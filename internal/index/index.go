@@ -252,3 +252,20 @@ func (d *DB) SetTagProvenance(ctx context.Context, fileID, tagID int64, source s
 	return nil
 }
 
+
+// DeleteStaleFiles deletes files from the index that were not seen during a recent scan.
+// Only files within the base_path whose indexed_at timestamp is strictly less than sinceUnix are removed.
+func (d *DB) DeleteStaleFiles(ctx context.Context, basePath string, sinceUnix int64) error {
+	// Add a trailing slash to basePath to ensure we only match files inside it,
+	// and use the LIKE operator to match the prefix.
+	prefix := basePath
+	if !strings.HasSuffix(prefix, "/") {
+		prefix += "/"
+	}
+	prefix += "%"
+
+	if _, err := d.db.ExecContext(ctx, "DELETE FROM files WHERE path LIKE ? AND indexed_at < ?", prefix, sinceUnix); err != nil {
+		return fmt.Errorf("index: delete stale files prefix %q since %d: %w", basePath, sinceUnix, err)
+	}
+	return nil
+}

@@ -17,6 +17,7 @@ import (
 	"github.com/darkliquid/tilbo/internal/index"
 	"github.com/darkliquid/tilbo/internal/ipc"
 	ipcv1 "github.com/darkliquid/tilbo/internal/ipc/gen/tilbo/ipc/v1"
+	"github.com/darkliquid/tilbo/internal/sync"
 	"github.com/darkliquid/tilbo/internal/watcher"
 )
 
@@ -86,11 +87,37 @@ func run(ctx context.Context, hupCh <-chan os.Signal, watchPath, dbPath string) 
 	go func() { watchErrCh <- w.Run(ctx) }()
 	slog.Info("watcher running", "path", watchPath)
 
+	// Initialize the background syncer.
+	syncer := sync.New(idx, watchPath)
+	go func() {
+		if err := syncer.Run(ctx); err != nil {
+			slog.Error("syncer failed", "err", err)
+		}
+	}()
+
 	// Start the IPC server.
 	sockPath := socketPath()
 	if err := os.MkdirAll(filepath.Dir(sockPath), 0o700); err != nil {
 		return fmt.Errorf("create socket dir: %w", err)
 	}
+
+	handleIPCRequest := func(ctx context.Context, req *ipcv1.Request) (*ipcv1.Response, error) {
+		switch req.Kind.(type) {
+		case *ipcv1.Request_Status:
+			state := syncer.State()
+			return &ipcv1.Response{
+				Kind: &ipcv1.Response_Status{
+					Status: &ipcv1.StatusResponse{
+						State:        state.State,
+						FilesIndexed: state.FilesIndexed,
+					},
+				},
+			}, nil
+		default:
+			return nil, fmt.Errorf("unimplemented request type: %T", req.Kind)
+		}
+	}
+
 	ipcServer := ipc.NewServer(sockPath, handleIPCRequest)
 	if err := ipcServer.Start(ctx); err != nil {
 		return fmt.Errorf("start ipc server: %w", err)
@@ -107,7 +134,7 @@ func run(ctx context.Context, hupCh <-chan os.Signal, watchPath, dbPath string) 
 				// Events channel closed: watcher has stopped.
 				return cleanShutdownErr(<-watchErrCh, ctx)
 			}
-			handleFSEvent(ctx, ev)
+			handleFSEvent(ctx, ev, syncer, idx)
 
 		case err := <-watchErrCh:
 			return cleanShutdownErr(err, ctx)
@@ -123,31 +150,43 @@ func run(ctx context.Context, hupCh <-chan os.Signal, watchPath, dbPath string) 
 	}
 }
 
-// handleIPCRequest processes an incoming IPC request from a client.
-func handleIPCRequest(ctx context.Context, req *ipcv1.Request) (*ipcv1.Response, error) {
-	switch req.Kind.(type) {
-	case *ipcv1.Request_Status:
-		return &ipcv1.Response{
-			Kind: &ipcv1.Response_Status{
-				Status: &ipcv1.StatusResponse{
-					State: ipcv1.DaemonState_DAEMON_STATE_READY,
-				},
-			},
-		}, nil
-	default:
-		return nil, fmt.Errorf("unimplemented request type: %T", req.Kind)
-	}
-}
-
 // handleFSEvent dispatches a filesystem event to the processing pipeline.
-// In M1 this only logs; the harvester pipeline is wired in M2.
-func handleFSEvent(ctx context.Context, ev watcher.Event) {
+func handleFSEvent(ctx context.Context, ev watcher.Event, syncer *sync.Syncer, idx *index.DB) {
 	slog.DebugContext(ctx, "fs event",
 		"path", ev.Path,
 		"old_path", ev.OldPath,
 		"kind", ev.Kind,
 	)
-	// TODO(M1-sync): dispatch to xattr→index sync.
+	
+	switch ev.Kind {
+	case watcher.EventCreate, watcher.EventModify:
+		var stat syscall.Stat_t
+		if err := syscall.Stat(ev.Path, &stat); err != nil {
+			slog.DebugContext(ctx, "fs event stat failed", "path", ev.Path, "err", err)
+			return
+		}
+		if err := syncer.SyncFile(ctx, ev.Path, &stat); err != nil {
+			slog.DebugContext(ctx, "fs event sync file failed", "path", ev.Path, "err", err)
+		}
+	case watcher.EventDelete:
+		if err := idx.DeleteFile(ctx, ev.Path); err != nil {
+			slog.DebugContext(ctx, "fs event delete file failed", "path", ev.Path, "err", err)
+		}
+	case watcher.EventRename:
+		// Delete old
+		if err := idx.DeleteFile(ctx, ev.OldPath); err != nil {
+			slog.DebugContext(ctx, "fs event delete old file failed", "path", ev.OldPath, "err", err)
+		}
+		// Sync new
+		var stat syscall.Stat_t
+		if err := syscall.Stat(ev.Path, &stat); err != nil {
+			slog.DebugContext(ctx, "fs event stat new file failed", "path", ev.Path, "err", err)
+			return
+		}
+		if err := syncer.SyncFile(ctx, ev.Path, &stat); err != nil {
+			slog.DebugContext(ctx, "fs event sync new file failed", "path", ev.Path, "err", err)
+		}
+	}
 }
 
 // cleanShutdownErr returns nil if err is a context cancellation (expected on
