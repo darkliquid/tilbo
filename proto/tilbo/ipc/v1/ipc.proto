@@ -1,0 +1,147 @@
+syntax = "proto3";
+
+package tilbo.ipc.v1;
+
+option go_package = "github.com/darkliquid/tilbo/internal/ipc/gen/tilbo/ipc/v1;ipcv1";
+
+message Envelope {
+  uint64 request_id = 1;
+  oneof payload {
+    Request request = 2;
+    Response response = 3;
+  }
+}
+
+message Request {
+  oneof kind {
+    SearchRequest search = 1;
+    TagRequest tag = 2;
+    MetadataRequest metadata = 3;
+    MetadataSetRequest metadata_set = 4;
+    RelatedRequest related = 5;
+    StatusRequest status = 6;
+    ReloadRulesRequest reload_rules = 7;
+  }
+}
+
+message Response {
+  oneof kind {
+    ErrorResponse error = 1;
+    SearchResponse search = 2;
+    TagResponse tag = 3;
+    MetadataResponse metadata = 4;
+    RelatedResponse related = 5;
+    StatusResponse status = 6;
+    ReloadRulesResponse reload_rules = 7;
+  }
+}
+
+message ErrorResponse {
+  uint32 code = 1; // 1=not_found, 2=permission, 3=invalid, 4=daemon_unavailable
+  string message = 2;
+}
+
+message SearchRequest {
+  repeated string tags = 1; // AND semantics by default
+  bool tags_any = 2; // set true for OR
+  repeated string tag_exclude = 3;
+  map<string, string> meta_filters = 4; // key=op:value e.g. "width"="gte:1280"
+  string fts_query = 5;
+  uint32 limit = 6; // default 100
+  uint32 offset = 7;
+  repeated string sort_by = 8; // e.g. ["mtime:desc", "name:asc"]
+}
+
+message FileResult {
+  string path = 1;
+  repeated string tags = 2;
+  map<string, string> metadata = 3;
+  double score = 4; // relevance score if fts or vector query
+  int64 mtime = 5; // unix timestamp
+  int64 size_bytes = 6;
+}
+
+message SearchResponse {
+  repeated FileResult files = 1;
+  uint32 total = 2; // total matching (before limit/offset)
+}
+
+enum TagOperation {
+  TAG_OPERATION_UNSPECIFIED = 0;
+  TAG_OPERATION_ADD = 1;
+  TAG_OPERATION_REMOVE = 2;
+  TAG_OPERATION_SET = 3; // replace all tags
+}
+
+message TagRequest {
+  repeated string paths = 1;
+  repeated string tags = 2;
+  TagOperation operation = 3;
+}
+
+message TagResponse {
+  repeated string paths_ok = 1;
+  repeated string paths_error = 2;
+  map<string, string> errors = 3;
+}
+
+message MetadataRequest {
+  string path = 1;
+}
+
+message MetadataResponse {
+  string path = 1;
+  map<string, string> metadata = 2;
+  map<string, string> sources = 3; // key → harvester name that produced it
+}
+
+message MetadataSetRequest {
+  string path = 1;
+  string key = 2;
+  string value = 3; // empty string to delete
+}
+
+message RelatedRequest {
+  string seed_path = 1;
+  uint32 limit = 2; // default 20
+  uint32 max_hops = 3; // default 3
+  float hop_weight = 4; // default 0.6
+  float vec_weight = 5; // default 0.4
+}
+
+message ScoredFile {
+  FileResult file = 1;
+  double score = 2;
+  uint32 hop_distance = 3;
+  double cosine_sim = 4;
+}
+
+message RelatedResponse {
+  repeated ScoredFile files = 1;
+}
+
+enum DaemonState {
+  DAEMON_STATE_UNSPECIFIED = 0;
+  DAEMON_STATE_IDLE = 1;
+  DAEMON_STATE_SCANNING = 2;
+  DAEMON_STATE_READY = 3;
+  DAEMON_STATE_DEGRADED = 4;
+}
+
+message StatusRequest {}
+
+message StatusResponse {
+  DaemonState state = 1;
+  uint64 files_indexed = 2;
+  uint64 tags_total = 3;
+  float index_size_mb = 4;
+  repeated string warnings = 5; // e.g. "FAN_RENAME unavailable, using fallback"
+  int64 uptime_seconds = 6;
+}
+
+message ReloadRulesRequest {}
+
+message ReloadRulesResponse {
+  uint32 rules_loaded = 1;
+  repeated string errors = 2;
+}

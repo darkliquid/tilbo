@@ -15,6 +15,8 @@ import (
 	"syscall"
 
 	"github.com/darkliquid/tilbo/internal/index"
+	"github.com/darkliquid/tilbo/internal/ipc"
+	ipcv1 "github.com/darkliquid/tilbo/internal/ipc/gen/tilbo/ipc/v1"
 	"github.com/darkliquid/tilbo/internal/watcher"
 )
 
@@ -84,7 +86,18 @@ func run(ctx context.Context, hupCh <-chan os.Signal, watchPath, dbPath string) 
 	go func() { watchErrCh <- w.Run(ctx) }()
 	slog.Info("watcher running", "path", watchPath)
 
-	slog.Info("tilbo-daemon ready", "socket", socketPath())
+	// Start the IPC server.
+	sockPath := socketPath()
+	if err := os.MkdirAll(filepath.Dir(sockPath), 0o700); err != nil {
+		return fmt.Errorf("create socket dir: %w", err)
+	}
+	ipcServer := ipc.NewServer(sockPath, handleIPCRequest)
+	if err := ipcServer.Start(ctx); err != nil {
+		return fmt.Errorf("start ipc server: %w", err)
+	}
+	defer ipcServer.Stop()
+
+	slog.Info("tilbo-daemon ready", "socket", sockPath)
 
 	// Main event loop.
 	for {
@@ -107,6 +120,22 @@ func run(ctx context.Context, hupCh <-chan os.Signal, watchPath, dbPath string) 
 			slog.Info("shutdown signal received; waiting for watcher")
 			return cleanShutdownErr(<-watchErrCh, ctx)
 		}
+	}
+}
+
+// handleIPCRequest processes an incoming IPC request from a client.
+func handleIPCRequest(ctx context.Context, req *ipcv1.Request) (*ipcv1.Response, error) {
+	switch req.Kind.(type) {
+	case *ipcv1.Request_Status:
+		return &ipcv1.Response{
+			Kind: &ipcv1.Response_Status{
+				Status: &ipcv1.StatusResponse{
+					State: ipcv1.DaemonState_DAEMON_STATE_READY,
+				},
+			},
+		}, nil
+	default:
+		return nil, fmt.Errorf("unimplemented request type: %T", req.Kind)
 	}
 }
 

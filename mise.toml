@@ -1,0 +1,33 @@
+[tools]
+go = "latest"
+buf = "latest"
+golangci-lint = "latest"
+"go:google.golang.org/protobuf/cmd/protoc-gen-go" = "latest"
+"go:github.com/planetscale/vtprotobuf/cmd/protoc-gen-go-vtproto" = "latest"
+
+[tasks.build]
+description = "Build all tilbo binaries"
+run = "go build -v ./cmd/..."
+
+[tasks.test]
+description = "Run all unit and integration tests"
+run = "go test -v ./..."
+
+[tasks.lint]
+description = "Lint the Go codebase"
+run = "golangci-lint run ./..."
+
+[tasks.generate]
+description = "Generate protobuf code using buf and vtprotobuf"
+run = "buf generate"
+
+[tasks.ci]
+description = "Run the full CI pipeline (generate, lint, test, build)"
+depends = ["generate", "lint", "test", "build"]
+
+[tasks.clean]
+description = "Clean build artifacts and generated code"
+run = """
+rm -rf bin/
+rm -rf internal/ipc/gen/
+"""

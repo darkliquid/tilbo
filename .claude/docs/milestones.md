@@ -18,8 +18,7 @@ Delivers a working metadata store, SQLite index, and Unix socket IPC skeleton.
 | Design xattr schema (`user.tags`, `user.meta.*`, `user.tags.source`) | 3d | P0 | Hard to change later. Defines on-disk contract. |
 | Implement xattr read/write library (`pkg/xattr` wrapper with batch read) | 2d | P0 | |
 | SQLite schema: files, tags, file_tags, metadata kv, tag_provenance, FTS5, tag-freq view | 3d | P0 | Include FTS5 virtual table from day one |
-| sqlite-vec extension integration; embedding column; basic KNN query | 2d | P1 | |
-| fanotify watcher (`golang.org/x/sys/unix`) with event debounce (200ms) | 5d | P0 | Mount-wide watch; `FAN_RENAME`; kernel version detection |
+
 | Daemon skeleton: process lifecycle, signal handling, graceful shutdown | 2d | P0 | Use `log/slog`; write systemd user service unit |
 | Unix socket IPC: protobuf framing, request/response skeleton | 4d | P0 | Define full proto schema upfront; see `ipc-schema.md` |
 | xattr→index sync on startup (full scan, low `ionice` priority) | 3d | P0 | Report progress via `DaemonStateChanged` signal |
@@ -59,9 +58,6 @@ Pluggable metadata enrichment and auto-tagging. The system becomes self-organisi
 | Rule priority and conflict resolution | 2d | P1 | Higher priority rules run last; their tags win |
 | Integration tests: full pipeline on fixture files (video, image, PDF, audio) | 4d | P0 | |
 
-**Research callout:** Evaluate `knights-analytics/hugot` (pure-Go ONNX) for metadata-string
-embeddings in-process during M2. If viable, ship basic vector embeddings here rather than
-waiting for M4.
 
 ---
 
@@ -92,10 +88,10 @@ Tune TTLs to balance responsiveness vs query load for the expected workload.
 
 ---
 
-## M4 — Graph Navigation & Vector Similarity
-**Duration:** 4–6 weeks
+## M4 — Graph Navigation
+**Duration:** 2–3 weeks
 
-Relational file discovery ordered by tag-graph distance and embedding similarity.
+Relational file discovery ordered by tag-graph distance.
 
 | Task | Effort | P | Notes |
 |---|---|---|---|
@@ -103,11 +99,8 @@ Relational file discovery ordered by tag-graph distance and embedding similarity
 | BFS/Dijkstra traversal: files ordered by hop distance from seed set | 3d | P0 | |
 | Tag-frequency weighting: penalise traversal through high-cardinality tags | 4d | P1 | Analogous to IDF; prevents "pdf" dominating graph traversal |
 | Hop limit and result cap (configurable, default: 3 hops, 100 results) | 1d | P0 | |
-| sqlite-vec KNN query: N most similar files by embedding cosine distance | 3d | P0 | |
-| Metadata-string embedding via hugot/ONNX (async, low-priority harvester) | 5d | P0 | Does not block ingest pipeline |
-| Blended relevance score: `score = hop_score * w1 + cosine_sim * w2` | 2d | P1 | Expose weights in daemon config |
-| Combined filter + vector query ("similar to X among files tagged Y") | 3d | P1 | sqlite-vec supports pre-filter before KNN |
 | IPC: `RelatedFiles(seed, limit, hops, weights)` RPC | 2d | P0 | |
+
 | FUSE: `@similar:<path>` virtual dir backed by graph query | 3d | P1 | |
 | Benchmark: graph traversal on 100k file corpus; target p99 < 50ms | 3d | P0 | |
 
@@ -163,7 +156,7 @@ Resident file manager + transparent portal integration for all portal-aware apps
 | Measure portal startup latency; target < 150ms warm show | 2d | P0 | Pre-warm Qt/QML; keep process resident |
 | GTK bookmark injection for non-portal apps (`~/.config/gtk-4.0/bookmarks`) | 1d | P1 | Adds FUSE virtual dirs as GTK sidebar entries |
 | Thumbnail generation: request from daemon harvester; display in grid | 3d | P1 | |
-| Settings UI: harvester config, rule editor, embedding toggle | 5d | P2 | |
+| Settings UI: harvester config, rule editor | 4d | P2 | |
 | Keyboard navigation and accessibility | 3d | P1 | |
 | Packaging: `.desktop` file, autostart entry, portal config | 2d | P0 | |
 
@@ -184,7 +177,7 @@ This is pragmatic, not a design failure.
 | M1 Foundation | 4–6w | 4–6w |
 | M2 Harvester & Rules | 6–8w | 10–14w |
 | M3 FUSE | 4–5w | 14–19w |
-| M4 Graph & Vectors | 4–6w | 18–25w |
+| M4 Graph | 3–4w | 17–22w |
 | M5 CLI | 3–4w | 21–29w |
 | M6 Browser & Portal | 8–12w | 29–41w |
 
