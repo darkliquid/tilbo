@@ -296,6 +296,60 @@ func (d *DB) WriteSidecar(ctx context.Context, inode, device uint64, data []byte
 	return nil
 }
 
+// ListFilePaths returns the absolute paths of all files currently in the index.
+func (d *DB) ListFilePaths(ctx context.Context) ([]string, error) {
+	rows, err := d.db.QueryContext(ctx, "SELECT path FROM files ORDER BY path")
+	if err != nil {
+		return nil, fmt.Errorf("index: list file paths: %w", err)
+	}
+	defer rows.Close()
+
+	var paths []string
+	for rows.Next() {
+		var p string
+		if err := rows.Scan(&p); err != nil {
+			return nil, fmt.Errorf("index: scan file path: %w", err)
+		}
+		paths = append(paths, p)
+	}
+	return paths, rows.Err()
+}
+
+// GetFileIDByPath returns the row ID for the file at path.
+// Returns an error wrapping sql.ErrNoRows if the file is not in the index.
+func (d *DB) GetFileIDByPath(ctx context.Context, path string) (int64, error) {
+	var id int64
+	err := d.db.QueryRowContext(ctx, "SELECT id FROM files WHERE path = ?", path).Scan(&id)
+	if err != nil {
+		return 0, fmt.Errorf("index: get file id for %q: %w", path, err)
+	}
+	return id, nil
+}
+
+// GetTagOverrides returns a map of tag name → suppressed rule names for fileID.
+// The map is empty (not nil) when there are no overrides.
+func (d *DB) GetTagOverrides(ctx context.Context, fileID int64) (map[string][]string, error) {
+	rows, err := d.db.QueryContext(ctx, `
+		SELECT t.name, o.rule_name
+		FROM tag_overrides o
+		JOIN tags t ON t.id = o.tag_id
+		WHERE o.file_id = ?`, fileID)
+	if err != nil {
+		return nil, fmt.Errorf("index: get tag overrides for file %d: %w", fileID, err)
+	}
+	defer rows.Close()
+
+	overrides := make(map[string][]string)
+	for rows.Next() {
+		var tagName, ruleName string
+		if err := rows.Scan(&tagName, &ruleName); err != nil {
+			return nil, fmt.Errorf("index: scan tag override: %w", err)
+		}
+		overrides[tagName] = append(overrides[tagName], ruleName)
+	}
+	return overrides, rows.Err()
+}
+
 // DeleteSidecar removes the sidecar payload for the given inode/device.
 func (d *DB) DeleteSidecar(ctx context.Context, inode, device uint64) error {
 	if _, err := d.db.ExecContext(ctx, "DELETE FROM sidecar_data WHERE inode = ? AND device = ?", inode, device); err != nil {
