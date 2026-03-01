@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"strings"
 
+	"github.com/darkliquid/tilbo/internal/graph"
 	"github.com/darkliquid/tilbo/internal/harvester"
 	"github.com/darkliquid/tilbo/internal/index"
 	"github.com/darkliquid/tilbo/internal/rules"
@@ -22,15 +23,17 @@ type Processor struct {
 	tags     *xattr.Service
 	pipeline *harvester.Pipeline
 	engine   *rules.Engine
+	g        *graph.Graph
 }
 
 // newProcessor creates a Processor.
-func newProcessor(idx *index.DB, tags *xattr.Service, pipeline *harvester.Pipeline, engine *rules.Engine) *Processor {
+func newProcessor(idx *index.DB, tags *xattr.Service, pipeline *harvester.Pipeline, engine *rules.Engine, g *graph.Graph) *Processor {
 	return &Processor{
 		idx:      idx,
 		tags:     tags,
 		pipeline: pipeline,
 		engine:   engine,
+		g:        g,
 	}
 }
 
@@ -176,10 +179,11 @@ func (p *Processor) applyDiff(ctx context.Context, path string, fileID int64, ex
 		slog.DebugContext(ctx, "processor: write source xattr error", "path", path, "err", err)
 	}
 
-	// Update index.
+	// Update index and in-memory graph.
 	if err := p.idx.SetFileTags(ctx, fileID, newTags); err != nil {
 		return fmt.Errorf("set file tags: %w", err)
 	}
+	p.g.SetFileTags(path, newTags)
 	for tag, src := range diff.Sources {
 		tagID, err := p.idx.UpsertTag(ctx, tag)
 		if err != nil {

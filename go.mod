@@ -9,6 +9,7 @@ require (
 
 require (
 	github.com/BurntSushi/toml v1.6.0 // indirect
+	github.com/dominikbraun/graph v0.23.0 // indirect
 	github.com/ncruces/julianday v1.0.0 // indirect
 	github.com/planetscale/vtprotobuf v0.6.0 // indirect
 	github.com/tetratelabs/wazero v1.11.0 // indirect

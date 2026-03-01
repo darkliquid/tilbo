@@ -16,6 +16,7 @@ import (
 
 	"github.com/tetratelabs/wazero"
 
+	"github.com/darkliquid/tilbo/internal/graph"
 	"github.com/darkliquid/tilbo/internal/harvester"
 	"github.com/darkliquid/tilbo/internal/index"
 	"github.com/darkliquid/tilbo/internal/ipc"
@@ -129,13 +130,23 @@ func run(ctx context.Context, hupCh <-chan os.Signal, watchPath, dbPath string) 
 	}
 	defer ruleReg.Close(ctx)
 
+	// --- M4: in-memory bipartite file-tag graph ---
+
+	fileGraph := graph.New()
+	if pairs, err := idx.ListFileTagPairs(ctx); err != nil {
+		slog.Warn("graph: failed to load file-tag pairs", "err", err)
+	} else {
+		fileGraph.Load(ctx, pairs)
+		slog.Info("graph loaded", "pairs", len(pairs))
+	}
+
 	// Processor (runs pipeline + rules on each file event).
-	proc := newProcessor(idx, tags, pipeline, engine)
+	proc := newProcessor(idx, tags, pipeline, engine, fileGraph)
 
 	// Sweeper (re-evaluates all files after rule reload).
 	sweeper := rules.NewSweeper(idx, tags, pipeline, engine)
 
-	// --- end M2 ---
+	// --- end M2/M4 ---
 
 	// Start the IPC server.
 	sockPath := socketPath()
@@ -144,7 +155,7 @@ func run(ctx context.Context, hupCh <-chan os.Signal, watchPath, dbPath string) 
 	}
 
 	handleIPCRequest := func(ctx context.Context, req *ipcv1.Request) (*ipcv1.Response, error) {
-		switch req.Kind.(type) {
+		switch r := req.Kind.(type) {
 		case *ipcv1.Request_Status:
 			state := syncer.State()
 			return &ipcv1.Response{
@@ -155,6 +166,10 @@ func run(ctx context.Context, hupCh <-chan os.Signal, watchPath, dbPath string) 
 					},
 				},
 			}, nil
+
+		case *ipcv1.Request_Related:
+			return handleRelated(ctx, r.Related, fileGraph, idx)
+
 		default:
 			return nil, fmt.Errorf("unimplemented request type: %T", req.Kind)
 		}
@@ -176,7 +191,7 @@ func run(ctx context.Context, hupCh <-chan os.Signal, watchPath, dbPath string) 
 				// Events channel closed: watcher has stopped.
 				return cleanShutdownErr(<-watchErrCh, ctx)
 			}
-			handleFSEvent(ctx, ev, syncer, idx, proc)
+			handleFSEvent(ctx, ev, syncer, idx, proc, fileGraph)
 
 		case err := <-watchErrCh:
 			return cleanShutdownErr(err, ctx)
@@ -215,8 +230,50 @@ func reloadConfig(ctx context.Context, pipeline *harvester.Pipeline, engine *rul
 	}()
 }
 
+// handleRelated handles a RelatedFiles IPC request using the in-memory graph.
+func handleRelated(ctx context.Context, req *ipcv1.RelatedRequest, g *graph.Graph, idx *index.DB) (*ipcv1.Response, error) {
+	maxHops := int(req.GetMaxHops())
+	if maxHops <= 0 {
+		maxHops = 2
+	}
+	limit := int(req.GetLimit())
+	if limit <= 0 {
+		limit = 20
+	}
+	hopWeight := float64(req.GetHopWeight())
+	if hopWeight <= 0 {
+		hopWeight = 1.0
+	}
+
+	related := g.Related(ctx, req.GetSeedPath(), maxHops, limit, hopWeight)
+
+	scored := make([]*ipcv1.ScoredFile, 0, len(related))
+	for _, r := range related {
+		summary, err := idx.GetFileSummary(ctx, r.Path)
+		if err != nil {
+			slog.DebugContext(ctx, "related: skip missing file", "path", r.Path, "err", err)
+			continue
+		}
+		scored = append(scored, &ipcv1.ScoredFile{
+			File: &ipcv1.FileResult{
+				Path:      summary.Path,
+				Tags:      summary.Tags,
+				Mtime:     summary.Mtime,
+				SizeBytes: summary.SizeBytes,
+			},
+			Score:       r.Score,
+			HopDistance: uint32(r.HopDistance),
+		})
+	}
+	return &ipcv1.Response{
+		Kind: &ipcv1.Response_Related{
+			Related: &ipcv1.RelatedResponse{Files: scored},
+		},
+	}, nil
+}
+
 // handleFSEvent dispatches a filesystem event to the processing pipeline.
-func handleFSEvent(ctx context.Context, ev watcher.Event, syncer *isync.Syncer, idx *index.DB, proc *Processor) {
+func handleFSEvent(ctx context.Context, ev watcher.Event, syncer *isync.Syncer, idx *index.DB, proc *Processor, g *graph.Graph) {
 	slog.DebugContext(ctx, "fs event",
 		"path", ev.Path,
 		"old_path", ev.OldPath,

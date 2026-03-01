@@ -350,6 +350,75 @@ func (d *DB) GetTagOverrides(ctx context.Context, fileID int64) (map[string][]st
 	return overrides, rows.Err()
 }
 
+// FileSummary holds the index-stored summary for a file, used to build IPC responses.
+type FileSummary struct {
+	Path      string
+	Tags      []string
+	Mtime     int64
+	SizeBytes int64
+}
+
+// ListFileTagPairs returns all (path, tagname) pairs currently in the index.
+// Each element is [path, tagname]. The result is used to bulk-load the
+// in-memory graph.
+func (d *DB) ListFileTagPairs(ctx context.Context) ([][2]string, error) {
+	const q = `SELECT f.path, t.name
+		FROM file_tags ft
+		JOIN files f ON f.id = ft.file_id
+		JOIN tags  t ON t.id = ft.tag_id`
+	rows, err := d.db.QueryContext(ctx, q)
+	if err != nil {
+		return nil, fmt.Errorf("index: list file-tag pairs: %w", err)
+	}
+	defer rows.Close()
+
+	var pairs [][2]string
+	for rows.Next() {
+		var path, tag string
+		if err := rows.Scan(&path, &tag); err != nil {
+			return nil, fmt.Errorf("index: scan file-tag pair: %w", err)
+		}
+		pairs = append(pairs, [2]string{path, tag})
+	}
+	return pairs, rows.Err()
+}
+
+// GetFileSummary returns the stored summary for path, including its tags,
+// mtime, and size. Returns sql.ErrNoRows (wrapped) if not found.
+func (d *DB) GetFileSummary(ctx context.Context, path string) (*FileSummary, error) {
+	const fq = `SELECT id, mtime, size_bytes FROM files WHERE path = ? LIMIT 1`
+	var id, mtime, size int64
+	if err := d.db.QueryRowContext(ctx, fq, path).Scan(&id, &mtime, &size); err != nil {
+		return nil, fmt.Errorf("index: get file summary for %q: %w", path, err)
+	}
+
+	const tq = `SELECT t.name FROM file_tags ft JOIN tags t ON t.id = ft.tag_id WHERE ft.file_id = ?`
+	rows, err := d.db.QueryContext(ctx, tq, id)
+	if err != nil {
+		return nil, fmt.Errorf("index: get tags for file %q: %w", path, err)
+	}
+	defer rows.Close()
+
+	var tags []string
+	for rows.Next() {
+		var name string
+		if err := rows.Scan(&name); err != nil {
+			return nil, fmt.Errorf("index: scan tag name: %w", err)
+		}
+		tags = append(tags, name)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return &FileSummary{
+		Path:      path,
+		Tags:      tags,
+		Mtime:     mtime,
+		SizeBytes: size,
+	}, nil
+}
+
 // DeleteSidecar removes the sidecar payload for the given inode/device.
 func (d *DB) DeleteSidecar(ctx context.Context, inode, device uint64) error {
 	if _, err := d.db.ExecContext(ctx, "DELETE FROM sidecar_data WHERE inode = ? AND device = ?", inode, device); err != nil {
