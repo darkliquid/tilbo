@@ -6,8 +6,11 @@ import (
 	"context"
 	"database/sql"
 	"embed"
+	"errors"
 	"fmt"
 	"log/slog"
+
+
 	"sort"
 	"strings"
 	"time"
@@ -266,6 +269,37 @@ func (d *DB) DeleteStaleFiles(ctx context.Context, basePath string, sinceUnix in
 
 	if _, err := d.db.ExecContext(ctx, "DELETE FROM files WHERE path LIKE ? AND indexed_at < ?", prefix, sinceUnix); err != nil {
 		return fmt.Errorf("index: delete stale files prefix %q since %d: %w", basePath, sinceUnix, err)
+	}
+	return nil
+}
+// ReadSidecar returns the JSON payload for the given path.
+// ReadSidecar returns the JSON payload for the given inode/device.
+func (d *DB) ReadSidecar(ctx context.Context, inode, device uint64) ([]byte, error) {
+	var data []byte
+	err := d.db.QueryRowContext(ctx, "SELECT data FROM sidecar_data WHERE inode = ? AND device = ?", inode, device).Scan(&data)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil // Return nil, nil when not found
+		}
+		return nil, fmt.Errorf("index: read sidecar for %d/%d: %w", inode, device, err)
+	}
+	return data, nil
+}
+
+// WriteSidecar upserts the JSON payload for the given inode/device.
+func (d *DB) WriteSidecar(ctx context.Context, inode, device uint64, data []byte) error {
+	if _, err := d.db.ExecContext(ctx,
+		"INSERT INTO sidecar_data(inode, device, data) VALUES (?, ?, ?) ON CONFLICT(inode, device) DO UPDATE SET data=excluded.data",
+		inode, device, data); err != nil {
+		return fmt.Errorf("index: write sidecar for %d/%d: %w", inode, device, err)
+	}
+	return nil
+}
+
+// DeleteSidecar removes the sidecar payload for the given inode/device.
+func (d *DB) DeleteSidecar(ctx context.Context, inode, device uint64) error {
+	if _, err := d.db.ExecContext(ctx, "DELETE FROM sidecar_data WHERE inode = ? AND device = ?", inode, device); err != nil {
+		return fmt.Errorf("index: delete sidecar for %d/%d: %w", inode, device, err)
 	}
 	return nil
 }

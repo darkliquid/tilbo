@@ -16,6 +16,7 @@ import (
 	"io"
 	"strings"
 
+	"github.com/darkliquid/tilbo/internal/sidecar"
 	"github.com/pkg/xattr"
 )
 
@@ -30,6 +31,16 @@ const (
 	XattrSourceKey = "user.tags.source"
 )
 
+var sidecarStore *sidecar.Store
+
+// InitSidecar configures the sidecar store with a database backend.
+// It must be called before using the xattr package if sidecar support is desired.
+func InitSidecar(db sidecar.Backend) {
+	sidecarStore = sidecar.New(db)
+}
+
+// ReadTags returns the tags stored on the file at path.
+
 // ReadTags returns the tags stored on the file at path.
 // Returns an empty slice (not an error) if no tags are set.
 func ReadTags(ctx context.Context, path string) ([]string, error) {
@@ -37,9 +48,23 @@ func ReadTags(ctx context.Context, path string) ([]string, error) {
 		return nil, err
 	}
 	val, err := xattr.Get(path, XattrTagKey)
-	if isNotExist(err) {
+	if err != nil && isNotSupported(err) && sidecarStore != nil {
+		sc, scErr := sidecarStore.Read(ctx, path)
+		if scErr == nil {
+			val = []byte(sc.Tags)
+			err = nil
+		} else if scErr == sidecar.ErrNoSidecar {
+			err = nil
+			val = nil
+		} else {
+			return nil, fmt.Errorf("sidecar read tags %q: %w", path, scErr)
+		}
+	}
+
+	if isNotExist(err) || len(val) == 0 {
 		return []string{}, nil
 	}
+
 	if err != nil {
 		return nil, fmt.Errorf("xattr read tags %q: %w", path, err)
 	}
@@ -74,10 +99,24 @@ func WriteTags(ctx context.Context, path string, tags []string) error {
 	if err := w.Error(); err != nil {
 		return fmt.Errorf("xattr marshal tags: %w", err)
 	}
-	val := strings.TrimRight(buf.String(), "\r\n")
-	if err := xattr.Set(path, XattrTagKey, []byte(val)); err != nil {
+	valStr := strings.TrimRight(buf.String(), "\r\n")
+	if err := xattr.Set(path, XattrTagKey, []byte(valStr)); err != nil {
+		if isNotSupported(err) && sidecarStore != nil {
+			sc, scErr := sidecarStore.Read(ctx, path)
+			if scErr == sidecar.ErrNoSidecar {
+				sc = &sidecar.Data{}
+			} else if scErr != nil {
+				return fmt.Errorf("sidecar read for tags update %q: %w", path, scErr)
+			}
+			sc.Tags = valStr
+			if err := sidecarStore.Write(ctx, path, sc); err != nil {
+				return fmt.Errorf("sidecar write tags %q: %w", path, err)
+			}
+			return nil
+		}
 		return fmt.Errorf("xattr write tags %q: %w", path, err)
 	}
+
 	return nil
 }
 
@@ -88,9 +127,23 @@ func ReadMeta(ctx context.Context, path, key string) (string, error) {
 		return "", err
 	}
 	val, err := xattr.Get(path, XattrMetaPrefix+key)
+	if err != nil && isNotSupported(err) && sidecarStore != nil {
+		sc, scErr := sidecarStore.Read(ctx, path)
+		if scErr == nil {
+			if v, ok := sc.Meta[key]; ok {
+				return v, nil
+			}
+			return "", nil
+		} else if scErr == sidecar.ErrNoSidecar {
+			return "", nil
+		}
+		return "", fmt.Errorf("sidecar read meta %q key %q: %w", path, key, scErr)
+	}
+
 	if isNotExist(err) {
 		return "", nil
 	}
+
 	if err != nil {
 		return "", fmt.Errorf("xattr read meta %q key %q: %w", path, key, err)
 	}
@@ -103,9 +156,27 @@ func WriteMeta(ctx context.Context, path, key, value string) error {
 		return err
 	}
 	if err := xattr.Set(path, XattrMetaPrefix+key, []byte(value)); err != nil {
+		if isNotSupported(err) && sidecarStore != nil {
+			sc, scErr := sidecarStore.Read(ctx, path)
+			if scErr == sidecar.ErrNoSidecar {
+				sc = &sidecar.Data{Meta: make(map[string]string)}
+			} else if scErr != nil {
+				return fmt.Errorf("sidecar read for meta update %q: %w", path, scErr)
+			}
+			if sc.Meta == nil {
+				sc.Meta = make(map[string]string)
+			}
+			sc.Meta[key] = value
+			if err := sidecarStore.Write(ctx, path, sc); err != nil {
+				return fmt.Errorf("sidecar write meta %q key %q: %w", path, key, err)
+			}
+			return nil
+		}
 		return fmt.Errorf("xattr write meta %q key %q: %w", path, key, err)
 	}
+
 	return nil
+
 }
 
 // ReadAllMeta returns all metadata key-value pairs for the file at path.
@@ -115,6 +186,19 @@ func ReadAllMeta(ctx context.Context, path string) (map[string]string, error) {
 		return nil, err
 	}
 	attrs, err := xattr.List(path)
+	if err != nil && isNotSupported(err) && sidecarStore != nil {
+		sc, scErr := sidecarStore.Read(ctx, path)
+		if scErr == nil {
+			if sc.Meta == nil {
+				return map[string]string{}, nil
+			}
+			return sc.Meta, nil
+		} else if scErr == sidecar.ErrNoSidecar {
+			return map[string]string{}, nil
+		}
+		return nil, fmt.Errorf("sidecar list meta %q: %w", path, scErr)
+	}
+
 	if err != nil {
 		return nil, fmt.Errorf("xattr list %q: %w", path, err)
 	}
@@ -141,9 +225,23 @@ func ReadSource(ctx context.Context, path string) (map[string]string, error) {
 		return nil, err
 	}
 	val, err := xattr.Get(path, XattrSourceKey)
-	if isNotExist(err) {
+	if err != nil && isNotSupported(err) && sidecarStore != nil {
+		sc, scErr := sidecarStore.Read(ctx, path)
+		if scErr == nil {
+			if sc.Source == nil {
+				return map[string]string{}, nil
+			}
+			return sc.Source, nil
+		} else if scErr == sidecar.ErrNoSidecar {
+			return map[string]string{}, nil
+		}
+		return nil, fmt.Errorf("sidecar read source %q: %w", path, scErr)
+	}
+
+	if isNotExist(err) || len(val) == 0 {
 		return map[string]string{}, nil
 	}
+
 	if err != nil {
 		return nil, fmt.Errorf("xattr read source %q: %w", path, err)
 	}
@@ -164,9 +262,23 @@ func WriteSource(ctx context.Context, path string, source map[string]string) err
 		return fmt.Errorf("xattr marshal source: %w", err)
 	}
 	if err := xattr.Set(path, XattrSourceKey, data); err != nil {
+		if isNotSupported(err) {
+			sc, scErr := sidecarStore.Read(ctx, path)
+			if scErr == sidecar.ErrNoSidecar {
+				sc = &sidecar.Data{Source: make(map[string]string)}
+			} else if scErr != nil {
+				return fmt.Errorf("sidecar read for source update %q: %w", path, scErr)
+			}
+			sc.Source = source
+			if err := sidecarStore.Write(ctx, path, sc); err != nil {
+				return fmt.Errorf("sidecar write source %q: %w", path, err)
+			}
+			return nil
+		}
 		return fmt.Errorf("xattr write source %q: %w", path, err)
 	}
 	return nil
+
 }
 
 // BatchReadTags reads tags from multiple files concurrently.
@@ -222,4 +334,15 @@ func isNotExist(err error) bool {
 		strings.Contains(s, "no such attribute") ||
 		strings.Contains(s, "ENODATA") ||
 		strings.Contains(s, "ENOATTR")
+}
+
+// isNotSupported reports whether the error indicates the filesystem does not support extended attributes.
+func isNotSupported(err error) bool {
+	if err == nil {
+		return false
+	}
+	s := err.Error()
+	return strings.Contains(s, "operation not supported") ||
+		strings.Contains(s, "ENOTSUP") ||
+		strings.Contains(s, "EOPNOTSUPP")
 }
