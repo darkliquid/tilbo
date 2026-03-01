@@ -37,8 +37,10 @@ func TestReadWriteTags(t *testing.T) {
 	ctx := context.Background()
 	path := newFile(t)
 
+	svc := xattr.New(nil)
+
 	// No tags set yet.
-	tags, err := xattr.ReadTags(ctx, path)
+	tags, err := svc.ReadTags(ctx, path)
 	if err != nil {
 		t.Fatalf("ReadTags: %v", err)
 	}
@@ -48,12 +50,12 @@ func TestReadWriteTags(t *testing.T) {
 
 	// Write tags.
 	want := []string{"work", "go", "important"}
-	if err := xattr.WriteTags(ctx, path, want); err != nil {
+	if err := svc.WriteTags(ctx, path, want); err != nil {
 		t.Fatalf("WriteTags: %v", err)
 	}
 
 	// Read back.
-	got, err := xattr.ReadTags(ctx, path)
+	got, err := svc.ReadTags(ctx, path)
 	if err != nil {
 		t.Fatalf("ReadTags after write: %v", err)
 	}
@@ -73,13 +75,15 @@ func TestWriteTagsEmptyList(t *testing.T) {
 	ctx := context.Background()
 	path := newFile(t)
 
-	if err := xattr.WriteTags(ctx, path, []string{"a", "b"}); err != nil {
+	svc := xattr.New(nil)
+
+	if err := svc.WriteTags(ctx, path, []string{"a", "b"}); err != nil {
 		t.Fatal(err)
 	}
-	if err := xattr.WriteTags(ctx, path, []string{}); err != nil {
+	if err := svc.WriteTags(ctx, path, []string{}); err != nil {
 		t.Fatal(err)
 	}
-	tags, err := xattr.ReadTags(ctx, path)
+	tags, err := svc.ReadTags(ctx, path)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -91,11 +95,14 @@ func TestWriteTagsEmptyList(t *testing.T) {
 func TestWriteTagsWithCommaRoundTrips(t *testing.T) {
 	ctx := context.Background()
 	path := newFile(t)
+
+	svc := xattr.New(nil)
+
 	want := []string{"tag,with,commas", "normal"}
-	if err := xattr.WriteTags(ctx, path, want); err != nil {
+	if err := svc.WriteTags(ctx, path, want); err != nil {
 		t.Fatalf("WriteTags: %v", err)
 	}
-	got, err := xattr.ReadTags(ctx, path)
+	got, err := svc.ReadTags(ctx, path)
 	if err != nil {
 		t.Fatalf("ReadTags: %v", err)
 	}
@@ -113,8 +120,10 @@ func TestReadWriteMeta(t *testing.T) {
 	ctx := context.Background()
 	path := newFile(t)
 
+	svc := xattr.New(nil)
+
 	// Non-existent key returns "".
-	val, err := xattr.ReadMeta(ctx, path, "codec")
+	val, err := svc.ReadMeta(ctx, path, "codec")
 	if err != nil {
 		t.Fatalf("ReadMeta missing key: %v", err)
 	}
@@ -123,10 +132,10 @@ func TestReadWriteMeta(t *testing.T) {
 	}
 
 	// Write and read back.
-	if err := xattr.WriteMeta(ctx, path, "codec", "h265"); err != nil {
+	if err := svc.WriteMeta(ctx, path, "codec", "h265"); err != nil {
 		t.Fatalf("WriteMeta: %v", err)
 	}
-	val, err = xattr.ReadMeta(ctx, path, "codec")
+	val, err = svc.ReadMeta(ctx, path, "codec")
 	if err != nil {
 		t.Fatalf("ReadMeta: %v", err)
 	}
@@ -139,18 +148,20 @@ func TestReadAllMeta(t *testing.T) {
 	ctx := context.Background()
 	path := newFile(t)
 
-	if err := xattr.WriteMeta(ctx, path, "codec", "h265"); err != nil {
+	svc := xattr.New(nil)
+
+	if err := svc.WriteMeta(ctx, path, "codec", "h265"); err != nil {
 		t.Fatal(err)
 	}
-	if err := xattr.WriteMeta(ctx, path, "width", "1920"); err != nil {
+	if err := svc.WriteMeta(ctx, path, "width", "1920"); err != nil {
 		t.Fatal(err)
 	}
 	// Also write a non-meta attr to ensure it is excluded.
-	if err := xattr.WriteTags(ctx, path, []string{"video"}); err != nil {
+	if err := svc.WriteTags(ctx, path, []string{"video"}); err != nil {
 		t.Fatal(err)
 	}
 
-	meta, err := xattr.ReadAllMeta(ctx, path)
+	meta, err := svc.ReadAllMeta(ctx, path)
 	if err != nil {
 		t.Fatalf("ReadAllMeta: %v", err)
 	}
@@ -170,8 +181,10 @@ func TestReadWriteSource(t *testing.T) {
 	ctx := context.Background()
 	path := newFile(t)
 
+	svc := xattr.New(nil)
+
 	// No source set yet.
-	src, err := xattr.ReadSource(ctx, path)
+	src, err := svc.ReadSource(ctx, path)
 	if err != nil {
 		t.Fatalf("ReadSource: %v", err)
 	}
@@ -183,11 +196,11 @@ func TestReadWriteSource(t *testing.T) {
 		"video": "rule:hd-video",
 		"work":  "manual",
 	}
-	if err := xattr.WriteSource(ctx, path, want); err != nil {
+	if err := svc.WriteSource(ctx, path, want); err != nil {
 		t.Fatalf("WriteSource: %v", err)
 	}
 
-	got, err := xattr.ReadSource(ctx, path)
+	got, err := svc.ReadSource(ctx, path)
 	if err != nil {
 		t.Fatalf("ReadSource after write: %v", err)
 	}
@@ -218,16 +231,18 @@ func TestBatchReadTags(t *testing.T) {
 	}
 	_ = pkgxattr.Remove(paths[0], "user.tilbo_probe")
 
+	svc := xattr.New(nil)
+
 	// Tag two of the three files.
-	if err := xattr.WriteTags(ctx, paths[0], []string{"a", "b"}); err != nil {
+	if err := svc.WriteTags(ctx, paths[0], []string{"a", "b"}); err != nil {
 		t.Fatal(err)
 	}
-	if err := xattr.WriteTags(ctx, paths[1], []string{"c"}); err != nil {
+	if err := svc.WriteTags(ctx, paths[1], []string{"c"}); err != nil {
 		t.Fatal(err)
 	}
 	// paths[2] has no tags.
 
-	result, err := xattr.BatchReadTags(ctx, paths)
+	result, err := svc.BatchReadTags(ctx, paths)
 	if err != nil {
 		t.Fatalf("BatchReadTags: %v", err)
 	}
@@ -242,9 +257,10 @@ func TestBatchReadTags(t *testing.T) {
 func TestContextCancellation(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel() // cancel immediately
+	svc := xattr.New(nil)
 
 	path := newFile(t)
-	if _, err := xattr.ReadTags(ctx, path); err == nil {
+	if _, err := svc.ReadTags(ctx, path); err == nil {
 		t.Error("expected error from cancelled context, got nil")
 	}
 }

@@ -1,11 +1,7 @@
 package xattr
 
 import (
-	"context"
-	"os"
-	"path/filepath"
 	"testing"
-	"time"
 )
 
 // This simulates a mount without xattr support by providing paths
@@ -18,8 +14,8 @@ func TestSidecarIntegration(t *testing.T) {
 	// Creating an actual mock for pkg/xattr is hard since it uses syscalls.
 	// But we can test sidecar integration by writing a sidecar directly,
 	// then reading it when the xattr read returns ENODATA and falls back.
-	
-	// Wait, our implementation falls back only on ENOTSUP. ENODATA (isNotExist) 
+
+	// Wait, our implementation falls back only on ENOTSUP. ENODATA (isNotExist)
 	// just returns empty. So sidecar is ONLY read if ENOTSUP is returned.
 	// We can't easily fake ENOTSUP without a special mount or mocking pkg/xattr.
 }

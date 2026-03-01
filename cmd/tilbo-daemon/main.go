@@ -19,6 +19,7 @@ import (
 	ipcv1 "github.com/darkliquid/tilbo/internal/ipc/gen/tilbo/ipc/v1"
 	"github.com/darkliquid/tilbo/internal/sync"
 	"github.com/darkliquid/tilbo/internal/watcher"
+	"github.com/darkliquid/tilbo/internal/xattr"
 )
 
 func main() {
@@ -87,8 +88,10 @@ func run(ctx context.Context, hupCh <-chan os.Signal, watchPath, dbPath string) 
 	go func() { watchErrCh <- w.Run(ctx) }()
 	slog.Info("watcher running", "path", watchPath)
 
+	tags := xattr.New(nil)
+
 	// Initialize the background syncer.
-	syncer := sync.New(idx, watchPath)
+	syncer := sync.New(idx, tags, watchPath)
 	go func() {
 		if err := syncer.Run(ctx); err != nil {
 			slog.Error("syncer failed", "err", err)
@@ -157,7 +160,7 @@ func handleFSEvent(ctx context.Context, ev watcher.Event, syncer *sync.Syncer, i
 		"old_path", ev.OldPath,
 		"kind", ev.Kind,
 	)
-	
+
 	switch ev.Kind {
 	case watcher.EventCreate, watcher.EventModify:
 		var stat syscall.Stat_t

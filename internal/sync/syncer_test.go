@@ -31,13 +31,15 @@ func TestSyncerRun(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	svc := xattr.New(nil)
+
 	// Setup some xattrs using the xattr package
-	if err := xattr.WriteTags(ctx, file1, []string{"foo", "bar"}); err != nil {
+	if err := svc.WriteTags(ctx, file1, []string{"foo", "bar"}); err != nil {
 		t.Logf("WriteTags might not be supported on tempdir: %v", err)
-		// It's possible tmpfs doesn't support user xattrs in some environments.
+		// It's possible tmpfs doesn't support user svcs in some environments.
 		// We'll proceed anyway, the DB should just get zero tags.
 	}
-	_ = xattr.WriteMeta(ctx, file1, "author", "alice")
+	_ = svc.WriteMeta(ctx, file1, "author", "alice")
 
 	// 2. Setup SQLite index
 	dbPath := filepath.Join(tmpDir, "index.db")
@@ -48,7 +50,7 @@ func TestSyncerRun(t *testing.T) {
 	defer idx.Close()
 
 	// 3. Run Syncer
-	s := New(idx, tmpDir)
+	s := New(idx, svc, tmpDir)
 
 	if s.State().State != ipcv1.DaemonState_DAEMON_STATE_IDLE {
 		t.Errorf("Expected IDLE state initially")
@@ -80,7 +82,9 @@ func TestSyncFile(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_ = xattr.WriteTags(ctx, file1, []string{"sync-test"})
+	svc := xattr.New(nil)
+
+	_ = svc.WriteTags(ctx, file1, []string{"sync-test"})
 
 	dbPath := filepath.Join(tmpDir, "index.db")
 	idx, err := index.Open(ctx, dbPath)
@@ -89,7 +93,7 @@ func TestSyncFile(t *testing.T) {
 	}
 	defer idx.Close()
 
-	s := New(idx, tmpDir)
+	s := New(idx, svc, tmpDir)
 
 	info, err := os.Stat(file1)
 	if err != nil {

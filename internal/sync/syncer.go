@@ -27,6 +27,7 @@ type DaemonState struct {
 // Syncer handles the background synchronisation between filesystem xattrs and the SQLite index.
 type Syncer struct {
 	idx       *index.DB
+	tags      *xattr.Service
 	watchPath string
 
 	state        atomic.Value // holds ipcv1.DaemonState
@@ -34,9 +35,10 @@ type Syncer struct {
 }
 
 // New creates a new Syncer.
-func New(idx *index.DB, watchPath string) *Syncer {
+func New(idx *index.DB, tags *xattr.Service, watchPath string) *Syncer {
 	s := &Syncer{
 		idx:       idx,
+		tags:      tags,
 		watchPath: watchPath,
 	}
 	s.state.Store(ipcv1.DaemonState_DAEMON_STATE_IDLE)
@@ -142,17 +144,17 @@ func (s *Syncer) SyncFile(ctx context.Context, path string, stat *syscall.Stat_t
 
 	// 1. Read all xattrs. If none exist, we still want to ensure the file is in the index
 	// so the harvester pipeline (M2) can process it if rules apply.
-	tags, err := xattr.ReadTags(ctx, path)
+	tags, err := s.tags.ReadTags(ctx, path)
 	if err != nil {
 		return fmt.Errorf("read tags: %w", err)
 	}
 
-	meta, err := xattr.ReadAllMeta(ctx, path)
+	meta, err := s.tags.ReadAllMeta(ctx, path)
 	if err != nil {
 		return fmt.Errorf("read meta: %w", err)
 	}
 
-	sourceMap, err := xattr.ReadSource(ctx, path)
+	sourceMap, err := s.tags.ReadSource(ctx, path)
 	if err != nil {
 		return fmt.Errorf("read source: %w", err)
 	}
