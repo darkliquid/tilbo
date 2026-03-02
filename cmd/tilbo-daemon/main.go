@@ -114,8 +114,10 @@ func run(ctx context.Context, hupCh <-chan os.Signal, watchPath, dbPath string) 
 		wasmCache = nil
 	}
 
-	// Harvester pipeline.
+	// Harvester pipeline — built-ins first, then user drop-ins.
 	pipeline := harvester.NewPipeline()
+	registerBuiltins(pipeline)
+
 	harvReg := harvester.NewRegistry(harvester.DefaultDirs(), wasmCache)
 	if err := harvReg.Load(ctx, pipeline); err != nil {
 		slog.Warn("harvester registry load error", "err", err)
