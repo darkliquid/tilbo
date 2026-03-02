@@ -8,18 +8,29 @@ golangci-lint = "latest"
 [tasks.build]
 description = "Build all tilbo binaries"
 run = "go build -v ./cmd/..."
+sources = ["**/*.go"]
+outputs = ["tilbo-cli", "tilbo-daemon"]
 
 [tasks.test]
-description = "Run all unit and integration tests"
+description = "Run tests"
 run = "go test -v ./..."
+sources = ["**/*.go"]
+
+[tasks.integration-test]
+description = "Run integration tests"
+run = "go test -v ./..."
+dir = "{{config_root}}/test/integration"
+sources = ["**/*.go"]
 
 [tasks.lint]
 description = "Lint the Go codebase"
 run = "golangci-lint run ./..."
+sources = ["**/*.go"]
 
 [tasks.generate]
 description = "Generate protobuf code using buf and vtprotobuf"
 run = "buf generate"
+sources = ["proto/**/*.proto", "buf.*"]
 
 [tasks.ci]
 description = "Run the full CI pipeline (generate, lint, test, build)"
@@ -28,6 +39,6 @@ depends = ["generate", "lint", "test", "build"]
 [tasks.clean]
 description = "Clean build artifacts and generated code"
 run = """
-rm -rf bin/
+rm -rf tilbo-cli tilbo-daemon
 rm -rf internal/ipc/gen/
 """

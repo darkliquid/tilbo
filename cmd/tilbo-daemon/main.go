@@ -31,13 +31,19 @@ import (
 
 func main() {
 	var (
-		watchPath  = flag.String("watch", defaultWatchPath(), "filesystem path to watch")
-		dbPath     = flag.String("db", defaultDBPath(), "path to the SQLite index database")
-		fuseMount  = flag.String("fuse-mount", defaultFuseMountPath(), "FUSE virtual filesystem mount point (empty to disable)")
-		logFormat  = flag.String("log-format", "text", "log format: text or json")
-		logLevel   = flag.String("log-level", "info", "log level: debug, info, warn, error")
+		watchPath    = flag.String("watch", defaultWatchPath(), "filesystem path to watch")
+		dbPath       = flag.String("db", defaultDBPath(), "path to the SQLite index database")
+		fuseMount    = flag.String("fuse-mount", defaultFuseMountPath(), "FUSE virtual filesystem mount point (empty to disable)")
+		sockOverride = flag.String("socket", "", "override default Unix socket path")
+		logFormat    = flag.String("log-format", "text", "log format: text or json")
+		logLevel     = flag.String("log-level", "info", "log level: debug, info, warn, error")
 	)
 	flag.Parse()
+
+	sockPath := *sockOverride
+	if sockPath == "" {
+		sockPath = socketPath()
+	}
 
 	if err := setupLogging(*logFormat, *logLevel); err != nil {
 		fmt.Fprintf(os.Stderr, "tilbo-daemon: bad log flags: %v\n", err)
@@ -60,7 +66,7 @@ func main() {
 	signal.Notify(hupCh, syscall.SIGHUP)
 	defer signal.Stop(hupCh)
 
-	if err := run(ctx, hupCh, *watchPath, *dbPath, *fuseMount); err != nil {
+	if err := run(ctx, hupCh, *watchPath, *dbPath, *fuseMount, sockPath); err != nil {
 		slog.Error("daemon error", "err", err)
 		os.Exit(1)
 	}
@@ -69,7 +75,7 @@ func main() {
 
 // run is the main daemon loop. It returns nil on clean shutdown and a non-nil
 // error if any component fails unexpectedly.
-func run(ctx context.Context, hupCh <-chan os.Signal, watchPath, dbPath, fuseMount string) error {
+func run(ctx context.Context, hupCh <-chan os.Signal, watchPath, dbPath, fuseMount, sockPath string) error {
 	// Ensure the database directory exists.
 	if err := os.MkdirAll(filepath.Dir(dbPath), 0o700); err != nil {
 		return fmt.Errorf("create db dir: %w", err)
@@ -168,7 +174,6 @@ func run(ctx context.Context, hupCh <-chan os.Signal, watchPath, dbPath, fuseMou
 	// --- end M3 ---
 
 	// Start the IPC server.
-	sockPath := socketPath()
 	if err := os.MkdirAll(filepath.Dir(sockPath), 0o700); err != nil {
 		return fmt.Errorf("create socket dir: %w", err)
 	}
