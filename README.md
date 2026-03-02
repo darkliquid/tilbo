@@ -15,7 +15,435 @@ Tags and metadata are stored via extended filesystem attributes by default, with
 a fallback to storing the data in an sqlite database for filesystems that do not
 support extended filesystem attributes.
 
-## Optional external dependencies
+---
+
+## Contents
+
+- [Requirements](#requirements)
+- [Installation](#installation)
+- [Getting Started](#getting-started)
+- [The Daemon](#the-daemon)
+- [The CLI](#the-cli)
+- [FUSE Virtual Filesystem](#fuse-virtual-filesystem)
+- [Auto-tagging: Harvesters and Rules](#auto-tagging-harvesters-and-rules)
+- [Optional External Dependencies](#optional-external-dependencies)
+- [Configuration](#configuration)
+- [Limitations](#limitations)
+
+---
+
+## Requirements
+
+- Linux (kernel 5.10+ for fanotify; 5.17+ recommended for rename tracking)
+- Go 1.22 or later (to build from source)
+- FUSE kernel module (`fuse` package)
+
+---
+
+## Installation
+
+```sh
+# Build daemon and CLI (CGo-free; no special deps needed)
+go build -o tilbo-daemon ./cmd/tilbo-daemon
+go build -o tilbo-cli    ./cmd/tilbo-cli
+
+# Install to ~/bin (or /usr/local/bin)
+cp tilbo-daemon tilbo-cli ~/bin/
+```
+
+A systemd user service unit is recommended for the daemon:
+
+```ini
+# ~/.config/systemd/user/tilbo-daemon.service
+[Unit]
+Description=Tilbo tag-first file manager daemon
+After=network.target
+
+[Service]
+ExecStart=%h/bin/tilbo-daemon --watch %h --log-format text --log-level info
+Restart=on-failure
+
+[Install]
+WantedBy=default.target
+```
+
+```sh
+systemctl --user enable --now tilbo-daemon
+```
+
+---
+
+## Getting Started
+
+1. **Start the daemon** (watching your home directory):
+
+   ```sh
+   tilbo-daemon --watch ~ --fuse-mount ~/tags
+   ```
+
+2. **Tag a file**:
+
+   ```sh
+   tilbo tag add ~/documents/report.pdf work project-alpha
+   ```
+
+3. **Browse by tag** (after FUSE is mounted):
+
+   ```sh
+   ls ~/tags/work/
+   ls ~/tags/work+project-alpha/
+   ```
+
+4. **Search from the CLI**:
+
+   ```sh
+   tilbo search --tags work+project-alpha
+   tilbo search --tags @recent
+   ```
+
+Tags are stored directly in the file's extended attributes (`user.tags`). The
+SQLite index is a read cache rebuilt from xattrs on startup — you can delete
+and recreate it without losing any tag data.
+
+---
+
+## The Daemon
+
+`tilbo-daemon` is the core engine. It watches a directory tree via fanotify,
+runs a metadata harvester pipeline, stores results in a SQLite index, serves a
+FUSE virtual filesystem, and exposes a Unix socket IPC endpoint.
+
+### Flags
+
+| Flag | Default | Description |
+| --- | --- | --- |
+| `--watch <path>` | `~` | Filesystem path to watch via fanotify |
+| `--db <path>` | `~/.cache/tilbo/index.db` | SQLite index database path |
+| `--fuse-mount <path>` | `~/tags` | FUSE virtual filesystem mount point (empty to disable) |
+| `--log-format <fmt>` | `text` | Log format: `text` or `json` |
+| `--log-level <lvl>` | `info` | Log level: `debug`, `info`, `warn`, `error` |
+
+### Signals
+
+| Signal | Behaviour |
+| --- | --- |
+| `SIGTERM` / `SIGINT` | Graceful shutdown; unmounts FUSE; closes index |
+| `SIGHUP` | Reloads harvester and rule configuration; triggers background re-evaluation sweep |
+
+### Data Storage
+
+#### xattrs (source of truth)
+
+Tags are stored in `user.tags` as a space-separated list. Metadata key/value
+pairs are stored in `user.meta.<key>`. Tag provenance (which rule applied which
+tag) is stored in `user.tags.source` as JSON.
+
+#### SQLite index (cache)
+
+A SQLite database caches the xattr data for fast search and graph queries. It
+includes an FTS5 virtual table for full-text search over metadata values. The
+index is fully rebuildable from xattrs — the daemon performs a background scan
+on startup to ensure consistency.
+
+#### Sidecar fallback
+
+For filesystems that do not support xattrs (FAT32, some NFS mounts), the daemon
+falls back to a sidecar SQLite database at `~/.local/share/tilbo/sidecar.db`
+keyed by inode and device number.
+
+---
+
+## The CLI
+
+`tilbo-cli` is the terminal client. All commands communicate with a running
+daemon via the Unix socket at `/run/user/$UID/tilbo.sock`.
+
+### Tag management
+
+```sh
+# Add tags to a file
+tilbo tag add <path> <tag> [tag...]
+
+# Remove tags from a file
+tilbo tag remove <path> <tag> [tag...]
+
+# List a file's current tags
+tilbo tag list <path>
+```
+
+### Search
+
+```sh
+# Find files matching a tag expression
+tilbo search --tags <expr>
+
+# Full-text search over metadata values
+tilbo search --fts "invoice 2024"
+
+# Filter by a metadata key/value pair
+tilbo search --meta "codec=h265"
+
+# Combine filters
+tilbo search --tags work --fts "quarterly report"
+
+# Control output and pagination
+tilbo search --tags video --limit 50 --offset 0 --format json
+tilbo search --tags photo --format tsv | cut -f1 | xargs ...
+```
+
+**Output formats:** `human` (default), `json`, `tsv`
+
+**Tag expression syntax:**
+
+| Expression | Meaning |
+| --- | --- |
+| `work` | Files tagged `work` |
+| `work+project` | Files tagged both `work` AND `project` |
+| `work+project-draft` | Files tagged `work` AND `project` but NOT `draft` |
+| `work,personal` | Files tagged `work` OR `personal` |
+| `@recent` | Files modified in the last 7 days |
+| `@recent:30d` | Files modified in the last 30 days |
+| `@untagged` | Files with no tags |
+| `@search:invoice 2024` | Full-text search over metadata values |
+| `@similar:/path/to/file` | Files similar to the given file (graph traversal) |
+| `@meta:iso:gte:1600` | Files where the `iso` metadata key is ≥ 1600 |
+
+Note: `+` (AND) and `,` (OR) cannot be mixed in the same expression.
+
+### Metadata
+
+```sh
+# Show all metadata for a file
+tilbo meta show <path>
+tilbo meta show <path> --format json
+
+# Set a metadata key
+tilbo meta set <path> <key> <value>
+
+# Delete a metadata key
+tilbo meta delete <path> <key>
+```
+
+### Related files
+
+```sh
+# Find files related to a given file via shared tags
+tilbo related <path>
+tilbo related <path> --limit 20 --hops 3
+tilbo related <path> --format json
+```
+
+Related files are ranked by a weighted IDF score across shared tags, decayed
+by hop distance. Tags shared by many files contribute less to the score (stopword
+analogy). High-cardinality tags (shared by more than 5% of all indexed files) are
+skipped during traversal.
+
+### Daemon management
+
+```sh
+# Check daemon status
+tilbo daemon status
+
+# Reload harvester and rule configuration (equivalent to SIGHUP)
+tilbo daemon reload-rules
+```
+
+---
+
+## FUSE Virtual Filesystem
+
+When `--fuse-mount` is set (default `~/tags`), the daemon mounts a virtual
+filesystem that presents your files organised by tags rather than filesystem
+location.
+
+### Path grammar
+
+```text
+~/tags/<expr>/              — virtual directory for a tag expression
+~/tags/work/                — all files tagged "work"
+~/tags/work+project/        — files tagged both "work" and "project"
+~/tags/work+project-draft/  — "work" AND "project" AND NOT "draft"
+~/tags/work,personal/       — files tagged "work" OR "personal"
+~/tags/@recent/             — files modified in the last 7 days
+~/tags/@recent:30d/         — files modified in the last 30 days
+~/tags/@untagged/           — files with no tags
+~/tags/@search:foo bar/     — full-text metadata search
+~/tags/@similar:/real/path/ — graph-similar files
+~/tags/@meta:iso:gte:1600/  — metadata filter
+```
+
+### How it works
+
+Each entry in a virtual directory is a **symlink** to the real file on disk.
+Reads and writes go to the actual file. Setting xattrs on a virtual-directory
+entry applies them to the real file and updates the index.
+
+**Rename semantics:** Moving a file from one virtual directory to another applies
+tag changes rather than a filesystem rename:
+
+```sh
+# Adds tag "personal", removes tag "work"
+mv ~/tags/work/report.pdf ~/tags/personal/
+```
+
+Rename only works when both source and destination are simple `+`/`-` tag
+expressions. Rename within the same directory is a no-op. Moving files out of
+the mount entirely returns `EXDEV`.
+
+**Inode stability:** Inodes are derived from a 64-bit FNV hash of the real
+absolute path, ensuring that directory listings remain stable across daemon
+restarts.
+
+**Deduplication:** When multiple files have the same basename, the virtual
+directory appends a `_2`, `_3`, … suffix to avoid collisions.
+
+### Integration tips
+
+```sh
+# Use with fzf for interactive tag-browsing file picker
+ls ~/tags/work/ | fzf
+
+# Open a tag-filtered view in your file manager
+xdg-open ~/tags/work+project/
+
+# Add tag virtual dirs as GTK bookmarks
+echo "file://$HOME/tags/work work" >> ~/.config/gtk-3.0/bookmarks
+```
+
+---
+
+## Auto-tagging: Harvesters and Rules
+
+The daemon automatically extracts metadata from files and applies tags based on
+configurable rules.
+
+### Pipeline overview
+
+1. A filesystem event triggers the pipeline for a file.
+2. All matching **harvesters** run concurrently and produce a metadata map
+   (MIME type, dimensions, duration, EXIF data, etc.).
+3. The **rule engine** evaluates the metadata map and writes tags to the file's
+   xattrs and the SQLite index.
+4. If you manually remove a rule-applied tag, that override is recorded. The rule
+   will not reapply the tag until you clear the override.
+5. Sending `SIGHUP` (or running `tilbo daemon reload-rules`) reloads all rule
+   files and triggers a background re-evaluation sweep over all indexed files.
+
+### Writing harvester plugins
+
+Harvesters are registered via drop-in TOML files in `~/.config/tilbo/harvesters/`.
+
+**`~/.config/tilbo/harvesters/my-harvester.toml`:**
+
+```toml
+[harvester]
+name        = "my-harvester"
+command     = ["/usr/local/bin/my-harvester"]
+# or WASM:  = ["~/.local/share/tilbo/harvesters/my-harvester.wasm"]
+mime_filter = ["video/*"]        # only run on matching MIME types
+path_glob   = []                 # alternative: file glob patterns
+priority    = 50                 # lower runs first; built-ins are 0
+timeout_ms  = 5000
+async       = true               # don't block rule evaluation
+```
+
+The harvester receives JSON on stdin and must write JSON to stdout:
+
+stdin:
+
+```json
+{
+  "path":     "/home/user/video.mkv",
+  "mime":     "video/x-matroska",
+  "existing": { "user.tags": "work" }
+}
+```
+
+stdout:
+
+```json
+{
+  "width": 1920,
+  "height": 1080,
+  "duration_seconds": 5400,
+  "codec": "h265",
+  "hdr": true
+}
+```
+
+Exit 0 → output merged into metadata map. Exit non-zero → output ignored.
+Keys beginning with `_` are internal and not written to xattr.
+
+### Writing declarative rules (TOML)
+
+Rules live in `~/.config/tilbo/rules/<name>.toml` (or `/etc/tilbo/rules/`).
+
+```toml
+[[rule]]
+name = "hd-video"
+tags = ["video", "HD"]
+
+[rule.match]
+mime = "video/*"
+
+[rule.match.width]
+gte = 1280
+
+
+[[rule]]
+name = "large-file"
+tags = ["large"]
+
+[rule.match.size_bytes]
+gte = 1073741824        # 1 GiB
+
+
+[[rule]]
+name = "old-document"
+tags = ["archive"]
+
+[rule.match]
+mime = "application/pdf"
+
+[rule.match.mtime]
+before = "2015-01-01"
+```
+
+**Condition operators:** `eq`, `glob`, `gte`, `lte`, `gt`, `lt`, `between`,
+`in`, `not`, `before`, `after`. Add `any = true` at the rule level for OR
+semantics (default is AND across all conditions).
+
+### Writing scripted rules (Lua)
+
+```lua
+-- ~/.config/tilbo/rules/video-quality.lua
+function apply(meta)
+  if not meta.mime or not meta.mime:match("^video/") then
+    return {}
+  end
+
+  local tags = {"video"}
+
+  if meta.width then
+    if meta.width >= 3840 then
+      tags[#tags+1] = "4K"
+      tags[#tags+1] = "HD"
+    elseif meta.width >= 1280 then
+      tags[#tags+1] = "HD"
+    end
+  end
+
+  return tags
+end
+```
+
+The `apply(meta)` function receives the metadata map and returns a list of tags.
+The sandbox has no filesystem or network access — only standard math, string, and
+table libraries are available.
+
+---
+
+## Optional External Dependencies
 
 The daemon's built-in harvester pipeline works without any external tools.
 The following optional binaries can be installed to enable additional metadata
@@ -34,3 +462,102 @@ tags, EPUB title/author/ISBN) is extracted in-process using pure-Go libraries �
 no external tools required. The optional binaries exist only to provide deeper
 or higher-accuracy results for specific file categories when they are already
 present on the system.
+
+---
+
+## Configuration
+
+### File locations
+
+| Path | Purpose |
+| --- | --- |
+| `~/.cache/tilbo/index.db` | SQLite index (default; override with `--db`) |
+| `~/.local/share/tilbo/sidecar.db` | Sidecar store for non-xattr filesystems |
+| `~/.config/tilbo/harvesters/*.toml` | User harvester registrations |
+| `/etc/tilbo/harvesters/*.toml` | System-wide harvester registrations |
+| `~/.config/tilbo/rules/*.toml` | User TOML rules |
+| `~/.config/tilbo/rules/*.lua` | User Lua rules |
+| `/etc/tilbo/rules/*.toml` | System-wide TOML rules |
+| `~/.local/lib/tilbo/plugins/*.so` | Native plugin harvesters |
+| `/usr/lib/tilbo/plugins/*.so` | System-wide native plugins |
+| `/run/user/$UID/tilbo.sock` | IPC Unix socket |
+| `~/tags` | FUSE mount point (default; override with `--fuse-mount`) |
+
+### Wasm plugin cache
+
+WASM modules are compiled once and cached in the OS temp directory
+(`$TMPDIR/tilbo-wasm-cache`). This avoids per-invocation compilation overhead.
+Delete the cache directory to force recompilation.
+
+---
+
+## Limitations
+
+### Kernel requirements
+
+- **fanotify** requires Linux kernel 5.10 or later.
+- **Rename event tracking** (`FAN_RENAME`) requires kernel 5.17 or later. On
+  older kernels, the daemon falls back to tracking moves via `FAN_MOVED_FROM` /
+  `FAN_MOVED_TO` pairs, which can miss cross-directory renames under high
+  concurrency.
+
+### xattr support
+
+- Extended attributes are not supported on FAT32, exFAT, or some network
+  filesystems (NFSv3 without server config, SMB by default). The daemon detects
+  this at startup and falls back to a sidecar SQLite database. The sidecar is
+  keyed by inode+device, so it is invalidated if files are moved between
+  filesystems.
+- xattrs on Linux are typically capped at 64 KiB per namespace per file. Files
+  with very large numbers of tags or long metadata values may hit this limit.
+
+### FUSE
+
+- The FUSE mount is read-only in the sense that creating new files inside a
+  virtual directory is not supported — files must exist in the real filesystem
+  first. Writing to existing files (reads/writes) passes through to the real file.
+- **Rename** only works when both the source and destination directories are
+  simple tag expressions (no OR expressions, no special `@` directives). Renaming
+  within complex expressions returns `EPERM`.
+- Directory listings cache for 2 seconds (entry TTL). Index changes from other
+  processes may take up to 2 seconds to appear.
+- The FUSE mount requires the `fuse` kernel module. It is incompatible with
+  user namespaces that don't have `CAP_SYS_ADMIN`.
+
+### Graph traversal
+
+- Tags shared by more than 5% of all indexed files are treated as stopwords and
+  skipped during graph traversal. This prevents very common tags (`document`,
+  `work`) from dominating related-file results, but means those tags do not
+  contribute to similarity scoring.
+- The BFS frontier is capped at `limit × 8` candidates per hop to bound
+  traversal cost. On very large corpora with dense tag graphs, some related files
+  reachable within the hop limit may not appear in results.
+- The graph is an in-memory snapshot loaded on daemon start and updated
+  incrementally. It does not persist across daemon restarts (always rebuilt from
+  the index).
+
+### Auto-tagging
+
+- Rule overrides (when you manually remove a rule-applied tag) are stored
+  per-file in the index. If you delete and recreate the index, overrides are
+  lost and rules will reapply previously suppressed tags.
+- Harvester processes run with a configurable timeout (`timeout_ms`). Files
+  that harvesters cannot process within the timeout are indexed with whatever
+  metadata was available at the time.
+- WASM and subprocess harvesters have WASI stdio only — no filesystem or
+  network access from within the sandbox.
+
+### Not yet implemented
+
+- **Qt/QML browser and XDG portal backend** (`tilbo-browser`) — the GUI file
+  manager and portal file picker are planned but not yet implemented.
+- **Vector embeddings** — the schema includes an `embeddings` column and
+  sqlite-vec integration for semantic similarity, but the embedding pipeline
+  (`knights-analytics/hugot`, ONNX) is not yet wired up. `@similar:` queries
+  use graph traversal only.
+- **`tilbo rule list/validate/test`** and **`tilbo harvester list/test`** CLI
+  subcommands are planned but not yet implemented.
+- **Shell completions** are not yet generated.
+- **D-Bus signals** (`FileTagged`, `IndexUpdated`, `DaemonStateChanged`) are
+  defined in the architecture but not yet implemented in the daemon.
