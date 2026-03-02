@@ -82,6 +82,8 @@ func (h *CalibreHarvester) Run(ctx context.Context, input harvester.Input) (harv
 	meta := make(harvester.MetaMap, 12)
 
 	set := func(dst, src string) {
+		// Calibre's ebook-meta outputs the literal string "None" for any
+		// field that has no value, so we treat it the same as the empty string.
 		if v, ok := kv[src]; ok && v != "" && v != "None" {
 			meta[dst] = v
 		}
@@ -171,6 +173,11 @@ func parseCalibreKV(data []byte) map[string]string {
 }
 
 // stripHTMLTags removes HTML/XML tags from s using a simple byte scan.
+// A space is written after each closing '>' so that text nodes separated
+// only by tags remain space-delimited (e.g. "<b>bold</b>word" → "bold word"
+// rather than "boldword"). strings.Fields then collapses any resulting runs of
+// whitespace into single spaces. This handles the lightweight HTML that
+// Calibre writes into the Comments field without needing a full HTML parser.
 func stripHTMLTags(s string) string {
 	var b strings.Builder
 	b.Grow(len(s))

@@ -130,6 +130,10 @@ func (h *FFProbeHarvester) Run(ctx context.Context, input harvester.Input) (harv
 			if s.Height > 0 {
 				meta["height"] = float64(s.Height)
 			}
+			// OR the transfer and primaries checks because some containers
+			// omit one or the other: some MKV files carry bt2020 primaries
+			// but write color_transfer as "unspecified", while some MP4 files
+			// have smpte2084 transfer but no primaries metadata at all.
 			meta["hdr"] = isHDRTransfer(s.ColorTransfer) || isHDRPrimaries(s.ColorPrimaries)
 			if fps := parseFrameRate(s.AvgFrameRate); fps > 0 {
 				meta["framerate"] = fps
@@ -150,7 +154,11 @@ func (h *FFProbeHarvester) Run(ctx context.Context, input harvester.Input) (harv
 	return meta, nil
 }
 
-// parseFrameRate converts an ffprobe avg_frame_rate string ("30000/1001") to float64.
+// parseFrameRate converts an ffprobe avg_frame_rate string to float64.
+// ffprobe always represents frame rates as rational numbers ("num/den") to
+// preserve exact values for non-integer rates such as NTSC 29.97 fps
+// (30000/1001) and 23.976 fps (24000/1001). Plain integer rates like 24 or 60
+// may appear as a bare float string; we try that first.
 func parseFrameRate(s string) float64 {
 	if s == "" || s == "0/0" {
 		return 0
@@ -167,6 +175,9 @@ func parseFrameRate(s string) float64 {
 	return 0
 }
 
+// splitFraction parses a "num/den" rational string and writes the components
+// into *num and *den. Returns (2, nil) on success — the integer follows the
+// fmt.Sscanf convention of returning the count of successfully parsed items.
 func splitFraction(s string, num, den *int64) (int, error) {
 	for i, c := range s {
 		if c == '/' {
@@ -185,15 +196,48 @@ func splitFraction(s string, num, den *int64) (int, error) {
 	return 0, strconv.ErrSyntax
 }
 
+// isHDRTransfer reports whether s is an HDR transfer function as reported by
+// ffprobe's "color_transfer" stream field. The strings come from libavcodec's
+// AVColorTransferCharacteristic enum, converted to names by av_color_transfer_name().
+//
+// Recognised HDR transfer functions:
+//   - "smpte2084": SMPTE ST 2084 Perceptual Quantizer (PQ) EOTF. Used in HDR10,
+//     HDR10+, and Dolby Vision. Maps code values 0–1 to absolute luminance
+//     0–10,000 cd/m² (nits); requires at least 10-bit signal depth.
+//     Ref: SMPTE ST 2084:2014.
+//   - "arib-std-b67": ARIB STD-B67 Hybrid Log-Gamma (HLG). Jointly developed by
+//     BBC and NHK; standardised in ITU-R BT.2100. Used in broadcast HDR
+//     (ATSC 3.0, DVB UHD-1). Combines a gamma curve for low values with a
+//     logarithmic curve for high values. Backward-compatible with SDR displays
+//     and requires no embedded metadata. Ref: ARIB STD-B67 2015.
+//   - "smpte428": SMPTE ST 428-1 D-Cinema (DCDM) transfer function, used in
+//     digital cinema distribution masters. Indicates content mastered for
+//     theatrical projection; carries a wider dynamic range than standard
+//     SDR broadcast gamma, though it is not "HDR" in the consumer HDR10/HLG
+//     sense. Ref: SMPTE ST 428-1:2019.
 func isHDRTransfer(s string) bool {
 	return s == "smpte2084" || s == "arib-std-b67" || s == "smpte428"
 }
 
+// isHDRPrimaries reports whether s indicates HDR-capable wide-gamut primaries
+// as reported by ffprobe's "color_primaries" stream field (libavcodec
+// AVColorPrimaries → av_color_primaries_name()).
+//
+// "bt2020" is ITU-R BT.2020 / BT.2100, the wide color gamut used by virtually
+// all consumer HDR formats (HDR10, HLG, Dolby Vision). BT.2020 primaries alone
+// do NOT confirm HDR — an SDR stream may use them — but their presence is a
+// reliable secondary indicator when the transfer function field is absent or
+// reported as "unspecified" by the container.
+// Ref: ITU-R BT.2020-2 (2015).
 func isHDRPrimaries(s string) bool {
 	return s == "bt2020"
 }
 
 // capitalize uppercases the first letter, as some muxers title-case their tag keys.
+// ASCII lowercase letters a–z (0x61–0x7A) are exactly 32 greater than their
+// uppercase equivalents A–Z (0x41–0x5A), so subtracting 32 from the first byte
+// converts case without importing "strings" or "unicode". This is safe here
+// because every key we pass is a known ASCII-only string ("title", "artist", etc.).
 func capitalize(s string) string {
 	if s == "" {
 		return s

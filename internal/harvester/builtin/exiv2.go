@@ -115,6 +115,9 @@ func (*EXIFHarvester) Run(_ context.Context, input harvester.Input) (harvester.M
 		meta["exposure_time"] = v
 	}
 	if v, ok := getFloat("Flash"); ok {
+		// Flash tag bit 0 is the "Flash fired" indicator per EXIF 2.32
+		// spec (JEITA CP-3451D, Table 9). Higher bits encode return light
+		// detected, strobe return, flash mode, red-eye reduction, etc.
 		meta["flash"] = int(v)&0x1 == 1
 	}
 	if v, ok := getFloat("Orientation"); ok && v > 0 {
@@ -204,6 +207,10 @@ func mimeToImageFormat(mime, path string) imagemeta.ImageFormat {
 }
 
 // extensionOf returns the file extension (dot included) from path.
+// It scans backwards and stops at '/' so that a dot in a parent directory
+// name (e.g. "/photos.2024/img") is never mistaken for an extension.
+// This is equivalent to path/filepath.Ext but avoids importing that package
+// in files that do not otherwise need it.
 func extensionOf(path string) string {
 	for i := len(path) - 1; i >= 0 && path[i] != '/'; i-- {
 		if path[i] == '.' {
@@ -214,8 +221,14 @@ func extensionOf(path string) string {
 }
 
 // exifFloat64 converts an EXIF tag value to float64.
-// imagemeta returns rational values as types implementing Float64(); integers as
-// various uint/int widths; and some converted values as float64 directly.
+// imagemeta returns different concrete types depending on the underlying EXIF
+// data type: integers of varying signed/unsigned widths for SHORT/LONG/SLONG
+// tags, float32/float64 for FLOAT/DOUBLE tags, and rational values for
+// RATIONAL/SRATIONAL tags (returned as Rat[uint32] or Rat[int32] respectively).
+// The type switch enumerates each integer width explicitly because Go's type
+// system does not allow a single numeric case. The floater interface catch-all
+// at the end handles both rational types, which both expose Float64() but share
+// no named interface in the imagemeta library.
 func exifFloat64(v any) (float64, bool) {
 	switch n := v.(type) {
 	case float64:

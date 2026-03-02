@@ -215,7 +215,7 @@ func parseOPF(data []byte) (harvester.MetaMap, error) {
 			break
 		}
 		if strings.HasPrefix(strings.ToLower(v), "urn:isbn:") {
-			meta["book_isbn"] = v[9:]
+			meta["book_isbn"] = v[9:] // strip the 9-byte "urn:isbn:" prefix
 			break
 		}
 	}
