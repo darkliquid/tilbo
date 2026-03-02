@@ -111,6 +111,12 @@ func (g *Graph) RemoveFile(path string) {
 // tag neighbours). hopWeight scales the per-hop IDF contribution. Files
 // accumulate score from all connecting tags in the same hop (multi-path
 // credit) but are not re-scored at later hops.
+//
+// Two mechanisms bound traversal cost for large corpora:
+//  1. Tags whose cardinality exceeds 5% of total files are skipped (stopword
+//     removal analogue); their IDF is near-zero anyway.
+//  2. The BFS frontier is capped at limit×20 per hop; only the highest-scored
+//     files advance to keep work per hop bounded.
 func (g *Graph) Related(_ context.Context, seedPath string, maxHops, limit int, hopWeight float64) []RelatedFile {
 	g.mu.RLock()
 	defer g.mu.RUnlock()
@@ -118,6 +124,21 @@ func (g *Graph) Related(_ context.Context, seedPath string, maxHops, limit int, 
 	fk := filePrefix + seedPath
 	if _, ok := g.fileAdj[fk]; !ok {
 		return nil
+	}
+
+	// High-cardinality skip: tags in >5% of files are too generic for useful
+	// traversal. Minimum threshold of 50 avoids skipping everything on tiny graphs.
+	maxCard := g.totalFiles / 20
+	if maxCard < 50 {
+		maxCard = 50
+	}
+
+	// Frontier cap: keeps work per hop at O(cap × tagsPerFile × maxCardinality).
+	// Factor of 8 balances result quality (enough candidates) against latency.
+	const frontierFactor = 8
+	maxFrontier := limit * frontierFactor
+	if maxFrontier <= 0 {
+		maxFrontier = 400
 	}
 
 	type result struct {
@@ -138,6 +159,9 @@ func (g *Graph) Related(_ context.Context, seedPath string, maxHops, limit int, 
 			for tk := range g.fileAdj[curFk] {
 				tagName := strings.TrimPrefix(tk, tagPrefix)
 				card := g.tagCardinality[tagName]
+				if card >= maxCard {
+					continue // skip high-cardinality stopword tags
+				}
 				idf := math.Log2(float64(g.totalFiles+1) / float64(card+1))
 				contrib := hopWeight * idf / float64(hop)
 
@@ -154,13 +178,36 @@ func (g *Graph) Related(_ context.Context, seedPath string, maxHops, limit int, 
 			break
 		}
 
-		nextFrontier := make(map[string]struct{}, len(pending))
-		for nfk, sc := range pending {
-			scores[nfk] = result{score: sc, hop: hop}
-			scored[nfk] = struct{}{}
-			nextFrontier[nfk] = struct{}{}
+		// Build next frontier, capped at maxFrontier.
+		if len(pending) <= maxFrontier {
+			nextFrontier := make(map[string]struct{}, len(pending))
+			for nfk, sc := range pending {
+				scores[nfk] = result{score: sc, hop: hop}
+				scored[nfk] = struct{}{}
+				nextFrontier[nfk] = struct{}{}
+			}
+			frontier = nextFrontier
+		} else {
+			// Keep only the top-scoring candidates for the next hop.
+			type kv struct {
+				k  string
+				sc float64
+			}
+			sl := make([]kv, 0, len(pending))
+			for k, sc := range pending {
+				sl = append(sl, kv{k, sc})
+			}
+			sort.Slice(sl, func(i, j int) bool { return sl[i].sc > sl[j].sc })
+			nextFrontier := make(map[string]struct{}, maxFrontier)
+			for _, item := range sl {
+				scores[item.k] = result{score: item.sc, hop: hop}
+				scored[item.k] = struct{}{}
+				if len(nextFrontier) < maxFrontier {
+					nextFrontier[item.k] = struct{}{}
+				}
+			}
+			frontier = nextFrontier
 		}
-		frontier = nextFrontier
 	}
 
 	out := make([]RelatedFile, 0, len(scores))

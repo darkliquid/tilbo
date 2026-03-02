@@ -2,7 +2,10 @@ package graph
 
 import (
 	"context"
+	"fmt"
+	"slices"
 	"testing"
+	"time"
 )
 
 func TestGraph_EmptyRelated(t *testing.T) {
@@ -158,25 +161,77 @@ func TestGraph_SeedNotInResults(t *testing.T) {
 	}
 }
 
-func BenchmarkGraph_Related(b *testing.B) {
-	g := New()
-	// Build a moderately large graph: 1000 files, each with 5 tags from a pool of 100.
-	tags := make([]string, 100)
-	for i := range tags {
-		tags[i] = "tag" + string(rune('A'+i%26)) + string(rune('0'+i/26))
-	}
-	for i := 0; i < 1000; i++ {
-		fileTags := make([]string, 5)
-		for j := range fileTags {
-			fileTags[j] = tags[(i+j)%len(tags)]
+// buildGraph constructs a graph using Load() with a bimodal tag distribution
+// that mimics real-world corpora: a small number of generic "common" tags
+// (high cardinality, automatically stopworded during BFS) and a large pool of
+// specific tags (low cardinality, actually traversed).
+//
+// nCommonTags tags each appear in ~nFiles/nCommonTags files (high cardinality).
+// nSpecificTags tags share the remaining tag slots among files (low cardinality).
+// Returns the graph and the path of the first file.
+func buildGraph(nFiles, nCommonTags, nSpecificTags, tagsPerFile int) (*Graph, string) {
+	pairs := make([][2]string, 0, nFiles*tagsPerFile)
+	firstPath := ""
+	for i := 0; i < nFiles; i++ {
+		path := fmt.Sprintf("/bench/%d", i)
+		if i == 0 {
+			firstPath = path
 		}
-		path := "/file/" + string(rune('a'+i%26)) + string(rune('0'+i/26))
-		g.SetFileTags(path, fileTags)
+		// One common tag per file (high cardinality, will be stopworded).
+		commonTag := fmt.Sprintf("common%d", i%nCommonTags)
+		pairs = append(pairs, [2]string{path, commonTag})
+		// Remaining tags from the specific pool (low cardinality).
+		for j := 1; j < tagsPerFile; j++ {
+			tagIdx := ((i*(j*7+1) + j*13) % nSpecificTags)
+			pairs = append(pairs, [2]string{path, fmt.Sprintf("specific%d", tagIdx)})
+		}
 	}
+	g := New()
+	g.Load(context.Background(), pairs)
+	return g, firstPath
+}
 
-	seed := "/fileA0"
+func BenchmarkGraph_Related_1k(b *testing.B) {
+	// 1k files, 5 common tags (~200 each), 200 specific tags (~16 each).
+	g, seed := buildGraph(1_000, 5, 200, 5)
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		g.Related(context.Background(), seed, 2, 20, 1.0)
+	for b.Loop() {
+		g.Related(context.Background(), seed, 3, 100, 1.0)
+	}
+}
+
+func BenchmarkGraph_Related_10k(b *testing.B) {
+	// 10k files, 10 common tags (~1k each), 500 specific tags (~80 each).
+	g, seed := buildGraph(10_000, 10, 500, 5)
+	b.ResetTimer()
+	for b.Loop() {
+		g.Related(context.Background(), seed, 3, 100, 1.0)
+	}
+}
+
+func BenchmarkGraph_Related_100k(b *testing.B) {
+	// 100k files, 20 common tags (~5k each, at the 5% stopword boundary),
+	// 5000 specific tags (~80 each). Realistic power-law corpus.
+	g, seed := buildGraph(100_000, 20, 5_000, 5)
+	b.ResetTimer()
+
+	timings := make([]int64, 0, b.N)
+	for b.Loop() {
+		t0 := time.Now()
+		g.Related(context.Background(), seed, 3, 100, 1.0)
+		timings = append(timings, time.Since(t0).Nanoseconds())
+	}
+	b.StopTimer()
+
+	if len(timings) > 0 {
+		slices.Sort(timings)
+		p50 := timings[len(timings)/2]
+		p99 := timings[int(float64(len(timings))*0.99)]
+		b.ReportMetric(float64(p50), "ns/p50")
+		b.ReportMetric(float64(p99), "ns/p99")
+		// Assert p99 < 50ms target from M4 milestone spec.
+		if p99 > 50_000_000 {
+			b.Errorf("p99 latency %dms exceeds 50ms target", p99/1_000_000)
+		}
 	}
 }
