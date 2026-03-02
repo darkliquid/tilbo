@@ -315,6 +315,24 @@ func (d *DB) ListFilePaths(ctx context.Context) ([]string, error) {
 	return paths, rows.Err()
 }
 
+// ListAllTags returns all tag names in the index ordered by name.
+func (d *DB) ListAllTags(ctx context.Context) ([]string, error) {
+	rows, err := d.db.QueryContext(ctx, "SELECT name FROM tags ORDER BY name")
+	if err != nil {
+		return nil, fmt.Errorf("index: list all tags: %w", err)
+	}
+	defer rows.Close()
+	var tags []string
+	for rows.Next() {
+		var name string
+		if err := rows.Scan(&name); err != nil {
+			return nil, fmt.Errorf("index: scan tag name: %w", err)
+		}
+		tags = append(tags, name)
+	}
+	return tags, rows.Err()
+}
+
 // GetFileIDByPath returns the row ID for the file at path.
 // Returns an error wrapping sql.ErrNoRows if the file is not in the index.
 func (d *DB) GetFileIDByPath(ctx context.Context, path string) (int64, error) {

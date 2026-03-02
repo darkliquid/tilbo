@@ -25,14 +25,17 @@ import (
 	isync "github.com/darkliquid/tilbo/internal/sync"
 	"github.com/darkliquid/tilbo/internal/watcher"
 	"github.com/darkliquid/tilbo/internal/xattr"
+
+	tilbofuse "github.com/darkliquid/tilbo/internal/fuse"
 )
 
 func main() {
 	var (
-		watchPath = flag.String("watch", defaultWatchPath(), "filesystem path to watch")
-		dbPath    = flag.String("db", defaultDBPath(), "path to the SQLite index database")
-		logFormat = flag.String("log-format", "text", "log format: text or json")
-		logLevel  = flag.String("log-level", "info", "log level: debug, info, warn, error")
+		watchPath  = flag.String("watch", defaultWatchPath(), "filesystem path to watch")
+		dbPath     = flag.String("db", defaultDBPath(), "path to the SQLite index database")
+		fuseMount  = flag.String("fuse-mount", defaultFuseMountPath(), "FUSE virtual filesystem mount point (empty to disable)")
+		logFormat  = flag.String("log-format", "text", "log format: text or json")
+		logLevel   = flag.String("log-level", "info", "log level: debug, info, warn, error")
 	)
 	flag.Parse()
 
@@ -44,6 +47,7 @@ func main() {
 	slog.Info("tilbo-daemon starting",
 		"watch", *watchPath,
 		"db", *dbPath,
+		"fuse", *fuseMount,
 		"pid", os.Getpid(),
 	)
 
@@ -56,7 +60,7 @@ func main() {
 	signal.Notify(hupCh, syscall.SIGHUP)
 	defer signal.Stop(hupCh)
 
-	if err := run(ctx, hupCh, *watchPath, *dbPath); err != nil {
+	if err := run(ctx, hupCh, *watchPath, *dbPath, *fuseMount); err != nil {
 		slog.Error("daemon error", "err", err)
 		os.Exit(1)
 	}
@@ -65,7 +69,7 @@ func main() {
 
 // run is the main daemon loop. It returns nil on clean shutdown and a non-nil
 // error if any component fails unexpectedly.
-func run(ctx context.Context, hupCh <-chan os.Signal, watchPath, dbPath string) error {
+func run(ctx context.Context, hupCh <-chan os.Signal, watchPath, dbPath, fuseMount string) error {
 	// Ensure the database directory exists.
 	if err := os.MkdirAll(filepath.Dir(dbPath), 0o700); err != nil {
 		return fmt.Errorf("create db dir: %w", err)
@@ -148,7 +152,20 @@ func run(ctx context.Context, hupCh <-chan os.Signal, watchPath, dbPath string) 
 	// Sweeper (re-evaluates all files after rule reload).
 	sweeper := rules.NewSweeper(idx, tags, pipeline, engine)
 
-	// --- end M2/M4 ---
+	// --- M3: FUSE virtual filesystem ---
+	if fuseMount != "" {
+		fuseSrv, err := tilbofuse.Mount(ctx, fuseMount, idx, fileGraph)
+		if err != nil {
+			slog.Warn("fuse: mount failed; continuing without FUSE", "path", fuseMount, "err", err)
+		} else {
+			defer func() {
+				if err := fuseSrv.Unmount(); err != nil {
+					slog.Warn("fuse: unmount error", "err", err)
+				}
+			}()
+		}
+	}
+	// --- end M3 ---
 
 	// Start the IPC server.
 	sockPath := socketPath()
@@ -171,6 +188,34 @@ func run(ctx context.Context, hupCh <-chan os.Signal, watchPath, dbPath string) 
 
 		case *ipcv1.Request_Related:
 			return handleRelated(ctx, r.Related, fileGraph, idx)
+
+		case *ipcv1.Request_Search:
+			return handleSearch(ctx, r.Search, idx)
+
+		case *ipcv1.Request_Tag:
+			return handleTag(ctx, r.Tag, idx, tags)
+
+		case *ipcv1.Request_Metadata:
+			return handleMetadata(ctx, r.Metadata, idx)
+
+		case *ipcv1.Request_MetadataSet:
+			return handleMetadataSet(ctx, r.MetadataSet, idx)
+
+		case *ipcv1.Request_ReloadRules:
+			var reloadErrs []string
+			engine.Reset()
+			newReg := rules.NewRegistry(rules.DefaultDirs(), wasmCache)
+			if err := newReg.Load(ctx, engine); err != nil {
+				reloadErrs = append(reloadErrs, err.Error())
+			}
+			go func() {
+				if err := sweeper.Sweep(ctx); err != nil && !errors.Is(err, context.Canceled) {
+					slog.WarnContext(ctx, "post-reload sweep error", "err", err)
+				}
+			}()
+			return &ipcv1.Response{Kind: &ipcv1.Response_ReloadRules{
+				ReloadRules: &ipcv1.ReloadRulesResponse{Errors: reloadErrs},
+			}}, nil
 
 		default:
 			return nil, fmt.Errorf("unimplemented request type: %T", req.Kind)
@@ -353,6 +398,14 @@ func setupLogging(format, level string) error {
 func socketPath() string {
 	uid := os.Getuid()
 	return fmt.Sprintf("/run/user/%d/tilbo.sock", uid)
+}
+
+// defaultFuseMountPath returns the default FUSE mount point for the current user.
+func defaultFuseMountPath() string {
+	if h, err := os.UserHomeDir(); err == nil {
+		return filepath.Join(h, "tags")
+	}
+	return ""
 }
 
 // defaultWatchPath returns the path to watch when none is specified.
