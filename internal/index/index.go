@@ -315,6 +315,76 @@ func (d *DB) ListFilePaths(ctx context.Context) ([]string, error) {
 	return paths, rows.Err()
 }
 
+// ListCooccurringTags returns tag names that appear on files matching all
+// includeTags (AND semantics) and none of the excludeTags. Tags in either
+// list are omitted from the result. If includeTags is empty, all tags are
+// returned (equivalent to ListAllTags minus excludeTags). The result is
+// ordered by name.
+func (d *DB) ListCooccurringTags(ctx context.Context, includeTags, excludeTags []string) ([]string, error) {
+	var sb strings.Builder
+	args := make([]any, 0, (len(includeTags)+len(excludeTags))*2)
+
+	sb.WriteString(`SELECT DISTINCT t.name
+		FROM tags t
+		JOIN file_tags ft ON ft.tag_id = t.id
+		JOIN files f ON ft.file_id = f.id
+		WHERE 1=1`)
+
+	// File must have ALL include tags.
+	if len(includeTags) > 0 {
+		ph := strings.Repeat("?,", len(includeTags))
+		ph = ph[:len(ph)-1]
+		sb.WriteString(fmt.Sprintf(` AND (
+			SELECT COUNT(DISTINCT t2.name) FROM file_tags ft2
+			JOIN tags t2 ON ft2.tag_id = t2.id
+			WHERE ft2.file_id = f.id AND t2.name IN (%s)) = %d`, ph, len(includeTags)))
+		for _, t := range includeTags {
+			args = append(args, t)
+		}
+	}
+
+	// File must have NONE of the exclude tags.
+	if len(excludeTags) > 0 {
+		ph := strings.Repeat("?,", len(excludeTags))
+		ph = ph[:len(ph)-1]
+		sb.WriteString(fmt.Sprintf(` AND NOT EXISTS (
+			SELECT 1 FROM file_tags ft3 JOIN tags t3 ON ft3.tag_id = t3.id
+			WHERE ft3.file_id = f.id AND t3.name IN (%s))`, ph))
+		for _, t := range excludeTags {
+			args = append(args, t)
+		}
+	}
+
+	// Omit tags already in include or exclude from the result.
+	allUsed := append(append([]string(nil), includeTags...), excludeTags...)
+	if len(allUsed) > 0 {
+		ph := strings.Repeat("?,", len(allUsed))
+		ph = ph[:len(ph)-1]
+		sb.WriteString(fmt.Sprintf(` AND t.name NOT IN (%s)`, ph))
+		for _, t := range allUsed {
+			args = append(args, t)
+		}
+	}
+
+	sb.WriteString(" ORDER BY t.name")
+
+	rows, err := d.db.QueryContext(ctx, sb.String(), args...)
+	if err != nil {
+		return nil, fmt.Errorf("index: list cooccurring tags: %w", err)
+	}
+	defer rows.Close()
+
+	var tags []string
+	for rows.Next() {
+		var name string
+		if err := rows.Scan(&name); err != nil {
+			return nil, fmt.Errorf("index: scan cooccurring tag: %w", err)
+		}
+		tags = append(tags, name)
+	}
+	return tags, rows.Err()
+}
+
 // ListAllTags returns all tag names in the index ordered by name.
 func (d *DB) ListAllTags(ctx context.Context) ([]string, error) {
 	rows, err := d.db.QueryContext(ctx, "SELECT name FROM tags ORDER BY name")

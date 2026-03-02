@@ -85,8 +85,12 @@ func (r *Root) allocInode(realPath string) uint64 {
 var _ fs.NodeReaddirer = (*Root)(nil)
 var _ fs.NodeLookuper = (*Root)(nil)
 var _ fs.NodeGetattrer = (*Root)(nil)
+var _ fs.NodeUnlinker = (*Root)(nil)
+var _ fs.NodeRmdirer = (*Root)(nil)
 
 // Readdir lists all tag names from the index as virtual directory entries.
+// Tag names containing +, comma, !, or % are percent-encoded so the kernel
+// does not confuse them with path-grammar operators on lookup.
 func (r *Root) Readdir(ctx context.Context) (fs.DirStream, syscall.Errno) {
 	tags, err := r.idx.ListAllTags(ctx)
 	if err != nil {
@@ -96,19 +100,35 @@ func (r *Root) Readdir(ctx context.Context) (fs.DirStream, syscall.Errno) {
 	entries := make([]fuse.DirEntry, 0, len(tags)+4)
 	for _, tag := range tags {
 		entries = append(entries, fuse.DirEntry{
-			Name: tag,
+			Name: percentEncode(tag),
 			Mode: syscall.S_IFDIR,
 		})
 	}
 	// Built-in special directories.
-	for _, name := range []string{"@recent", "@untagged"} {
+	for _, name := range []string{"@recent", "@untagged", "@browse"} {
 		entries = append(entries, fuse.DirEntry{Name: name, Mode: syscall.S_IFDIR})
 	}
 	return fs.NewListDirStream(entries), 0
 }
 
-// Lookup resolves a name to a TagDir node. The name is parsed as a tag expression.
+// Unlink returns EROFS: virtual tag directories cannot be removed via the filesystem.
+func (r *Root) Unlink(_ context.Context, _ string) syscall.Errno { return syscall.EROFS }
+
+// Rmdir returns EROFS: virtual tag directories cannot be removed via the filesystem.
+func (r *Root) Rmdir(_ context.Context, _ string) syscall.Errno { return syscall.EROFS }
+
+// Lookup resolves a name to a node. "@browse" returns the incremental tag
+// browser; everything else is parsed as a tag expression and returns a TagDir.
 func (r *Root) Lookup(ctx context.Context, name string, out *fuse.EntryOut) (*fs.Inode, syscall.Errno) {
+	if name == "@browse" {
+		out.SetAttrTimeout(30)
+		out.SetEntryTimeout(2)
+		out.Attr.Mode = syscall.S_IFDIR | 0o555
+		child := r.NewPersistentInode(ctx, &BrowseDir{root: r},
+			fs.StableAttr{Mode: syscall.S_IFDIR})
+		return child, 0
+	}
+
 	expr, err := ParseExpr(name)
 	if err != nil {
 		slog.DebugContext(ctx, "fuse: lookup: invalid expr", "name", name, "err", err)
@@ -151,6 +171,8 @@ var _ fs.NodeLookuper = (*TagDir)(nil)
 var _ fs.NodeGetattrer = (*TagDir)(nil)
 var _ fs.NodeRenamer = (*TagDir)(nil)
 var _ fs.NodeSetxattrer = (*TagDir)(nil)
+var _ fs.NodeUnlinker = (*TagDir)(nil)
+var _ fs.NodeRmdirer = (*TagDir)(nil)
 
 // query executes the tag expression against the index and returns results.
 func (d *TagDir) query(ctx context.Context) ([]index.SearchResult, error) {
@@ -301,6 +323,15 @@ func (d *TagDir) Rename(ctx context.Context, name string, newParent fs.InodeEmbe
 	return 0
 }
 
+// Unlink returns EROFS: removing entries from a virtual tag directory is not supported.
+// Without this explicit implementation the FUSE default would silently succeed
+// (removing the inode from the kernel cache) while leaving the real file and index
+// untouched, causing the entry to reappear on the next readdir.
+func (d *TagDir) Unlink(_ context.Context, _ string) syscall.Errno { return syscall.EROFS }
+
+// Rmdir returns EROFS for the same reason as Unlink.
+func (d *TagDir) Rmdir(_ context.Context, _ string) syscall.Errno { return syscall.EROFS }
+
 // Setxattr forwards an xattr write to the real file of a named child.
 // This is called when the kernel writes an xattr on a path inside this directory.
 func (d *TagDir) Setxattr(ctx context.Context, attr string, data []byte, flags uint32) syscall.Errno {
@@ -351,6 +382,194 @@ func (l *FileLink) Setxattr(_ context.Context, attr string, data []byte, flags u
 	return 0
 }
 
+// ─── BrowseDir ────────────────────────────────────────────────────────────────
+
+// BrowseDir is a virtual directory for incremental tag-AND browsing, rooted at
+// ~/tags/@browse/. Each subdirectory appends one tag (or !tag) to the
+// accumulated query. A fixed "@files" child shows the matching files.
+//
+// Navigating deeper never requires knowing the full query in advance —
+// each level lists only tags that co-occur with the current accumulated set.
+type BrowseDir struct {
+	fs.Inode
+
+	root        *Root
+	includeTags []string // tags all matching files must have
+	excludeTags []string // tags all matching files must NOT have
+}
+
+var _ fs.NodeReaddirer = (*BrowseDir)(nil)
+var _ fs.NodeLookuper = (*BrowseDir)(nil)
+var _ fs.NodeGetattrer = (*BrowseDir)(nil)
+var _ fs.NodeUnlinker = (*BrowseDir)(nil)
+var _ fs.NodeRmdirer = (*BrowseDir)(nil)
+
+// Readdir lists co-occurring tags as subdirectories and "@files" as a fixed entry.
+func (d *BrowseDir) Readdir(ctx context.Context) (fs.DirStream, syscall.Errno) {
+	tags, err := d.root.idx.ListCooccurringTags(ctx, d.includeTags, d.excludeTags)
+	if err != nil {
+		slog.WarnContext(ctx, "fuse: browse readdir failed", "err", err)
+		return nil, syscall.EIO
+	}
+
+	entries := make([]fuse.DirEntry, 0, len(tags)+1)
+	entries = append(entries, fuse.DirEntry{Name: "@files", Mode: syscall.S_IFDIR})
+	for _, tag := range tags {
+		entries = append(entries, fuse.DirEntry{
+			Name: percentEncode(tag),
+			Mode: syscall.S_IFDIR,
+		})
+	}
+	return fs.NewListDirStream(entries), 0
+}
+
+// Lookup handles three name forms:
+//   - "@files"  → BrowseFilesDir listing matching files
+//   - "!<tag>"  → new BrowseDir with <tag> added to excludeTags
+//   - "<tag>"   → new BrowseDir with <tag> added to includeTags
+func (d *BrowseDir) Lookup(ctx context.Context, name string, out *fuse.EntryOut) (*fs.Inode, syscall.Errno) {
+	out.SetAttrTimeout(2)
+	out.SetEntryTimeout(2)
+	out.Attr.Mode = syscall.S_IFDIR | 0o555
+
+	if name == "@files" {
+		child := d.NewPersistentInode(ctx, &BrowseFilesDir{
+			root:        d.root,
+			includeTags: d.includeTags,
+			excludeTags: d.excludeTags,
+		}, fs.StableAttr{Mode: syscall.S_IFDIR})
+		return child, 0
+	}
+
+	isNot := strings.HasPrefix(name, "!")
+	raw := name
+	if isNot {
+		raw = name[1:]
+	}
+	decoded, err := percentDecode(raw)
+	if err != nil || decoded == "" {
+		return nil, syscall.ENOENT
+	}
+
+	var next *BrowseDir
+	if isNot {
+		next = &BrowseDir{
+			root:        d.root,
+			includeTags: d.includeTags,
+			excludeTags: appendClone(d.excludeTags, decoded),
+		}
+	} else {
+		next = &BrowseDir{
+			root:        d.root,
+			includeTags: appendClone(d.includeTags, decoded),
+			excludeTags: d.excludeTags,
+		}
+	}
+	child := d.NewPersistentInode(ctx, next, fs.StableAttr{Mode: syscall.S_IFDIR})
+	return child, 0
+}
+
+// Getattr returns directory attributes.
+func (d *BrowseDir) Getattr(_ context.Context, _ fs.FileHandle, out *fuse.AttrOut) syscall.Errno {
+	out.Mode = syscall.S_IFDIR | 0o555
+	out.SetTimeout(2)
+	return 0
+}
+
+func (d *BrowseDir) Unlink(_ context.Context, _ string) syscall.Errno { return syscall.EROFS }
+func (d *BrowseDir) Rmdir(_ context.Context, _ string) syscall.Errno  { return syscall.EROFS }
+
+// ─── BrowseFilesDir ───────────────────────────────────────────────────────────
+
+// BrowseFilesDir is the leaf node of a @browse path. It lists the files
+// matching the accumulated includeTags AND NOT excludeTags as symlinks.
+type BrowseFilesDir struct {
+	fs.Inode
+
+	root        *Root
+	includeTags []string
+	excludeTags []string
+}
+
+var _ fs.NodeReaddirer = (*BrowseFilesDir)(nil)
+var _ fs.NodeLookuper = (*BrowseFilesDir)(nil)
+var _ fs.NodeGetattrer = (*BrowseFilesDir)(nil)
+var _ fs.NodeUnlinker = (*BrowseFilesDir)(nil)
+
+func (f *BrowseFilesDir) browseQuery(ctx context.Context) ([]index.SearchResult, error) {
+	results, _, err := f.root.idx.Search(ctx, index.SearchParams{
+		Tags:       f.includeTags,
+		TagExclude: f.excludeTags,
+		Limit:      10_000,
+		SortBy:     []string{"mtime:desc"},
+	})
+	return results, err
+}
+
+// Readdir returns matching files as symlink entries.
+func (f *BrowseFilesDir) Readdir(ctx context.Context) (fs.DirStream, syscall.Errno) {
+	results, err := f.browseQuery(ctx)
+	if err != nil {
+		slog.WarnContext(ctx, "fuse: browse files readdir failed", "err", err)
+		return nil, syscall.EIO
+	}
+	nameCounts := make(map[string]int, len(results))
+	for _, r := range results {
+		nameCounts[filepath.Base(r.Path)]++
+	}
+	seenCount := make(map[string]int, len(results))
+
+	entries := make([]fuse.DirEntry, 0, len(results))
+	for _, r := range results {
+		entries = append(entries, fuse.DirEntry{
+			Name: entryName(r.Path, nameCounts, seenCount),
+			Mode: syscall.S_IFLNK,
+			Ino:  f.root.allocInode(r.Path),
+		})
+	}
+	return fs.NewListDirStream(entries), 0
+}
+
+// Lookup finds a file by its virtual name within this directory.
+func (f *BrowseFilesDir) Lookup(ctx context.Context, name string, out *fuse.EntryOut) (*fs.Inode, syscall.Errno) {
+	results, err := f.browseQuery(ctx)
+	if err != nil {
+		return nil, syscall.EIO
+	}
+	nameCounts := make(map[string]int, len(results))
+	for _, r := range results {
+		nameCounts[filepath.Base(r.Path)]++
+	}
+	seenCount := make(map[string]int, len(results))
+
+	for _, r := range results {
+		if entryName(r.Path, nameCounts, seenCount) != name {
+			continue
+		}
+		if _, err := os.Lstat(r.Path); err != nil {
+			return nil, syscall.ENOENT
+		}
+		ino := f.root.allocInode(r.Path)
+		out.Attr.Ino = ino
+		out.SetAttrTimeout(30)
+		out.SetEntryTimeout(1)
+		out.Attr.Mode = syscall.S_IFLNK | 0o777
+		child := f.NewPersistentInode(ctx, &FileLink{realPath: r.Path},
+			fs.StableAttr{Mode: syscall.S_IFLNK, Ino: ino})
+		return child, 0
+	}
+	return nil, syscall.ENOENT
+}
+
+// Getattr returns directory attributes.
+func (f *BrowseFilesDir) Getattr(_ context.Context, _ fs.FileHandle, out *fuse.AttrOut) syscall.Errno {
+	out.Mode = syscall.S_IFDIR | 0o555
+	out.SetTimeout(2)
+	return 0
+}
+
+func (f *BrowseFilesDir) Unlink(_ context.Context, _ string) syscall.Errno { return syscall.EROFS }
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 // entryName returns the virtual entry name for a file, appending a counter
@@ -387,6 +606,14 @@ func simpleTagsFromExpr(e *Expr) []string {
 		return nil
 	}
 	return e.Tags
+}
+
+// appendClone returns a new slice with elem appended, never mutating src.
+func appendClone(src []string, elem string) []string {
+	out := make([]string, len(src)+1)
+	copy(out, src)
+	out[len(src)] = elem
+	return out
 }
 
 // graphToSearchResults converts graph.RelatedFile slice to index.SearchResult.

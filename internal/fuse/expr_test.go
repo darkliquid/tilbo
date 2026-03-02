@@ -13,11 +13,29 @@ func TestParseExpr_Tags(t *testing.T) {
 		wantExcl   []string
 		wantErrStr string
 	}{
+		// Basic AND expressions
 		{"python", []string{"python"}, false, nil, ""},
 		{"python+work", []string{"python", "work"}, false, nil, ""},
-		{"python+work-draft", []string{"python", "work"}, false, []string{"draft"}, ""},
+
+		// NOT uses ! prefix; - is a literal character in tag names
+		{"python+work+!draft", []string{"python", "work"}, false, []string{"draft"}, ""},
+		{"low-priority", []string{"low-priority"}, false, nil, ""},
+		{"low-priority+!draft", []string{"low-priority"}, false, []string{"draft"}, ""},
+		{"a-b+c-d", []string{"a-b", "c-d"}, false, nil, ""},
+
+		// OR expressions
 		{"python,work", []string{"python", "work"}, true, nil, ""},
-		{"-draft", nil, false, nil, "negation-only"},
+		{"low-priority,urgent", []string{"low-priority", "urgent"}, true, nil, ""},
+
+		// Percent-encoded tag names
+		{"c%2B%2B", []string{"c++"}, false, nil, ""},
+		{"a%2Cb", []string{"a,b"}, false, nil, ""},
+		{"c%2B%2B+work", []string{"c++", "work"}, false, nil, ""},
+		{"c%2B%2B+!draft", []string{"c++"}, false, []string{"draft"}, ""},
+
+		// Error cases
+		{"!draft", nil, false, nil, "negation-only"},
+		{"!draft+work", nil, false, nil, "negation-only"},
 		{"", nil, false, nil, "empty"},
 		{"a+b,c", nil, false, nil, "mixed"},
 	}
@@ -128,6 +146,75 @@ func TestParseExpr_Special(t *testing.T) {
 			t.Error("expected error")
 		}
 	})
+}
+
+func TestPercentEncode(t *testing.T) {
+	cases := []struct{ in, want string }{
+		{"normal", "normal"},
+		{"low-priority", "low-priority"},
+		{"c++", "c%2B%2B"},
+		{"a,b", "a%2Cb"},
+		{"100%", "100%25"},
+		{"!draft", "%21draft"},
+		{"a+b,c!d%e", "a%2Bb%2Cc%21d%25e"},
+	}
+	for _, tc := range cases {
+		got := percentEncode(tc.in)
+		if got != tc.want {
+			t.Errorf("percentEncode(%q) = %q, want %q", tc.in, got, tc.want)
+		}
+	}
+}
+
+func TestPercentDecode(t *testing.T) {
+	cases := []struct {
+		in      string
+		want    string
+		wantErr bool
+	}{
+		{"normal", "normal", false},
+		{"low-priority", "low-priority", false},
+		{"c%2B%2B", "c++", false},
+		{"a%2Cb", "a,b", false},
+		{"100%25", "100%", false},
+		{"%21draft", "!draft", false},
+		{"a%2Bb%2Cc%21d%25e", "a+b,c!d%e", false},
+		// Error cases
+		{"%", "", true},
+		{"%2", "", true},
+		{"%ZZ", "", true},
+	}
+	for _, tc := range cases {
+		got, err := percentDecode(tc.in)
+		if tc.wantErr {
+			if err == nil {
+				t.Errorf("percentDecode(%q): expected error, got %q", tc.in, got)
+			}
+			continue
+		}
+		if err != nil {
+			t.Errorf("percentDecode(%q): unexpected error: %v", tc.in, err)
+			continue
+		}
+		if got != tc.want {
+			t.Errorf("percentDecode(%q) = %q, want %q", tc.in, got, tc.want)
+		}
+	}
+}
+
+func TestPercentRoundTrip(t *testing.T) {
+	tags := []string{"c++", "low-priority", "100%", "!important", "a,b", "normal", "café"}
+	for _, tag := range tags {
+		encoded := percentEncode(tag)
+		decoded, err := percentDecode(encoded)
+		if err != nil {
+			t.Errorf("round-trip %q → %q: decode error: %v", tag, encoded, err)
+			continue
+		}
+		if decoded != tag {
+			t.Errorf("round-trip %q → %q → %q: mismatch", tag, encoded, decoded)
+		}
+	}
 }
 
 func sliceEq(a, b []string) bool {

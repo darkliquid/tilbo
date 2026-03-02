@@ -199,7 +199,8 @@ tilbo search --tags photo --format tsv | cut -f1 | xargs ...
 | --- | --- |
 | `work` | Files tagged `work` |
 | `work+project` | Files tagged both `work` AND `project` |
-| `work+project-draft` | Files tagged `work` AND `project` but NOT `draft` |
+| `work+project+!draft` | Files tagged `work` AND `project` but NOT `draft` |
+| `low-priority` | Files tagged `low-priority` (hyphens are literal in tag names) |
 | `work,personal` | Files tagged `work` OR `personal` |
 | `@recent` | Files modified in the last 7 days |
 | `@recent:30d` | Files modified in the last 30 days |
@@ -208,7 +209,12 @@ tilbo search --tags photo --format tsv | cut -f1 | xargs ...
 | `@similar:/path/to/file` | Files similar to the given file (graph traversal) |
 | `@meta:iso:gte:1600` | Files where the `iso` metadata key is ≥ 1600 |
 
-Note: `+` (AND) and `,` (OR) cannot be mixed in the same expression.
+Notes:
+
+- `+` (AND) and `,` (OR) cannot be mixed in the same expression.
+- `-` is a literal character in tag names: `low-priority` means the tag named `low-priority`.
+- NOT uses the `!` prefix on an individual term: `work+!draft`.
+- Tag names containing `+`, `,`, `!`, or `%` must be percent-encoded (`%2B`, `%2C`, `%21`, `%25`) in FUSE paths. The CLI and IPC do not require encoding.
 
 ### Metadata
 
@@ -259,17 +265,23 @@ location.
 ### Path grammar
 
 ```text
-~/tags/<expr>/              — virtual directory for a tag expression
-~/tags/work/                — all files tagged "work"
-~/tags/work+project/        — files tagged both "work" and "project"
-~/tags/work+project-draft/  — "work" AND "project" AND NOT "draft"
-~/tags/work,personal/       — files tagged "work" OR "personal"
-~/tags/@recent/             — files modified in the last 7 days
-~/tags/@recent:30d/         — files modified in the last 30 days
-~/tags/@untagged/           — files with no tags
-~/tags/@search:foo bar/     — full-text metadata search
-~/tags/@similar:/real/path/ — graph-similar files
-~/tags/@meta:iso:gte:1600/  — metadata filter
+~/tags/<expr>/                    — virtual directory for a tag expression
+~/tags/work/                      — all files tagged "work"
+~/tags/work+project/              — files tagged both "work" AND "project"
+~/tags/work+project+!draft/       — "work" AND "project" AND NOT "draft"
+~/tags/low-priority/              — files tagged "low-priority" (hyphens allowed)
+~/tags/work,personal/             — files tagged "work" OR "personal"
+~/tags/@recent/                   — files modified in the last 7 days
+~/tags/@recent:30d/               — files modified in the last 30 days
+~/tags/@untagged/                 — files with no tags
+~/tags/@search:foo bar/           — full-text metadata search
+~/tags/@similar:/real/path/       — graph-similar files
+~/tags/@meta:iso:gte:1600/        — metadata filter
+~/tags/@browse/                   — incremental tag browser (see below)
+~/tags/@browse/work/              — lists tags co-occurring with "work"
+~/tags/@browse/work/project/      — lists tags co-occurring with work AND project
+~/tags/@browse/work/!draft/       — excludes "draft" from accumulated query
+~/tags/@browse/work/@files/       — files matching the current accumulated query
 ```
 
 ### How it works
@@ -296,6 +308,30 @@ restarts.
 
 **Deduplication:** When multiple files have the same basename, the virtual
 directory appends a `_2`, `_3`, … suffix to avoid collisions.
+
+### Incremental tag browser (@browse)
+
+`@browse` is designed for interactive exploration with a file manager or shell.
+Rather than requiring you to know the full tag query upfront, each subdirectory
+level shows only the tags that co-occur with all the tags you have navigated so
+far — narrowing the visible set with every step.
+
+```text
+~/tags/@browse/              — lists all tags
+~/tags/@browse/work/         — lists tags that appear alongside "work"
+~/tags/@browse/work/video/   — lists tags that appear with both "work" AND "video"
+~/tags/@browse/work/@files/  — the matching files (symlinks)
+```
+
+Prefix a tag name with `!` to exclude it:
+
+```text
+~/tags/@browse/video/!draft/@files/   — video files, excluding drafts
+```
+
+`@files` is always present at every level and shows the files matching the
+accumulated query so far. Tag names with special characters are percent-encoded
+in directory listings (same rules as the flat grammar).
 
 ### Integration tips
 

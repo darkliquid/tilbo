@@ -16,12 +16,12 @@ import (
 type exprKind int
 
 const (
-	exprTag    exprKind = iota // tag intersection/union/exclusion
-	exprRecent                 // @recent[:Nd]
-	exprSearch                 // @search:<q>
-	exprUntagged               // @untagged
-	exprSimilar                // @similar:<abs_path>
-	exprMeta                   // @meta:<k>:<op>:<v>
+	exprTag      exprKind = iota // tag intersection/union/exclusion
+	exprRecent                   // @recent[:Nd]
+	exprSearch                   // @search:<q>
+	exprUntagged                 // @untagged
+	exprSimilar                  // @similar:<abs_path>
+	exprMeta                     // @meta:<k>:<op>:<v>
 )
 
 // Expr is a parsed virtual-directory path component.
@@ -53,7 +53,7 @@ type Expr struct {
 //
 // Supported forms:
 //   - "tag"             single tag (AND)
-//   - "a+b-c"          AND a and b, NOT c
+//   - "a+b+!c"         AND a and b, NOT c  (! prefix = exclude)
 //   - "a,b,c"          OR a, b, c  (no + allowed when , is present)
 //   - "@recent"        modified in last 7 days
 //   - "@recent:30d"    modified in last 30 days
@@ -62,6 +62,10 @@ type Expr struct {
 //   - "@similar:/path" graph/vector similar to path
 //   - "@meta:k:v"      metadata key equals value
 //   - "@meta:k:gte:n"  metadata key ≥ n
+//
+// Tag names may contain any printable character including hyphens and spaces.
+// The characters %, +, ,, and ! must be percent-encoded (%25, %2B, %2C, %21)
+// when they appear literally in a tag name.
 func ParseExpr(name string) (*Expr, error) {
 	if strings.HasPrefix(name, "@") {
 		return parseSpecial(name)
@@ -143,44 +147,58 @@ func parseTagExpr(name string) (*Expr, error) {
 		if strings.Contains(name, "+") {
 			return nil, fmt.Errorf("fuse: mixed , and + not supported; use CLI for complex queries")
 		}
-		tags := strings.Split(name, ",")
-		for i, t := range tags {
-			tags[i] = strings.TrimSpace(t)
-			if tags[i] == "" {
+		rawParts := strings.Split(name, ",")
+		tags := make([]string, 0, len(rawParts))
+		for _, raw := range rawParts {
+			raw = strings.TrimSpace(raw)
+			if raw == "" {
 				return nil, fmt.Errorf("fuse: empty tag in OR expression")
 			}
-		}
-		// Negation within OR terms is not supported.
-		for _, t := range tags {
-			if strings.ContainsAny(t, "+-") {
-				return nil, fmt.Errorf("fuse: negation within OR expression not supported")
+			if strings.HasPrefix(raw, "!") {
+				return nil, fmt.Errorf("fuse: negation not supported in OR expression")
 			}
+			decoded, err := percentDecode(raw)
+			if err != nil {
+				return nil, fmt.Errorf("fuse: %w", err)
+			}
+			tags = append(tags, decoded)
 		}
 		return &Expr{kind: exprTag, Tags: tags, TagsAny: true}, nil
 	}
 
-	// AND+NOT mode: split by '+'; within each segment, '-' introduces NOT tags.
-	// e.g. "python+work-draft" → include=[python,work] exclude=[draft]
+	// AND+NOT mode: split by '+'; each segment is "tag" (include) or "!tag" (exclude).
+	// Tag names may contain hyphens and other characters freely.
+	// Use percent-encoding (%2B, %2C, %21, %25) for literal +, comma, !, %.
 	parts := strings.Split(name, "+")
 	var include, exclude []string
 	for _, p := range parts {
 		if p == "" {
 			return nil, fmt.Errorf("fuse: empty part in AND expression")
 		}
-		subs := strings.Split(p, "-")
-		if subs[0] == "" {
-			// Leading '-' with no preceding tag in this segment.
+		var raw string
+		isNot := strings.HasPrefix(p, "!")
+		if isNot {
+			raw = p[1:]
+			if raw == "" {
+				return nil, fmt.Errorf("fuse: empty negation tag")
+			}
 			if len(include) == 0 {
 				return nil, fmt.Errorf("fuse: negation-only expression not supported")
 			}
 		} else {
-			include = append(include, subs[0])
+			raw = p
 		}
-		for _, neg := range subs[1:] {
-			if neg == "" {
-				return nil, fmt.Errorf("fuse: empty negation tag")
-			}
-			exclude = append(exclude, neg)
+		decoded, err := percentDecode(raw)
+		if err != nil {
+			return nil, fmt.Errorf("fuse: %w", err)
+		}
+		if decoded == "" {
+			return nil, fmt.Errorf("fuse: empty tag name after decoding")
+		}
+		if isNot {
+			exclude = append(exclude, decoded)
+		} else {
+			include = append(include, decoded)
 		}
 	}
 	if len(include) == 0 {
@@ -272,4 +290,70 @@ func parseRelativeDur(s string) (time.Duration, error) {
 	default:
 		return 0, fmt.Errorf("unknown unit %q (use d, h, w)", string(unit))
 	}
+}
+
+// percentEncode encodes special path-grammar characters in a tag name so they
+// are not mistaken for AND (+), OR (,), or NOT (!) operators.
+// Characters encoded: %, +, comma, !
+func percentEncode(s string) string {
+	if !strings.ContainsAny(s, "%+,!") {
+		return s
+	}
+	var buf strings.Builder
+	buf.Grow(len(s))
+	for i := 0; i < len(s); i++ {
+		switch s[i] {
+		case '%':
+			buf.WriteString("%25")
+		case '+':
+			buf.WriteString("%2B")
+		case ',':
+			buf.WriteString("%2C")
+		case '!':
+			buf.WriteString("%21")
+		default:
+			buf.WriteByte(s[i])
+		}
+	}
+	return buf.String()
+}
+
+// percentDecode decodes %XX sequences in a tag path component.
+// Only the four grammar-special encodings are expected (%25, %2B, %2C, %21),
+// but any valid %XX sequence is accepted for forward compatibility.
+func percentDecode(s string) (string, error) {
+	if !strings.Contains(s, "%") {
+		return s, nil
+	}
+	var buf strings.Builder
+	buf.Grow(len(s))
+	for i := 0; i < len(s); i++ {
+		if s[i] != '%' {
+			buf.WriteByte(s[i])
+			continue
+		}
+		if i+2 >= len(s) {
+			return "", fmt.Errorf("truncated percent-encoding at position %d", i)
+		}
+		hi := unhex(s[i+1])
+		lo := unhex(s[i+2])
+		if hi < 0 || lo < 0 {
+			return "", fmt.Errorf("invalid percent-encoding %%%c%c", s[i+1], s[i+2])
+		}
+		buf.WriteByte(byte(hi<<4 | lo))
+		i += 2
+	}
+	return buf.String(), nil
+}
+
+func unhex(c byte) int {
+	switch {
+	case c >= '0' && c <= '9':
+		return int(c - '0')
+	case c >= 'A' && c <= 'F':
+		return int(c-'A') + 10
+	case c >= 'a' && c <= 'f':
+		return int(c-'a') + 10
+	}
+	return -1
 }
