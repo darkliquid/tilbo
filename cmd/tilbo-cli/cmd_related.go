@@ -14,9 +14,10 @@ import (
 )
 
 var relatedCmd = &cobra.Command{
-	Use:   "related <path>",
-	Short: "Find files related to a given file via the tag graph",
-	Args:  cobra.ExactArgs(1),
+	Use:               "related <path>",
+	Short:             "Find files related to a given file via the tag graph",
+	Args:              cobra.ExactArgs(1),
+	ValidArgsFunction: completeFilePathOnly,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ctx := cmd.Context()
 		path := absPath(args[0])
@@ -56,6 +57,7 @@ func init() {
 	relatedCmd.Flags().Uint32("limit", 20, "maximum results to return")
 	relatedCmd.Flags().Uint32("hops", 3, "maximum graph hops from seed")
 	relatedCmd.Flags().String("format", "human", "output format: human, json, tsv")
+	_ = relatedCmd.RegisterFlagCompletionFunc("format", completeEnum("human", "json", "tsv"))
 }
 
 type jsonRelatedResult struct {

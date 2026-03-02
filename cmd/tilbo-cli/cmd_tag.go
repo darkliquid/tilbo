@@ -15,9 +15,10 @@ var tagCmd = &cobra.Command{
 }
 
 var tagAddCmd = &cobra.Command{
-	Use:   "add <path> <tag>...",
-	Short: "Add one or more tags to a file",
-	Args:  cobra.MinimumNArgs(2),
+	Use:               "add <path> <tag>...",
+	Short:             "Add one or more tags to a file",
+	Args:              cobra.MinimumNArgs(2),
+	ValidArgsFunction: completeTagsVariadic,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ctx := cmd.Context()
 		path := absPath(args[0])
@@ -44,10 +45,11 @@ var tagAddCmd = &cobra.Command{
 }
 
 var tagRemoveCmd = &cobra.Command{
-	Use:     "remove <path> <tag>...",
-	Aliases: []string{"rm"},
-	Short:   "Remove one or more tags from a file",
-	Args:    cobra.MinimumNArgs(2),
+	Use:               "remove <path> <tag>...",
+	Aliases:           []string{"rm"},
+	Short:             "Remove one or more tags from a file",
+	Args:              cobra.MinimumNArgs(2),
+	ValidArgsFunction: completeFileTags,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ctx := cmd.Context()
 		path := absPath(args[0])
@@ -74,9 +76,10 @@ var tagRemoveCmd = &cobra.Command{
 }
 
 var tagSetCmd = &cobra.Command{
-	Use:   "set <path> [tag]...",
-	Short: "Replace all tags on a file (pass no tags to clear all)",
-	Args:  cobra.MinimumNArgs(1),
+	Use:               "set <path> [tag]...",
+	Short:             "Replace all tags on a file (pass no tags to clear all)",
+	Args:              cobra.MinimumNArgs(1),
+	ValidArgsFunction: completeTagsVariadic,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ctx := cmd.Context()
 		path := absPath(args[0])
@@ -107,10 +110,11 @@ var tagSetCmd = &cobra.Command{
 }
 
 var tagListCmd = &cobra.Command{
-	Use:     "list <path>",
-	Aliases: []string{"ls"},
-	Short:   "List tags on a file",
-	Args:    cobra.ExactArgs(1),
+	Use:               "list <path>",
+	Aliases:           []string{"ls"},
+	Short:             "List tags on a file",
+	Args:              cobra.ExactArgs(1),
+	ValidArgsFunction: completeFilePathOnly,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ctx := cmd.Context()
 		path := absPath(args[0])

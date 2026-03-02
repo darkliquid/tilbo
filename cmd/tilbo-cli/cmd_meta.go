@@ -18,9 +18,10 @@ var metaCmd = &cobra.Command{
 }
 
 var metaShowCmd = &cobra.Command{
-	Use:   "show <path>",
-	Short: "Show all metadata for a file",
-	Args:  cobra.ExactArgs(1),
+	Use:               "show <path>",
+	Short:             "Show all metadata for a file",
+	Args:              cobra.ExactArgs(1),
+	ValidArgsFunction: completeFilePathOnly,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ctx := cmd.Context()
 		path := absPath(args[0])
@@ -76,9 +77,10 @@ var metaShowCmd = &cobra.Command{
 }
 
 var metaSetCmd = &cobra.Command{
-	Use:   "set <path> <key> <value>",
-	Short: "Set a metadata key on a file",
-	Args:  cobra.ExactArgs(3),
+	Use:               "set <path> <key> <value>",
+	Short:             "Set a metadata key on a file",
+	Args:              cobra.ExactArgs(3),
+	ValidArgsFunction: completeFilePathOnly, // key and value are free-form
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ctx := cmd.Context()
 		path := absPath(args[0])
@@ -104,10 +106,11 @@ var metaSetCmd = &cobra.Command{
 }
 
 var metaDeleteCmd = &cobra.Command{
-	Use:     "delete <path> <key>",
-	Aliases: []string{"del", "rm"},
-	Short:   "Delete a metadata key from a file",
-	Args:    cobra.ExactArgs(2),
+	Use:               "delete <path> <key>",
+	Aliases:           []string{"del", "rm"},
+	Short:             "Delete a metadata key from a file",
+	Args:              cobra.ExactArgs(2),
+	ValidArgsFunction: completeMetaKey,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ctx := cmd.Context()
 		path := absPath(args[0])
@@ -133,5 +136,6 @@ var metaDeleteCmd = &cobra.Command{
 
 func init() {
 	metaShowCmd.Flags().String("format", "human", "output format: human, json")
+	_ = metaShowCmd.RegisterFlagCompletionFunc("format", completeEnum("human", "json"))
 	metaCmd.AddCommand(metaShowCmd, metaSetCmd, metaDeleteCmd)
 }

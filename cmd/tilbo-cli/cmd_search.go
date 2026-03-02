@@ -82,6 +82,21 @@ func init() {
 	f.Uint32("limit", 50, "maximum results to return")
 	f.Uint32("offset", 0, "result offset for pagination")
 	f.String("format", "human", "output format: human, json, tsv")
+
+	_ = searchCmd.RegisterFlagCompletionFunc("tags", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+		already, _ := cmd.Flags().GetStringSlice("tags")
+		return completeTags(already, cmd, args, toComplete)
+	})
+	_ = searchCmd.RegisterFlagCompletionFunc("exclude", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+		already, _ := cmd.Flags().GetStringSlice("exclude")
+		return completeTags(already, cmd, args, toComplete)
+	})
+	_ = searchCmd.RegisterFlagCompletionFunc("format", completeEnum("human", "json", "tsv"))
+	_ = searchCmd.RegisterFlagCompletionFunc("sort", completeEnum(
+		"mtime:asc", "mtime:desc",
+		"name:asc", "name:desc",
+		"size:asc", "size:desc",
+	))
 }
 
 type jsonFileResult struct {

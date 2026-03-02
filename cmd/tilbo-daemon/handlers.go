@@ -142,6 +142,27 @@ func handleMetadataSet(ctx context.Context, req *ipcv1.MetadataSetRequest, idx *
 	}}, nil
 }
 
+// handleListTags returns all tags whose names start with the given prefix.
+func handleListTags(ctx context.Context, req *ipcv1.ListTagsRequest, idx *index.DB) (*ipcv1.Response, error) {
+	all, err := idx.ListAllTags(ctx)
+	if err != nil {
+		return errResponse(3, fmt.Sprintf("list tags failed: %v", err)), nil
+	}
+	prefix := req.GetPrefix()
+	tags := all
+	if prefix != "" {
+		tags = tags[:0]
+		for _, t := range all {
+			if len(t) >= len(prefix) && t[:len(prefix)] == prefix {
+				tags = append(tags, t)
+			}
+		}
+	}
+	return &ipcv1.Response{Kind: &ipcv1.Response_ListTags{
+		ListTags: &ipcv1.ListTagsResponse{Tags: tags},
+	}}, nil
+}
+
 // applyTagsXattr applies tag modifications to the file's xattrs.
 func applyTagsXattr(ctx context.Context, path string, tagNames []string, op string, store *xattr.Service) error {
 	existing, err := store.ReadTags(ctx, path)

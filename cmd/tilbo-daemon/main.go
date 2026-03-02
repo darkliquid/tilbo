@@ -201,6 +201,9 @@ func run(ctx context.Context, hupCh <-chan os.Signal, watchPath, dbPath, fuseMou
 		case *ipcv1.Request_MetadataSet:
 			return handleMetadataSet(ctx, r.MetadataSet, idx)
 
+		case *ipcv1.Request_ListTags:
+			return handleListTags(ctx, r.ListTags, idx)
+
 		case *ipcv1.Request_ReloadRules:
 			var reloadErrs []string
 			engine.Reset()

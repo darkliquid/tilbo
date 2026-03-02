@@ -21,6 +21,7 @@ message Request {
     RelatedRequest related = 5;
     StatusRequest status = 6;
     ReloadRulesRequest reload_rules = 7;
+    ListTagsRequest list_tags = 8;
   }
 }
 
@@ -33,6 +34,7 @@ message Response {
     RelatedResponse related = 5;
     StatusResponse status = 6;
     ReloadRulesResponse reload_rules = 7;
+    ListTagsResponse list_tags = 8;
   }
 }
 
@@ -144,4 +146,12 @@ message ReloadRulesRequest {}
 message ReloadRulesResponse {
   uint32 rules_loaded = 1;
   repeated string errors = 2;
+}
+
+message ListTagsRequest {
+  string prefix = 1; // optional prefix filter for completion
+}
+
+message ListTagsResponse {
+  repeated string tags = 1;
 }
