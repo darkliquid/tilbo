@@ -24,11 +24,13 @@ extraction. The daemon detects them at startup and logs which are active.
 | Binary | Purpose | Install |
 | --- | --- | --- |
 | `ffprobe` | Richer video/audio metadata (codec, bitrate, frame rate, HDR, stream details) — overrides the built-in media harvester | Part of [FFmpeg](https://ffmpeg.org/download.html); most distros: `ffmpeg` package |
+| `ebook-meta` | Ebook metadata for MOBI, AZW, AZW3, FB2, and other formats Calibre supports; also enriches EPUB with series/rating data | Part of [Calibre](https://calibre-ebook.com/download); most distros: `calibre` package |
 | `magika` | ML-based file-type detection — improves MIME accuracy for ambiguous files (Office formats, polyglot files, obscure text variants) | `pip install magika` or [pre-built release](https://github.com/google/magika/releases) |
 
 ### Why these are optional
 
 All core metadata (EXIF/IPTC from images, PDF info, MP4/MKV/audio duration and
-tags) is extracted in-process using pure-Go libraries — no external tools
-required.  The optional binaries exist only to provide deeper or higher-accuracy
-results for specific file categories when they are already present on the system.
+tags, EPUB title/author/ISBN) is extracted in-process using pure-Go libraries —
+no external tools required. The optional binaries exist only to provide deeper
+or higher-accuracy results for specific file categories when they are already
+present on the system.

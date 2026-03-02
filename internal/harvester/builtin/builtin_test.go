@@ -1,6 +1,8 @@
 package builtin
 
 import (
+	"archive/zip"
+	"bytes"
 	"context"
 	"os"
 	"path/filepath"
@@ -258,6 +260,133 @@ func TestMagikaHarvester_Interface(t *testing.T) {
 	}
 	if !h.Matches("", "anything") {
 		t.Error("magika harvester should match everything")
+	}
+}
+
+// --- EPUBHarvester ---
+
+// makeEPUB builds a minimal valid EPUB ZIP in memory with the given OPF body.
+func makeEPUB(t *testing.T, opfBody string) string {
+	t.Helper()
+	var buf bytes.Buffer
+	zw := zip.NewWriter(&buf)
+
+	addFile := func(name, content string) {
+		t.Helper()
+		w, err := zw.Create(name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := w.Write([]byte(content)); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	addFile("mimetype", "application/epub+zip")
+	addFile("META-INF/container.xml", `<?xml version="1.0"?>
+<container xmlns="urn:oasis:names:tc:opendocument:xmlns:container" version="1.0">
+  <rootfiles>
+    <rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/>
+  </rootfiles>
+</container>`)
+	addFile("OEBPS/content.opf", opfBody)
+
+	if err := zw.Close(); err != nil {
+		t.Fatal(err)
+	}
+	return tmpFile(t, "test.epub", buf.Bytes())
+}
+
+const testOPF = `<?xml version="1.0" encoding="UTF-8"?>
+<package xmlns="http://www.idpf.org/2007/opf"
+         xmlns:dc="http://purl.org/dc/elements/1.1/"
+         xmlns:opf="http://www.idpf.org/2007/opf" version="2.0">
+  <metadata>
+    <dc:title>The Test Book</dc:title>
+    <dc:creator opf:role="aut">Jane Author</dc:creator>
+    <dc:publisher>Test Press</dc:publisher>
+    <dc:language>en</dc:language>
+    <dc:subject>Fiction</dc:subject>
+    <dc:subject>Science Fiction</dc:subject>
+    <dc:identifier opf:scheme="ISBN">9781234567890</dc:identifier>
+    <dc:date opf:event="publication">2023-06-15</dc:date>
+    <dc:description>A book about testing.</dc:description>
+  </metadata>
+</package>`
+
+func TestEPUBHarvester_Interface(t *testing.T) {
+	h := NewEPUBHarvester()
+	if h.Async() {
+		t.Error("EPUB harvester should be synchronous")
+	}
+	if !h.Matches("", "application/epub+zip") {
+		t.Error("EPUB harvester should match application/epub+zip")
+	}
+	if h.Matches("", "application/pdf") {
+		t.Error("EPUB harvester should not match application/pdf")
+	}
+}
+
+func TestEPUBHarvester_ExtractsMetadata(t *testing.T) {
+	path := makeEPUB(t, testOPF)
+	h := NewEPUBHarvester()
+	meta, err := h.Run(context.Background(), harvester.Input{Path: path, MIME: "application/epub+zip"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if meta == nil {
+		t.Fatal("expected metadata, got nil")
+	}
+
+	check := func(key, want string) {
+		t.Helper()
+		got, _ := meta[key].(string)
+		if got != want {
+			t.Errorf("%s = %q, want %q", key, got, want)
+		}
+	}
+	check("book_title", "The Test Book")
+	check("book_author", "Jane Author")
+	check("book_publisher", "Test Press")
+	check("book_language", "en")
+	check("book_isbn", "9781234567890")
+	check("book_description", "A book about testing.")
+
+	if subj, _ := meta["book_subject"].(string); subj == "" {
+		t.Error("expected book_subject")
+	}
+	if _, ok := meta["book_date"].(float64); !ok {
+		t.Error("expected book_date float64")
+	}
+}
+
+func TestEPUBHarvester_MissingFileReturnsNil(t *testing.T) {
+	h := NewEPUBHarvester()
+	meta, err := h.Run(context.Background(), harvester.Input{Path: "/no/such/file.epub", MIME: "application/epub+zip"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if meta != nil {
+		t.Errorf("expected nil for missing file, got %v", meta)
+	}
+}
+
+func TestCalibreHarvester_Interface(t *testing.T) {
+	h := NewCalibreHarvester()
+	if h == nil {
+		t.Skip("ebook-meta (calibre) not installed")
+	}
+	if h.Async() {
+		t.Error("calibre harvester should be synchronous")
+	}
+	if !h.Matches("", "application/epub+zip") {
+		t.Error("calibre harvester should match epub")
+	}
+	if !h.Matches("", "application/x-mobipocket-ebook") {
+		t.Error("calibre harvester should match mobi")
+	}
+	if h.Matches("", "image/jpeg") {
+		t.Error("calibre harvester should not match image/jpeg")
 	}
 }
 

@@ -25,10 +25,12 @@ func registerBuiltins(p *harvester.Pipeline) {
 	p.Register(builtin.NewEXIFHarvester())
 	p.Register(builtin.NewPDFHarvester())
 	p.Register(builtin.NewMediaHarvester())
+	p.Register(builtin.NewEPUBHarvester())
 
-	// Optional subprocess harvesters at priority 10.
+	// Optional subprocess harvesters at priority 10–15.
 	for _, h := range []harvester.Harvester{
 		builtin.NewFFProbeHarvester(),
+		builtin.NewCalibreHarvester(),
 	} {
 		if h == nil {
 			continue
