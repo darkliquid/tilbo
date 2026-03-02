@@ -5,10 +5,12 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
+	dockercontainer "github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/pkg/stdcopy"
 	tc "github.com/testcontainers/testcontainers-go"
 )
@@ -56,6 +58,23 @@ func NewSuite(ctx context.Context, binDir, stateDir string) (*Suite, error) {
 		},
 		// Keep container alive; we exec commands individually.
 		Cmd: []string{"sleep", "infinity"},
+		// Expose loop devices so losetup works inside the container.
+		// Podman/Docker do not automatically pass them through even with --privileged.
+		HostConfigModifier: func(hc *dockercontainer.HostConfig) {
+			addDev := func(path string) {
+				if _, err := os.Stat(path); err == nil {
+					hc.Devices = append(hc.Devices, dockercontainer.DeviceMapping{
+						PathOnHost:        path,
+						PathInContainer:   path,
+						CgroupPermissions: "rwm",
+					})
+				}
+			}
+			addDev("/dev/loop-control")
+			for i := 0; i < 16; i++ {
+				addDev(fmt.Sprintf("/dev/loop%d", i))
+			}
+		},
 	}
 
 	ctr, err := tc.GenericContainer(ctx, tc.GenericContainerRequest{
