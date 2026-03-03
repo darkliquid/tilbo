@@ -22,9 +22,11 @@ func TestKernelVersion(t *testing.T) {
 	t.Logf("kernel %d.%d", major, minor)
 }
 
-func TestNew_RequiresPrivilege(t *testing.T) {
+func TestNew_FanotifyRequiresPrivilege(t *testing.T) {
 	ctx := context.Background()
-	w, err := New(ctx, "/")
+	// BackendFanotify forces fanotify and returns an error when unavailable,
+	// rather than falling back to inotify.
+	w, err := New(ctx, "/", BackendFanotify)
 	if err == nil {
 		// Some environments allow fanotify without root (user namespaces, capabilities).
 		t.Log("fanotify opened without elevated privilege")
@@ -33,6 +35,29 @@ func TestNew_RequiresPrivilege(t *testing.T) {
 	}
 	if !errors.Is(err, unix.EPERM) && !errors.Is(err, unix.EACCES) {
 		t.Logf("expected EPERM or EACCES for unprivileged fanotify_init, got: %v", err)
+	}
+}
+
+func TestNew_AutoFallsBackToInotify(t *testing.T) {
+	ctx := context.Background()
+	// BackendAuto silently falls back to inotify when fanotify is unavailable.
+	w, err := New(ctx, t.TempDir(), BackendAuto)
+	if err != nil {
+		t.Fatalf("New with BackendAuto: %v", err)
+	}
+	if w == nil {
+		t.Fatal("expected a non-nil Watcher")
+	}
+}
+
+func TestNew_InotifyAlwaysWorks(t *testing.T) {
+	ctx := context.Background()
+	w, err := New(ctx, t.TempDir(), BackendInotify)
+	if err != nil {
+		t.Fatalf("New with BackendInotify: %v", err)
+	}
+	if w == nil {
+		t.Fatal("expected a non-nil Watcher")
 	}
 }
 

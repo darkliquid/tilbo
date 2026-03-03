@@ -10,9 +10,11 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"os/exec"
 	"os/signal"
 	"path/filepath"
 	"syscall"
+	"time"
 
 	"github.com/tetratelabs/wazero"
 
@@ -31,12 +33,13 @@ import (
 
 func main() {
 	var (
-		watchPath    = flag.String("watch", defaultWatchPath(), "filesystem path to watch")
-		dbPath       = flag.String("db", defaultDBPath(), "path to the SQLite index database")
-		fuseMount    = flag.String("fuse-mount", defaultFuseMountPath(), "FUSE virtual filesystem mount point (empty to disable)")
-		sockOverride = flag.String("socket", "", "override default Unix socket path")
-		logFormat    = flag.String("log-format", "text", "log format: text or json")
-		logLevel     = flag.String("log-level", "info", "log level: debug, info, warn, error")
+		watchPath      = flag.String("watch", defaultWatchPath(), "filesystem path to watch")
+		dbPath         = flag.String("db", defaultDBPath(), "path to the SQLite index database")
+		fuseMount      = flag.String("fuse-mount", defaultFuseMountPath(), "FUSE virtual filesystem mount point (empty to disable)")
+		sockOverride   = flag.String("socket", "", "override default Unix socket path")
+		logFormat      = flag.String("log-format", "text", "log format: text or json")
+		logLevel       = flag.String("log-level", "info", "log level: debug, info, warn, error")
+		watcherBackend = flag.String("watcher", "auto", "filesystem watcher backend: auto, fanotify, inotify")
 	)
 	flag.Parse()
 
@@ -66,7 +69,7 @@ func main() {
 	signal.Notify(hupCh, syscall.SIGHUP)
 	defer signal.Stop(hupCh)
 
-	if err := run(ctx, hupCh, *watchPath, *dbPath, *fuseMount, sockPath); err != nil {
+	if err := run(ctx, hupCh, *watchPath, *dbPath, *fuseMount, sockPath, watcher.Backend(*watcherBackend)); err != nil {
 		slog.Error("daemon error", "err", err)
 		os.Exit(1)
 	}
@@ -75,7 +78,7 @@ func main() {
 
 // run is the main daemon loop. It returns nil on clean shutdown and a non-nil
 // error if any component fails unexpectedly.
-func run(ctx context.Context, hupCh <-chan os.Signal, watchPath, dbPath, fuseMount, sockPath string) error {
+func run(ctx context.Context, hupCh <-chan os.Signal, watchPath, dbPath, fuseMount, sockPath string, watcherBackend watcher.Backend) error {
 	// Ensure the database directory exists.
 	if err := os.MkdirAll(filepath.Dir(dbPath), 0o700); err != nil {
 		return fmt.Errorf("create db dir: %w", err)
@@ -93,8 +96,8 @@ func run(ctx context.Context, hupCh <-chan os.Signal, watchPath, dbPath, fuseMou
 	}()
 	slog.Info("index ready", "path", dbPath)
 
-	// Start the fanotify watcher.
-	w, err := watcher.New(ctx, watchPath)
+	// Start the filesystem watcher (fanotify, inotify, or auto-detected).
+	w, err := watcher.New(ctx, watchPath, watcherBackend)
 	if err != nil {
 		return fmt.Errorf("create watcher: %w", err)
 	}
@@ -159,16 +162,49 @@ func run(ctx context.Context, hupCh <-chan os.Signal, watchPath, dbPath, fuseMou
 	sweeper := rules.NewSweeper(idx, tags, pipeline, engine)
 
 	// --- M3: FUSE virtual filesystem ---
+	// Mount in a goroutine so a blocking mount(2) call (e.g. in rootless
+	// containers where the kernel stalls the syscall) does not prevent the IPC
+	// server from starting. If the mount does not complete within 5 s we log a
+	// warning and continue without FUSE.
 	if fuseMount != "" {
-		fuseSrv, err := tilbofuse.Mount(ctx, fuseMount, idx, fileGraph)
-		if err != nil {
-			slog.Warn("fuse: mount failed; continuing without FUSE", "path", fuseMount, "err", err)
-		} else {
-			defer func() {
-				if err := fuseSrv.Unmount(); err != nil {
-					slog.Warn("fuse: unmount error", "err", err)
+		type mountResult struct {
+			srv *tilbofuse.Server
+			err error
+		}
+		ch := make(chan mountResult, 1)
+		go func() {
+			srv, err := tilbofuse.Mount(ctx, fuseMount, idx, fileGraph)
+			ch <- mountResult{srv, err}
+		}()
+		select {
+		case res := <-ch:
+			if res.err != nil {
+				slog.Warn("fuse: mount failed; continuing without FUSE", "path", fuseMount, "err", res.err)
+			} else {
+				defer func() {
+					if err := res.srv.Unmount(); err != nil {
+						slog.Warn("fuse: unmount error", "err", err)
+					}
+				}()
+			}
+		case <-time.After(5 * time.Second):
+			slog.Warn("fuse: mount timed out; continuing without FUSE", "path", fuseMount)
+			// Attempt a lazy unmount so the mount point doesn't block
+			// subsequent accesses if the kernel-side mount was established
+			// before the FUSE server connected. Errors are expected when the
+			// mount was never set up; ignore them.
+			go func() {
+				for _, argv := range [][]string{
+					{"fusermount3", "-u", "-z", fuseMount},
+					{"umount", "-l", fuseMount},
+				} {
+					if exec.Command(argv[0], argv[1:]...).Run() == nil { //nolint:gosec
+						break
+					}
 				}
 			}()
+		case <-ctx.Done():
+			return ctx.Err()
 		}
 	}
 	// --- end M3 ---
@@ -198,7 +234,7 @@ func run(ctx context.Context, hupCh <-chan os.Signal, watchPath, dbPath, fuseMou
 			return handleSearch(ctx, r.Search, idx)
 
 		case *ipcv1.Request_Tag:
-			return handleTag(ctx, r.Tag, idx, tags)
+			return handleTag(ctx, r.Tag, idx, tags, fileGraph)
 
 		case *ipcv1.Request_Metadata:
 			return handleMetadata(ctx, r.Metadata, idx)

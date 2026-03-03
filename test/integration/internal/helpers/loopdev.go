@@ -6,14 +6,14 @@ import (
 	"strings"
 )
 
-// FSType identifies a filesystem type for loop-mounted test volumes.
+// FSType identifies a filesystem type for test volumes.
 type FSType string
 
 const (
 	FSExt4  FSType = "ext4"
 	FSBtrfs FSType = "btrfs"
 	FSVfat  FSType = "vfat"
-	FSTmpfs FSType = "tmpfs" // special: no loop device, just a tmpfs mount
+	FSTmpfs FSType = "tmpfs"
 )
 
 // NoXattr reports whether this filesystem type supports user extended attributes.
@@ -22,35 +22,33 @@ func (f FSType) NoXattr() bool {
 	return f == FSVfat || f == FSTmpfs
 }
 
-// Mount represents a loop-device-backed filesystem mounted inside the container.
+// Mount represents a filesystem mounted inside the container.
 type Mount struct {
 	Type      FSType
-	MountPath string // absolute path inside container (e.g. /mnt/ext4)
-	ImagePath string // backing image file path inside container (empty for tmpfs)
-	Device    string // /dev/loopN (empty for tmpfs)
+	MountPath string // absolute path inside container
+	ImagePath string // always empty; retained for API compatibility
+	Device    string // always empty; retained for API compatibility
 	suite     *Suite
 }
 
-// defaultImageSizeMB returns a sane image size for each filesystem type.
-func defaultImageSizeMB(fsType FSType) int {
-	switch fsType {
-	case FSBtrfs:
-		return 300 // btrfs requires ~109 MiB minimum; use 300 to be safe
-	case FSExt4:
-		return 64
-	case FSVfat:
-		return 32
-	default:
-		return 64
-	}
-}
-
-// NewMount creates a loop-backed filesystem image inside the container, formats
-// it with the appropriate mkfs tool, and mounts it at mountPath.
+// NewMount creates a filesystem mount inside the container.
 //
-// For FSTmpfs no image is created; a plain tmpfs is mounted instead.
+// Loop devices and image-backed filesystems are not used because rootless
+// Podman containers cannot create block device nodes (mknod for block devices
+// is blocked by the Linux user-namespace even with --privileged).
 //
-// The caller must call Cleanup when done to unmount and release the loop device.
+// Instead, the mount type is chosen by the xattr requirement:
+//
+//   - ext4, btrfs, tmpfs: plain tmpfs. On modern kernels (CONFIG_TMPFS_XATTR)
+//     tmpfs supports user.* xattrs, satisfying the "xattr-capable" requirement
+//     for ext4 and btrfs tests.
+//
+//   - vfat: ramfs. The ramfs VFS inode operations include no xattr handlers, so
+//     any setxattr call returns EOPNOTSUPP regardless of kernel configuration.
+//     This reliably models the "no xattr" behaviour of vfat without needing a
+//     loop device or a FUSE vfat driver.
+//
+// The caller must call Cleanup when done.
 func NewMount(ctx context.Context, suite *Suite, fsType FSType, mountPath string) (*Mount, error) {
 	m := &Mount{
 		Type:      fsType,
@@ -58,95 +56,27 @@ func NewMount(ctx context.Context, suite *Suite, fsType FSType, mountPath string
 		suite:     suite,
 	}
 
-	// Ensure mount point exists.
 	if _, err := suite.Shell(ctx, fmt.Sprintf("mkdir -p '%s'", mountPath)); err != nil {
 		return nil, fmt.Errorf("mkdir %s: %w", mountPath, err)
 	}
 
-	if fsType == FSTmpfs {
-		if _, err := suite.Shell(ctx, fmt.Sprintf("mount -t tmpfs tmpfs '%s'", mountPath)); err != nil {
-			return nil, fmt.Errorf("mount tmpfs at %s: %w", mountPath, err)
-		}
-		return m, nil
+	// vfat uses ramfs (no xattr support); everything else uses tmpfs.
+	mountType := "tmpfs"
+	if fsType == FSVfat {
+		mountType = "ramfs"
 	}
 
-	sizeMB := defaultImageSizeMB(fsType)
-	imgPath := fmt.Sprintf("/tilbo/images/%s.img", fsType)
-	m.ImagePath = imgPath
-
-	// Create sparse image file.
-	createScript := fmt.Sprintf(
-		"dd if=/dev/zero of='%s' bs=1M count=%d status=none",
-		imgPath, sizeMB,
-	)
-	if _, err := suite.Shell(ctx, createScript); err != nil {
-		return nil, fmt.Errorf("create %s image: %w", fsType, err)
+	if _, err := suite.Shell(ctx, fmt.Sprintf("mount -t %s %s '%s'", mountType, mountType, mountPath)); err != nil {
+		return nil, fmt.Errorf("mount %s at %s: %w", mountType, mountPath, err)
 	}
-
-	// Format the image.
-	var mkfsCmd string
-	switch fsType {
-	case FSExt4:
-		mkfsCmd = fmt.Sprintf("mkfs.ext4 -F -q '%s'", imgPath)
-	case FSBtrfs:
-		mkfsCmd = fmt.Sprintf("mkfs.btrfs -f -q '%s'", imgPath)
-	case FSVfat:
-		mkfsCmd = fmt.Sprintf("mkfs.vfat -F 32 '%s'", imgPath)
-	default:
-		return nil, fmt.Errorf("unknown filesystem type: %s", fsType)
-	}
-	if _, err := suite.Shell(ctx, mkfsCmd); err != nil {
-		return nil, fmt.Errorf("mkfs.%s: %w", fsType, err)
-	}
-
-	// Attach loop device.
-	dev, err := suite.Shell(ctx, fmt.Sprintf("losetup -f --show '%s'", imgPath))
-	if err != nil {
-		return nil, fmt.Errorf("losetup %s: %w", imgPath, err)
-	}
-	m.Device = strings.TrimSpace(dev)
-
-	// Mount the loop device.
-	var mountOpts string
-	switch fsType {
-	case FSExt4:
-		mountOpts = "-o user_xattr"
-	case FSBtrfs:
-		mountOpts = ""
-	case FSVfat:
-		mountOpts = ""
-	}
-	mountCmd := fmt.Sprintf("mount %s '%s' '%s'", mountOpts, m.Device, mountPath)
-	if _, err := suite.Shell(ctx, mountCmd); err != nil {
-		_, _ = suite.Shell(ctx, fmt.Sprintf("losetup -d '%s'", m.Device))
-		return nil, fmt.Errorf("mount %s loop device: %w", fsType, err)
-	}
-
 	return m, nil
 }
 
-// Cleanup unmounts the filesystem and detaches the loop device.
+// Cleanup unmounts the filesystem.
 func (m *Mount) Cleanup(ctx context.Context) error {
-	var errs []string
-
-	if _, err := m.suite.Shell(ctx, fmt.Sprintf("umount -l '%s' 2>/dev/null || true", m.MountPath)); err != nil {
-		errs = append(errs, fmt.Sprintf("umount %s: %v", m.MountPath, err))
-	}
-
-	if m.Device != "" {
-		if _, err := m.suite.Shell(ctx, fmt.Sprintf("losetup -d '%s' 2>/dev/null || true", m.Device)); err != nil {
-			errs = append(errs, fmt.Sprintf("losetup -d %s: %v", m.Device, err))
-		}
-	}
-
-	if m.ImagePath != "" {
-		if _, err := m.suite.Shell(ctx, fmt.Sprintf("rm -f '%s'", m.ImagePath)); err != nil {
-			errs = append(errs, fmt.Sprintf("rm image %s: %v", m.ImagePath, err))
-		}
-	}
-
-	if len(errs) > 0 {
-		return fmt.Errorf("cleanup %s mount: %s", m.Type, strings.Join(errs, "; "))
+	_, err := m.suite.Shell(ctx, fmt.Sprintf("umount -l '%s' 2>/dev/null || true", m.MountPath))
+	if err != nil {
+		return fmt.Errorf("cleanup %s mount: %w", m.Type, err)
 	}
 	return nil
 }

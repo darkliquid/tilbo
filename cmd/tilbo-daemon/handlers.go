@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 
+	"github.com/darkliquid/tilbo/internal/graph"
 	"github.com/darkliquid/tilbo/internal/index"
 	ipcv1 "github.com/darkliquid/tilbo/internal/ipc/gen/tilbo/ipc/v1"
 	"github.com/darkliquid/tilbo/internal/xattr"
@@ -64,6 +65,7 @@ func handleTag(
 	req *ipcv1.TagRequest,
 	idx *index.DB,
 	tags *xattr.Service,
+	g *graph.Graph,
 ) (*ipcv1.Response, error) {
 	opStr := map[ipcv1.TagOperation]string{
 		ipcv1.TagOperation_TAG_OPERATION_ADD:    "add",
@@ -88,6 +90,10 @@ func handleTag(
 			pathsErr = append(pathsErr, path)
 			errs[path] = err.Error()
 			continue
+		}
+		// Keep the in-memory graph in sync with the index.
+		if updated, err := idx.GetFileTags(ctx, path); err == nil {
+			g.SetFileTags(path, updated)
 		}
 		pathsOK = append(pathsOK, path)
 	}

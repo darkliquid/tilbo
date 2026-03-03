@@ -125,6 +125,11 @@ func runSuite(ctx context.Context, m *testing.M) (int, error) {
 	}
 	defer s.StopDaemon(context.Background(), mainSock) //nolint:errcheck
 
+	// Step 7: probe available capabilities and store them on the suite.
+	s.Caps = helpers.Probe(ctx, s, mainLog, ext4Mount)
+	fmt.Printf("integration: capabilities: fanotify=%v fuse=%v user_xattr=%v\n",
+		s.Caps.Fanotify, s.Caps.Fuse, s.Caps.UserXattr)
+
 	fmt.Println("integration: suite ready; running tests")
 	return m.Run(), nil
 }

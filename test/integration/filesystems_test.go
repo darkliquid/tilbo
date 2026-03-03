@@ -56,6 +56,9 @@ func TestTagRoundTripAllFilesystems(t *testing.T) {
 				suite.Shell(context.Background(), fmt.Sprintf("rm -f '%s'", path)) //nolint:errcheck
 			})
 
+			if err := suite.WaitIndexed(ctx, sock, path, 5*time.Second); err != nil {
+				t.Fatalf("wait for file to be indexed: %v", err)
+			}
 			// Tag via the IPC (daemon handles xattr or sidecar transparently).
 			out, err := suite.CLI(ctx, sock, "tag", "add", path, "roundtrip-tag")
 			if err != nil {
@@ -77,6 +80,7 @@ func TestTagRoundTripAllFilesystems(t *testing.T) {
 // TestXattrUsedOnCapableFilesystems verifies that on ext4 and btrfs the tag
 // is stored as a real xattr (not sidecar). getfattr must return the value.
 func TestXattrUsedOnCapableFilesystems(t *testing.T) {
+	suite.Caps.RequireUserXattr(t)
 	for _, tc := range []struct {
 		mount **helpers.Mount
 		label string
@@ -108,6 +112,9 @@ func TestXattrUsedOnCapableFilesystems(t *testing.T) {
 				suite.Shell(context.Background(), fmt.Sprintf("rm -f '%s'", path)) //nolint:errcheck
 			})
 
+			if err := suite.WaitIndexed(ctx, sock, path, 5*time.Second); err != nil {
+				t.Fatalf("wait for file to be indexed: %v", err)
+			}
 			if _, err := suite.CLI(ctx, sock, "tag", "add", path, "xattr-verified"); err != nil {
 				t.Fatalf("tag add: %v", err)
 			}
@@ -170,6 +177,9 @@ func TestSidecarUsedOnNonXattrFilesystems(t *testing.T) {
 				suite.Shell(context.Background(), fmt.Sprintf("rm -f '%s'", path)) //nolint:errcheck
 			})
 
+			if err := suite.WaitIndexed(ctx, sock, path, 5*time.Second); err != nil {
+				t.Fatalf("wait for file to be indexed: %v", err)
+			}
 			if _, err := suite.CLI(ctx, sock, "tag", "add", path, "sidecar-verified"); err != nil {
 				t.Fatalf("tag add: %v", err)
 			}
@@ -225,6 +235,9 @@ func TestMoveXattrToNonXattr(t *testing.T) {
 		suite.Shell(context.Background(), fmt.Sprintf("rm -f '%s'", dstPath)) //nolint:errcheck
 	})
 
+	if err := suite.WaitIndexed(ctx, sock, dstPath, 5*time.Second); err != nil {
+		t.Fatalf("wait for copied file to be indexed on vfat: %v", err)
+	}
 	// Re-apply the tags via the vfat daemon so it writes to sidecar.
 	if _, err := suite.CLI(ctx, sock, "tag", "add", dstPath, "move-xattr-tag"); err != nil {
 		t.Fatalf("tag on vfat dst: %v", err)

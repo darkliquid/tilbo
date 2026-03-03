@@ -20,6 +20,19 @@ import (
 	"golang.org/x/sys/unix"
 )
 
+// Backend selects the filesystem-event notification mechanism.
+type Backend string
+
+const (
+	// BackendAuto detects the best available backend at runtime,
+	// preferring fanotify and falling back to inotify.
+	BackendAuto Backend = "auto"
+	// BackendFanotify forces fanotify; New returns an error if unavailable.
+	BackendFanotify Backend = "fanotify"
+	// BackendInotify forces the inotify-based recursive directory watcher.
+	BackendInotify Backend = "inotify"
+)
+
 // EventKind identifies the type of filesystem change.
 type EventKind uint
 
@@ -64,10 +77,13 @@ const fanotifyMetaVersion uint8 = 3
 var fanMetaSize = int(unsafe.Sizeof(unix.FanotifyEventMetadata{}))
 
 // Watcher watches a filesystem mount point for changes using fanotify.
+// If fanotify is unavailable (e.g. in rootless containers), it falls back
+// transparently to an inotify-based recursive directory watcher.
 type Watcher struct {
 	mountPath string
 	fanfd     int
 	fanRename bool // true when FAN_RENAME is in use (kernel ≥ 5.17)
+	inotify   *inotifyImpl // non-nil when using the inotify fallback
 	out       chan Event
 
 	mu      sync.Mutex
@@ -79,9 +95,25 @@ type debounceEntry struct {
 	timer *time.Timer
 }
 
-// New creates a Watcher for the given mount point.
+// New creates a Watcher for the given mount point using the specified backend.
+// Pass BackendAuto to prefer fanotify and fall back to inotify automatically.
 // Call Run to start delivering events.
-func New(ctx context.Context, mountPath string) (*Watcher, error) {
+func New(ctx context.Context, mountPath string, backend Backend) (*Watcher, error) {
+	// When inotify is forced, skip fanotify entirely.
+	if backend == BackendInotify {
+		slog.InfoContext(ctx, "watcher: using inotify backend (forced)")
+		impl, err := newInotify(ctx, mountPath)
+		if err != nil {
+			return nil, fmt.Errorf("watcher: inotify: %w", err)
+		}
+		return &Watcher{
+			mountPath: mountPath,
+			fanfd:     -1,
+			inotify:   impl,
+			pending:   make(map[string]*debounceEntry),
+		}, nil
+	}
+
 	major, minor, err := kernelVersion()
 	if err != nil {
 		return nil, err
@@ -97,6 +129,24 @@ func New(ctx context.Context, mountPath string) (*Watcher, error) {
 		unix.O_RDONLY|unix.O_CLOEXEC|unix.O_LARGEFILE,
 	)
 	if err != nil {
+		// fanotify requires CAP_SYS_ADMIN in the initial user namespace.
+		// Rootless containers only hold it in a child namespace, so
+		// fanotify_init returns EPERM. In auto mode, fall back to inotify.
+		// In fanotify mode, return the error so the caller knows.
+		if (err == unix.EPERM || err == unix.ENOSYS) && backend == BackendAuto {
+			slog.WarnContext(ctx, "watcher: fanotify unavailable; falling back to inotify",
+				"err", err)
+			impl, iErr := newInotify(ctx, mountPath)
+			if iErr != nil {
+				return nil, fmt.Errorf("watcher: inotify fallback: %w", iErr)
+			}
+			return &Watcher{
+				mountPath: mountPath,
+				fanfd:     -1,
+				inotify:   impl,
+				pending:   make(map[string]*debounceEntry),
+			}, nil
+		}
 		return nil, fmt.Errorf("watcher: fanotify_init: %w", err)
 	}
 
@@ -129,12 +179,18 @@ func New(ctx context.Context, mountPath string) (*Watcher, error) {
 // Events returns the channel on which debounced filesystem events are delivered.
 // The channel is closed when Run returns.
 func (w *Watcher) Events() <-chan Event {
+	if w.inotify != nil {
+		return w.inotify.out
+	}
 	return w.out
 }
 
-// Run reads fanotify events until ctx is cancelled.
-// It closes the fanotify fd and the Events channel on return.
+// Run reads filesystem events until ctx is cancelled.
+// It closes the Events channel on return.
 func (w *Watcher) Run(ctx context.Context) error {
+	if w.inotify != nil {
+		return w.inotify.run(ctx)
+	}
 	defer unix.Close(w.fanfd)
 	defer close(w.out)
 

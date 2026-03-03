@@ -11,6 +11,7 @@ import (
 // TestCreateFileAppearsInIndex verifies that creating a file inside the watched
 // directory causes it to land in the index automatically via fanotify.
 func TestCreateFileAppearsInIndex(t *testing.T) {
+	suite.Caps.RequireFanotify(t)
 	ctx := testCtx(t)
 	path := fmt.Sprintf("%s/fanotify-create-%d.txt", mainWatch, time.Now().UnixNano())
 
@@ -28,6 +29,7 @@ func TestCreateFileAppearsInIndex(t *testing.T) {
 // TestModifyFileUpdatesIndex verifies that modifying an already-indexed file
 // triggers a re-index (the mtime or size visible via search must change).
 func TestModifyFileUpdatesIndex(t *testing.T) {
+	suite.Caps.RequireFanotify(t)
 	ctx := testCtx(t)
 	path := watchedFile(t, ctx, "fanotify-modify.txt", "original content")
 
@@ -58,6 +60,7 @@ func TestModifyFileUpdatesIndex(t *testing.T) {
 // TestDeleteFileRemovedFromIndex verifies that deleting a file causes it to
 // disappear from the index.
 func TestDeleteFileRemovedFromIndex(t *testing.T) {
+	suite.Caps.RequireFanotify(t)
 	ctx := testCtx(t)
 	path := watchedFile(t, ctx, "fanotify-delete.txt", "to be deleted")
 
@@ -76,6 +79,7 @@ func TestDeleteFileRemovedFromIndex(t *testing.T) {
 // directory retains its tags. Since xattr travels with the inode, the daemon
 // reads the tags from the xattr on the new path and re-indexes.
 func TestRenamePreservesTags(t *testing.T) {
+	suite.Caps.RequireFanotify(t)
 	ctx := testCtx(t)
 	src := watchedFile(t, ctx, "fanotify-rename-src.txt", "rename me")
 	dst := fmt.Sprintf("%s/fanotify-rename-dst.txt", mainWatch)
@@ -104,6 +108,7 @@ func TestRenamePreservesTags(t *testing.T) {
 // TestCrossDirectoryRenamePreservesTags checks rename across directories
 // within the same watched mount.
 func TestCrossDirectoryRenamePreservesTags(t *testing.T) {
+	suite.Caps.RequireFanotify(t)
 	ctx := testCtx(t)
 
 	subdir := fmt.Sprintf("%s/subdir-%d", mainWatch, time.Now().UnixNano())
@@ -136,6 +141,7 @@ func TestCrossDirectoryRenamePreservesTags(t *testing.T) {
 // verifies that every one lands in the index (debounce coalesces per-path,
 // not across paths).
 func TestRapidCreatesAllIndexed(t *testing.T) {
+	suite.Caps.RequireFanotify(t)
 	ctx := testCtx(t)
 
 	const n = 20

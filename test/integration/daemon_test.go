@@ -25,6 +25,7 @@ func TestDaemonStartsAndResponds(t *testing.T) {
 // TestDaemonFUSEMountVisible verifies that the FUSE virtual directory is
 // accessible inside the container after daemon startup.
 func TestDaemonFUSEMountVisible(t *testing.T) {
+	suite.Caps.RequireFuse(t)
 	ctx := testCtx(t)
 	out, code, err := suite.Exec(ctx, "test", "-d", mainFuse)
 	if err != nil {
@@ -85,6 +86,9 @@ func TestDaemonRestartRetainsIndex(t *testing.T) {
 	}
 	t.Cleanup(func() { suite.Shell(context.Background(), fmt.Sprintf("rm -f '%s'", path)) }) //nolint:errcheck
 
+	if err := suite.WaitIndexed(ctx, mainSock, path, 5*time.Second); err != nil {
+		t.Fatalf("wait for file to be indexed: %v", err)
+	}
 	if _, err := suite.CLI(ctx, mainSock, "tag", "add", path, "retain-test"); err != nil {
 		t.Fatalf("tag add: %v", err)
 	}

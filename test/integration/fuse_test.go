@@ -12,6 +12,7 @@ import (
 
 // TestFUSERootIsDirectory verifies the FUSE mount point is a directory.
 func TestFUSERootIsDirectory(t *testing.T) {
+	suite.Caps.RequireFuse(t)
 	ctx := testCtx(t)
 	_, code, err := suite.Exec(ctx, "test", "-d", mainFuse)
 	if err != nil {
@@ -26,6 +27,7 @@ func TestFUSERootIsDirectory(t *testing.T) {
 // TestFUSETagDirAppears verifies that tagging a file causes a virtual
 // directory named after the tag to appear under the FUSE root.
 func TestFUSETagDirAppears(t *testing.T) {
+	suite.Caps.RequireFuse(t)
 	ctx := testCtx(t)
 	path := watchedFile(t, ctx, "fuse-tag-dir.txt", "tag dir test")
 
@@ -43,6 +45,7 @@ func TestFUSETagDirAppears(t *testing.T) {
 // TestFUSEFileInTagDir verifies that a tagged file appears as a link inside
 // the corresponding FUSE virtual directory.
 func TestFUSEFileInTagDir(t *testing.T) {
+	suite.Caps.RequireFuse(t)
 	ctx := testCtx(t)
 	path := watchedFile(t, ctx, "fuse-file-in-dir.txt", "file in dir test")
 
@@ -67,6 +70,7 @@ func TestFUSEFileInTagDir(t *testing.T) {
 // TestFUSEFileReadable verifies that a file's content is readable through
 // the FUSE virtual directory.
 func TestFUSEFileReadable(t *testing.T) {
+	suite.Caps.RequireFuse(t)
 	ctx := testCtx(t)
 	content := "readable content through fuse"
 	path := watchedFile(t, ctx, "fuse-readable.txt", content)
@@ -92,6 +96,7 @@ func TestFUSEFileReadable(t *testing.T) {
 // TestFUSEFileWritable verifies that writing through the FUSE path updates
 // the real file on disk.
 func TestFUSEFileWritable(t *testing.T) {
+	suite.Caps.RequireFuse(t)
 	ctx := testCtx(t)
 	path := watchedFile(t, ctx, "fuse-writable.txt", "original")
 
@@ -121,6 +126,7 @@ func TestFUSEFileWritable(t *testing.T) {
 // TestFUSERenameRetag verifies that moving a file from one FUSE tag directory
 // to another retagges the file (not a filesystem rename).
 func TestFUSERenameRetag(t *testing.T) {
+	suite.Caps.RequireFuse(t)
 	ctx := testCtx(t)
 	path := watchedFile(t, ctx, "fuse-retag.txt", "retag me")
 
@@ -153,6 +159,7 @@ func TestFUSERenameRetag(t *testing.T) {
 // TestFUSEIntersectionDir verifies the tag+tag expression path returns only
 // files that have BOTH tags.
 func TestFUSEIntersectionDir(t *testing.T) {
+	suite.Caps.RequireFuse(t)
 	ctx := testCtx(t)
 
 	both := watchedFile(t, ctx, "fuse-intersect-both.txt", "both tags")
@@ -182,6 +189,7 @@ func TestFUSEIntersectionDir(t *testing.T) {
 // TestFUSEUnionDir verifies the tag,tag expression path returns files with
 // EITHER tag.
 func TestFUSEUnionDir(t *testing.T) {
+	suite.Caps.RequireFuse(t)
 	ctx := testCtx(t)
 
 	fileA := watchedFile(t, ctx, "fuse-union-a.txt", "union a")
@@ -210,6 +218,7 @@ func TestFUSEUnionDir(t *testing.T) {
 // TestFUSENegationDir verifies the tag-tag expression excludes files with the
 // second tag from the result set.
 func TestFUSENegationDir(t *testing.T) {
+	suite.Caps.RequireFuse(t)
 	ctx := testCtx(t)
 
 	keep := watchedFile(t, ctx, "fuse-neg-keep.txt", "keep")
@@ -238,6 +247,7 @@ func TestFUSENegationDir(t *testing.T) {
 
 // TestFUSERecentDir verifies that @recent contains recently modified files.
 func TestFUSERecentDir(t *testing.T) {
+	suite.Caps.RequireFuse(t)
 	ctx := testCtx(t)
 	path := watchedFile(t, ctx, "fuse-recent.txt", "recent file")
 	_ = path
@@ -258,6 +268,7 @@ func TestFUSERecentDir(t *testing.T) {
 
 // TestFUSESimilarDir verifies that @similar:<path> returns graph-related files.
 func TestFUSESimilarDir(t *testing.T) {
+	suite.Caps.RequireFuse(t)
 	ctx := testCtx(t)
 
 	seed := watchedFile(t, ctx, "fuse-similar-seed.txt", "seed")

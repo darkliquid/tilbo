@@ -5,12 +5,10 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
-	dockercontainer "github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/pkg/stdcopy"
 	tc "github.com/testcontainers/testcontainers-go"
 )
@@ -22,6 +20,10 @@ type Suite struct {
 
 	// HostStateDir is the host-side directory bind-mounted to /tilbo.
 	HostStateDir string
+
+	// Caps holds capabilities detected after the primary daemon starts.
+	// Populated by calling helpers.Probe.
+	Caps Caps
 }
 
 // containerStateDir is the fixed container-side mount point for shared state.
@@ -58,23 +60,6 @@ func NewSuite(ctx context.Context, binDir, stateDir string) (*Suite, error) {
 		},
 		// Keep container alive; we exec commands individually.
 		Cmd: []string{"sleep", "infinity"},
-		// Expose loop devices so losetup works inside the container.
-		// Podman/Docker do not automatically pass them through even with --privileged.
-		HostConfigModifier: func(hc *dockercontainer.HostConfig) {
-			addDev := func(path string) {
-				if _, err := os.Stat(path); err == nil {
-					hc.Devices = append(hc.Devices, dockercontainer.DeviceMapping{
-						PathOnHost:        path,
-						PathInContainer:   path,
-						CgroupPermissions: "rwm",
-					})
-				}
-			}
-			addDev("/dev/loop-control")
-			for i := 0; i < 16; i++ {
-				addDev(fmt.Sprintf("/dev/loop%d", i))
-			}
-		},
 	}
 
 	ctr, err := tc.GenericContainer(ctx, tc.GenericContainerRequest{
@@ -149,26 +134,21 @@ func (s *Suite) CLI(ctx context.Context, sockPath string, args ...string) (strin
 // Parameters:
 //   - sockPath: container-side Unix socket path (e.g. /tilbo/socks/main.sock)
 //   - dbPath: container-side SQLite path (e.g. /tilbo/dbs/main.db)
-//   - watchPath: container-side directory to watch via fanotify
+//   - watchPath: container-side directory to watch
 //   - fuseMount: container-side FUSE mount point (empty to disable FUSE)
 //   - logPath: container-side path where daemon stdout+stderr is written
-func (s *Suite) StartDaemon(ctx context.Context, sockPath, dbPath, watchPath, fuseMount, logPath string) error {
-	fuse := fuseMount
-	if fuse == "" {
-		fuse = "" // explicit empty disables FUSE in the daemon
+//   - extraArgs: additional flags forwarded verbatim to tilbo-daemon
+//     (e.g. "-watcher", "inotify")
+func (s *Suite) StartDaemon(ctx context.Context, sockPath, dbPath, watchPath, fuseMount, logPath string, extraArgs ...string) error {
+	cmd := fmt.Sprintf(
+		"tilbo-daemon -socket '%s' -db '%s' -watch '%s' -fuse-mount '%s' -log-format json",
+		sockPath, dbPath, watchPath, fuseMount,
+	)
+	if len(extraArgs) > 0 {
+		cmd += " " + strings.Join(extraArgs, " ")
 	}
 
-	script := fmt.Sprintf(
-		`nohup tilbo-daemon \
-  -socket '%s' \
-  -db '%s' \
-  -watch '%s' \
-  -fuse-mount '%s' \
-  -log-format json \
-  > '%s' 2>&1 &
-echo $! > '%s.pid'`,
-		sockPath, dbPath, watchPath, fuse, logPath, sockPath,
-	)
+	script := fmt.Sprintf("nohup %s > '%s' 2>&1 &\necho $! > '%s.pid'", cmd, logPath, sockPath)
 	if _, err := s.Shell(ctx, script); err != nil {
 		return fmt.Errorf("start daemon: %w", err)
 	}
