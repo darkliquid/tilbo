@@ -68,9 +68,10 @@ func handleTag(
 	g *graph.Graph,
 ) (*ipcv1.Response, error) {
 	opStr := map[ipcv1.TagOperation]string{
-		ipcv1.TagOperation_TAG_OPERATION_ADD:    "add",
-		ipcv1.TagOperation_TAG_OPERATION_REMOVE: "remove",
-		ipcv1.TagOperation_TAG_OPERATION_SET:    "set",
+		ipcv1.TagOperation_TAG_OPERATION_UNSPECIFIED: "",
+		ipcv1.TagOperation_TAG_OPERATION_ADD:         "add",
+		ipcv1.TagOperation_TAG_OPERATION_REMOVE:      "remove",
+		ipcv1.TagOperation_TAG_OPERATION_SET:         "set",
 	}[req.GetOperation()]
 	if opStr == "" {
 		return errResponse(3, "invalid tag operation"), nil

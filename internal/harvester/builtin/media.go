@@ -97,6 +97,8 @@ func probeMP4(path string, meta harvester.MetaMap) {
 			if t.MP4A != nil {
 				meta["audio_channels"] = float64(t.MP4A.ChannelCount)
 			}
+		default:
+			// other codecs (HEVC, AV1, etc.) are not extracted here
 		}
 	}
 }
@@ -105,6 +107,7 @@ func probeMP4(path string, meta harvester.MetaMap) {
 // metadata from MKV/WebM files.
 type mkvHandler struct {
 	mkvparse.DefaultHandler
+
 	timecodeScale uint64 // nanoseconds per timecode unit (default 1 000 000)
 	duration      float64
 	title         string
@@ -124,6 +127,8 @@ func (h *mkvHandler) HandleMasterBegin(id mkvparse.ElementID, _ mkvparse.Element
 		h.inVideo = true
 	case mkvparse.AudioElement:
 		h.inAudio = true
+	default:
+		// other elements are not tracked
 	}
 	return true, nil
 }
@@ -136,6 +141,8 @@ func (h *mkvHandler) HandleMasterEnd(id mkvparse.ElementID, _ mkvparse.ElementIn
 		h.inVideo = false
 	case mkvparse.AudioElement:
 		h.inAudio = false
+	default:
+		// other elements are not tracked
 	}
 	return nil
 }
@@ -153,6 +160,8 @@ func (h *mkvHandler) HandleInteger(id mkvparse.ElementID, value int64, _ mkvpars
 		h.timecodeScale = uint64(value)
 	case h.inAudio && id == mkvparse.ChannelsElement:
 		h.audioChannels = float64(value)
+	default:
+		// other integer elements are not extracted
 	}
 	return nil
 }
@@ -165,6 +174,8 @@ func (h *mkvHandler) HandleString(id mkvparse.ElementID, value string, _ mkvpars
 		h.videoCodec = value
 	case h.inAudio && id == mkvparse.CodecIDElement:
 		h.audioCodec = value
+	default:
+		// other string elements are not extracted
 	}
 	return nil
 }

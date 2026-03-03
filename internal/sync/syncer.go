@@ -2,6 +2,7 @@ package sync
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io/fs"
 	"log/slog"
@@ -65,7 +66,7 @@ func setLowIOPrio() {
 
 	// Best-effort. If it fails, we just continue.
 	// We use the current process/thread ID.
-	unix.Syscall(SYS_IOPRIO_SET, uintptr(IOPRIO_WHO_PROCESS), 0, uintptr(IOPRIO_CLASS_IDLE<<IOPRIO_CLASS_SHIFT))
+	_, _, _ = unix.Syscall(SYS_IOPRIO_SET, uintptr(IOPRIO_WHO_PROCESS), 0, uintptr(IOPRIO_CLASS_IDLE<<IOPRIO_CLASS_SHIFT))
 }
 
 // Run performs a full filesystem walk of the watchPath, upserting all discovered
@@ -122,7 +123,7 @@ func (s *Syncer) Run(ctx context.Context) error {
 		return nil
 	})
 
-	if err != nil && err != context.Canceled && err != context.DeadlineExceeded {
+	if err != nil && !errors.Is(err, context.Canceled) && !errors.Is(err, context.DeadlineExceeded) {
 		s.state.Store(ipcv1.DaemonState_DAEMON_STATE_DEGRADED)
 		return fmt.Errorf("syncer: walk dir %q: %w", s.watchPath, err)
 	}

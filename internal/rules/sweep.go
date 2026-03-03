@@ -173,6 +173,6 @@ func sweepSetLowIOPrio() {
 		ioPrioWhoProcess = 1
 		sysIOPrioSet     = 251 // valid for amd64/arm64
 	)
-	unix.Syscall(sysIOPrioSet, uintptr(ioPrioWhoProcess), 0,
+	_, _, _ = unix.Syscall(sysIOPrioSet, uintptr(ioPrioWhoProcess), 0,
 		uintptr(ioPrioClassIdle<<ioPrioClassShift))
 }

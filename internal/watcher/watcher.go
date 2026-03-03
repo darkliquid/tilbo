@@ -10,6 +10,7 @@ package watcher
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -74,7 +75,7 @@ const (
 const fanotifyMetaVersion uint8 = 3
 
 // fanMetaSize is the byte size of FanotifyEventMetadata.
-var fanMetaSize = int(unsafe.Sizeof(unix.FanotifyEventMetadata{}))
+const fanMetaSize = int(unsafe.Sizeof(unix.FanotifyEventMetadata{}))
 
 // Watcher watches a filesystem mount point for changes using fanotify.
 // If fanotify is unavailable (e.g. in rootless containers), it falls back
@@ -133,7 +134,7 @@ func New(ctx context.Context, mountPath string, backend Backend) (*Watcher, erro
 		// Rootless containers only hold it in a child namespace, so
 		// fanotify_init returns EPERM. In auto mode, fall back to inotify.
 		// In fanotify mode, return the error so the caller knows.
-		if (err == unix.EPERM || err == unix.ENOSYS) && backend == BackendAuto {
+		if (errors.Is(err, unix.EPERM) || errors.Is(err, unix.ENOSYS)) && backend == BackendAuto {
 			slog.WarnContext(ctx, "watcher: fanotify unavailable; falling back to inotify",
 				"err", err)
 			impl, iErr := newInotify(ctx, mountPath)

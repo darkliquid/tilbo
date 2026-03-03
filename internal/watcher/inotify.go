@@ -18,7 +18,7 @@ import (
 
 // inotifyEventBaseSize is the fixed-header size of a single inotify event
 // (Wd + Mask + Cookie + Len fields; the variable-length Name follows).
-var inotifyEventBaseSize = int(unsafe.Sizeof(unix.InotifyEvent{}))
+const inotifyEventBaseSize = int(unsafe.Sizeof(unix.InotifyEvent{}))
 
 const inotifyMask = unix.IN_CREATE | unix.IN_CLOSE_WRITE | unix.IN_MODIFY |
 	unix.IN_DELETE | unix.IN_MOVED_FROM | unix.IN_MOVED_TO

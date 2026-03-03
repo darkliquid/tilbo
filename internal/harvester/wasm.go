@@ -21,6 +21,7 @@ import (
 // The module is compiled once; each Run call instantiates a fresh module instance.
 type WASMHarvester struct {
 	baseHarvester
+
 	runtime  wazero.Runtime
 	compiled wazero.CompiledModule
 }

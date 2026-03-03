@@ -36,7 +36,7 @@ formatters:
       # with the given prefixes are grouped after 3rd-party packages.
       # Default: []
       local-prefixes:
-        - github.com/my/project
+        - github.com/darkliquid/tilbo
 
     golines:
       # Target maximum line length.
@@ -238,6 +238,10 @@ linters:
       check:
         - switch
         - map
+      # A switch statement that has a default case is considered exhaustive,
+      # even if all enum values are not listed.
+      # Default: false
+      default-signifies-exhaustive: true
 
     exhaustruct:
       # List of regular expressions to match type names that should be excluded from processing.
@@ -472,3 +476,10 @@ linters:
           - gosec
           - noctx
           - wrapcheck
+      # cmd/ binaries use cobra idioms: global command vars, init() for wiring,
+      # and fmt.Print* for legitimate terminal output.
+      - path: '^cmd/'
+        linters:
+          - forbidigo
+          - gochecknoglobals
+          - gochecknoinits

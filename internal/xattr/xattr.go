@@ -12,6 +12,7 @@ import (
 	"context"
 	"encoding/csv"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -60,7 +61,7 @@ func (s *Service) ReadTags(ctx context.Context, path string) ([]string, error) {
 		if scErr == nil {
 			val = []byte(sc.Tags)
 			err = nil
-		} else if scErr == sidecar.ErrNoSidecar {
+		} else if errors.Is(scErr, sidecar.ErrNoSidecar) {
 			err = nil
 			val = nil
 		} else {
@@ -82,7 +83,7 @@ func (s *Service) ReadTags(ctx context.Context, path string) ([]string, error) {
 	}
 
 	record, err := csv.NewReader(strings.NewReader(str)).Read()
-	if err != nil && err != io.EOF {
+	if err != nil && !errors.Is(err, io.EOF) {
 		return nil, fmt.Errorf("xattr parse tags %q: %w", path, err)
 	}
 
@@ -117,7 +118,7 @@ func (s *Service) WriteTags(ctx context.Context, path string, tags []string) err
 	if err := xattr.Set(path, XattrTagKey, []byte(valStr)); err != nil {
 		if isNotSupported(err) && s.sidecarStore != nil {
 			sc, scErr := s.sidecarStore.Read(ctx, path)
-			if scErr == sidecar.ErrNoSidecar {
+			if errors.Is(scErr, sidecar.ErrNoSidecar) {
 				sc = &sidecar.Data{}
 			} else if scErr != nil {
 				return fmt.Errorf("sidecar read for tags update %q: %w", path, scErr)
@@ -153,7 +154,7 @@ func (s *Service) ReadMeta(ctx context.Context, path, key string) (string, error
 			}
 
 			return "", nil
-		} else if scErr == sidecar.ErrNoSidecar {
+		} else if errors.Is(scErr, sidecar.ErrNoSidecar) {
 			return "", nil
 		}
 
@@ -180,7 +181,7 @@ func (s *Service) WriteMeta(ctx context.Context, path, key, value string) error 
 	if err := xattr.Set(path, XattrMetaPrefix+key, []byte(value)); err != nil {
 		if isNotSupported(err) && s.sidecarStore != nil {
 			sc, scErr := s.sidecarStore.Read(ctx, path)
-			if scErr == sidecar.ErrNoSidecar {
+			if errors.Is(scErr, sidecar.ErrNoSidecar) {
 				sc = &sidecar.Data{Meta: make(map[string]string)}
 			} else if scErr != nil {
 				return fmt.Errorf("sidecar read for meta update %q: %w", path, scErr)
@@ -221,7 +222,7 @@ func (s *Service) ReadAllMeta(ctx context.Context, path string) (map[string]stri
 			}
 
 			return sc.Meta, nil
-		} else if scErr == sidecar.ErrNoSidecar {
+		} else if errors.Is(scErr, sidecar.ErrNoSidecar) {
 			return map[string]string{}, nil
 		}
 
@@ -267,7 +268,7 @@ func (s *Service) ReadSource(ctx context.Context, path string) (map[string]strin
 			}
 
 			return sc.Source, nil
-		} else if scErr == sidecar.ErrNoSidecar {
+		} else if errors.Is(scErr, sidecar.ErrNoSidecar) {
 			return map[string]string{}, nil
 		}
 
@@ -304,7 +305,7 @@ func (s *Service) WriteSource(ctx context.Context, path string, source map[strin
 	if err := xattr.Set(path, XattrSourceKey, data); err != nil {
 		if isNotSupported(err) {
 			sc, scErr := s.sidecarStore.Read(ctx, path)
-			if scErr == sidecar.ErrNoSidecar {
+			if errors.Is(scErr, sidecar.ErrNoSidecar) {
 				sc = &sidecar.Data{Source: make(map[string]string)}
 			} else if scErr != nil {
 				return fmt.Errorf("sidecar read for source update %q: %w", path, scErr)
@@ -340,7 +341,6 @@ func (s *Service) BatchReadTags(ctx context.Context, paths []string) (map[string
 
 	ch := make(chan result, len(paths))
 	for _, p := range paths {
-		p := p
 		go func() {
 			tags, err := s.ReadTags(ctx, p)
 			ch <- result{path: p, tags: tags, err: err}

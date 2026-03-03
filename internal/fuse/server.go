@@ -348,6 +348,7 @@ func (d *TagDir) Setxattr(ctx context.Context, attr string, data []byte, flags u
 // FileLink is a symlink node pointing to a real file path.
 type FileLink struct {
 	fs.Inode
+
 	realPath string
 }
 

@@ -2,6 +2,7 @@ package sidecar
 
 import (
 	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
@@ -40,7 +41,7 @@ func TestSidecarStore(t *testing.T) {
 	}
 
 	// 1. Read non-existent
-	if _, err := s.Read(ctx, path); err != ErrNoSidecar {
+	if _, err := s.Read(ctx, path); !errors.Is(err, ErrNoSidecar) {
 		t.Fatalf("expected ErrNoSidecar, got %v", err)
 	}
 

@@ -58,7 +58,6 @@ func (p *Pipeline) RunAsync(ctx context.Context, input Input, onResult func(name
 	p.mu.RUnlock()
 
 	for _, h := range hs {
-		h := h
 		go func() {
 			meta, err := h.Run(ctx, input)
 			if err != nil {
@@ -87,7 +86,6 @@ func runAndMerge(ctx context.Context, hs []Harvester, input Input) (MetaMap, err
 	ch := make(chan result, len(hs))
 
 	for _, h := range hs {
-		h := h
 		go func() {
 			meta, err := h.Run(ctx, input)
 			if err != nil {
