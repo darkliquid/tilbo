@@ -1,0 +1,67 @@
+version: "2"
+
+linters:
+  enable:
+    - errcheck        # unchecked error returns
+    - govet           # standard Go vet
+    - staticcheck     # comprehensive static analysis
+    - ineffassign     # assignment to a variable that is never used after
+    - unused          # unused code
+    - godot           # check that godoc comments end with a period
+    - noctx           # find http.NewRequest without context.Context
+    - revive          # general Go linting rules
+    - misspell        # typos in comments and strings
+    - goimports       # goimports formatting
+    - durationcheck   # check for two durations being multiplied together
+    - exportloopref   # check for pointers to enclosing loop variables (Go < 1.22)
+    - bodyclose       # check http body is closed
+    - contextcheck    # check function using correct context
+
+linters-settings:
+  revive:
+    rules:
+      - name: exported
+        arguments:
+          - "checkPrivateReceivers"
+          - "sayRepetitiveInsteadOfStutters"
+      - name: error-return
+      - name: error-strings
+      - name: indent-error-flow
+      - name: var-naming
+      - name: package-comments
+  godot:
+    scope: all
+    capital: false
+  goimports:
+    local-prefixes: github.com/darkliquid/tilbo
+
+issues:
+  exclude-rules:
+    # Generated protobuf code — do not lint
+    - path: internal/ipc/gen/
+      linters: [all]
+    # Browser package uses CGo and Qt — different rules apply
+    - path: cmd/tilbo-browser/
+      linters: [all]
+    # Test files: relax godoc, errcheck for deferred cleanup
+    - path: _test\.go
+      linters:
+        - godot
+        - errcheck
+        - revive
+    # Integration test helpers are internal packages, not public API
+    - path: test/integration/
+      linters:
+        - godot
+        - revive
+
+  # Show all issues even if similar ones exist
+  max-same-issues: 0
+  max-issues-per-linter: 0
+
+run:
+  # Exclude browser (CGo/Qt) and generated code from all analysis
+  exclude-dirs:
+    - cmd/tilbo-browser
+    - internal/ipc/gen
+  timeout: 5m

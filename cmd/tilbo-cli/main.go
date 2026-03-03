@@ -15,6 +15,15 @@ import (
 	ipcv1 "github.com/darkliquid/tilbo/internal/ipc/gen/tilbo/ipc/v1"
 )
 
+// version, commit, and buildDate are injected at build time by goreleaser via
+// -ldflags "-X main.version=... -X main.commit=... -X main.buildDate=...".
+// They default to "dev" so untagged local builds still produce useful output.
+var (
+	version   = "dev"
+	commit    = "none"
+	buildDate = "unknown"
+)
+
 var sockFlag string
 
 var rootCmd = &cobra.Command{
@@ -31,6 +40,9 @@ var rootCmd = &cobra.Command{
 }
 
 func init() {
+	rootCmd.Version = version
+	rootCmd.SetVersionTemplate(fmt.Sprintf("tilbo %s (commit %s, built %s)\n", version, commit, buildDate))
+
 	rootCmd.PersistentFlags().StringVar(&sockFlag, "socket", defaultSocketPath(), "path to the tilbo daemon socket")
 
 	rootCmd.AddCommand(tagCmd)

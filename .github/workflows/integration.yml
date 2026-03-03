@@ -1,0 +1,95 @@
+name: Integration Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# Cancel in-flight integration runs on the same branch on new pushes.
+concurrency:
+  group: integration-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  integration:
+    name: Integration tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      # Docker is pre-installed on ubuntu-24.04; testcontainers-go uses it.
+      # Privileged containers (required for FUSE + fanotify) are allowed on
+      # GitHub Actions Linux runners.
+      - name: Verify Docker is accessible
+        run: docker info
+
+      - name: Install gotestsum
+        run: go install gotest.tools/gotestsum@latest
+
+      - name: Run integration tests
+        working-directory: test/integration
+        env:
+          # Use Docker explicitly (not Podman) on CI.
+          DOCKER_HOST: unix:///var/run/docker.sock
+          # Keep the Ryuk reaper enabled; it ensures cleanup even on failure.
+          TESTCONTAINERS_RYUK_DISABLED: "false"
+        run: |
+          mkdir -p test-results
+          gotestsum \
+            --format=github-actions \
+            --junitfile=test-results/junit.xml \
+            -- \
+            -v \
+            -count=1 \
+            -timeout=20m \
+            ./...
+
+      - name: Write integration test summary
+        if: always()
+        run: |
+          echo "## Integration Test Results" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          if [ -f test/integration/test-results/junit.xml ]; then
+            # Quick pass/fail/skip tally from JUnit XML
+            python3 - <<'EOF'
+          import xml.etree.ElementTree as ET, sys, os
+          tree = ET.parse("test/integration/test-results/junit.xml")
+          root = tree.getroot()
+          suites = root.findall(".//testsuite")
+          tests = sum(int(s.get("tests", 0)) for s in suites)
+          failures = sum(int(s.get("failures", 0)) for s in suites)
+          skipped = sum(int(s.get("skipped", 0)) for s in suites)
+          passed = tests - failures - skipped
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as f:
+              f.write(f"| Result | Count |\n|--------|-------|\n")
+              f.write(f"| ✅ Passed | {passed} |\n")
+              f.write(f"| ❌ Failed | {failures} |\n")
+              f.write(f"| ⏭️ Skipped | {skipped} |\n")
+              f.write(f"| **Total** | **{tests}** |\n\n")
+          EOF
+          fi
+
+      - name: Upload integration test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-test-results
+          path: test/integration/test-results/junit.xml
+          retention-days: 30
+
+      - name: Report integration test results
+        if: always()
+        uses: dorny/test-reporter@v1
+        with:
+          name: Integration test results
+          path: test/integration/test-results/junit.xml
+          reporter: java-junit
+          fail-on-error: true

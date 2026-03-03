@@ -31,6 +31,15 @@ import (
 	tilbofuse "github.com/darkliquid/tilbo/internal/fuse"
 )
 
+// version, commit, and buildDate are injected at build time by goreleaser via
+// -ldflags "-X main.version=... -X main.commit=... -X main.buildDate=...".
+// They default to "dev" so untagged local builds still produce useful output.
+var (
+	version   = "dev"
+	commit    = "none"
+	buildDate = "unknown"
+)
+
 func main() {
 	var (
 		watchPath      = flag.String("watch", defaultWatchPath(), "filesystem path to watch")
@@ -40,8 +49,14 @@ func main() {
 		logFormat      = flag.String("log-format", "text", "log format: text or json")
 		logLevel       = flag.String("log-level", "info", "log level: debug, info, warn, error")
 		watcherBackend = flag.String("watcher", "auto", "filesystem watcher backend: auto, fanotify, inotify")
+		printVersion   = flag.Bool("version", false, "print version information and exit")
 	)
 	flag.Parse()
+
+	if *printVersion {
+		fmt.Printf("tilbo-daemon %s (commit %s, built %s)\n", version, commit, buildDate)
+		return
+	}
 
 	sockPath := *sockOverride
 	if sockPath == "" {
@@ -54,6 +69,9 @@ func main() {
 	}
 
 	slog.Info("tilbo-daemon starting",
+		"version", version,
+		"commit", commit,
+		"built", buildDate,
 		"watch", *watchPath,
 		"db", *dbPath,
 		"fuse", *fuseMount,

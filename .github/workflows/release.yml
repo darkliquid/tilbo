@@ -1,0 +1,42 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+# Allow one release at a time; older runs are NOT cancelled (each tag is unique).
+concurrency:
+  group: release-${{ github.ref }}
+
+jobs:
+  release:
+    name: goreleaser
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write   # create GitHub release + upload assets
+      packages: write   # push container images if added later
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Full history is required for goreleaser changelog generation.
+          fetch-depth: 0
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      # nfpm is embedded in goreleaser; no separate install needed.
+      # fpm/dpkg-dev tools are available on ubuntu-24.04 runners for .deb/.rpm.
+      - name: Install packaging dependencies
+        run: sudo apt-get install -y rpm
+
+      - name: Run goreleaser
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          version: latest
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

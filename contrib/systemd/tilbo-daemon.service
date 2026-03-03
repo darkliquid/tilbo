@@ -1,0 +1,25 @@
+[Unit]
+Description=Tilbo file tagging daemon
+Documentation=https://github.com/darkliquid/tilbo
+# Start after the session D-Bus and user filesystem are available.
+After=dbus.socket local-fs.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/tilbo-daemon
+Restart=on-failure
+RestartSec=5s
+
+# Logging — journal captures stdout/stderr automatically.
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=tilbo-daemon
+
+# Security hardening (user service, so these are relative to the user).
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ReadWritePaths=%h
+
+[Install]
+WantedBy=default.target

@@ -1,0 +1,113 @@
+version: 2
+
+project_name: tilbo
+
+before:
+  hooks:
+    - go mod tidy
+    - go mod verify
+
+builds:
+  - id: tilbo-daemon
+    binary: tilbo-daemon
+    main: ./cmd/tilbo-daemon
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+      - -X main.commit={{.ShortCommit}}
+      - -X main.buildDate={{.Date}}
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
+  - id: tilbo-cli
+    binary: tilbo-cli
+    main: ./cmd/tilbo-cli
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+      - -X main.commit={{.ShortCommit}}
+      - -X main.buildDate={{.Date}}
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
+archives:
+  - id: tilbo-archive
+    builds:
+      - tilbo-daemon
+      - tilbo-cli
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    format: tar.gz
+    files:
+      - LICENSE*
+      - README*
+      - CHANGELOG*
+
+nfpms:
+  - id: tilbo-packages
+    package_name: tilbo
+    builds:
+      - tilbo-daemon
+      - tilbo-cli
+    vendor: darkliquid
+    homepage: https://github.com/darkliquid/tilbo
+    maintainer: "darkliquid <darkliquid@users.noreply.github.com>"
+    description: |
+      Tag-first file management platform for Linux. Replaces folder-hierarchy
+      browsing with metadata-driven, graph-aware file interaction via xattrs,
+      a virtual FUSE filesystem, and a CLI client.
+    license: MIT
+    formats:
+      - deb
+      - rpm
+      - apk
+    contents:
+      - src: contrib/systemd/tilbo-daemon.service
+        dst: /usr/lib/systemd/user/tilbo-daemon.service
+        type: config
+    scripts:
+      postinstall: contrib/scripts/postinstall.sh
+      preremove: contrib/scripts/preremove.sh
+
+checksum:
+  name_template: checksums.txt
+  algorithm: sha256
+
+snapshot:
+  version_template: "{{ incpatch .Version }}-dev+{{ .ShortCommit }}"
+
+changelog:
+  sort: asc
+  use: github
+  groups:
+    - title: Features
+      regexp: "^.*feat[(\\[].*[)\\]]?:.*$"
+      order: 0
+    - title: Bug Fixes
+      regexp: "^.*fix[(\\[].*[)\\]]?:.*$"
+      order: 1
+    - title: Performance
+      regexp: "^.*perf[(\\[].*[)\\]]?:.*$"
+      order: 2
+    - title: Other
+      order: 999
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+      - "^ci:"
+      - "^refactor:"
+      - Merge pull request
+      - Merge branch
