@@ -50,6 +50,8 @@ func init() {
 	rootCmd.AddCommand(metaCmd)
 	rootCmd.AddCommand(relatedCmd)
 	rootCmd.AddCommand(daemonCmd)
+	rootCmd.AddCommand(ruleCmd)
+	rootCmd.AddCommand(harvesterCmd)
 }
 
 func main() {

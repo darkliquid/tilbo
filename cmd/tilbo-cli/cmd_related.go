@@ -24,12 +24,16 @@ var relatedCmd = &cobra.Command{
 		limit, _ := cmd.Flags().GetUint32("limit")
 		hops, _ := cmd.Flags().GetUint32("hops")
 		format, _ := cmd.Flags().GetString("format")
+		hopWeight, _ := cmd.Flags().GetFloat32("hop-weight")
+		vecWeight, _ := cmd.Flags().GetFloat32("vec-weight")
 
 		resp, err := call(ctx, &ipcv1.Request{Kind: &ipcv1.Request_Related{
 			Related: &ipcv1.RelatedRequest{
-				SeedPath: path,
-				Limit:    limit,
-				MaxHops:  hops,
+				SeedPath:  path,
+				Limit:     limit,
+				MaxHops:   hops,
+				HopWeight: hopWeight,
+				VecWeight: vecWeight,
 			},
 		}})
 		if err != nil {
@@ -56,6 +60,8 @@ var relatedCmd = &cobra.Command{
 func init() {
 	relatedCmd.Flags().Uint32("limit", 20, "maximum results to return")
 	relatedCmd.Flags().Uint32("hops", 3, "maximum graph hops from seed")
+	relatedCmd.Flags().Float32("hop-weight", 1.0, "weight multiplier for graph hop distance")
+	relatedCmd.Flags().Float32("vec-weight", 0.4, "weight multiplier for vector similarity")
 	relatedCmd.Flags().String("format", "human", "output format: human, json, tsv")
 	_ = relatedCmd.RegisterFlagCompletionFunc("format", completeEnum("human", "json", "tsv"))
 }

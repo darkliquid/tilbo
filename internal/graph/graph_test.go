@@ -10,7 +10,7 @@ import (
 
 func TestGraph_EmptyRelated(t *testing.T) {
 	g := New()
-	got := g.Related(context.Background(), "/no/such/file", 3, 10, 1.0)
+	got := g.Related(context.Background(), "/no/such/file", 3, 10, 1.0, 0.4)
 	if len(got) != 0 {
 		t.Fatalf("expected no results, got %v", got)
 	}
@@ -24,7 +24,7 @@ func TestGraph_DirectNeighbours(t *testing.T) {
 	g.SetFileTags("/c", []string{"video", "action"})
 	g.SetFileTags("/d", []string{"comedy"})
 
-	results := g.Related(context.Background(), "/a", 1, 10, 1.0)
+	results := g.Related(context.Background(), "/a", 1, 10, 1.0, 0.4)
 
 	paths := make(map[string]bool)
 	for _, r := range results {
@@ -51,7 +51,7 @@ func TestGraph_MultiTagBoost(t *testing.T) {
 	g.SetFileTags("/b", []string{"video", "action"})
 	g.SetFileTags("/c", []string{"video"})
 
-	results := g.Related(context.Background(), "/a", 1, 10, 1.0)
+	results := g.Related(context.Background(), "/a", 1, 10, 1.0, 0.4)
 	if len(results) < 2 {
 		t.Fatalf("expected at least 2 results, got %v", results)
 	}
@@ -70,7 +70,7 @@ func TestGraph_HopDecay(t *testing.T) {
 	g.SetFileTags("/b", []string{"x", "y"})
 	g.SetFileTags("/c", []string{"y"})
 
-	results := g.Related(context.Background(), "/a", 2, 10, 1.0)
+	results := g.Related(context.Background(), "/a", 2, 10, 1.0, 0.4)
 	if len(results) < 2 {
 		t.Fatalf("expected 2 results, got %v", results)
 	}
@@ -92,7 +92,7 @@ func TestGraph_MaxHopsRespected(t *testing.T) {
 	g.SetFileTags("/b", []string{"x", "y"})
 	g.SetFileTags("/c", []string{"y"})
 
-	results := g.Related(context.Background(), "/a", 1, 10, 1.0)
+	results := g.Related(context.Background(), "/a", 1, 10, 1.0, 0.4)
 	for _, r := range results {
 		if r.Path == "/c" {
 			t.Error("/c should not appear with maxHops=1")
@@ -107,7 +107,7 @@ func TestGraph_LimitRespected(t *testing.T) {
 	g.SetFileTags("/c", []string{"t2"})
 	g.SetFileTags("/d", []string{"t3"})
 
-	results := g.Related(context.Background(), "/a", 1, 2, 1.0)
+	results := g.Related(context.Background(), "/a", 1, 2, 1.0, 0.4)
 	if len(results) != 2 {
 		t.Fatalf("expected limit=2, got %d results", len(results))
 	}
@@ -119,7 +119,7 @@ func TestGraph_RemoveFile(t *testing.T) {
 	g.SetFileTags("/b", []string{"video"})
 	g.RemoveFile("/b")
 
-	results := g.Related(context.Background(), "/a", 1, 10, 1.0)
+	results := g.Related(context.Background(), "/a", 1, 10, 1.0, 0.4)
 	for _, r := range results {
 		if r.Path == "/b" {
 			t.Error("/b should not appear after RemoveFile")
@@ -136,7 +136,7 @@ func TestGraph_Load(t *testing.T) {
 	}
 	g.Load(context.Background(), pairs)
 
-	results := g.Related(context.Background(), "/a", 1, 10, 1.0)
+	results := g.Related(context.Background(), "/a", 1, 10, 1.0, 0.4)
 	found := false
 	for _, r := range results {
 		if r.Path == "/b" {
@@ -153,7 +153,7 @@ func TestGraph_SeedNotInResults(t *testing.T) {
 	g.SetFileTags("/a", []string{"video"})
 	g.SetFileTags("/b", []string{"video"})
 
-	results := g.Related(context.Background(), "/a", 1, 10, 1.0)
+	results := g.Related(context.Background(), "/a", 1, 10, 1.0, 0.4)
 	for _, r := range results {
 		if r.Path == "/a" {
 			t.Error("seed file should not appear in Related results")
@@ -196,7 +196,7 @@ func BenchmarkGraph_Related_1k(b *testing.B) {
 	g, seed := buildGraph(1_000, 5, 200, 5)
 	b.ResetTimer()
 	for b.Loop() {
-		g.Related(context.Background(), seed, 3, 100, 1.0)
+		g.Related(context.Background(), seed, 3, 100, 1.0, 0.4)
 	}
 }
 
@@ -205,7 +205,7 @@ func BenchmarkGraph_Related_10k(b *testing.B) {
 	g, seed := buildGraph(10_000, 10, 500, 5)
 	b.ResetTimer()
 	for b.Loop() {
-		g.Related(context.Background(), seed, 3, 100, 1.0)
+		g.Related(context.Background(), seed, 3, 100, 1.0, 0.4)
 	}
 }
 
@@ -218,7 +218,7 @@ func BenchmarkGraph_Related_100k(b *testing.B) {
 	timings := make([]int64, 0, b.N)
 	for b.Loop() {
 		t0 := time.Now()
-		g.Related(context.Background(), seed, 3, 100, 1.0)
+		g.Related(context.Background(), seed, 3, 100, 1.0, 0.4)
 		timings = append(timings, time.Since(t0).Nanoseconds())
 	}
 	b.StopTimer()

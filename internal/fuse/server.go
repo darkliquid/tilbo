@@ -177,7 +177,7 @@ var _ fs.NodeRmdirer = (*TagDir)(nil)
 // query executes the tag expression against the index and returns results.
 func (d *TagDir) query(ctx context.Context) ([]index.SearchResult, error) {
 	if d.expr.IsSimilar() {
-		results := d.root.g.Related(ctx, d.expr.SeedPath, 3, 100, 1.0)
+		results := d.root.g.Related(ctx, d.expr.SeedPath, 3, 100, 1.0, 0.4)
 		return graphToSearchResults(results), nil
 	}
 

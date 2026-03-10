@@ -35,6 +35,8 @@ type Graph struct {
 	fileAdj map[string]map[string]struct{} // fileKey → set of tagKeys
 	tagAdj  map[string]map[string]struct{} // tagKey  → set of fileKeys
 
+	fileEmbeddings map[string][]float32
+
 	tagCardinality map[string]int // tagname → #files
 	totalFiles     int
 }
@@ -45,6 +47,7 @@ func New() *Graph {
 		g:              dgraph.New(dgraph.StringHash),
 		fileAdj:        make(map[string]map[string]struct{}),
 		tagAdj:         make(map[string]map[string]struct{}),
+		fileEmbeddings: make(map[string][]float32),
 		tagCardinality: make(map[string]int),
 	}
 }
@@ -64,6 +67,24 @@ func (g *Graph) Load(_ context.Context, pairs [][2]string) {
 		g.addEdgeLocked(p[0], p[1])
 	}
 	g.rebuildCountsLocked()
+}
+
+// LoadEmbeddings populates the graph's embedding lookup for similarity blending.
+// Typically called shortly after Load.
+func (g *Graph) LoadEmbeddings(_ context.Context, embs map[string][]float32) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+
+	for path, vec := range embs {
+		g.fileEmbeddings[filePrefix+path] = vec
+	}
+}
+
+// SetEmbedding updates the embedding vector for a single path.
+func (g *Graph) SetEmbedding(path string, vec []float32) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	g.fileEmbeddings[filePrefix+path] = vec
 }
 
 // SetFileTags updates the graph so that path's tag-set exactly equals tagNames.
@@ -103,6 +124,7 @@ func (g *Graph) RemoveFile(path string) {
 	}
 	_ = g.g.RemoveVertex(fk)
 	delete(g.fileAdj, fk)
+	delete(g.fileEmbeddings, fk)
 	g.rebuildCountsLocked()
 }
 
@@ -117,7 +139,7 @@ func (g *Graph) RemoveFile(path string) {
 //     removal analogue); their IDF is near-zero anyway.
 //  2. The BFS frontier is capped at limit×20 per hop; only the highest-scored
 //     files advance to keep work per hop bounded.
-func (g *Graph) Related(_ context.Context, seedPath string, maxHops, limit int, hopWeight float64) []RelatedFile {
+func (g *Graph) Related(_ context.Context, seedPath string, maxHops, limit int, hopWeight, vecWeight float64) []RelatedFile {
 	g.mu.RLock()
 	defer g.mu.RUnlock()
 
@@ -140,6 +162,8 @@ func (g *Graph) Related(_ context.Context, seedPath string, maxHops, limit int, 
 	if maxFrontier <= 0 {
 		maxFrontier = 400
 	}
+
+	seedVec, hasSeedVec := g.fileEmbeddings[fk]
 
 	type result struct {
 		score float64
@@ -208,6 +232,21 @@ func (g *Graph) Related(_ context.Context, seedPath string, maxHops, limit int, 
 			}
 			frontier = nextFrontier
 		}
+
+		// Apply vector similarity boost exactly once per discovered target
+		if hasSeedVec {
+			for nfk := range pending {
+				if tgtVec, ok := g.fileEmbeddings[nfk]; ok {
+					sim := cosineSimilarity(seedVec, tgtVec)
+					if sim > 0 {
+						// Only boost positive similarities
+						r := scores[nfk]
+						r.score += (sim * vecWeight)
+						scores[nfk] = r
+					}
+				}
+			}
+		}
 	}
 
 	out := make([]RelatedFile, 0, len(scores))
@@ -253,4 +292,24 @@ func (g *Graph) rebuildCountsLocked() {
 	for tk, nbrs := range g.tagAdj {
 		g.tagCardinality[strings.TrimPrefix(tk, tagPrefix)] = len(nbrs)
 	}
+}
+
+// cosineSimilarity computes the cosine similarity between two float32 slices.
+// Requires identical dimensions.
+func cosineSimilarity(a, b []float32) float64 {
+	if len(a) != len(b) || len(a) == 0 {
+		return 0.0
+	}
+	var dot, normA, normB float64
+	for i := range a {
+		va := float64(a[i])
+		vb := float64(b[i])
+		dot += va * vb
+		normA += va * va
+		normB += vb * vb
+	}
+	if normA == 0 || normB == 0 {
+		return 0.0
+	}
+	return dot / (math.Sqrt(normA) * math.Sqrt(normB))
 }

@@ -33,6 +33,12 @@ type Syncer struct {
 
 	state        atomic.Value // holds ipcv1.DaemonState
 	filesIndexed atomic.Uint64
+
+	// OnStateChanged is called whenever the daemon state changes.
+	OnStateChanged func(state ipcv1.DaemonState)
+
+	// OnIndexUpdated is called when a full sync scan completes.
+	OnIndexUpdated func(filesTotal, tagsTotal uint64)
 }
 
 // New creates a new Syncer.
@@ -42,7 +48,7 @@ func New(idx *index.DB, tags *xattr.Service, watchPath string) *Syncer {
 		tags:      tags,
 		watchPath: watchPath,
 	}
-	s.state.Store(ipcv1.DaemonState_DAEMON_STATE_IDLE)
+	s.setState(ipcv1.DaemonState_DAEMON_STATE_IDLE)
 	return s
 }
 
@@ -52,6 +58,13 @@ func (s *Syncer) State() DaemonState {
 	return DaemonState{
 		State:        state,
 		FilesIndexed: s.filesIndexed.Load(),
+	}
+}
+
+func (s *Syncer) setState(state ipcv1.DaemonState) {
+	s.state.Store(state)
+	if s.OnStateChanged != nil {
+		s.OnStateChanged(state)
 	}
 }
 
@@ -73,12 +86,12 @@ func setLowIOPrio() {
 // files and their xattrs into the index. It runs in the background and sets its
 // own I/O priority to IDLE to avoid impacting the system.
 func (s *Syncer) Run(ctx context.Context) error {
-	s.state.Store(ipcv1.DaemonState_DAEMON_STATE_SCANNING)
+	s.setState(ipcv1.DaemonState_DAEMON_STATE_SCANNING)
 	s.filesIndexed.Store(0)
 
 	defer func() {
 		if ctx.Err() == nil {
-			s.state.Store(ipcv1.DaemonState_DAEMON_STATE_READY)
+			s.setState(ipcv1.DaemonState_DAEMON_STATE_READY)
 		}
 	}()
 
@@ -124,7 +137,7 @@ func (s *Syncer) Run(ctx context.Context) error {
 	})
 
 	if err != nil && !errors.Is(err, context.Canceled) && !errors.Is(err, context.DeadlineExceeded) {
-		s.state.Store(ipcv1.DaemonState_DAEMON_STATE_DEGRADED)
+		s.setState(ipcv1.DaemonState_DAEMON_STATE_DEGRADED)
 		return fmt.Errorf("syncer: walk dir %q: %w", s.watchPath, err)
 	}
 
@@ -134,6 +147,11 @@ func (s *Syncer) Run(ctx context.Context) error {
 		if err := s.idx.DeleteStaleFiles(ctx, s.watchPath, startTime); err != nil {
 			slog.WarnContext(ctx, "syncer: cleanup stale files failed", "err", err)
 		}
+	}
+
+	if s.OnIndexUpdated != nil {
+		stats, _ := s.idx.GetStats(ctx)
+		s.OnIndexUpdated(uint64(stats.FilesCount), uint64(stats.TagsCount))
 	}
 
 	slog.InfoContext(ctx, "syncer: completed full scan", "indexed", s.filesIndexed.Load())

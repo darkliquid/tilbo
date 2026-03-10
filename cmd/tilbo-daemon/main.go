@@ -18,6 +18,7 @@ import (
 
 	"github.com/tetratelabs/wazero"
 
+	"github.com/darkliquid/tilbo/internal/embed"
 	"github.com/darkliquid/tilbo/internal/graph"
 	"github.com/darkliquid/tilbo/internal/harvester"
 	"github.com/darkliquid/tilbo/internal/index"
@@ -27,6 +28,7 @@ import (
 	isync "github.com/darkliquid/tilbo/internal/sync"
 	"github.com/darkliquid/tilbo/internal/watcher"
 	"github.com/darkliquid/tilbo/internal/xattr"
+	"github.com/darkliquid/tilbo/internal/dbus"
 
 	tilbofuse "github.com/darkliquid/tilbo/internal/fuse"
 )
@@ -49,6 +51,7 @@ func main() {
 		logFormat      = flag.String("log-format", "text", "log format: text or json")
 		logLevel       = flag.String("log-level", "info", "log level: debug, info, warn, error")
 		watcherBackend = flag.String("watcher", "auto", "filesystem watcher backend: auto, fanotify, inotify")
+		embedModel     = flag.String("embed-model", "", "path to ONNX tokenizer/model directory for embeddings")
 		printVersion   = flag.Bool("version", false, "print version information and exit")
 	)
 	flag.Parse()
@@ -87,7 +90,7 @@ func main() {
 	signal.Notify(hupCh, syscall.SIGHUP)
 	defer signal.Stop(hupCh)
 
-	if err := run(ctx, hupCh, *watchPath, *dbPath, *fuseMount, sockPath, watcher.Backend(*watcherBackend)); err != nil {
+	if err := run(ctx, hupCh, *watchPath, *dbPath, *fuseMount, sockPath, watcher.Backend(*watcherBackend), *embedModel); err != nil {
 		slog.Error("daemon error", "err", err)
 		os.Exit(1)
 	}
@@ -96,7 +99,7 @@ func main() {
 
 // run is the main daemon loop. It returns nil on clean shutdown and a non-nil
 // error if any component fails unexpectedly.
-func run(ctx context.Context, hupCh <-chan os.Signal, watchPath, dbPath, fuseMount, sockPath string, watcherBackend watcher.Backend) error {
+func run(ctx context.Context, hupCh <-chan os.Signal, watchPath, dbPath, fuseMount, sockPath string, watcherBackend watcher.Backend, embedModelPath string) error {
 	// Ensure the database directory exists.
 	if err := os.MkdirAll(filepath.Dir(dbPath), 0o700); err != nil {
 		return fmt.Errorf("create db dir: %w", err)
@@ -128,6 +131,31 @@ func run(ctx context.Context, hupCh <-chan os.Signal, watchPath, dbPath, fuseMou
 
 	// Initialize the background syncer.
 	syncer := isync.New(idx, tags, watchPath)
+	
+	// Start D-Bus so we can report daemon state changes.
+	dbusConn, dbusErr := dbus.NewDaemonBus()
+	if dbusErr != nil {
+		slog.Warn("dbus: failed to connect; continuing without D-Bus signals", "err", dbusErr)
+	} else {
+		defer dbusConn.Close()
+		syncer.OnStateChanged = func(state ipcv1.DaemonState) {
+			s := "idle"
+			// Translate protobuf states into strings for D-Bus
+			switch state {
+			case ipcv1.DaemonState_DAEMON_STATE_SCANNING:
+				s = "scanning"
+			case ipcv1.DaemonState_DAEMON_STATE_READY:
+				s = "ready"
+			case ipcv1.DaemonState_DAEMON_STATE_DEGRADED:
+				s = "degraded"
+			}
+			dbusConn.EmitDaemonStateChanged(s)
+		}
+		syncer.OnIndexUpdated = func(filesTotal, tagsTotal uint64) {
+			dbusConn.EmitIndexUpdated(filesTotal, tagsTotal)
+		}
+	}
+
 	go func() {
 		if err := syncer.Run(ctx); err != nil {
 			slog.Error("syncer failed", "err", err)
@@ -173,8 +201,32 @@ func run(ctx context.Context, hupCh <-chan os.Signal, watchPath, dbPath, fuseMou
 		slog.Info("graph loaded", "pairs", len(pairs))
 	}
 
+	if embs, err := idx.ListEmbeddings(ctx); err != nil {
+		slog.Warn("graph: failed to load embeddings", "err", err)
+	} else {
+		fileGraph.LoadEmbeddings(ctx, embs)
+		slog.Info("embeddings loaded", "vectors", len(embs))
+	}
+
+	var embedder *embed.ONNXEmbedder
+	if embedModelPath != "" {
+		emb, err := embed.NewONNXEmbedder(ctx, embedModelPath)
+		if err != nil {
+			slog.Warn("failed to init embedder; continuing without vector search", "err", err)
+		} else {
+			embedder = emb
+			defer embedder.Close()
+			slog.Info("embedder initialized", "model", embedModelPath)
+		}
+	}
+
 	// Processor (runs pipeline + rules on each file event).
-	proc := newProcessor(idx, tags, pipeline, engine, fileGraph)
+	proc := newProcessor(idx, tags, pipeline, engine, fileGraph, embedder)
+	if dbusConn != nil {
+		proc.OnFileTagged = func(path string, added, removed []string) {
+			dbusConn.EmitFileTagged(path, added, removed)
+		}
+	}
 
 	// Sweeper (re-evaluates all files after rule reload).
 	sweeper := rules.NewSweeper(idx, tags, pipeline, engine)
@@ -252,7 +304,7 @@ func run(ctx context.Context, hupCh <-chan os.Signal, watchPath, dbPath, fuseMou
 			return handleSearch(ctx, r.Search, idx)
 
 		case *ipcv1.Request_Tag:
-			return handleTag(ctx, r.Tag, idx, tags, fileGraph)
+			return handleTag(ctx, r.Tag, idx, tags, fileGraph, proc.OnFileTagged)
 
 		case *ipcv1.Request_Metadata:
 			return handleMetadata(ctx, r.Metadata, idx)
@@ -354,7 +406,12 @@ func handleRelated(ctx context.Context, req *ipcv1.RelatedRequest, g *graph.Grap
 		hopWeight = 1.0
 	}
 
-	related := g.Related(ctx, req.GetSeedPath(), maxHops, limit, hopWeight)
+	vecWeight := float64(req.GetVecWeight())
+	if vecWeight <= 0 {
+		vecWeight = 0.4 // default vecWeight
+	}
+
+	related := g.Related(ctx, req.GetSeedPath(), maxHops, limit, hopWeight, vecWeight)
 
 	scored := make([]*ipcv1.ScoredFile, 0, len(related))
 	for _, r := range related {

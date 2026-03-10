@@ -66,6 +66,7 @@ func handleTag(
 	idx *index.DB,
 	tags *xattr.Service,
 	g *graph.Graph,
+	OnFileTagged func(path string, added, removed []string),
 ) (*ipcv1.Response, error) {
 	opStr := map[ipcv1.TagOperation]string{
 		ipcv1.TagOperation_TAG_OPERATION_UNSPECIFIED: "",
@@ -82,6 +83,35 @@ func handleTag(
 	errs := make(map[string]string)
 
 	for _, path := range req.GetPaths() {
+		// Calculate differences to emit D-Bus signal
+		var added, removed []string
+		if OnFileTagged != nil {
+			oldTags, _ := idx.GetFileTags(ctx, path)
+			// At this point we already modified the index... wait, no we haven't?
+			// The index modification is below, so GetFileTags here gets the *old* tags!
+			oldSet := make(map[string]bool)
+			for _, t := range oldTags {
+				oldSet[t] = true
+			}
+			newSet := make(map[string]bool)
+			switch req.GetOperation() {
+			case ipcv1.TagOperation_TAG_OPERATION_ADD:
+				for t := range oldSet { newSet[t] = true }
+				for _, t := range req.GetTags() { newSet[t] = true }
+			case ipcv1.TagOperation_TAG_OPERATION_REMOVE:
+				for t := range oldSet { newSet[t] = true }
+				for _, t := range req.GetTags() { delete(newSet, t) }
+			case ipcv1.TagOperation_TAG_OPERATION_SET:
+				for _, t := range req.GetTags() { newSet[t] = true }
+			}
+			for t := range newSet {
+				if !oldSet[t] { added = append(added, t) }
+			}
+			for t := range oldSet {
+				if !newSet[t] { removed = append(removed, t) }
+			}
+		}
+
 		// Apply to xattr first (best-effort; non-xattr filesystems may fail).
 		if err := applyTagsXattr(ctx, path, req.GetTags(), opStr, tags); err != nil {
 			slog.WarnContext(ctx, "tag xattr failed", "path", path, "err", err)
@@ -97,6 +127,10 @@ func handleTag(
 			g.SetFileTags(path, updated)
 		}
 		pathsOK = append(pathsOK, path)
+
+		if OnFileTagged != nil && (len(added) > 0 || len(removed) > 0) {
+			OnFileTagged(path, added, removed)
+		}
 	}
 
 	return &ipcv1.Response{Kind: &ipcv1.Response_Tag{

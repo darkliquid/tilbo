@@ -16,7 +16,6 @@ import (
 	"time"
 
 	_ "github.com/ncruces/go-sqlite3/driver"
-	_ "github.com/ncruces/go-sqlite3/embed"
 )
 
 //go:embed migrations/*.sql
@@ -157,10 +156,21 @@ func (d *DB) UpsertFile(ctx context.Context, path string, inode, device, mtime, 
 
 // DeleteFile removes the file record (and cascades to file_tags, metadata, etc.).
 func (d *DB) DeleteFile(ctx context.Context, path string) error {
-	if _, err := d.db.ExecContext(ctx, "DELETE FROM files WHERE path = ?", path); err != nil {
+	tx, err := d.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback() //nolint:errcheck
+
+	var id int64
+	if err := tx.QueryRowContext(ctx, "SELECT id FROM files WHERE path = ?", path).Scan(&id); err == nil {
+		tx.ExecContext(ctx, "DELETE FROM file_embeddings WHERE file_id = ?", id) //nolint:errcheck
+	}
+
+	if _, err := tx.ExecContext(ctx, "DELETE FROM files WHERE path = ?", path); err != nil {
 		return fmt.Errorf("index: delete file %q: %w", path, err)
 	}
-	return nil
+	return tx.Commit()
 }
 
 // UpsertTag inserts the tag if it does not exist and returns its ID.
@@ -256,6 +266,22 @@ func (d *DB) SetTagProvenance(ctx context.Context, fileID, tagID int64, source s
 }
 
 
+// Stats contains aggregated index metrics.
+type Stats struct {
+	FilesCount int64
+	TagsCount  int64
+}
+
+// GetStats returns aggregated metrics from the index.
+func (d *DB) GetStats(ctx context.Context) (Stats, error) {
+	var s Stats
+	err := d.db.QueryRowContext(ctx, "SELECT (SELECT COUNT(*) FROM files), (SELECT COUNT(*) FROM tags)").Scan(&s.FilesCount, &s.TagsCount)
+	if err != nil {
+		return s, fmt.Errorf("index: get stats: %w", err)
+	}
+	return s, nil
+}
+
 // DeleteStaleFiles deletes files from the index that were not seen during a recent scan.
 // Only files within the base_path whose indexed_at timestamp is strictly less than sinceUnix are removed.
 func (d *DB) DeleteStaleFiles(ctx context.Context, basePath string, sinceUnix int64) error {
@@ -267,10 +293,20 @@ func (d *DB) DeleteStaleFiles(ctx context.Context, basePath string, sinceUnix in
 	}
 	prefix += "%"
 
-	if _, err := d.db.ExecContext(ctx, "DELETE FROM files WHERE path LIKE ? AND indexed_at < ?", prefix, sinceUnix); err != nil {
+	tx, err := d.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback() //nolint:errcheck
+
+	if _, err := tx.ExecContext(ctx, "DELETE FROM file_embeddings WHERE file_id IN (SELECT id FROM files WHERE path LIKE ? AND indexed_at < ?)", prefix, sinceUnix); err != nil {
+		return fmt.Errorf("index: delete stale embeddings: %w", err)
+	}
+
+	if _, err := tx.ExecContext(ctx, "DELETE FROM files WHERE path LIKE ? AND indexed_at < ?", prefix, sinceUnix); err != nil {
 		return fmt.Errorf("index: delete stale files prefix %q since %d: %w", basePath, sinceUnix, err)
 	}
-	return nil
+	return tx.Commit()
 }
 // ReadSidecar returns the JSON payload for the given path.
 // ReadSidecar returns the JSON payload for the given inode/device.

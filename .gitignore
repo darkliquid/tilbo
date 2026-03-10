@@ -1,0 +1,31 @@
+# Ignore everything by default
+*
+
+# Allow directories to be traversed
+!*/
+
+# Source code and configuration extensions
+!*.go
+!*.mod
+!*.sum
+!*.yaml
+!*.yml
+!*.toml
+!*.md
+!*.sql
+!*.proto
+!*.json
+!*.mdx
+!*.txt
+
+# Specific project files
+!.gitignore
+!.gitattributes
+!LICENSE
+!Makefile
+
+# Explicitly exclude build output and caches
+/tilbo-cli
+/tilbo-daemon
+memory/
+.claude/

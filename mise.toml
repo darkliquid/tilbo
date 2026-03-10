@@ -42,3 +42,17 @@ run = """
 rm -rf tilbo-cli tilbo-daemon
 rm -rf internal/ipc/gen/
 """
+
+[tasks.build-sqlite-vec]
+description = "Rebuild sqlite-vec.wasm for the index package"
+run = """
+#!/usr/bin/env bash
+set -euo pipefail
+WORK_DIR=$(mktemp -d)
+trap 'rm -rf "$WORK_DIR"' EXIT
+git clone https://github.com/ncruces/sqlite-vec-go "$WORK_DIR"
+cd "$WORK_DIR"
+./build.sh
+cp sqlite-vec.wasm "{{config_root}}/internal/index/sqlite-vec.wasm"
+echo "Successfully rebuilt and copied sqlite-vec.wasm to internal/index/"
+"""

@@ -29,6 +29,15 @@ func (p *Pipeline) Register(h Harvester) {
 	})
 }
 
+// List returns all registered harvesters.
+func (p *Pipeline) List() []Harvester {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+	res := make([]Harvester, len(p.harvesters))
+	copy(res, p.harvesters)
+	return res
+}
+
 // Run executes all synchronous harvesters that match the input concurrently.
 // Results are merged in priority order: higher-priority values overwrite lower ones
 // on key conflicts. Async harvesters are skipped; use RunAsync for those.

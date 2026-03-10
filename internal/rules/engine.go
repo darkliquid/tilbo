@@ -39,6 +39,15 @@ func (e *Engine) Register(r Rule) {
 	})
 }
 
+// List returns all registered rules.
+func (e *Engine) List() []Rule {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+	res := make([]Rule, len(e.rules))
+	copy(res, e.rules)
+	return res
+}
+
 // Eval evaluates all registered rules against meta and returns the tags to add.
 //
 // existingTags is the current set of tag names on the file; tags already present

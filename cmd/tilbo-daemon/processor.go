@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"strings"
 
+	"github.com/darkliquid/tilbo/internal/embed"
 	"github.com/darkliquid/tilbo/internal/graph"
 	"github.com/darkliquid/tilbo/internal/harvester"
 	"github.com/darkliquid/tilbo/internal/index"
@@ -24,16 +25,21 @@ type Processor struct {
 	pipeline *harvester.Pipeline
 	engine   *rules.Engine
 	g        *graph.Graph
+	embedder *embed.ONNXEmbedder
+
+	// OnFileTagged is called when a file's tags have been modified.
+	OnFileTagged func(path string, added []string, removed []string)
 }
 
 // newProcessor creates a Processor.
-func newProcessor(idx *index.DB, tags *xattr.Service, pipeline *harvester.Pipeline, engine *rules.Engine, g *graph.Graph) *Processor {
+func newProcessor(idx *index.DB, tags *xattr.Service, pipeline *harvester.Pipeline, engine *rules.Engine, g *graph.Graph, embedder *embed.ONNXEmbedder) *Processor {
 	return &Processor{
 		idx:      idx,
 		tags:     tags,
 		pipeline: pipeline,
 		engine:   engine,
 		g:        g,
+		embedder: embedder,
 	}
 }
 
@@ -112,6 +118,33 @@ func (p *Processor) processFile(ctx context.Context, path string) error {
 	if err != nil {
 		return fmt.Errorf("eval rules: %w", err)
 	}
+
+	if p.embedder != nil {
+		textParts := []string{path}
+		textParts = append(textParts, existingTags...)
+		if desc, ok := meta["description"].(string); ok && desc != "" {
+			textParts = append(textParts, desc)
+		}
+		if title, ok := meta["title"].(string); ok && title != "" {
+			textParts = append(textParts, title)
+		}
+		if text, ok := meta["text"].(string); ok && text != "" {
+			textParts = append(textParts, text)
+		}
+		text := strings.Join(textParts, " ")
+
+		vec, err := p.embedder.EmbedText(ctx, text)
+		if err != nil {
+			slog.DebugContext(ctx, "processor: embedding generation failed", "path", path, "err", err)
+		} else {
+			if err := p.idx.UpsertEmbedding(ctx, fileID, vec); err != nil {
+				slog.DebugContext(ctx, "processor: embedding index upsert failed", "path", path, "err", err)
+			} else {
+				p.g.SetEmbedding(path, vec)
+			}
+		}
+	}
+
 	if len(diff.Added) == 0 {
 		return nil
 	}
@@ -193,6 +226,10 @@ func (p *Processor) applyDiff(ctx context.Context, path string, fileID int64, ex
 			slog.DebugContext(ctx, "processor: set provenance error",
 				"path", path, "tag", tag, "err", err)
 		}
+	}
+
+	if p.OnFileTagged != nil {
+		p.OnFileTagged(path, diff.Added, nil)
 	}
 
 	slog.DebugContext(ctx, "processor: applied tags", "path", path, "added", diff.Added)
