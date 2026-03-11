@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"log/slog"
 
+	"github.com/darkliquid/tilbo/internal/index/dbgen"
 
 	"sort"
 	"strings"
@@ -24,6 +25,7 @@ var migrationsFS embed.FS
 // DB wraps a SQLite database connection and provides the tilbo index API.
 type DB struct {
 	db *sql.DB
+	q  *dbgen.Queries
 }
 
 // Open opens (or creates) the SQLite database at path, configures it, and runs
@@ -50,7 +52,10 @@ func Open(ctx context.Context, path string) (*DB, error) {
 		return nil, fmt.Errorf("index: enable foreign keys: %w", err)
 	}
 
-	idx := &DB{db: db}
+	idx := &DB{
+		db: db,
+		q:  dbgen.New(db),
+	}
 	if err := idx.Migrate(ctx); err != nil {
 		db.Close()
 		return nil, err
@@ -175,21 +180,19 @@ func (d *DB) DeleteFile(ctx context.Context, path string) error {
 
 // UpsertTag inserts the tag if it does not exist and returns its ID.
 func (d *DB) UpsertTag(ctx context.Context, name string) (int64, error) {
-	if _, err := d.db.ExecContext(ctx,
-		"INSERT OR IGNORE INTO tags(name) VALUES (?)", name); err != nil {
+	id, err := d.q.UpsertTag(ctx, name)
+	if err != nil {
 		return 0, fmt.Errorf("index: upsert tag %q: %w", name, err)
-	}
-	var id int64
-	if err := d.db.QueryRowContext(ctx, "SELECT id FROM tags WHERE name = ?", name).Scan(&id); err != nil {
-		return 0, fmt.Errorf("index: resolve tag id for %q: %w", name, err)
 	}
 	return id, nil
 }
 
 // AddFileTag associates tagID with fileID. No-op if already present.
 func (d *DB) AddFileTag(ctx context.Context, fileID, tagID int64) error {
-	if _, err := d.db.ExecContext(ctx,
-		"INSERT OR IGNORE INTO file_tags(file_id, tag_id) VALUES (?, ?)", fileID, tagID); err != nil {
+	if err := d.q.AddFileTag(ctx, dbgen.AddFileTagParams{
+		FileID: fileID,
+		TagID:  tagID,
+	}); err != nil {
 		return fmt.Errorf("index: add file tag file=%d tag=%d: %w", fileID, tagID, err)
 	}
 	return nil
@@ -197,8 +200,10 @@ func (d *DB) AddFileTag(ctx context.Context, fileID, tagID int64) error {
 
 // RemoveFileTag removes the association between fileID and tagID.
 func (d *DB) RemoveFileTag(ctx context.Context, fileID, tagID int64) error {
-	if _, err := d.db.ExecContext(ctx,
-		"DELETE FROM file_tags WHERE file_id = ? AND tag_id = ?", fileID, tagID); err != nil {
+	if err := d.q.RemoveFileTag(ctx, dbgen.RemoveFileTagParams{
+		FileID: fileID,
+		TagID:  tagID,
+	}); err != nil {
 		return fmt.Errorf("index: remove file tag file=%d tag=%d: %w", fileID, tagID, err)
 	}
 	return nil
@@ -238,13 +243,12 @@ func (d *DB) SetFileTags(ctx context.Context, fileID int64, tagNames []string) e
 
 // UpsertMeta inserts or replaces a metadata key-value pair for fileID.
 func (d *DB) UpsertMeta(ctx context.Context, fileID int64, key, value, source string) error {
-	if _, err := d.db.ExecContext(ctx, `
-		INSERT INTO metadata(file_id, key, value, source)
-		VALUES (?, ?, ?, ?)
-		ON CONFLICT(file_id, key) DO UPDATE SET
-			value  = excluded.value,
-			source = excluded.source`,
-		fileID, key, value, source); err != nil {
+	if err := d.q.UpsertMeta(ctx, dbgen.UpsertMetaParams{
+		FileID: fileID,
+		Key:    key,
+		Value:  value,
+		Source: source,
+	}); err != nil {
 		return fmt.Errorf("index: upsert meta file=%d key=%q: %w", fileID, key, err)
 	}
 	return nil
@@ -252,14 +256,12 @@ func (d *DB) UpsertMeta(ctx context.Context, fileID int64, key, value, source st
 
 // SetTagProvenance records which source applied a tag to a file.
 func (d *DB) SetTagProvenance(ctx context.Context, fileID, tagID int64, source string) error {
-	now := time.Now().Unix()
-	if _, err := d.db.ExecContext(ctx, `
-		INSERT INTO tag_provenance(file_id, tag_id, source, set_at)
-		VALUES (?, ?, ?, ?)
-		ON CONFLICT(file_id, tag_id) DO UPDATE SET
-			source = excluded.source,
-			set_at = excluded.set_at`,
-		fileID, tagID, source, now); err != nil {
+	if err := d.q.SetTagProvenance(ctx, dbgen.SetTagProvenanceParams{
+		FileID: fileID,
+		TagID:  tagID,
+		Source: source,
+		SetAt:  time.Now().Unix(),
+	}); err != nil {
 		return fmt.Errorf("index: set tag provenance file=%d tag=%d: %w", fileID, tagID, err)
 	}
 	return nil
@@ -274,12 +276,14 @@ type Stats struct {
 
 // GetStats returns aggregated metrics from the index.
 func (d *DB) GetStats(ctx context.Context) (Stats, error) {
-	var s Stats
-	err := d.db.QueryRowContext(ctx, "SELECT (SELECT COUNT(*) FROM files), (SELECT COUNT(*) FROM tags)").Scan(&s.FilesCount, &s.TagsCount)
+	row, err := d.q.GetStats(ctx)
 	if err != nil {
-		return s, fmt.Errorf("index: get stats: %w", err)
+		return Stats{}, fmt.Errorf("index: get stats: %w", err)
 	}
-	return s, nil
+	return Stats{
+		FilesCount: row.FilesCount,
+		TagsCount:  row.TagsCount,
+	}, nil
 }
 
 // DeleteStaleFiles deletes files from the index that were not seen during a recent scan.
@@ -303,30 +307,36 @@ func (d *DB) DeleteStaleFiles(ctx context.Context, basePath string, sinceUnix in
 		return fmt.Errorf("index: delete stale embeddings: %w", err)
 	}
 
-	if _, err := tx.ExecContext(ctx, "DELETE FROM files WHERE path LIKE ? AND indexed_at < ?", prefix, sinceUnix); err != nil {
+	if err := d.q.WithTx(tx).DeleteStaleFiles(ctx, dbgen.DeleteStaleFilesParams{
+		Path:      prefix,
+		IndexedAt: sinceUnix,
+	}); err != nil {
 		return fmt.Errorf("index: delete stale files prefix %q since %d: %w", basePath, sinceUnix, err)
 	}
 	return tx.Commit()
 }
-// ReadSidecar returns the JSON payload for the given path.
 // ReadSidecar returns the JSON payload for the given inode/device.
 func (d *DB) ReadSidecar(ctx context.Context, inode, device uint64) ([]byte, error) {
-	var data []byte
-	err := d.db.QueryRowContext(ctx, "SELECT data FROM sidecar_data WHERE inode = ? AND device = ?", inode, device).Scan(&data)
+	data, err := d.q.ReadSidecar(ctx, dbgen.ReadSidecarParams{
+		Inode:  int64(inode),
+		Device: int64(device),
+	})
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil // Return nil, nil when not found
 		}
 		return nil, fmt.Errorf("index: read sidecar for %d/%d: %w", inode, device, err)
 	}
-	return data, nil
+	return []byte(data), nil
 }
 
 // WriteSidecar upserts the JSON payload for the given inode/device.
 func (d *DB) WriteSidecar(ctx context.Context, inode, device uint64, data []byte) error {
-	if _, err := d.db.ExecContext(ctx,
-		"INSERT INTO sidecar_data(inode, device, data) VALUES (?, ?, ?) ON CONFLICT(inode, device) DO UPDATE SET data=excluded.data",
-		inode, device, data); err != nil {
+	if err := d.q.WriteSidecar(ctx, dbgen.WriteSidecarParams{
+		Inode:  int64(inode),
+		Device: int64(device),
+		Data:   string(data),
+	}); err != nil {
 		return fmt.Errorf("index: write sidecar for %d/%d: %w", inode, device, err)
 	}
 	return nil
@@ -334,21 +344,11 @@ func (d *DB) WriteSidecar(ctx context.Context, inode, device uint64, data []byte
 
 // ListFilePaths returns the absolute paths of all files currently in the index.
 func (d *DB) ListFilePaths(ctx context.Context) ([]string, error) {
-	rows, err := d.db.QueryContext(ctx, "SELECT path FROM files ORDER BY path")
+	paths, err := d.q.ListFilePaths(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("index: list file paths: %w", err)
 	}
-	defer rows.Close()
-
-	var paths []string
-	for rows.Next() {
-		var p string
-		if err := rows.Scan(&p); err != nil {
-			return nil, fmt.Errorf("index: scan file path: %w", err)
-		}
-		paths = append(paths, p)
-	}
-	return paths, rows.Err()
+	return paths, nil
 }
 
 // ListCooccurringTags returns tag names that appear on files matching all
@@ -423,27 +423,17 @@ func (d *DB) ListCooccurringTags(ctx context.Context, includeTags, excludeTags [
 
 // ListAllTags returns all tag names in the index ordered by name.
 func (d *DB) ListAllTags(ctx context.Context) ([]string, error) {
-	rows, err := d.db.QueryContext(ctx, "SELECT name FROM tags ORDER BY name")
+	tags, err := d.q.ListAllTags(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("index: list all tags: %w", err)
 	}
-	defer rows.Close()
-	var tags []string
-	for rows.Next() {
-		var name string
-		if err := rows.Scan(&name); err != nil {
-			return nil, fmt.Errorf("index: scan tag name: %w", err)
-		}
-		tags = append(tags, name)
-	}
-	return tags, rows.Err()
+	return tags, nil
 }
 
 // GetFileIDByPath returns the row ID for the file at path.
 // Returns an error wrapping sql.ErrNoRows if the file is not in the index.
 func (d *DB) GetFileIDByPath(ctx context.Context, path string) (int64, error) {
-	var id int64
-	err := d.db.QueryRowContext(ctx, "SELECT id FROM files WHERE path = ?", path).Scan(&id)
+	id, err := d.q.GetFileIDByPath(ctx, path)
 	if err != nil {
 		return 0, fmt.Errorf("index: get file id for %q: %w", path, err)
 	}
@@ -453,25 +443,16 @@ func (d *DB) GetFileIDByPath(ctx context.Context, path string) (int64, error) {
 // GetTagOverrides returns a map of tag name → suppressed rule names for fileID.
 // The map is empty (not nil) when there are no overrides.
 func (d *DB) GetTagOverrides(ctx context.Context, fileID int64) (map[string][]string, error) {
-	rows, err := d.db.QueryContext(ctx, `
-		SELECT t.name, o.rule_name
-		FROM tag_overrides o
-		JOIN tags t ON t.id = o.tag_id
-		WHERE o.file_id = ?`, fileID)
+	rows, err := d.q.GetTagOverrides(ctx, fileID)
 	if err != nil {
 		return nil, fmt.Errorf("index: get tag overrides for file %d: %w", fileID, err)
 	}
-	defer rows.Close()
 
 	overrides := make(map[string][]string)
-	for rows.Next() {
-		var tagName, ruleName string
-		if err := rows.Scan(&tagName, &ruleName); err != nil {
-			return nil, fmt.Errorf("index: scan tag override: %w", err)
-		}
-		overrides[tagName] = append(overrides[tagName], ruleName)
+	for _, r := range rows {
+		overrides[r.Name] = append(overrides[r.Name], r.RuleName)
 	}
-	return overrides, rows.Err()
+	return overrides, nil
 }
 
 // FileSummary holds the index-stored summary for a file, used to build IPC responses.
@@ -486,66 +467,45 @@ type FileSummary struct {
 // Each element is [path, tagname]. The result is used to bulk-load the
 // in-memory graph.
 func (d *DB) ListFileTagPairs(ctx context.Context) ([][2]string, error) {
-	const q = `SELECT f.path, t.name
-		FROM file_tags ft
-		JOIN files f ON f.id = ft.file_id
-		JOIN tags  t ON t.id = ft.tag_id`
-	rows, err := d.db.QueryContext(ctx, q)
+	rows, err := d.q.ListFileTagPairs(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("index: list file-tag pairs: %w", err)
 	}
-	defer rows.Close()
 
 	var pairs [][2]string
-	for rows.Next() {
-		var path, tag string
-		if err := rows.Scan(&path, &tag); err != nil {
-			return nil, fmt.Errorf("index: scan file-tag pair: %w", err)
-		}
-		pairs = append(pairs, [2]string{path, tag})
+	for _, r := range rows {
+		pairs = append(pairs, [2]string{r.Path, r.Name})
 	}
-	return pairs, rows.Err()
+	return pairs, nil
 }
 
 // GetFileSummary returns the stored summary for path, including its tags,
 // mtime, and size. Returns sql.ErrNoRows (wrapped) if not found.
 func (d *DB) GetFileSummary(ctx context.Context, path string) (*FileSummary, error) {
-	const fq = `SELECT id, mtime, size_bytes FROM files WHERE path = ? LIMIT 1`
-	var id, mtime, size int64
-	if err := d.db.QueryRowContext(ctx, fq, path).Scan(&id, &mtime, &size); err != nil {
+	row, err := d.q.GetFileSummary(ctx, path)
+	if err != nil {
 		return nil, fmt.Errorf("index: get file summary for %q: %w", path, err)
 	}
 
-	const tq = `SELECT t.name FROM file_tags ft JOIN tags t ON t.id = ft.tag_id WHERE ft.file_id = ?`
-	rows, err := d.db.QueryContext(ctx, tq, id)
+	tags, err := d.q.GetFileTags(ctx, row.ID)
 	if err != nil {
 		return nil, fmt.Errorf("index: get tags for file %q: %w", path, err)
-	}
-	defer rows.Close()
-
-	var tags []string
-	for rows.Next() {
-		var name string
-		if err := rows.Scan(&name); err != nil {
-			return nil, fmt.Errorf("index: scan tag name: %w", err)
-		}
-		tags = append(tags, name)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
 	}
 
 	return &FileSummary{
 		Path:      path,
 		Tags:      tags,
-		Mtime:     mtime,
-		SizeBytes: size,
+		Mtime:     row.Mtime,
+		SizeBytes: row.SizeBytes,
 	}, nil
 }
 
 // DeleteSidecar removes the sidecar payload for the given inode/device.
 func (d *DB) DeleteSidecar(ctx context.Context, inode, device uint64) error {
-	if _, err := d.db.ExecContext(ctx, "DELETE FROM sidecar_data WHERE inode = ? AND device = ?", inode, device); err != nil {
+	if err := d.q.DeleteSidecar(ctx, dbgen.DeleteSidecarParams{
+		Inode:  int64(inode),
+		Device: int64(device),
+	}); err != nil {
 		return fmt.Errorf("index: delete sidecar for %d/%d: %w", inode, device, err)
 	}
 	return nil

@@ -3,9 +3,12 @@ package index
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
+
+	"github.com/darkliquid/tilbo/internal/index/dbgen"
 )
 
 // SearchParams describes a file search query.
@@ -234,40 +237,38 @@ func (d *DB) Search(ctx context.Context, p SearchParams) ([]SearchResult, int, e
 
 // GetFileMeta returns all metadata key-value pairs and their sources for path.
 func (d *DB) GetFileMeta(ctx context.Context, path string) (vals map[string]string, sources map[string]string, err error) {
-	var fileID int64
-	if err := d.db.QueryRowContext(ctx, "SELECT id FROM files WHERE path = ?", path).Scan(&fileID); err != nil {
-		if err == sql.ErrNoRows {
+	fileID, err := d.q.GetFileIDByPath(ctx, path)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil, nil
 		}
 		return nil, nil, fmt.Errorf("index: get file for meta %q: %w", path, err)
 	}
 
-	rows, err := d.db.QueryContext(ctx, "SELECT key, value, source FROM metadata WHERE file_id = ?", fileID)
+	rows, err := d.q.GetFileMeta(ctx, fileID)
 	if err != nil {
 		return nil, nil, fmt.Errorf("index: get meta %q: %w", path, err)
 	}
-	defer rows.Close()
 
 	vals = make(map[string]string)
 	sources = make(map[string]string)
-	for rows.Next() {
-		var k, v, s string
-		if err := rows.Scan(&k, &v, &s); err != nil {
-			return nil, nil, fmt.Errorf("index: scan meta: %w", err)
-		}
-		vals[k] = v
-		sources[k] = s
+	for _, r := range rows {
+		vals[r.Key] = r.Value
+		sources[r.Key] = r.Source
 	}
-	return vals, sources, rows.Err()
+	return vals, sources, nil
 }
 
 // DeleteMeta removes a metadata key for path.
 func (d *DB) DeleteMeta(ctx context.Context, path string, key string) error {
-	var fileID int64
-	if err := d.db.QueryRowContext(ctx, "SELECT id FROM files WHERE path = ?", path).Scan(&fileID); err != nil {
+	fileID, err := d.q.GetFileIDByPath(ctx, path)
+	if err != nil {
 		return fmt.Errorf("index: get file for delete meta %q: %w", path, err)
 	}
-	if _, err := d.db.ExecContext(ctx, "DELETE FROM metadata WHERE file_id = ? AND key = ?", fileID, key); err != nil {
+	if err := d.q.DeleteMeta(ctx, dbgen.DeleteMetaParams{
+		FileID: fileID,
+		Key:    key,
+	}); err != nil {
 		return fmt.Errorf("index: delete meta %q key %q: %w", path, key, err)
 	}
 	return nil
@@ -275,26 +276,22 @@ func (d *DB) DeleteMeta(ctx context.Context, path string, key string) error {
 
 // GetFileTags returns the tag names for path.
 func (d *DB) GetFileTags(ctx context.Context, path string) ([]string, error) {
-	const q = `SELECT t.name FROM file_tags ft
-		JOIN files f ON f.id = ft.file_id
-		JOIN tags  t ON t.id = ft.tag_id
-		WHERE f.path = ?
-		ORDER BY t.name`
-	rows, err := d.db.QueryContext(ctx, q, path)
+	fileID, err := d.q.GetFileIDByPath(ctx, path)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return []string{}, nil
+		}
+		return nil, fmt.Errorf("index: get file id for tags %q: %w", path, err)
+	}
+	tags, err := d.q.GetFileTags(ctx, fileID)
 	if err != nil {
 		return nil, fmt.Errorf("index: get tags for %q: %w", path, err)
 	}
-	defer rows.Close()
-
-	var tags []string
-	for rows.Next() {
-		var name string
-		if err := rows.Scan(&name); err != nil {
-			return nil, err
-		}
-		tags = append(tags, name)
+	// Return empty slice instead of nil for consistency
+	if tags == nil {
+		tags = []string{}
 	}
-	return tags, rows.Err()
+	return tags, nil
 }
 
 // ModifyFileTags adds or removes tags for a file identified by path.

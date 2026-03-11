@@ -4,6 +4,7 @@ buf = "latest"
 golangci-lint = "latest"
 "go:google.golang.org/protobuf/cmd/protoc-gen-go" = "latest"
 "go:github.com/planetscale/vtprotobuf/cmd/protoc-gen-go-vtproto" = "latest"
+sqlc = "latest"
 
 [tasks.build-daemon]
 description = "Build tilbo daemon"
@@ -46,10 +47,20 @@ description = "Lint the Go codebase"
 run = "golangci-lint run ./..."
 sources = ["**/*.go"]
 
-[tasks.generate]
+[tasks.generate-proto]
 description = "Generate protobuf code using buf and vtprotobuf"
 run = "buf generate"
 sources = ["proto/**/*.proto", "buf.*"]
+
+[tasks.generate-sqlc]
+description = "Generate sqlc code using sqlc"
+run = "sqlc generate"
+sources = ["query.sql"]
+dir = "{{config_root}}/internal/index"
+
+[tasks.generate]
+description = "Generate protobuf and sqlc code"
+depends = ["generate-proto", "generate-sqlc"]
 
 [tasks.ci]
 description = "Run the full CI pipeline (generate, lint, test, build)"
