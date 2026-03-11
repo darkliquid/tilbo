@@ -17,6 +17,7 @@ type Browser struct {
 	app          *qt6.QGuiApplication
 	engine       *miqtqml.QQmlApplicationEngine
 	fsModel      *FileSystemModel
+	acModel      *AutocompleteModel
 	dbusConn     *dbus.Conn
 	mainThreadCh chan func()
 	ctx          context.Context
@@ -159,6 +160,11 @@ func main() {
 	// Access the underlying QObject pointer correctly in miqt.
 	b.engine.RootContext().SetContextProperty("fsModel", b.fsModel.QObject)
 
+	b.acModel = NewAutocompleteModel(b.app.QObject, daemonClient, b.mainThreadCh)
+	b.engine.RootContext().SetContextProperty("acModel", b.acModel.QObject)
+	
+	b.engine.RootContext().SetContextProperty2("daemonConnected", qt6.NewQVariant8(daemonClient != nil))
+
 	// Setup thread-safety bridge
 	b.timer = qt6.NewQTimer()
 	b.timer.OnTimeout(func() {
@@ -175,6 +181,7 @@ func main() {
 	_ = os.WriteFile(dumbTmpPath+"/windows/PortalDialog.qml", []byte(qml.PortalDialog), 0644)
 	_ = os.WriteFile(dumbTmpPath+"/components/TagSearchBar.qml", []byte(qml.TagSearchBar), 0644)
 	_ = os.WriteFile(dumbTmpPath+"/components/FileGrid.qml", []byte(qml.FileGrid), 0644)
+	_ = os.WriteFile(dumbTmpPath+"/components/FileList.qml", []byte(qml.FileList), 0644)
 
 	// Export D-Bus interface
 	/*

@@ -13,3 +13,6 @@ var TagSearchBar string
 
 //go:embed components/FileGrid.qml
 var FileGrid string
+
+//go:embed components/FileList.qml
+var FileList string

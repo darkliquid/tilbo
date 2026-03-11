@@ -90,3 +90,31 @@ func (c *DaemonClient) RelatedAsync(ctx context.Context, req *ipcv1.RelatedReque
 		}
 	}()
 }
+
+// ListTagsAsync issues an IPC list_tags request to fetch autocomplete suggestions.
+func (c *DaemonClient) ListTagsAsync(ctx context.Context, req *ipcv1.ListTagsRequest, mainThreadCh chan<- func(), callback func(*ipcv1.ListTagsResponse, error)) {
+	go func() {
+		resp, err := c.client.Call(ctx, &ipcv1.Request{
+			Kind: &ipcv1.Request_ListTags{
+				ListTags: req,
+			},
+		})
+
+		var listTagsResp *ipcv1.ListTagsResponse
+		var callErr error
+
+		if err != nil {
+			callErr = err
+		} else if errKind, ok := resp.Kind.(*ipcv1.Response_Error); ok {
+			callErr = fmt.Errorf("daemon: %s (code %d)", errKind.Error.GetMessage(), errKind.Error.GetCode())
+		} else if r, ok := resp.Kind.(*ipcv1.Response_ListTags); ok {
+			listTagsResp = r.ListTags
+		} else {
+			callErr = fmt.Errorf("unexpected response type")
+		}
+
+		mainThreadCh <- func() {
+			callback(listTagsResp, callErr)
+		}
+	}()
+}

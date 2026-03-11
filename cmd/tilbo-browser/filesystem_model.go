@@ -2,10 +2,12 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 
 	ipcv1 "github.com/darkliquid/tilbo/internal/ipc/gen/tilbo/ipc/v1"
 	"github.com/mappu/miqt/qt6"
@@ -24,9 +26,10 @@ type FileSystemModel struct {
 	roleNamesMap map[int][]byte
 
 	// Internal state
-	currentPath string
-	hidden      bool
-	entries     []folderEntry
+	currentPath  string
+	hidden       bool
+	isSearchMode bool
+	entries      []folderEntry
 }
 
 type folderEntry struct {
@@ -72,6 +75,7 @@ func NewFileSystemModel(parent *qt6.QObject, dc *DaemonClient, ch chan<- func())
 }
 
 func (m *FileSystemModel) SetPath(path string) {
+	m.isSearchMode = false
 	m.currentPath = path
 	m.refresh()
 }
@@ -82,6 +86,9 @@ func (m *FileSystemModel) ShowHidden(show bool) {
 }
 
 func (m *FileSystemModel) refresh() {
+	if m.isSearchMode {
+		return // Do not refresh search automatically, wait for search request
+	}
 	m.loadEntries()
 }
 
@@ -202,6 +209,7 @@ const (
 	ActionChmodRole
 	ActionCDRole
 	ActionToggleHiddenRole
+	ActionSearchRole
 )
 
 func (m *FileSystemModel) setData(super func(*qt6.QModelIndex, *qt6.QVariant, int) bool, index *qt6.QModelIndex, value *qt6.QVariant, role int) bool {
@@ -278,10 +286,133 @@ func (m *FileSystemModel) setData(super func(*qt6.QModelIndex, *qt6.QVariant, in
 		show := value.ToBool()
 		m.ShowHidden(show)
 		return true
+
+	case ActionSearchRole:
+		chipsJSON := value.ToString()
+		if chipsJSON == "" {
+			return false
+		}
+		
+		var chips []string
+		if err := json.Unmarshal([]byte(chipsJSON), &chips); err != nil {
+			return false
+		}
+		
+		if len(chips) == 0 {
+			m.isSearchMode = false
+			m.refresh()
+			return true
+		}
+
+		m.isSearchMode = true
+		m.executeSearch(chips)
+		return true
 	}
 	
 	if super != nil {
 		return super(index, value, role)
 	}
 	return false
+}
+
+func (m *FileSystemModel) executeSearch(chips []string) {
+	req := &ipcv1.SearchRequest{
+		Limit:       1000,
+		MetaFilters: make(map[string]string),
+	}
+	
+	// Parse chips
+	for _, chip := range chips {
+		if strings.HasPrefix(chip, "glob:") {
+			// handled locally
+		} else if strings.HasPrefix(chip, "hidden:") {
+			// handled locally
+		} else if strings.Contains(chip, ":") {
+			parts := strings.SplitN(chip, ":", 2)
+			req.MetaFilters[parts[0]] = parts[1]
+		} else {
+			req.Tags = append(req.Tags, chip)
+		}
+	}
+
+	if m.daemonClient == nil {
+		// Just run the local glob matching part
+		m.populateSearchResults(nil, chips)
+		return
+	}
+
+	m.daemonClient.SearchAsync(context.Background(), req, m.mainThreadCh, func(resp *ipcv1.SearchResponse, err error) {
+		if err != nil || resp == nil {
+			return
+		}
+		m.populateSearchResults(resp.Files, chips)
+	})
+}
+
+func (m *FileSystemModel) populateSearchResults(files []*ipcv1.FileResult, chips []string) {
+	m.Clear()
+	m.SetItemRoleNames(m.roleNamesMap)
+	m.entries = m.entries[:0]
+
+	allowHidden := m.hidden
+	var globStr string
+	for _, c := range chips {
+		if c == "hidden:any" {
+			allowHidden = true
+		} else if strings.HasPrefix(c, "glob:") {
+			globStr = strings.TrimPrefix(c, "glob:")
+		}
+	}
+
+	var items []*qt6.QStandardItem
+
+	for _, f := range files {
+		name := filepath.Base(f.Path)
+
+		if !allowHidden && name != "" && name[0] == '.' {
+			continue
+		}
+
+		if globStr != "" {
+			// Simple match check
+			matched, _ := filepath.Match(globStr, f.Path)
+			if !matched {
+				// If uses **, simple prefix check
+				cleanGlob := strings.TrimSuffix(globStr, "**")
+				if !strings.HasPrefix(f.Path, cleanGlob) {
+					continue
+				}
+			}
+		}
+
+		isDir := false
+		info, err := os.Stat(f.Path)
+		if err == nil {
+			isDir = info.IsDir()
+		}
+
+		entry := folderEntry{
+			Name:     name,
+			Path:     f.Path,
+			IsDir:    isDir,
+			Size:     f.SizeBytes,
+			Modified: f.Mtime,
+			Tags:     f.Tags,
+		}
+		m.entries = append(m.entries, entry)
+
+		item := qt6.NewQStandardItem()
+		item.SetData(qt6.NewQVariant14(entry.Name), NameRole)
+		item.SetData(qt6.NewQVariant14(entry.Path), PathRole)
+		item.SetData(qt6.NewQVariant8(entry.IsDir), IsDirRole)
+		item.SetData(qt6.NewQVariant4(int(entry.Size)), SizeRole)
+		item.SetData(qt6.NewQVariant4(int(entry.Modified)), ModifiedRole)
+		item.SetData(qt6.NewQVariant15(entry.Tags), TagsRole)
+
+		items = append(items, item)
+	}
+
+	for _, item := range items {
+		m.AppendRow([]*qt6.QStandardItem{item})
+	}
 }
