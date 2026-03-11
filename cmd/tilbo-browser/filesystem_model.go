@@ -14,13 +14,14 @@ import (
 // FileSystemModel provides a QML-compatible data bridge for traditional folder
 // traversal, augmenting system paths with daemon tags where available.
 type FileSystemModel struct {
-	qt6.QAbstractListModel
+	*qt6.QStandardItemModel
 
 	_ func() `constructor:"init"`
 
 	// Application state refs
 	daemonClient *DaemonClient
 	mainThreadCh chan<- func()
+	roleNamesMap map[int][]byte
 
 	// Internal state
 	currentPath string
@@ -37,27 +38,35 @@ type folderEntry struct {
 	Tags     []string
 }
 
-func NewFileSystemModel(dc *DaemonClient, ch chan<- func()) *FileSystemModel {
+func NewFileSystemModel(parent *qt6.QObject, dc *DaemonClient, ch chan<- func()) *FileSystemModel {
 	m := &FileSystemModel{
-		QAbstractListModel: *qt6.NewQAbstractListModel(),
+		QStandardItemModel: qt6.NewQStandardItemModel3(parent),
 		daemonClient:       dc,
 		mainThreadCh:       ch,
 		currentPath:        "/",
 		entries:            make([]folderEntry, 0),
+		roleNamesMap: map[int][]byte{
+			NameRole:         []byte("fileName"),
+			PathRole:         []byte("filePath"),
+			IsDirRole:        []byte("isDir"),
+			SizeRole:         []byte("fileSize"),
+			ModifiedRole:     []byte("fileModified"),
+			TagsRole:         []byte("fileTags"),
+			ActionOpenRole:   []byte("actionOpen"),
+			ActionRenameRole: []byte("actionRename"),
+			ActionDeleteRole: []byte("actionDelete"),
+			ActionChmodRole:  []byte("actionChmod"),
+		},
 	}
 
-	m.OnRoleNames(func(super func() map[int][]byte) map[int][]byte {
-		return m.roleNames()
-	})
-	m.OnRowCount(func(parent *qt6.QModelIndex) int {
-		return m.rowCount(parent)
-	})
-	m.OnData(func(index *qt6.QModelIndex, role int) *qt6.QVariant {
-		return m.data(index, role)
-	})
+	m.SetItemRoleNames(m.roleNamesMap)
+
+	// Intercept SetData requests to handle actions
 	m.OnSetData(func(super func(index *qt6.QModelIndex, value *qt6.QVariant, role int) bool, index *qt6.QModelIndex, value *qt6.QVariant, role int) bool {
-		return m.setData(index, value, role)
+		return m.setData(super, index, value, role)
 	})
+
+	m.refresh()
 
 	return m
 }
@@ -77,10 +86,8 @@ func (m *FileSystemModel) refresh() {
 }
 
 func (m *FileSystemModel) loadEntries() {
-	// Let the Qt model know we're going to wipe and replace the rows
-	m.BeginResetModel()
-	defer m.EndResetModel()
-
+	m.Clear()
+	m.SetItemRoleNames(m.roleNamesMap)
 	m.entries = m.entries[:0]
 
 	dirEntries, err := os.ReadDir(m.currentPath)
@@ -90,6 +97,8 @@ func (m *FileSystemModel) loadEntries() {
 
 	// Prepare list of paths to bulk-fetch tags for
 	pathsToTagFetch := make([]string, 0, len(dirEntries))
+
+	var items []*qt6.QStandardItem
 
 	for _, de := range dirEntries {
 		name := de.Name()
@@ -107,14 +116,29 @@ func (m *FileSystemModel) loadEntries() {
 		fullPath := filepath.Join(m.currentPath, name)
 		pathsToTagFetch = append(pathsToTagFetch, fullPath)
 
-		m.entries = append(m.entries, folderEntry{
+		entry := folderEntry{
 			Name:     name,
 			Path:     fullPath,
 			IsDir:    de.IsDir(),
 			Size:     info.Size(),
 			Modified: info.ModTime().Unix(),
 			Tags:     []string{}, // Populated asynchronously later
-		})
+		}
+		m.entries = append(m.entries, entry)
+
+		item := qt6.NewQStandardItem()
+		item.SetData(qt6.NewQVariant14(entry.Name), NameRole)
+		item.SetData(qt6.NewQVariant14(entry.Path), PathRole)
+		item.SetData(qt6.NewQVariant8(entry.IsDir), IsDirRole)
+		item.SetData(qt6.NewQVariant4(int(entry.Size)), SizeRole)
+		item.SetData(qt6.NewQVariant4(int(entry.Modified)), ModifiedRole)
+		item.SetData(qt6.NewQVariant15(entry.Tags), TagsRole)
+		
+		items = append(items, item)
+	}
+
+	for _, item := range items {
+		m.AppendRow([]*qt6.QStandardItem{item})
 	}
 
 	// Initiate an async query to fetch any matching daemon metadata for
@@ -125,18 +149,11 @@ func (m *FileSystemModel) loadEntries() {
 }
 
 func (m *FileSystemModel) fetchTagsAsync(paths []string) {
-	// The search query syntax expects `path:x` for direct path lookups
 	req := &ipcv1.SearchRequest{
 		Limit:       1000,
 		MetaFilters: make(map[string]string),
 	}
 	
-	// Create an OR search containing all our paths
-	// In tilbo FTS schema, path matching natively works via tags API or queries.
-	// We'll use the Related() or Search() endpoints. Since FTS has path indexed,
-	// checking against the daemon will return any tracked files matching those paths.
-	// NOTE: this is a naive sync. In a fully optimized production build we'd probably
-	// have a dedicated batch path-lookup IPC call instead of building a massive search query.
 	var tags []string
 	for _, p := range paths {
 		tags = append(tags, fmt.Sprintf("path:%s", p))
@@ -155,17 +172,19 @@ func (m *FileSystemModel) fetchTagsAsync(paths []string) {
 			tagMap[f.Path] = f.Tags
 		}
 
-		// Re-apply tags to our in-memory slice
+		// Re-apply tags to our in-memory slice and QStandardItems
 		for i, entry := range m.entries {
 			if matchedTags, ok := tagMap[entry.Path]; ok {
 				m.entries[i].Tags = matchedTags
+				
+				// Update QStandardItem directly
+				idx := m.Index(i, 0, qt6.NewQModelIndex())
+				item := m.ItemFromIndex(idx)
+				if item != nil {
+					item.SetData(qt6.NewQVariant15(matchedTags), TagsRole)
+				}
 			}
 		}
-
-		// Tell QML the data has changed for all indices so the view repaints tag badges
-		startIdx := m.Index(0, 0, qt6.NewQModelIndex())
-		endIdx := m.Index(len(m.entries)-1, 0, qt6.NewQModelIndex())
-		m.DataChanged(startIdx, endIdx)
 	})
 }
 
@@ -185,71 +204,24 @@ const (
 	ActionToggleHiddenRole
 )
 
-func (m *FileSystemModel) roleNames() map[int][]byte {
-	return map[int][]byte{
-		NameRole:         []byte("fileName"),
-		PathRole:         []byte("filePath"),
-		IsDirRole:        []byte("isDir"),
-		SizeRole:         []byte("fileSize"),
-		ModifiedRole:     []byte("fileModified"),
-		TagsRole:         []byte("fileTags"),
-		ActionOpenRole:   []byte("actionOpen"),
-		ActionRenameRole: []byte("actionRename"),
-		ActionDeleteRole: []byte("actionDelete"),
-		ActionChmodRole:  []byte("actionChmod"),
-	}
-}
-
-func (m *FileSystemModel) rowCount(parent *qt6.QModelIndex) int {
-	if parent != nil && parent.IsValid() {
-		return 0
-	}
-	return len(m.entries)
-}
-
-func (m *FileSystemModel) data(index *qt6.QModelIndex, role int) *qt6.QVariant {
-	if index == nil || !index.IsValid() {
-		return qt6.NewQVariant()
+func (m *FileSystemModel) setData(super func(*qt6.QModelIndex, *qt6.QVariant, int) bool, index *qt6.QModelIndex, value *qt6.QVariant, role int) bool {
+	var row int = -1
+	if index != nil && index.IsValid() {
+		row = index.Row()
 	}
 
-	row := index.Row()
-	if row < 0 || row >= len(m.entries) {
-		return qt6.NewQVariant()
+	// For per-item actions, validate the row index
+	isItemAction := role == ActionOpenRole || role == ActionRenameRole || role == ActionDeleteRole || role == ActionChmodRole
+	
+	if isItemAction {
+		if row < 0 || row >= len(m.entries) {
+			return false
+		}
 	}
-
-	entry := m.entries[row]
-
-	switch role {
-	case NameRole:
-		return qt6.NewQVariant14(entry.Name)
-	case PathRole:
-		return qt6.NewQVariant14(entry.Path)
-	case IsDirRole:
-		return qt6.NewQVariant8(entry.IsDir)
-	case SizeRole:
-		return qt6.NewQVariant4(int(entry.Size))
-	case ModifiedRole:
-		return qt6.NewQVariant4(int(entry.Modified))
-	case TagsRole:
-		// Convert Go slice []string to Qt stringlist QVariant
-		return qt6.NewQVariant15(entry.Tags)
-	}
-
-	return qt6.NewQVariant()
-}
-
-func (m *FileSystemModel) setData(index *qt6.QModelIndex, value *qt6.QVariant, role int) bool {
-	if index == nil || !index.IsValid() {
-		return false
-	}
-	row := index.Row()
-	if row < 0 || row >= len(m.entries) {
-		return false
-	}
-	entry := m.entries[row]
 
 	switch role {
 	case ActionOpenRole:
+		entry := m.entries[row]
 		cmd := exec.Command("xdg-open", entry.Path)
 		if err := cmd.Start(); err == nil {
 			go cmd.Wait() // release async
@@ -258,6 +230,7 @@ func (m *FileSystemModel) setData(index *qt6.QModelIndex, value *qt6.QVariant, r
 		return false
 
 	case ActionRenameRole:
+		entry := m.entries[row]
 		newName := value.ToString()
 		if newName == "" || newName == entry.Name {
 			return false
@@ -266,19 +239,27 @@ func (m *FileSystemModel) setData(index *qt6.QModelIndex, value *qt6.QVariant, r
 		if err := os.Rename(entry.Path, newPath); err == nil {
 			m.entries[row].Name = newName
 			m.entries[row].Path = newPath
-			m.DataChanged(index, index) // Trigger QML update natively
+			
+			// Update the QStandardItem directly
+			item := m.ItemFromIndex(index)
+			if item != nil {
+				item.SetData(qt6.NewQVariant14(newName), NameRole)
+				item.SetData(qt6.NewQVariant14(newPath), PathRole)
+			}
 			return true
 		}
 		return false
 
 	case ActionDeleteRole:
+		entry := m.entries[row]
 		if err := os.RemoveAll(entry.Path); err == nil {
-			m.refresh() // Simplest route: refresh rather than computing BeginRemoveRows
+			m.refresh() // Simplest route: refresh
 			return true
 		}
 		return false
 
 	case ActionChmodRole:
+		entry := m.entries[row]
 		mode := value.ToInt()
 		if err := os.Chmod(entry.Path, os.FileMode(mode)); err == nil {
 			return true
@@ -297,6 +278,10 @@ func (m *FileSystemModel) setData(index *qt6.QModelIndex, value *qt6.QVariant, r
 		show := value.ToBool()
 		m.ShowHidden(show)
 		return true
+	}
+	
+	if super != nil {
+		return super(index, value, role)
 	}
 	return false
 }

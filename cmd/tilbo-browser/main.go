@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"log/slog"
 	"os"
+	"runtime"
 
 	"github.com/darkliquid/tilbo/cmd/tilbo-browser/qml"
 	"github.com/godbus/dbus/v5"
@@ -15,6 +16,7 @@ import (
 type Browser struct {
 	app          *qt6.QGuiApplication
 	engine       *miqtqml.QQmlApplicationEngine
+	fsModel      *FileSystemModel
 	dbusConn     *dbus.Conn
 	mainThreadCh chan func()
 	ctx          context.Context
@@ -43,17 +45,22 @@ func (b *Browser) loadMode(mode, argsJSON string) {
 	}
 
 	// Depending on mode ("browser", "portal", "search"), show the correct QML component
-	var componentURL *qt6.QUrl
+	var componentPath string
 	switch mode {
 	case "portal":
-		componentURL = qt6.QUrl_FromLocalFile(os.TempDir() + "/tilbo-qml/windows/PortalDialog.qml")
+		componentPath = os.TempDir() + "/tilbo-qml/windows/PortalDialog.qml"
 	case "browser", "search":
-		componentURL = qt6.QUrl_FromLocalFile(os.TempDir() + "/tilbo-qml/windows/BrowserWindow.qml")
+		componentPath = os.TempDir() + "/tilbo-qml/windows/BrowserWindow.qml"
 	default:
-		componentURL = qt6.QUrl_FromLocalFile(os.TempDir() + "/tilbo-qml/windows/BrowserWindow.qml")
+		componentPath = os.TempDir() + "/tilbo-qml/windows/BrowserWindow.qml"
 	}
 	
+	// Ensure safe memory management for miqt/Qt
+	componentURL := qt6.QUrl_FromLocalFile(componentPath)
 	b.engine.Load(componentURL)
+	// IMPORTANT: Keep QUrl alive during QML processing
+	// runtime.KeepAlive isn't explicitly needed if componentURL is used after, but just in case
+	_ = componentURL
 	
 	if len(b.engine.RootObjects()) == 0 {
 		slog.Error("Failed to load QML for mode", "mode", mode)
@@ -148,9 +155,9 @@ func main() {
 	}
 
 	// Initialize Traditional Tagged Filesystem Model
-	fsModel := NewFileSystemModel(daemonClient, b.mainThreadCh)
+	b.fsModel = NewFileSystemModel(b.app.QObject, daemonClient, b.mainThreadCh)
 	// Access the underlying QObject pointer correctly in miqt.
-	b.engine.RootContext().SetContextProperty("fsModel", fsModel.QObject)
+	b.engine.RootContext().SetContextProperty("fsModel", b.fsModel.QObject)
 
 	// Setup thread-safety bridge
 	b.timer = qt6.NewQTimer()
@@ -183,5 +190,12 @@ func main() {
 	b.loadMode("browser", "")
 
 	// Give control to Qt event loop
-	os.Exit(qt6.QGuiApplication_Exec())
+	exitCode := qt6.QGuiApplication_Exec()
+
+	// Ensure Go pointer semantics do not garbage collect our wrapper structs
+	// before the Qt engine terminates.
+	runtime.KeepAlive(b)
+	runtime.KeepAlive(daemonClient)
+
+	os.Exit(exitCode)
 }
