@@ -26,7 +26,7 @@ func TestNew_FanotifyRequiresPrivilege(t *testing.T) {
 	ctx := context.Background()
 	// BackendFanotify forces fanotify and returns an error when unavailable,
 	// rather than falling back to inotify.
-	w, err := New(ctx, "/", BackendFanotify)
+	w, err := New(ctx, "/", BackendFanotify, Options{WatchHidden: true})
 	if err == nil {
 		// Some environments allow fanotify without root (user namespaces, capabilities).
 		t.Log("fanotify opened without elevated privilege")
@@ -41,7 +41,7 @@ func TestNew_FanotifyRequiresPrivilege(t *testing.T) {
 func TestNew_AutoFallsBackToInotify(t *testing.T) {
 	ctx := context.Background()
 	// BackendAuto silently falls back to inotify when fanotify is unavailable.
-	w, err := New(ctx, t.TempDir(), BackendAuto)
+	w, err := New(ctx, t.TempDir(), BackendAuto, Options{WatchHidden: true})
 	if err != nil {
 		t.Fatalf("New with BackendAuto: %v", err)
 	}
@@ -52,7 +52,7 @@ func TestNew_AutoFallsBackToInotify(t *testing.T) {
 
 func TestNew_InotifyAlwaysWorks(t *testing.T) {
 	ctx := context.Background()
-	w, err := New(ctx, t.TempDir(), BackendInotify)
+	w, err := New(ctx, t.TempDir(), BackendInotify, Options{WatchHidden: true})
 	if err != nil {
 		t.Fatalf("New with BackendInotify: %v", err)
 	}

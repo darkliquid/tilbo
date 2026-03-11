@@ -29,6 +29,7 @@ import (
 	"github.com/darkliquid/tilbo/internal/watcher"
 	"github.com/darkliquid/tilbo/internal/xattr"
 	"github.com/darkliquid/tilbo/internal/dbus"
+	"github.com/darkliquid/tilbo/internal/bookmarks"
 
 	tilbofuse "github.com/darkliquid/tilbo/internal/fuse"
 )
@@ -51,6 +52,7 @@ func main() {
 		logFormat      = flag.String("log-format", "text", "log format: text or json")
 		logLevel       = flag.String("log-level", "info", "log level: debug, info, warn, error")
 		watcherBackend = flag.String("watcher", "auto", "filesystem watcher backend: auto, fanotify, inotify")
+		watchHidden    = flag.Bool("watch-hidden", false, "watch hidden files and directories")
 		embedModel     = flag.String("embed-model", "", "path to ONNX tokenizer/model directory for embeddings")
 		printVersion   = flag.Bool("version", false, "print version information and exit")
 	)
@@ -90,7 +92,7 @@ func main() {
 	signal.Notify(hupCh, syscall.SIGHUP)
 	defer signal.Stop(hupCh)
 
-	if err := run(ctx, hupCh, *watchPath, *dbPath, *fuseMount, sockPath, watcher.Backend(*watcherBackend), *embedModel); err != nil {
+	if err := run(ctx, hupCh, *watchPath, *dbPath, *fuseMount, sockPath, watcher.Backend(*watcherBackend), *watchHidden, *embedModel); err != nil {
 		slog.Error("daemon error", "err", err)
 		os.Exit(1)
 	}
@@ -99,7 +101,7 @@ func main() {
 
 // run is the main daemon loop. It returns nil on clean shutdown and a non-nil
 // error if any component fails unexpectedly.
-func run(ctx context.Context, hupCh <-chan os.Signal, watchPath, dbPath, fuseMount, sockPath string, watcherBackend watcher.Backend, embedModelPath string) error {
+func run(ctx context.Context, hupCh <-chan os.Signal, watchPath, dbPath, fuseMount, sockPath string, watcherBackend watcher.Backend, watchHidden bool, embedModelPath string) error {
 	// Ensure the database directory exists.
 	if err := os.MkdirAll(filepath.Dir(dbPath), 0o700); err != nil {
 		return fmt.Errorf("create db dir: %w", err)
@@ -118,7 +120,7 @@ func run(ctx context.Context, hupCh <-chan os.Signal, watchPath, dbPath, fuseMou
 	slog.Info("index ready", "path", dbPath)
 
 	// Start the filesystem watcher (fanotify, inotify, or auto-detected).
-	w, err := watcher.New(ctx, watchPath, watcherBackend)
+	w, err := watcher.New(ctx, watchPath, watcherBackend, watcher.Options{WatchHidden: watchHidden})
 	if err != nil {
 		return fmt.Errorf("create watcher: %w", err)
 	}
@@ -251,6 +253,8 @@ func run(ctx context.Context, hupCh <-chan os.Signal, watchPath, dbPath, fuseMou
 			if res.err != nil {
 				slog.Warn("fuse: mount failed; continuing without FUSE", "path", fuseMount, "err", res.err)
 			} else {
+				bookmarks.InjectVirtualTags(fuseMount)
+				slog.Info("fuse: mounted successfully", "path", fuseMount)
 				defer func() {
 					if err := res.srv.Unmount(); err != nil {
 						slog.Warn("fuse: unmount error", "err", err)

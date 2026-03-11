@@ -5,11 +5,30 @@ golangci-lint = "latest"
 "go:google.golang.org/protobuf/cmd/protoc-gen-go" = "latest"
 "go:github.com/planetscale/vtprotobuf/cmd/protoc-gen-go-vtproto" = "latest"
 
+[tasks.build-daemon]
+description = "Build tilbo daemon"
+run = "go build -v ./cmd/tilbo-daemon"
+depends = ["generate"]
+sources = ["**/*.go"]
+outputs = ["tilbo-daemon"]
+
+[tasks.build-cli]
+description = "Build tilbo cli"
+run = "go build -v ./cmd/tilbo-cli"
+depends = ["generate"]
+sources = ["**/*.go"]
+outputs = ["tilbo-cli"]
+
+[tasks.build-browser]
+description = "Build tilbo browser"
+depends = ["generate"]
+run = "go build -v ./cmd/tilbo-browser"
+sources = ["**/*.go"]
+outputs = ["tilbo-browser"]
+
 [tasks.build]
 description = "Build all tilbo binaries"
-run = "go build -v ./cmd/..."
-sources = ["**/*.go"]
-outputs = ["tilbo-cli", "tilbo-daemon"]
+depends = ["build-daemon", "build-cli", "build-browser"]
 
 [tasks.test]
 description = "Run tests"

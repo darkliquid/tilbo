@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 	"unsafe"
@@ -32,25 +33,27 @@ type inotifyImpl struct {
 	wdToDir map[int32]string // watch descriptor → absolute directory path
 	out     chan Event
 
-	pendMu  sync.Mutex
-	pending map[string]*debounceEntry
+	pendMu      sync.Mutex
+	pending     map[string]*debounceEntry
+	watchHidden bool
 }
 
 // newInotify creates an inotify watcher rooted at mountPath.
-func newInotify(ctx context.Context, mountPath string) (*inotifyImpl, error) {
+func newInotify(ctx context.Context, mountPath string, watchHidden bool) (*inotifyImpl, error) {
 	fd, err := unix.InotifyInit1(unix.IN_CLOEXEC | unix.IN_NONBLOCK)
 	if err != nil {
 		return nil, fmt.Errorf("inotify_init: %w", err)
 	}
 
 	impl := &inotifyImpl{
-		fd:      fd,
-		wdToDir: make(map[int32]string),
-		out:     make(chan Event, outChanBuf),
-		pending: make(map[string]*debounceEntry),
+		fd:          fd,
+		wdToDir:     make(map[int32]string),
+		out:         make(chan Event, outChanBuf),
+		pending:     make(map[string]*debounceEntry),
+		watchHidden: watchHidden,
 	}
 
-	if err := impl.addWatchRecursive(mountPath); err != nil {
+	if err := impl.addWatchRecursive(ctx, mountPath); err != nil {
 		unix.Close(fd)
 		return nil, err
 	}
@@ -61,7 +64,7 @@ func newInotify(ctx context.Context, mountPath string) (*inotifyImpl, error) {
 
 // addWatch registers dir with inotify. Missing or non-directory paths are
 // silently ignored so that a race between creation and watch-add is safe.
-func (i *inotifyImpl) addWatch(dir string) error {
+func (i *inotifyImpl) addWatch(ctx context.Context, dir string) error {
 	wd, err := unix.InotifyAddWatch(i.fd, dir, inotifyMask)
 	if err != nil {
 		if err == unix.ENOTDIR || err == unix.ENOENT {
@@ -76,16 +79,40 @@ func (i *inotifyImpl) addWatch(dir string) error {
 }
 
 // addWatchRecursive walks root and calls addWatch on every directory found.
-func (i *inotifyImpl) addWatchRecursive(root string) error {
-	return filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
+func (i *inotifyImpl) addWatchRecursive(ctx context.Context, root string) error {
+	var successCount int
+	var lastErr error
+
+	err := filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
+			slog.WarnContext(ctx, "inotify: unreadable directory", "path", path, "err", err)
 			return nil // skip unreadable entries; don't abort the walk
 		}
+		if !i.watchHidden && strings.HasPrefix(d.Name(), ".") && path != root {
+			if d.IsDir() {
+				return filepath.SkipDir
+			}
+			return nil
+		}
 		if d.IsDir() {
-			return i.addWatch(path)
+			if wErr := i.addWatch(ctx, path); wErr != nil {
+				slog.ErrorContext(ctx, "inotify: failed to add watch", "path", path, "err", wErr)
+				lastErr = wErr
+			} else {
+				successCount++
+			}
 		}
 		return nil
 	})
+
+	if err != nil {
+		return err
+	}
+
+	if successCount == 0 && lastErr != nil {
+		return fmt.Errorf("inotify: all watchers failed, last error: %w", lastErr)
+	}
+	return nil
 }
 
 // run is the event loop. It blocks until ctx is cancelled.
@@ -173,9 +200,14 @@ func (i *inotifyImpl) processEvents(ctx context.Context, buf []byte) {
 
 		mask := ev.Mask
 
+		// Ignore hidden files/directories during event processing implicitly
+		if !i.watchHidden && strings.Contains(path, "/.") {
+			continue
+		}
+
 		// Recursively watch newly created subdirectories.
 		if mask&unix.IN_CREATE != 0 && mask&unix.IN_ISDIR != 0 {
-			if err := i.addWatchRecursive(path); err != nil {
+			if err := i.addWatchRecursive(ctx, path); err != nil {
 				slog.DebugContext(ctx, "inotify: failed to watch new dir",
 					"path", path, "err", err)
 			}

@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"strings"
 	"sync"
 	"time"
 	"unsafe"
@@ -89,6 +90,8 @@ type Watcher struct {
 
 	mu      sync.Mutex
 	pending map[string]*debounceEntry
+
+	watchHidden bool
 }
 
 type debounceEntry struct {
@@ -96,22 +99,28 @@ type debounceEntry struct {
 	timer *time.Timer
 }
 
-// New creates a Watcher for the given mount point using the specified backend.
+// Options configure the behavior of the Watcher.
+type Options struct {
+	WatchHidden bool // If true, hidden files and directories (starting with '.') are monitored.
+}
+
+// New creates a Watcher for the given mount point using the specified backend and options.
 // Pass BackendAuto to prefer fanotify and fall back to inotify automatically.
 // Call Run to start delivering events.
-func New(ctx context.Context, mountPath string, backend Backend) (*Watcher, error) {
+func New(ctx context.Context, mountPath string, backend Backend, opts Options) (*Watcher, error) {
 	// When inotify is forced, skip fanotify entirely.
 	if backend == BackendInotify {
 		slog.InfoContext(ctx, "watcher: using inotify backend (forced)")
-		impl, err := newInotify(ctx, mountPath)
+		impl, err := newInotify(ctx, mountPath, opts.WatchHidden)
 		if err != nil {
 			return nil, fmt.Errorf("watcher: inotify: %w", err)
 		}
 		return &Watcher{
-			mountPath: mountPath,
-			fanfd:     -1,
-			inotify:   impl,
-			pending:   make(map[string]*debounceEntry),
+			mountPath:   mountPath,
+			fanfd:       -1,
+			inotify:     impl,
+			pending:     make(map[string]*debounceEntry),
+			watchHidden: opts.WatchHidden,
 		}, nil
 	}
 
@@ -137,15 +146,16 @@ func New(ctx context.Context, mountPath string, backend Backend) (*Watcher, erro
 		if (errors.Is(err, unix.EPERM) || errors.Is(err, unix.ENOSYS)) && backend == BackendAuto {
 			slog.WarnContext(ctx, "watcher: fanotify unavailable; falling back to inotify",
 				"err", err)
-			impl, iErr := newInotify(ctx, mountPath)
+			impl, iErr := newInotify(ctx, mountPath, opts.WatchHidden)
 			if iErr != nil {
 				return nil, fmt.Errorf("watcher: inotify fallback: %w", iErr)
 			}
 			return &Watcher{
-				mountPath: mountPath,
-				fanfd:     -1,
-				inotify:   impl,
-				pending:   make(map[string]*debounceEntry),
+				mountPath:   mountPath,
+				fanfd:       -1,
+				inotify:     impl,
+				pending:     make(map[string]*debounceEntry),
+				watchHidden: opts.WatchHidden,
 			}, nil
 		}
 		return nil, fmt.Errorf("watcher: fanotify_init: %w", err)
@@ -169,11 +179,12 @@ func New(ctx context.Context, mountPath string, backend Backend) (*Watcher, erro
 	}
 
 	return &Watcher{
-		mountPath: mountPath,
-		fanfd:     fanfd,
-		fanRename: fanRename,
-		out:       make(chan Event, outChanBuf),
-		pending:   make(map[string]*debounceEntry),
+		mountPath:   mountPath,
+		fanfd:       fanfd,
+		fanRename:   fanRename,
+		out:         make(chan Event, outChanBuf),
+		pending:     make(map[string]*debounceEntry),
+		watchHidden: opts.WatchHidden,
 	}, nil
 }
 
@@ -287,6 +298,10 @@ func (w *Watcher) handleMeta(ctx context.Context, meta *unix.FanotifyEventMetada
 
 	var ev Event
 	ev.Path = path
+
+	if !w.watchHidden && strings.Contains(path, "/.") {
+		return // Ignore hidden files/directories
+	}
 
 	switch {
 	case meta.Mask&unix.FAN_RENAME != 0:
