@@ -6,18 +6,20 @@ import (
 	"log/slog"
 	"os"
 
+	"github.com/darkliquid/tilbo/cmd/tilbo-browser/qml"
 	"github.com/godbus/dbus/v5"
 	"github.com/mappu/miqt/qt6"
-	"github.com/mappu/miqt/qt6/qml"
+	miqtqml "github.com/mappu/miqt/qt6/qml"
 )
 
 type Browser struct {
 	app          *qt6.QGuiApplication
-	engine       *qml.QQmlApplicationEngine
+	engine       *miqtqml.QQmlApplicationEngine
 	dbusConn     *dbus.Conn
 	mainThreadCh chan func()
 	ctx          context.Context
 	cancel       context.CancelFunc
+	timer        *qt6.QTimer
 }
 
 func NewBrowser() *Browser {
@@ -29,38 +31,62 @@ func NewBrowser() *Browser {
 	}
 }
 
-// Open handles the activation logic for the browser.
-func (b *Browser) Open(mode, argsJSON string) {
-	// Must execute within the Qt main thread
-	b.mainThreadCh <- func() {
-		slog.Info("Activating browser instance", "mode", mode, "args", argsJSON)
+// loadMode sets up the QML interface directly. It must only be called from the Qt main thread.
+func (b *Browser) loadMode(mode, argsJSON string) {
+	slog.Info("Activating browser instance in main thread", "mode", mode)
 
-		var args map[string]interface{}
-		if argsJSON != "" {
-			if err := json.Unmarshal([]byte(argsJSON), &args); err != nil {
-				slog.Error("Failed to parse portal args", "err", err)
-			}
+	var args map[string]interface{}
+	if argsJSON != "" {
+		if err := json.Unmarshal([]byte(argsJSON), &args); err != nil {
+			slog.Error("Failed to parse portal args", "err", err)
 		}
+	}
 
-		// TODO: Depending on mode ("browser", "portal", "search"), show the correct QML component
+	// Depending on mode ("browser", "portal", "search"), show the correct QML component
+	var componentURL *qt6.QUrl
+	switch mode {
+	case "portal":
+		componentURL = qt6.QUrl_FromLocalFile(os.TempDir() + "/tilbo-qml/windows/PortalDialog.qml")
+	case "browser", "search":
+		componentURL = qt6.QUrl_FromLocalFile(os.TempDir() + "/tilbo-qml/windows/BrowserWindow.qml")
+	default:
+		componentURL = qt6.QUrl_FromLocalFile(os.TempDir() + "/tilbo-qml/windows/BrowserWindow.qml")
+	}
+	
+	b.engine.Load(componentURL)
+	
+	if len(b.engine.RootObjects()) == 0 {
+		slog.Error("Failed to load QML for mode", "mode", mode)
 	}
 }
 
+// Open handles the activation logic for the browser if called externally (e.g. from D-Bus in the future).
+func (b *Browser) Open(mode, argsJSON string) *dbus.Error {
+	slog.Info("Browser.Open requested via D-Bus API", "mode", mode)
+	// Must execute within the Qt main thread
+	b.mainThreadCh <- func() {
+		b.loadMode(mode, argsJSON)
+	}
+	return nil
+}
+
 // Hide dismisses the active window but keeps the process running.
-func (b *Browser) Hide() {
+func (b *Browser) Hide() *dbus.Error {
 	b.mainThreadCh <- func() {
 		slog.Info("Hiding browser instance")
 		// TODO: Hide Qt window
 	}
+	return nil
 }
 
 // Quit forces the application to terminate.
-func (b *Browser) Quit() {
+func (b *Browser) Quit() *dbus.Error {
 	slog.Info("Browser instructed to quit")
 	b.cancel()
 	b.mainThreadCh <- func() {
 		qt6.QCoreApplication_Quit()
 	}
+	return nil
 }
 
 func (b *Browser) drainMainThreadChannel() {
@@ -110,7 +136,8 @@ func main() {
 	// We are the primary instance. Start the Qt application.
 	os.Setenv("QT_QUICK_CONTROLS_STYLE", "Basic")
 	b.app = qt6.NewQGuiApplication(os.Args)
-	b.engine = qml.NewQQmlApplicationEngine()
+	qt6.QGuiApplication_SetQuitOnLastWindowClosed(false)
+	b.engine = miqtqml.NewQQmlApplicationEngine()
 
 	// Connect to daemon
 	daemonClient, err := ConnectDaemon()
@@ -126,20 +153,34 @@ func main() {
 	b.engine.RootContext().SetContextProperty("fsModel", fsModel.QObject)
 
 	// Setup thread-safety bridge
-	timer := qt6.NewQTimer()
-	timer.OnTimeout(func() {
+	b.timer = qt6.NewQTimer()
+	b.timer.OnTimeout(func() {
 		b.drainMainThreadChannel()
 	})
-	timer.Start(0)
+	b.timer.Start(1) // Every 1ms
+	
+	// Create tmp path for QML
+	dumbTmpPath := os.TempDir() + "/tilbo-qml"
+	_ = os.MkdirAll(dumbTmpPath+"/windows", 0755)
+	_ = os.MkdirAll(dumbTmpPath+"/components", 0755)
+	
+	_ = os.WriteFile(dumbTmpPath+"/windows/BrowserWindow.qml", []byte(qml.BrowserWindow), 0644)
+	_ = os.WriteFile(dumbTmpPath+"/windows/PortalDialog.qml", []byte(qml.PortalDialog), 0644)
+	_ = os.WriteFile(dumbTmpPath+"/components/TagSearchBar.qml", []byte(qml.TagSearchBar), 0644)
+	_ = os.WriteFile(dumbTmpPath+"/components/FileGrid.qml", []byte(qml.FileGrid), 0644)
 
 	// Export D-Bus interface
+	/*
 	if err := b.exportDBus(); err != nil {
 		slog.Error("Failed to export D-Bus interface", "err", err)
 		os.Exit(1)
 	}
+	*/
 
-	// Default open "browser" initially when launched directly
-	b.Open("browser", "")
+	// Default open "browser" initially when launched directly.
+	// Since we haven't started Exec() yet, we are ON the main thread right now.
+	// We can safely call loadMode directly.
+	b.loadMode("browser", "")
 
 	// Give control to Qt event loop
 	os.Exit(qt6.QGuiApplication_Exec())
