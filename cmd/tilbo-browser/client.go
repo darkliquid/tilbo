@@ -30,18 +30,19 @@ var (
 const (
 	daemonConnectTimeout = 2 * time.Second
 	daemonRetryBackoff   = 150 * time.Millisecond
+	asyncCallTimeout     = 5 * time.Second
 )
 
-func ConnectDaemon() (*DaemonClient, error) {
+func ConnectDaemon(ctx context.Context) (*DaemonClient, error) {
 	userID := os.Getuid()
 	sockPath := fmt.Sprintf("/run/user/%d/tilbo.sock", userID)
 
-	c, err := newIPCClient(context.Background(), sockPath)
+	c, err := newIPCClient(ctx, sockPath)
 	if err == nil {
 		return &DaemonClient{client: c}, nil
 	}
 
-	slog.Info("Failed to connect to daemon, attempting background spawn", "sockPath", sockPath, "err", err)
+	slog.InfoContext(ctx, "Failed to connect to daemon, attempting background spawn", "sockPath", sockPath, "err", err)
 
 	if spawnErr := spawnDaemonProcess(); spawnErr != nil {
 		return nil, fmt.Errorf("connect to daemon socket %s: %w (spawn daemon: %w)", sockPath, err, spawnErr)
@@ -49,9 +50,9 @@ func ConnectDaemon() (*DaemonClient, error) {
 
 	deadline := nowFn().Add(daemonConnectTimeout)
 	for nowFn().Before(deadline) {
-		c, err = newIPCClient(context.Background(), sockPath)
+		c, err = newIPCClient(ctx, sockPath)
 		if err == nil {
-			slog.Info("Connected to daemon after spawn", "sockPath", sockPath)
+			slog.InfoContext(ctx, "Connected to daemon after spawn", "sockPath", sockPath)
 			return &DaemonClient{client: c}, nil
 		}
 		sleepFn(daemonRetryBackoff)
@@ -75,6 +76,15 @@ func spawnDaemon() error {
 
 func (c *DaemonClient) Close() error {
 	return c.client.Close()
+}
+
+// Call performs a raw IPC request, allowing adapter-style integration layers.
+func (c *DaemonClient) Call(ctx context.Context, req *ipcv1.Request) (*ipcv1.Response, error) {
+	if c == nil || c.client == nil {
+		return nil, errors.New("daemon client is not connected")
+	}
+
+	return c.client.Call(ctx, req)
 }
 
 // Status fetches daemon status, including capability warnings.
@@ -215,8 +225,20 @@ func asyncCall[T any](
 	decode func(*ipcv1.Response) (*T, error),
 	callback func(*T, error),
 ) {
-	go func() {
-		resp, err := c.client.Call(ctx, req)
+	callCtx := ctx
+	var cancel context.CancelFunc
+	if callCtx == nil {
+		callCtx = context.Background()
+	}
+	if _, hasDeadline := callCtx.Deadline(); !hasDeadline {
+		callCtx, cancel = context.WithTimeout(callCtx, asyncCallTimeout)
+	}
+
+	go func(callCtx context.Context) {
+		if cancel != nil {
+			defer cancel()
+		}
+		resp, err := c.client.Call(callCtx, req)
 
 		var out *T
 		var callErr error
@@ -229,8 +251,12 @@ func asyncCall[T any](
 			out, callErr = decode(resp)
 		}
 
-		mainThreadCh <- func() {
+		select {
+		case <-callCtx.Done():
+			return
+		case mainThreadCh <- func() {
 			callback(out, callErr)
+		}:
 		}
-	}()
+	}(callCtx)
 }

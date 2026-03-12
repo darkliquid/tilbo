@@ -3,14 +3,19 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"log/slog"
 	"os"
+	"os/signal"
 	"runtime"
+	"syscall"
 
 	"github.com/godbus/dbus/v5"
 	"github.com/mappu/miqt/qt6"
 	miqtqml "github.com/mappu/miqt/qt6/qml"
 
+	"github.com/darkliquid/tilbo/cmd/tilbo-browser/pkg/browser"
 	"github.com/darkliquid/tilbo/cmd/tilbo-browser/qml"
 )
 
@@ -26,21 +31,54 @@ type Browser struct {
 	ctx               context.Context
 	cancel            context.CancelFunc
 	timer             *qt6.QTimer
+	controller        *browser.Controller
+	projections       browser.Projections
+	placesProjectionV uint64
+	dirProjectionV    uint64
+	searchProjectionV uint64
+	autoProjectionV   uint64
+	portalProjectionV uint64
+	loadedMode        string
 }
 
 const mainThreadQueueSize = 100
 
-func NewBrowser() *Browser {
-	ctx, cancel := context.WithCancel(context.Background())
+const browserWindowMode = "browser"
+
+const placesRefreshTickThreshold = 2000
+
+func NewBrowser(ctx context.Context) *Browser {
+	// #nosec G118 -- the cancel func is stored on Browser and invoked on Quit and shutdown.
+	browserCtx, cancel := context.WithCancel(ctx)
 	return &Browser{
 		mainThreadCh: make(chan func(), mainThreadQueueSize),
-		ctx:          ctx,
+		ctx:          browserCtx,
 		cancel:       cancel,
+	}
+}
+
+func (b *Browser) postToMainThread(fn func()) {
+	if fn == nil {
+		return
+	}
+
+	select {
+	case <-b.ctx.Done():
+		return
+	case b.mainThreadCh <- fn:
+		return
 	}
 }
 
 // loadMode sets up the QML interface directly. It must only be called from the Qt main thread.
 func (b *Browser) loadMode(mode, argsJSON string) {
+	if mode == "" {
+		mode = browserWindowMode
+	}
+	if b.loadedMode == mode {
+		return
+	}
+
 	slog.Info("Activating browser instance in main thread", "mode", mode)
 
 	var args map[string]any
@@ -71,17 +109,28 @@ func (b *Browser) loadMode(mode, argsJSON string) {
 	if len(b.engine.RootObjects()) == 0 {
 		slog.Error("Failed to load QML for mode", "mode", mode)
 	}
+	b.loadedMode = mode
 }
 
 // Open handles the activation logic for the browser if called externally (e.g. from D-Bus in the future).
-//
-//nolint:unparam // D-Bus exported method signature requires *dbus.Error return
 func (b *Browser) Open(mode, argsJSON string) *dbus.Error {
 	slog.Info("Browser.Open requested via D-Bus API", "mode", mode)
-	// Must execute within the Qt main thread
-	b.mainThreadCh <- func() {
-		b.loadMode(mode, argsJSON)
+	_ = argsJSON
+	if mode == "" {
+		mode = browserWindowMode
 	}
+	if b.controller == nil {
+		return dbus.MakeFailedError(errors.New("controller not ready"))
+	}
+
+	err := b.controller.Dispatch(browser.OpenPortalCommand{
+		CommandBase: browser.CommandBase{OpID: "dbus-open"},
+		Mode:        mode,
+	})
+	if err != nil {
+		return dbus.MakeFailedError(fmt.Errorf("dispatch open portal command: %w", err))
+	}
+
 	return nil
 }
 
@@ -89,31 +138,39 @@ func (b *Browser) Open(mode, argsJSON string) *dbus.Error {
 //
 //nolint:unparam // D-Bus exported method signature requires *dbus.Error return
 func (b *Browser) Hide() *dbus.Error {
-	b.mainThreadCh <- func() {
+	b.postToMainThread(func() {
 		slog.Info("Hiding browser instance")
 		// TODO: Hide Qt window
-	}
+	})
 	return nil
 }
 
 // Quit forces the application to terminate.
-//
-//nolint:unparam // D-Bus exported method signature requires *dbus.Error return
 func (b *Browser) Quit() *dbus.Error {
 	slog.Info("Browser instructed to quit")
-	b.cancel()
-	b.mainThreadCh <- func() {
-		qt6.QCoreApplication_Quit()
+	if b.controller == nil {
+		return dbus.MakeFailedError(errors.New("controller not ready"))
 	}
+
+	err := b.controller.Dispatch(browser.ShutdownCommand{
+		CommandBase: browser.CommandBase{OpID: "dbus-quit"},
+		Reason:      "dbus-quit",
+	})
+	if err != nil {
+		return dbus.MakeFailedError(fmt.Errorf("dispatch shutdown command: %w", err))
+	}
+
 	return nil
 }
 
 func (b *Browser) drainMainThreadChannel() {
-	// Periodically refresh the places model (~every 2 seconds at 1ms tick rate).
+	// Periodically request places refresh from the controller (~every 2 seconds at 1ms tick rate).
 	b.placesRefreshTick++
-	if b.placesRefreshTick >= 2000 && b.placesModel != nil {
+	if b.placesRefreshTick >= placesRefreshTickThreshold {
 		b.placesRefreshTick = 0
-		b.placesModel.Refresh()
+		_ = b.controller.Dispatch(browser.RefreshPlacesCommand{
+			CommandBase: browser.CommandBase{OpID: "places-tick"},
+		})
 	}
 	// Drain all pending tasks from the channel
 	for {
@@ -121,21 +178,107 @@ func (b *Browser) drainMainThreadChannel() {
 		case fn := <-b.mainThreadCh:
 			fn()
 		default:
+			b.applyPortalProjection()
+			b.applyAutocompleteProjection()
+			b.applySearchProjection()
+			b.applyDirectoryProjection()
+			b.applyPlacesProjection()
 			return
 		}
 	}
 }
 
-//nolint:funlen // process bootstrap includes Qt, D-Bus, and singleton activation wiring
+func (b *Browser) applyPortalProjection() {
+	if b.projections.Portal == nil {
+		return
+	}
+
+	state, version := b.projections.Portal.Snapshot()
+	if version == 0 || version == b.portalProjectionV {
+		return
+	}
+
+	b.portalProjectionV = version
+	b.loadMode(state.WindowMode, "")
+	b.engine.RootContext().SetContextProperty2("portalSelectedFiles", qt6.NewQVariant15(state.PortalSelection))
+}
+
+func (b *Browser) applyAutocompleteProjection() {
+	if b.acModel == nil || b.projections.Auto == nil {
+		return
+	}
+
+	state, version := b.projections.Auto.Snapshot()
+	if version == 0 || version == b.autoProjectionV {
+		return
+	}
+
+	b.autoProjectionV = version
+	b.acModel.ApplyProjectionAutocomplete(state.Autocomplete)
+}
+
+func (b *Browser) applySearchProjection() {
+	if b.fsModel == nil || b.projections.Search == nil {
+		return
+	}
+
+	state, version := b.projections.Search.Snapshot()
+	if version == 0 || version == b.searchProjectionV {
+		return
+	}
+
+	b.searchProjectionV = version
+	b.fsModel.ApplyProjectionSearch(state.SearchResults)
+}
+
+func (b *Browser) applyDirectoryProjection() {
+	if b.fsModel == nil || b.projections.Directory == nil {
+		return
+	}
+
+	state, version := b.projections.Directory.Snapshot()
+	if version == 0 || version == b.dirProjectionV {
+		return
+	}
+
+	b.dirProjectionV = version
+	b.fsModel.ApplyProjectionDirectory(state.CurrentPath, state.DirectoryEntries)
+}
+
+func (b *Browser) applyPlacesProjection() {
+	if b.placesModel == nil || b.projections.Places == nil {
+		return
+	}
+
+	state, version := b.projections.Places.Snapshot()
+	if version == 0 || version == b.placesProjectionV {
+		return
+	}
+
+	b.placesProjectionV = version
+	b.placesModel.ApplyProjectionPlaces(state.Places)
+}
+
+//nolint:funlen,gocognit // process bootstrap includes Qt, D-Bus, and singleton activation wiring
 func main() {
 	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelDebug})))
 
-	b := NewBrowser()
+	signalCtx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	b := NewBrowser(signalCtx)
+
+	go func() {
+		<-signalCtx.Done()
+		b.postToMainThread(func() {
+			b.cancel()
+			qt6.QCoreApplication_Quit()
+		})
+	}()
 
 	// Initialize D-Bus and check for existing instance BEFORE starting Qt
-	conn, err := dbus.ConnectSessionBus()
+	conn, err := dbus.ConnectSessionBus(dbus.WithContext(b.ctx))
 	if err != nil {
 		slog.Error("Failed to connect to session bus", "err", err)
+		stop()
 		os.Exit(1)
 	}
 	b.dbusConn = conn
@@ -143,6 +286,7 @@ func main() {
 	reply, err := conn.RequestName("uk.co.darkliquid.tilbo.Browser", dbus.NameFlagDoNotQueue)
 	if err != nil {
 		slog.Error("Failed to request D-Bus name", "err", err)
+		stop()
 		os.Exit(1)
 	}
 
@@ -154,9 +298,11 @@ func main() {
 		if call.Err != nil {
 			slog.Error("Failed to activate existing instance", "err", call.Err)
 			_ = conn.Close()
+			stop()
 			os.Exit(1)
 		}
 		_ = conn.Close()
+		stop()
 		os.Exit(0)
 	}
 
@@ -169,7 +315,7 @@ func main() {
 	b.engine = miqtqml.NewQQmlApplicationEngine()
 
 	// Connect to daemon
-	daemonClient, err := ConnectDaemon()
+	daemonClient, err := ConnectDaemon(b.ctx)
 	if err != nil {
 		slog.Error("Failed to connect to daemon", "err", err)
 		// We shouldn't exit here, standalone browsing might still work,
@@ -187,19 +333,59 @@ func main() {
 	}
 
 	// Initialize Traditional Tagged Filesystem Model
-	b.fsModel = NewFileSystemModel(b.app.QObject, daemonClient, b.mainThreadCh)
+	b.fsModel = NewFileSystemModel(b.ctx, b.app.QObject)
 	// Access the underlying QObject pointer correctly in miqt.
 	b.engine.RootContext().SetContextProperty("fsModel", b.fsModel.QObject)
 
-	b.acModel = NewAutocompleteModel(b.app.QObject, daemonClient, b.mainThreadCh)
+	b.acModel = NewAutocompleteModel(b.app.QObject)
 	b.engine.RootContext().SetContextProperty("acModel", b.acModel.QObject)
 
 	b.placesModel = NewPlacesModel(b.app.QObject)
 	b.engine.RootContext().SetContextProperty("placesModel", b.placesModel.QObject)
 
+	b.controller = browser.NewController(b.ctx)
+	if daemonClient != nil {
+		b.controller.SetDaemonAdapter(browser.NewDaemonAdapter(daemonClient))
+	}
+	b.controller.EventBus().Subscribe(browser.EventShutdownInitiated, func(_ context.Context, evt browser.Event) {
+		if _, ok := evt.(browser.ShutdownInitiatedEvent); !ok {
+			return
+		}
+
+		b.postToMainThread(func() {
+			b.cancel()
+			qt6.QCoreApplication_Quit()
+		})
+	})
+	b.controller.EventBus().Subscribe(browser.EventFileOperationDone, func(_ context.Context, evt browser.Event) {
+		if _, ok := evt.(browser.FileOperationDoneEvent); !ok {
+			return
+		}
+
+		b.postToMainThread(func() {
+			if b.fsModel != nil {
+				b.fsModel.refresh()
+			}
+		})
+	})
+	projSubs, projections := browser.NewProjectionSet()
+	b.controller.RegisterProjectionSubscribers(projSubs)
+	b.projections = projections
+	b.fsModel.BindController(b.controller)
+	b.acModel.BindController(b.controller)
+	_ = b.controller.Dispatch(browser.OpenPortalCommand{
+		CommandBase: browser.CommandBase{OpID: "startup-open"},
+		Mode:        browserWindowMode,
+	})
+	b.fsModel.SetPath("/")
+	_ = b.controller.Dispatch(browser.RefreshPlacesCommand{
+		CommandBase: browser.CommandBase{OpID: "places-initial"},
+	})
+
 	b.engine.RootContext().SetContextProperty2("daemonConnected", qt6.NewQVariant8(daemonClient != nil))
 	b.engine.RootContext().SetContextProperty2("daemonNeedsPermission", qt6.NewQVariant8(daemonPermissionMessage != ""))
 	b.engine.RootContext().SetContextProperty2("daemonPermissionMessage", qt6.NewQVariant14(daemonPermissionMessage))
+	b.engine.RootContext().SetContextProperty2("portalSelectedFiles", qt6.NewQVariant15([]string{}))
 
 	// Setup thread-safety bridge
 	b.timer = qt6.NewQTimer()
@@ -227,13 +413,18 @@ func main() {
 		}
 	*/
 
-	// Default open "browser" initially when launched directly.
-	// Since we haven't started Exec() yet, we are ON the main thread right now.
-	// We can safely call loadMode directly.
-	b.loadMode("browser", "")
-
 	// Give control to Qt event loop
 	exitCode := qt6.QGuiApplication_Exec()
+	b.cancel()
+	if daemonClient != nil {
+		if err := daemonClient.Close(); err != nil {
+			slog.Debug("Failed to close daemon client", "err", err)
+		}
+	}
+	if b.dbusConn != nil {
+		_ = b.dbusConn.Close()
+	}
+	stop()
 
 	// Ensure Go pointer semantics do not garbage collect our wrapper structs
 	// before the Qt engine terminates.

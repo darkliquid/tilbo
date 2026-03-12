@@ -56,7 +56,7 @@ func TestConnectDaemon_SpawnsAndReconnects(t *testing.T) {
 	}
 	sleepFn = func(time.Duration) {}
 
-	client, err := ConnectDaemon()
+	client, err := ConnectDaemon(context.Background())
 	if err != nil {
 		t.Fatalf("expected reconnect success, got error: %v", err)
 	}
@@ -85,7 +85,7 @@ func TestConnectDaemon_SpawnFailureReturnsError(t *testing.T) {
 		return errors.New("spawn failed")
 	}
 
-	client, err := ConnectDaemon()
+	client, err := ConnectDaemon(context.Background())
 	if err == nil {
 		t.Fatal("expected error when spawn fails")
 	}
@@ -133,7 +133,7 @@ func TestConnectDaemon_RetryTimeoutReturnsError(t *testing.T) {
 		sleepCalls++
 	}
 
-	client, err := ConnectDaemon()
+	client, err := ConnectDaemon(context.Background())
 	if err == nil {
 		t.Fatal("expected timeout error when retries are exhausted")
 	}

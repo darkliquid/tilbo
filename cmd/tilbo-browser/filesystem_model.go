@@ -5,13 +5,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
-	"strings"
+	"sync/atomic"
 
 	"github.com/mappu/miqt/qt6"
 
-	ipcv1 "github.com/darkliquid/tilbo/internal/ipc/gen/tilbo/ipc/v1"
+	browserruntime "github.com/darkliquid/tilbo/cmd/tilbo-browser/pkg/browser"
 )
 
 // FileSystemModel provides a QML-compatible data bridge for traditional folder
@@ -22,8 +21,7 @@ type FileSystemModel struct {
 	_ func() `constructor:"init"`
 
 	// Application state refs
-	daemonClient *DaemonClient
-	mainThreadCh chan<- func()
+	ctx          context.Context
 	roleNamesMap map[int][]byte
 
 	// Internal state
@@ -31,11 +29,12 @@ type FileSystemModel struct {
 	hidden       bool
 	isSearchMode bool
 	entries      []folderEntry
+	loadVersion  uint64
+	controller   *browserruntime.Controller
 }
 
 const (
 	defaultSearchLimit = 1000
-	splitNMaxParts     = 2
 )
 
 type folderEntry struct {
@@ -47,11 +46,10 @@ type folderEntry struct {
 	Tags     []string
 }
 
-func NewFileSystemModel(parent *qt6.QObject, dc *DaemonClient, ch chan<- func()) *FileSystemModel {
+func NewFileSystemModel(ctx context.Context, parent *qt6.QObject) *FileSystemModel {
 	m := &FileSystemModel{
 		QStandardItemModel: qt6.NewQStandardItemModel3(parent),
-		daemonClient:       dc,
-		mainThreadCh:       ch,
+		ctx:                ctx,
 		currentPath:        "/",
 		entries:            make([]folderEntry, 0),
 		roleNamesMap: map[int][]byte{
@@ -77,8 +75,6 @@ func NewFileSystemModel(parent *qt6.QObject, dc *DaemonClient, ch chan<- func())
 		},
 	)
 
-	m.refresh()
-
 	return m
 }
 
@@ -90,57 +86,94 @@ func (m *FileSystemModel) SetPath(path string) {
 
 func (m *FileSystemModel) ShowHidden(show bool) {
 	m.hidden = show
+	if m.controller == nil {
+		return
+	}
+
+	_ = m.controller.Dispatch(browserruntime.ToggleHiddenCommand{
+		CommandBase: browserruntime.CommandBase{OpID: m.nextOpID("toggle-hidden")},
+		Show:        show,
+	})
 	m.refresh()
+}
+
+// BindController enables controller/projection-driven navigation for this model.
+func (m *FileSystemModel) BindController(controller *browserruntime.Controller) {
+	m.controller = controller
 }
 
 func (m *FileSystemModel) refresh() {
 	if m.isSearchMode {
 		return // Do not refresh search automatically, wait for search request
 	}
-	m.loadEntries()
-}
-
-func (m *FileSystemModel) loadEntries() {
-	m.Clear()
-	m.SetItemRoleNames(m.roleNamesMap)
-	m.entries = m.entries[:0]
-
-	dirEntries, err := os.ReadDir(m.currentPath)
-	if err != nil {
+	if m.controller == nil {
 		return
 	}
 
-	// Prepare list of paths to bulk-fetch tags for
-	pathsToTagFetch := make([]string, 0, len(dirEntries))
+	_ = m.controller.Dispatch(browserruntime.NavigateCommand{
+		CommandBase: browserruntime.CommandBase{OpID: m.nextOpID("navigate")},
+		Path:        m.currentPath,
+	})
+}
 
-	var items []*qt6.QStandardItem
+func (m *FileSystemModel) nextOpID(prefix string) string {
+	id := atomic.AddUint64(&m.loadVersion, 1)
+	return fmt.Sprintf("%s-%d", prefix, id)
+}
 
-	for _, de := range dirEntries {
-		name := de.Name()
+// ApplyProjectionDirectory updates the model using controller projection output.
+func (m *FileSystemModel) ApplyProjectionDirectory(path string, entries []browserruntime.DirectoryEntry) {
+	m.isSearchMode = false
+	m.currentPath = path
 
-		// Filter hidden files if not enabled
-		if !m.hidden && name != "" && name[0] == '.' {
-			continue
+	converted := make([]folderEntry, 0, len(entries))
+	for _, e := range entries {
+		converted = append(converted, folderEntry{
+			Name:     e.Name,
+			Path:     e.Path,
+			IsDir:    e.IsDir,
+			Size:     e.Size,
+			Modified: e.MTime,
+			Tags:     append([]string(nil), e.Tags...),
+		})
+	}
+
+	m.entries = append(m.entries[:0], converted...)
+	m.renderEntries(converted)
+}
+
+// ApplyProjectionSearch updates the model using controller search projection output.
+func (m *FileSystemModel) ApplyProjectionSearch(files []browserruntime.SearchFile) {
+	m.isSearchMode = true
+
+	converted := make([]folderEntry, 0, len(files))
+	for _, f := range files {
+		isDir := false
+		info, err := os.Stat(f.Path)
+		if err == nil {
+			isDir = info.IsDir()
 		}
 
-		info, err := de.Info()
-		if err != nil {
-			continue
-		}
+		converted = append(converted, folderEntry{
+			Name:     filepath.Base(f.Path),
+			Path:     f.Path,
+			IsDir:    isDir,
+			Size:     f.Size,
+			Modified: f.MTime,
+			Tags:     append([]string(nil), f.Tags...),
+		})
+	}
 
-		fullPath := filepath.Join(m.currentPath, name)
-		pathsToTagFetch = append(pathsToTagFetch, fullPath)
+	m.entries = append(m.entries[:0], converted...)
+	m.renderEntries(converted)
+}
 
-		entry := folderEntry{
-			Name:     name,
-			Path:     fullPath,
-			IsDir:    de.IsDir(),
-			Size:     info.Size(),
-			Modified: info.ModTime().Unix(),
-			Tags:     []string{}, // Populated asynchronously later
-		}
-		m.entries = append(m.entries, entry)
+func (m *FileSystemModel) renderEntries(entries []folderEntry) {
+	m.Clear()
+	m.SetItemRoleNames(m.roleNamesMap)
 
+	items := make([]*qt6.QStandardItem, 0, len(entries))
+	for _, entry := range entries {
 		item := qt6.NewQStandardItem()
 		item.SetData(qt6.NewQVariant14(entry.Name), NameRole)
 		item.SetData(qt6.NewQVariant14(entry.Path), PathRole)
@@ -148,59 +181,12 @@ func (m *FileSystemModel) loadEntries() {
 		item.SetData(qt6.NewQVariant4(int(entry.Size)), SizeRole)
 		item.SetData(qt6.NewQVariant4(int(entry.Modified)), ModifiedRole)
 		item.SetData(qt6.NewQVariant15(entry.Tags), TagsRole)
-
 		items = append(items, item)
 	}
 
 	for _, item := range items {
 		m.AppendRow([]*qt6.QStandardItem{item})
 	}
-
-	// Initiate an async query to fetch any matching daemon metadata for
-	// the paths currently visible in the folder.
-	if m.daemonClient != nil && len(pathsToTagFetch) > 0 {
-		m.fetchTagsAsync(pathsToTagFetch)
-	}
-}
-
-func (m *FileSystemModel) fetchTagsAsync(paths []string) {
-	req := &ipcv1.SearchRequest{
-		Limit:       defaultSearchLimit,
-		MetaFilters: make(map[string]string),
-	}
-
-	var tags []string
-	for _, p := range paths {
-		tags = append(tags, fmt.Sprintf("path:%s", p))
-	}
-	req.Tags = tags
-	req.TagsAny = true
-
-	m.daemonClient.SearchAsync(context.Background(), req, m.mainThreadCh, func(resp *ipcv1.SearchResponse, err error) {
-		if err != nil || resp == nil {
-			return
-		}
-
-		// Update our local model entries with fetched tags
-		tagMap := make(map[string][]string)
-		for _, f := range resp.GetFiles() {
-			tagMap[f.GetPath()] = f.GetTags()
-		}
-
-		// Re-apply tags to our in-memory slice and QStandardItems
-		for i, entry := range m.entries {
-			if matchedTags, ok := tagMap[entry.Path]; ok {
-				m.entries[i].Tags = matchedTags
-
-				// Update QStandardItem directly
-				idx := m.Index(i, 0, qt6.NewQModelIndex())
-				item := m.ItemFromIndex(idx)
-				if item != nil {
-					item.SetData(qt6.NewQVariant15(matchedTags), TagsRole)
-				}
-			}
-		}
-	})
 }
 
 // RoleName mapping to QML context properties.
@@ -218,11 +204,12 @@ const (
 	ActionCDRole
 	ActionToggleHiddenRole
 	ActionSearchRole
+	ActionPortalSubmitRole
 	PlaceNameRole
 	PlacePathRole
 )
 
-//nolint:funlen,gocognit // action dispatch is intentionally centralized for QML role handling
+//nolint:funlen,gocognit,gocyclo,cyclop // action dispatch is intentionally centralized for QML role handling
 func (m *FileSystemModel) setData(
 	super func(*qt6.QModelIndex, *qt6.QVariant, int) bool,
 	index *qt6.QModelIndex,
@@ -246,56 +233,59 @@ func (m *FileSystemModel) setData(
 
 	switch role {
 	case ActionOpenRole:
-		entry := m.entries[row]
-		// #nosec G204 -- entry.Path comes from local filesystem entries selected by the user.
-		cmd := exec.CommandContext(context.Background(), "xdg-open", entry.Path)
-		if err := cmd.Start(); err == nil {
-			go func() {
-				_ = cmd.Wait() // release async
-			}()
-			return true
+		if m.controller == nil {
+			return false
 		}
-		return false
+		entry := m.entries[row]
+		err := m.controller.Dispatch(browserruntime.OpenFileCommand{
+			CommandBase: browserruntime.CommandBase{OpID: m.nextOpID("open")},
+			Path:        entry.Path,
+		})
+		return err == nil
 
 	case ActionRenameRole:
+		if m.controller == nil {
+			return false
+		}
 		entry := m.entries[row]
 		newName := value.ToString()
 		if newName == "" || newName == entry.Name {
 			return false
 		}
-		newPath := filepath.Join(filepath.Dir(entry.Path), newName)
-		if err := os.Rename(entry.Path, newPath); err == nil {
-			m.entries[row].Name = newName
-			m.entries[row].Path = newPath
 
-			// Update the QStandardItem directly
-			item := m.ItemFromIndex(index)
-			if item != nil {
-				item.SetData(qt6.NewQVariant14(newName), NameRole)
-				item.SetData(qt6.NewQVariant14(newPath), PathRole)
-			}
-			return true
-		}
-		return false
+		err := m.controller.Dispatch(browserruntime.RenameFileCommand{
+			CommandBase: browserruntime.CommandBase{OpID: m.nextOpID("rename")},
+			OldPath:     entry.Path,
+			NewName:     newName,
+		})
+		return err == nil
 
 	case ActionDeleteRole:
-		entry := m.entries[row]
-		if err := os.RemoveAll(entry.Path); err == nil {
-			m.refresh() // Simplest route: refresh
-			return true
+		if m.controller == nil {
+			return false
 		}
-		return false
+		entry := m.entries[row]
+		err := m.controller.Dispatch(browserruntime.DeleteFileCommand{
+			CommandBase: browserruntime.CommandBase{OpID: m.nextOpID("delete")},
+			Path:        entry.Path,
+		})
+		return err == nil
 
 	case ActionChmodRole:
+		if m.controller == nil {
+			return false
+		}
 		entry := m.entries[row]
 		mode := value.ToInt()
 		if mode < 0 || mode > 0o7777 {
 			return false
 		}
-		if err := os.Chmod(entry.Path, os.FileMode(mode)); err == nil {
-			return true
-		}
-		return false
+		err := m.controller.Dispatch(browserruntime.ChmodFileCommand{
+			CommandBase: browserruntime.CommandBase{OpID: m.nextOpID("chmod")},
+			Path:        entry.Path,
+			Mode:        uint32(mode),
+		})
+		return err == nil
 
 	case ActionCDRole:
 		path := value.ToString()
@@ -330,6 +320,25 @@ func (m *FileSystemModel) setData(
 		m.isSearchMode = true
 		m.executeSearch(chips)
 		return true
+
+	case ActionPortalSubmitRole:
+		if m.controller == nil {
+			return false
+		}
+
+		selectedJSON := value.ToString()
+		selected := []string{}
+		if selectedJSON != "" {
+			if err := json.Unmarshal([]byte(selectedJSON), &selected); err != nil {
+				return false
+			}
+		}
+
+		err := m.controller.Dispatch(browserruntime.SubmitPortalCommand{
+			CommandBase:   browserruntime.CommandBase{OpID: m.nextOpID("portal-submit")},
+			SelectedFiles: append([]string(nil), selected...),
+		})
+		return err == nil
 	}
 
 	if super != nil {
@@ -339,104 +348,13 @@ func (m *FileSystemModel) setData(
 }
 
 func (m *FileSystemModel) executeSearch(chips []string) {
-	req := &ipcv1.SearchRequest{
-		Limit:       defaultSearchLimit,
-		MetaFilters: make(map[string]string),
-	}
-
-	// Parse chips
-	for _, chip := range chips {
-		switch {
-		case strings.HasPrefix(chip, "glob:"):
-			// handled locally
-		case strings.HasPrefix(chip, "hidden:"):
-			// handled locally
-		case strings.Contains(chip, ":"):
-			parts := strings.SplitN(chip, ":", splitNMaxParts)
-			req.MetaFilters[parts[0]] = parts[1]
-		default:
-			req.Tags = append(req.Tags, chip)
-		}
-	}
-
-	if m.daemonClient == nil {
-		// Just run the local glob matching part
-		m.populateSearchResults(nil, chips)
+	if m.controller == nil {
 		return
 	}
 
-	m.daemonClient.SearchAsync(context.Background(), req, m.mainThreadCh, func(resp *ipcv1.SearchResponse, err error) {
-		if err != nil || resp == nil {
-			return
-		}
-		m.populateSearchResults(resp.GetFiles(), chips)
+	_ = m.controller.Dispatch(browserruntime.SearchCommand{
+		CommandBase: browserruntime.CommandBase{OpID: m.nextOpID("search")},
+		Chips:       append([]string(nil), chips...),
+		Limit:       defaultSearchLimit,
 	})
-}
-
-func (m *FileSystemModel) populateSearchResults(files []*ipcv1.FileResult, chips []string) {
-	m.Clear()
-	m.SetItemRoleNames(m.roleNamesMap)
-	m.entries = m.entries[:0]
-
-	allowHidden := m.hidden
-	var globStr string
-	for _, c := range chips {
-		if c == "hidden:any" {
-			allowHidden = true
-		} else if after, ok := strings.CutPrefix(c, "glob:"); ok {
-			globStr = after
-		}
-	}
-
-	var items []*qt6.QStandardItem
-
-	for _, f := range files {
-		name := filepath.Base(f.GetPath())
-
-		if !allowHidden && name != "" && name[0] == '.' {
-			continue
-		}
-
-		if globStr != "" {
-			// Simple match check
-			matched, _ := filepath.Match(globStr, f.GetPath())
-			if !matched {
-				// If uses **, simple prefix check
-				cleanGlob := strings.TrimSuffix(globStr, "**")
-				if !strings.HasPrefix(f.GetPath(), cleanGlob) {
-					continue
-				}
-			}
-		}
-
-		isDir := false
-		info, err := os.Stat(f.GetPath())
-		if err == nil {
-			isDir = info.IsDir()
-		}
-
-		entry := folderEntry{
-			Name:     name,
-			Path:     f.GetPath(),
-			IsDir:    isDir,
-			Size:     f.GetSizeBytes(),
-			Modified: f.GetMtime(),
-			Tags:     f.GetTags(),
-		}
-		m.entries = append(m.entries, entry)
-
-		item := qt6.NewQStandardItem()
-		item.SetData(qt6.NewQVariant14(entry.Name), NameRole)
-		item.SetData(qt6.NewQVariant14(entry.Path), PathRole)
-		item.SetData(qt6.NewQVariant8(entry.IsDir), IsDirRole)
-		item.SetData(qt6.NewQVariant4(int(entry.Size)), SizeRole)
-		item.SetData(qt6.NewQVariant4(int(entry.Modified)), ModifiedRole)
-		item.SetData(qt6.NewQVariant15(entry.Tags), TagsRole)
-
-		items = append(items, item)
-	}
-
-	for _, item := range items {
-		m.AppendRow([]*qt6.QStandardItem{item})
-	}
 }

@@ -25,6 +25,8 @@ type Server struct {
 	closing atomic.Bool
 	wg      sync.WaitGroup
 	ln      net.Listener
+	mu      sync.Mutex
+	conns   map[net.Conn]struct{}
 }
 
 const genericErrorCode = 3
@@ -34,6 +36,7 @@ func NewServer(path string, handler Handler) *Server {
 	return &Server{
 		path:    path,
 		handler: handler,
+		conns:   make(map[net.Conn]struct{}),
 	}
 }
 
@@ -63,11 +66,35 @@ func (s *Server) Stop() {
 				slog.Debug("ipc server close listener", "err", err)
 			}
 		}
+		s.closeActiveConnections()
 		s.wg.Wait()
 		if err := os.Remove(s.path); err != nil && !os.IsNotExist(err) {
 			slog.Debug("ipc server remove socket", "path", s.path, "err", err)
 		}
 	}
+}
+
+func (s *Server) closeActiveConnections() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	for conn := range s.conns {
+		if err := conn.Close(); err != nil && !errors.Is(err, net.ErrClosed) {
+			slog.Debug("ipc server close connection", "err", err)
+		}
+	}
+}
+
+func (s *Server) trackConn(conn net.Conn) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.conns[conn] = struct{}{}
+}
+
+func (s *Server) untrackConn(conn net.Conn) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	delete(s.conns, conn)
 }
 
 func (s *Server) serve(ctx context.Context) {
@@ -82,6 +109,7 @@ func (s *Server) serve(ctx context.Context) {
 			continue
 		}
 
+		s.trackConn(conn)
 		s.wg.Add(1)
 		go s.handleConn(ctx, conn)
 	}
@@ -89,6 +117,7 @@ func (s *Server) serve(ctx context.Context) {
 
 func (s *Server) handleConn(ctx context.Context, conn net.Conn) {
 	defer s.wg.Done()
+	defer s.untrackConn(conn)
 	defer conn.Close()
 
 	for {

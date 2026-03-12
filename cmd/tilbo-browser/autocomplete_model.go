@@ -1,13 +1,12 @@
 package main
 
 import (
-	"context"
-	"path/filepath"
-	"strings"
+	"fmt"
+	"sync/atomic"
 
 	"github.com/mappu/miqt/qt6"
 
-	ipcv1 "github.com/darkliquid/tilbo/internal/ipc/gen/tilbo/ipc/v1"
+	browserruntime "github.com/darkliquid/tilbo/cmd/tilbo-browser/pkg/browser"
 )
 
 type AutocompleteModel struct {
@@ -15,9 +14,9 @@ type AutocompleteModel struct {
 
 	_ func() `constructor:"init"`
 
-	daemonClient *DaemonClient
-	mainThreadCh chan<- func()
 	roleNamesMap map[int][]byte
+	controller   *browserruntime.Controller
+	reqVersion   uint64
 }
 
 const (
@@ -25,11 +24,9 @@ const (
 	AcTriggerRole
 )
 
-func NewAutocompleteModel(parent *qt6.QObject, dc *DaemonClient, ch chan<- func()) *AutocompleteModel {
+func NewAutocompleteModel(parent *qt6.QObject) *AutocompleteModel {
 	m := &AutocompleteModel{
 		QStandardItemModel: qt6.NewQStandardItemModel3(parent),
-		daemonClient:       dc,
-		mainThreadCh:       ch,
 		roleNamesMap: map[int][]byte{
 			AcTextRole: []byte("acText"),
 			AcTriggerRole: []byte(
@@ -44,9 +41,16 @@ func NewAutocompleteModel(parent *qt6.QObject, dc *DaemonClient, ch chan<- func(
 	m.OnSetData(
 		func(super func(*qt6.QModelIndex, *qt6.QVariant, int) bool, index *qt6.QModelIndex, value *qt6.QVariant, role int) bool {
 			if role == AcTriggerRole {
+				if m.controller == nil {
+					return false
+				}
+
 				prefix := value.ToString()
-				m.fetchAutocomplete(prefix)
-				return true
+				err := m.controller.Dispatch(browserruntime.AutocompleteCommand{
+					CommandBase: browserruntime.CommandBase{OpID: m.nextOpID("autocomplete")},
+					Prefix:      prefix,
+				})
+				return err == nil
 			}
 			if super != nil {
 				return super(index, value, role)
@@ -58,45 +62,23 @@ func NewAutocompleteModel(parent *qt6.QObject, dc *DaemonClient, ch chan<- func(
 	return m
 }
 
-func (m *AutocompleteModel) fetchAutocomplete(prefix string) {
-	if m.daemonClient == nil {
-		m.Clear()
-		m.SetItemRoleNames(m.roleNamesMap)
-		return
-	}
+func (m *AutocompleteModel) nextOpID(prefix string) string {
+	id := atomic.AddUint64(&m.reqVersion, 1)
+	return fmt.Sprintf("%s-%d", prefix, id)
+}
 
-	// 1. If prefix targets a path (glob: /path)
-	if strings.HasPrefix(prefix, "glob:") {
-		m.Clear()
-		m.SetItemRoleNames(m.roleNamesMap)
-		globStr := strings.TrimPrefix(prefix, "glob:")
-		matches, err := filepath.Glob(globStr + "*")
-		if err == nil {
-			for _, match := range matches {
-				item := qt6.NewQStandardItem()
-				item.SetData(qt6.NewQVariant14("glob:"+match), AcTextRole)
-				m.AppendRow([]*qt6.QStandardItem{item})
-			}
-		}
-		return
-	}
+// BindController enables controller-driven autocomplete requests for this model.
+func (m *AutocompleteModel) BindController(controller *browserruntime.Controller) {
+	m.controller = controller
+}
 
-	// 2. Otherwise assume it's a tag or metadata prefix
-	req := &ipcv1.ListTagsRequest{Prefix: prefix}
-	m.daemonClient.ListTagsAsync(
-		context.Background(),
-		req,
-		m.mainThreadCh,
-		func(resp *ipcv1.ListTagsResponse, err error) {
-			m.Clear()
-			m.SetItemRoleNames(m.roleNamesMap)
-			if err == nil && resp != nil {
-				for _, tag := range resp.GetTags() {
-					item := qt6.NewQStandardItem()
-					item.SetData(qt6.NewQVariant14(tag), AcTextRole)
-					m.AppendRow([]*qt6.QStandardItem{item})
-				}
-			}
-		},
-	)
+// ApplyProjectionAutocomplete updates the model from autocomplete projection items.
+func (m *AutocompleteModel) ApplyProjectionAutocomplete(items []string) {
+	m.Clear()
+	m.SetItemRoleNames(m.roleNamesMap)
+	for _, itemText := range items {
+		item := qt6.NewQStandardItem()
+		item.SetData(qt6.NewQVariant14(itemText), AcTextRole)
+		m.AppendRow([]*qt6.QStandardItem{item})
+	}
 }

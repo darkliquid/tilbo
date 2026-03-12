@@ -1,0 +1,214 @@
+package browser
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"slices"
+	"strings"
+
+	ipcv1 "github.com/darkliquid/tilbo/internal/ipc/gen/tilbo/ipc/v1"
+)
+
+// requestCaller is implemented by ipc.Client and test doubles.
+type requestCaller interface {
+	Call(ctx context.Context, req *ipcv1.Request) (*ipcv1.Response, error)
+}
+
+// DaemonAdapter translates controller search/tag hydration requests to daemon IPC.
+type DaemonAdapter struct {
+	caller requestCaller
+}
+
+// NewDaemonAdapter constructs a daemon adapter from a request caller.
+func NewDaemonAdapter(caller requestCaller) *DaemonAdapter {
+	if caller == nil {
+		return nil
+	}
+
+	return &DaemonAdapter{caller: caller}
+}
+
+// Search executes daemon search for non-local chips.
+func (a *DaemonAdapter) Search(ctx context.Context, chips []string, limit uint32) ([]SearchFile, error) {
+	if a == nil || a.caller == nil {
+		return nil, errors.New("daemon adapter not configured")
+	}
+
+	req := SearchRequestFromChips(chips, limit)
+	resp, err := a.caller.Call(ctx, &ipcv1.Request{Kind: &ipcv1.Request_Search{Search: req}})
+	if err != nil {
+		return nil, err
+	}
+
+	searchResp, ok := resp.GetKind().(*ipcv1.Response_Search)
+	if !ok || searchResp.Search == nil {
+		return nil, errors.New("unexpected daemon search response")
+	}
+
+	return SearchFilesFromIPC(searchResp.Search.GetFiles()), nil
+}
+
+// HydrateTags fetches tags for the provided paths.
+func (a *DaemonAdapter) HydrateTags(ctx context.Context, paths []string) (map[string][]string, error) {
+	if a == nil || a.caller == nil {
+		return nil, errors.New("daemon adapter not configured")
+	}
+
+	if len(paths) == 0 {
+		return map[string][]string{}, nil
+	}
+
+	tagMap := make(map[string][]string, len(paths))
+	for _, p := range paths {
+		req := &ipcv1.SearchRequest{
+			Limit:       1,
+			Tags:        []string{"path:" + p},
+			MetaFilters: make(map[string]string),
+		}
+
+		resp, err := a.caller.Call(ctx, &ipcv1.Request{Kind: &ipcv1.Request_Search{Search: req}})
+		if err != nil {
+			return nil, err
+		}
+
+		searchResp, ok := resp.GetKind().(*ipcv1.Response_Search)
+		if !ok || searchResp.Search == nil {
+			return nil, errors.New("unexpected daemon hydration response")
+		}
+		for _, f := range searchResp.Search.GetFiles() {
+			tagMap[f.GetPath()] = append([]string(nil), f.GetTags()...)
+		}
+	}
+
+	return tagMap, nil
+}
+
+// Autocomplete fetches daemon tag suggestions for a prefix.
+func (a *DaemonAdapter) Autocomplete(ctx context.Context, prefix string) ([]string, error) {
+	if a == nil || a.caller == nil {
+		return nil, errors.New("daemon adapter not configured")
+	}
+
+	resp, err := a.caller.Call(ctx, &ipcv1.Request{
+		Kind: &ipcv1.Request_ListTags{ListTags: &ipcv1.ListTagsRequest{Prefix: prefix}},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	tagsResp, ok := resp.GetKind().(*ipcv1.Response_ListTags)
+	if !ok || tagsResp.ListTags == nil {
+		return nil, errors.New("unexpected daemon autocomplete response")
+	}
+
+	return append([]string(nil), tagsResp.ListTags.GetTags()...), nil
+}
+
+// SearchRequestFromChips builds an IPC search request from browser chips.
+func SearchRequestFromChips(chips []string, limit uint32) *ipcv1.SearchRequest {
+	if limit == 0 {
+		limit = defaultSearchLimit
+	}
+
+	req := &ipcv1.SearchRequest{
+		Limit:       limit,
+		MetaFilters: make(map[string]string),
+	}
+
+	for _, chip := range chips {
+		if strings.HasPrefix(chip, "glob:") || strings.HasPrefix(chip, "hidden:") {
+			continue
+		}
+		if strings.Contains(chip, ":") {
+			parts := strings.SplitN(chip, ":", splitPartsLimit)
+			if len(parts) == 2 && parts[0] != "" {
+				req.MetaFilters[parts[0]] = parts[1]
+			}
+			continue
+		}
+		req.Tags = append(req.Tags, chip)
+	}
+
+	if len(req.GetTags()) == 0 && len(req.GetMetaFilters()) == 0 {
+		req.FtsQuery = strings.Join(chips, " ")
+	}
+
+	return req
+}
+
+// SearchFilesFromIPC maps daemon file results to runtime SearchFile values.
+func SearchFilesFromIPC(files []*ipcv1.FileResult) []SearchFile {
+	if len(files) == 0 {
+		return []SearchFile{}
+	}
+
+	out := make([]SearchFile, 0, len(files))
+	for _, f := range files {
+		out = append(out, SearchFile{
+			Path:  f.GetPath(),
+			Tags:  append([]string(nil), f.GetTags()...),
+			Size:  f.GetSizeBytes(),
+			MTime: f.GetMtime(),
+		})
+	}
+
+	return out
+}
+
+func mergeEntryTags(entries []DirectoryEntry, tagMap map[string][]string) []DirectoryEntry {
+	if len(entries) == 0 || len(tagMap) == 0 {
+		return entries
+	}
+
+	merged := make([]DirectoryEntry, len(entries))
+	copy(merged, entries)
+	for i := range merged {
+		if tags, ok := tagMap[merged[i].Path]; ok {
+			merged[i].Tags = append([]string(nil), tags...)
+		}
+	}
+
+	return merged
+}
+
+func hasGlobChip(chips []string) bool {
+	for _, chip := range chips {
+		if strings.HasPrefix(chip, "glob:") {
+			return true
+		}
+	}
+
+	return false
+}
+
+// SearchAllowHidden reports whether hidden files should be considered for search.
+func SearchAllowHidden(chips []string, current bool) bool {
+	return current || slices.Contains(chips, "hidden:any")
+}
+
+func ensureSearchSource(files []SearchFile, chips []string, local []SearchFile) []SearchFile {
+	if len(files) > 0 {
+		return files
+	}
+	if !hasGlobChip(chips) {
+		return files
+	}
+
+	return local
+}
+
+func buildSearchError(daemonErr, localErr error) error {
+	if daemonErr == nil {
+		return localErr
+	}
+	if localErr == nil {
+		return daemonErr
+	}
+
+	return fmt.Errorf("daemon search: %w (local fallback: %w)", daemonErr, localErr)
+}
+
+const (
+	splitPartsLimit = 2
+)
