@@ -16,6 +16,11 @@ import (
 )
 
 const (
+	highCardinalityDivisor      = 20
+	minHighCardinalityThreshold = 50
+)
+
+const (
 	filePrefix = "f:"
 	tagPrefix  = "t:"
 )
@@ -31,7 +36,7 @@ type RelatedFile struct {
 type Graph struct {
 	mu sync.RWMutex
 
-	g       dgraph.Graph[string, string] // backing store
+	g       dgraph.Graph[string, string]   // backing store
 	fileAdj map[string]map[string]struct{} // fileKey → set of tagKeys
 	tagAdj  map[string]map[string]struct{} // tagKey  → set of fileKeys
 
@@ -139,7 +144,14 @@ func (g *Graph) RemoveFile(path string) {
 //     removal analogue); their IDF is near-zero anyway.
 //  2. The BFS frontier is capped at limit×20 per hop; only the highest-scored
 //     files advance to keep work per hop bounded.
-func (g *Graph) Related(_ context.Context, seedPath string, maxHops, limit int, hopWeight, vecWeight float64) []RelatedFile {
+//
+//nolint:funlen,gocognit // ranking and traversal logic is kept in one place for consistency
+func (g *Graph) Related(
+	_ context.Context,
+	seedPath string,
+	maxHops, limit int,
+	hopWeight, vecWeight float64,
+) []RelatedFile {
 	g.mu.RLock()
 	defer g.mu.RUnlock()
 
@@ -150,10 +162,7 @@ func (g *Graph) Related(_ context.Context, seedPath string, maxHops, limit int, 
 
 	// High-cardinality skip: tags in >5% of files are too generic for useful
 	// traversal. Minimum threshold of 50 avoids skipping everything on tiny graphs.
-	maxCard := g.totalFiles / 20
-	if maxCard < 50 {
-		maxCard = 50
-	}
+	maxCard := max(g.totalFiles/highCardinalityDivisor, minHighCardinalityThreshold)
 
 	// Frontier cap: keeps work per hop at O(cap × tagsPerFile × maxCardinality).
 	// Factor of 8 balances result quality (enough candidates) against latency.

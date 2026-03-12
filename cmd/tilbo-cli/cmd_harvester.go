@@ -22,13 +22,13 @@ var harvesterCmd = &cobra.Command{
 var harvesterListCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List all configured harvester plugins",
-	RunE: func(cmd *cobra.Command, args []string) error {
+	RunE: func(cmd *cobra.Command, _ []string) error {
 		pipeline := harvester.NewPipeline()
 		reg := harvester.NewRegistry(harvester.DefaultDirs(), nil)
 		if err := reg.Load(cmd.Context(), pipeline); err != nil {
 			return fmt.Errorf("failed to load harvesters: %w", err)
 		}
-		
+
 		fmt.Println("Configured harvesters:")
 		for _, h := range pipeline.List() {
 			fmt.Printf("  - %s (Priority: %d, Async: %t)\n", h.Name(), h.Priority(), h.Async())
@@ -38,13 +38,13 @@ var harvesterListCmd = &cobra.Command{
 }
 
 var harvesterTestCmd = &cobra.Command{
-	Use:   "test <path>",
-	Short: "Test the harvester pipeline against a local file",
-	Args:  cobra.ExactArgs(1),
+	Use:               "test <path>",
+	Short:             "Test the harvester pipeline against a local file",
+	Args:              cobra.ExactArgs(1),
 	ValidArgsFunction: completeFilePathOnly,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		path := absPath(args[0])
-		
+
 		pipeline := harvester.NewPipeline()
 		reg := harvester.NewRegistry(harvester.DefaultDirs(), nil)
 		if err := reg.Load(cmd.Context(), pipeline); err != nil {
@@ -52,9 +52,9 @@ var harvesterTestCmd = &cobra.Command{
 		}
 
 		ctx := context.Background()
-		// Simple mock for MIME type for testing. In reality this wouldn't strictly match the daemon's internal detection 
+		// Simple mock for MIME type for testing. In reality this wouldn't strictly match the daemon's internal detection
 		// exactly but enough for pipeline debug.
-		
+
 		input := harvester.Input{
 			Path: path,
 			// For testing we just assume we don't have existing metadata or we might want a flag to provide it.

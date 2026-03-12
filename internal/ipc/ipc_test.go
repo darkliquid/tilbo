@@ -31,8 +31,8 @@ func TestFramingRoundTrip(t *testing.T) {
 		t.Fatalf("ReadEnvelope: %v", err)
 	}
 
-	if got.RequestId != 42 {
-		t.Errorf("got req id %d, want 42", got.RequestId)
+	if got.GetRequestId() != 42 {
+		t.Errorf("got req id %d, want 42", got.GetRequestId())
 	}
 }
 
@@ -42,7 +42,7 @@ func TestServerClientRoundTrip(t *testing.T) {
 
 	sockPath := t.TempDir() + "/test.sock"
 
-	handler := func(ctx context.Context, req *ipcv1.Request) (*ipcv1.Response, error) {
+	handler := func(_ context.Context, _ *ipcv1.Request) (*ipcv1.Response, error) {
 		return &ipcv1.Response{
 			Kind: &ipcv1.Response_Status{
 				Status: &ipcv1.StatusResponse{
@@ -79,9 +79,9 @@ func TestServerClientRoundTrip(t *testing.T) {
 
 	status := resp.GetStatus()
 	if status == nil {
-		t.Fatalf("expected status response, got %T", resp.Kind)
+		t.Fatalf("expected status response, got %T", resp.GetKind())
 	}
-	if status.UptimeSeconds != 123 {
-		t.Errorf("got uptime %d, want 123", status.UptimeSeconds)
+	if status.GetUptimeSeconds() != 123 {
+		t.Errorf("got uptime %d, want 123", status.GetUptimeSeconds())
 	}
 }

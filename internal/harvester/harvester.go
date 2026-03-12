@@ -18,6 +18,11 @@ import (
 // written to xattr.
 type MetaMap map[string]any
 
+const (
+	metaTrueString  = "true"
+	metaFalseString = "false"
+)
+
 // Input is the payload sent to a harvester. It is serialised as JSON on the
 // harvester's stdin.
 type Input struct {
@@ -26,7 +31,7 @@ type Input struct {
 	Existing MetaMap `json:"existing"`
 }
 
-// HarvesterConfig is the nested config block inside a TOML harvester registration file.
+//nolint:revive // exported: hierarchical naming is deliberate
 type HarvesterConfig struct {
 	Name       string   `toml:"name"`
 	Command    []string `toml:"command"`
@@ -93,10 +98,10 @@ func ExpandPath(path string) string {
 // ParseMetaValue converts a string xattr metadata value to the most appropriate
 // Go type (bool, float64, or string), enabling typed comparisons in the rule engine.
 func ParseMetaValue(s string) any {
-	if s == "true" {
+	if s == metaTrueString {
 		return true
 	}
-	if s == "false" {
+	if s == metaFalseString {
 		return false
 	}
 	if n, err := strconv.ParseInt(s, 10, 64); err == nil {
@@ -121,9 +126,9 @@ func ValueToString(v any) string {
 		return strconv.FormatFloat(n, 'f', -1, 64)
 	case bool:
 		if n {
-			return "true"
+			return metaTrueString
 		}
-		return "false"
+		return metaFalseString
 	default:
 		return fmt.Sprintf("%v", v)
 	}
@@ -137,8 +142,8 @@ func matchesMIME(mime string, filters []string) bool {
 		if f == mime {
 			return true
 		}
-		if strings.HasSuffix(f, "/*") {
-			prefix := strings.TrimSuffix(f, "/*")
+		if before, ok := strings.CutSuffix(f, "/*"); ok {
+			prefix := before
 			if strings.HasPrefix(mime, prefix+"/") {
 				return true
 			}

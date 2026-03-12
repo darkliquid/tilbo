@@ -3,6 +3,8 @@
 package fuse
 
 import (
+	"encoding/hex"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -10,6 +12,11 @@ import (
 	"unicode"
 
 	"github.com/darkliquid/tilbo/internal/index"
+)
+
+const (
+	metaExprMaxParts = 3
+	metaExprMinParts = 2
 )
 
 // exprKind identifies the kind of path expression.
@@ -91,14 +98,14 @@ func parseSpecial(name string) (*Expr, error) {
 	case strings.HasPrefix(name, "@search:"):
 		q := name[len("@search:"):]
 		if q == "" {
-			return nil, fmt.Errorf("fuse: @search requires a query")
+			return nil, errors.New("fuse: @search requires a query")
 		}
 		return &Expr{kind: exprSearch, FTSQuery: q}, nil
 
 	case strings.HasPrefix(name, "@similar:"):
 		p := name[len("@similar:"):]
 		if p == "" {
-			return nil, fmt.Errorf("fuse: @similar requires a path")
+			return nil, errors.New("fuse: @similar requires a path")
 		}
 		return &Expr{kind: exprSimilar, SeedPath: p}, nil
 
@@ -112,12 +119,12 @@ func parseSpecial(name string) (*Expr, error) {
 
 func parseMetaExpr(s string) (*Expr, error) {
 	// Format: key:value or key:op:value
-	parts := strings.SplitN(s, ":", 3)
-	if len(parts) < 2 {
-		return nil, fmt.Errorf("fuse: @meta requires key:value")
+	parts := strings.SplitN(s, ":", metaExprMaxParts)
+	if len(parts) < metaExprMinParts {
+		return nil, errors.New("fuse: @meta requires key:value")
 	}
 	e := &Expr{kind: exprMeta, MetaKey: parts[0]}
-	if len(parts) == 2 {
+	if len(parts) == metaExprMinParts {
 		e.MetaOp = "eq"
 		e.MetaVal = parts[1]
 	} else {
@@ -132,30 +139,31 @@ func parseMetaExpr(s string) (*Expr, error) {
 	return e, nil
 }
 
+//nolint:gocognit // parser keeps validation and syntax branches explicit for user-facing errors
 func parseTagExpr(name string) (*Expr, error) {
 	if name == "" {
-		return nil, fmt.Errorf("fuse: empty tag expression")
+		return nil, errors.New("fuse: empty tag expression")
 	}
 	for _, r := range name {
 		if !unicode.IsPrint(r) {
-			return nil, fmt.Errorf("fuse: tag expression contains non-printable characters")
+			return nil, errors.New("fuse: tag expression contains non-printable characters")
 		}
 	}
 
 	// OR mode: expression contains ',' but no '+'
 	if strings.Contains(name, ",") {
 		if strings.Contains(name, "+") {
-			return nil, fmt.Errorf("fuse: mixed , and + not supported; use CLI for complex queries")
+			return nil, errors.New("fuse: mixed , and + not supported; use CLI for complex queries")
 		}
 		rawParts := strings.Split(name, ",")
 		tags := make([]string, 0, len(rawParts))
 		for _, raw := range rawParts {
 			raw = strings.TrimSpace(raw)
 			if raw == "" {
-				return nil, fmt.Errorf("fuse: empty tag in OR expression")
+				return nil, errors.New("fuse: empty tag in OR expression")
 			}
 			if strings.HasPrefix(raw, "!") {
-				return nil, fmt.Errorf("fuse: negation not supported in OR expression")
+				return nil, errors.New("fuse: negation not supported in OR expression")
 			}
 			decoded, err := percentDecode(raw)
 			if err != nil {
@@ -173,17 +181,17 @@ func parseTagExpr(name string) (*Expr, error) {
 	var include, exclude []string
 	for _, p := range parts {
 		if p == "" {
-			return nil, fmt.Errorf("fuse: empty part in AND expression")
+			return nil, errors.New("fuse: empty part in AND expression")
 		}
 		var raw string
 		isNot := strings.HasPrefix(p, "!")
 		if isNot {
 			raw = p[1:]
 			if raw == "" {
-				return nil, fmt.Errorf("fuse: empty negation tag")
+				return nil, errors.New("fuse: empty negation tag")
 			}
 			if len(include) == 0 {
-				return nil, fmt.Errorf("fuse: negation-only expression not supported")
+				return nil, errors.New("fuse: negation-only expression not supported")
 			}
 		} else {
 			raw = p
@@ -193,7 +201,7 @@ func parseTagExpr(name string) (*Expr, error) {
 			return nil, fmt.Errorf("fuse: %w", err)
 		}
 		if decoded == "" {
-			return nil, fmt.Errorf("fuse: empty tag name after decoding")
+			return nil, errors.New("fuse: empty tag name after decoding")
 		}
 		if isNot {
 			exclude = append(exclude, decoded)
@@ -202,7 +210,7 @@ func parseTagExpr(name string) (*Expr, error) {
 		}
 	}
 	if len(include) == 0 {
-		return nil, fmt.Errorf("fuse: negation-only expression not supported")
+		return nil, errors.New("fuse: negation-only expression not supported")
 	}
 	return &Expr{kind: exprTag, Tags: include, TagExclude: exclude}, nil
 }
@@ -269,10 +277,10 @@ func (e *Expr) IsSimilar() bool { return e.kind == exprSimilar }
 // IsUntagged reports whether this expression matches untagged files.
 func (e *Expr) IsUntagged() bool { return e.kind == exprUntagged }
 
-// parseRelativeDur parses strings like "7d", "30d", "2h" into a time.Duration.
+// parseRelativeDur parses strings like "7d", "30d", "2h" into a [time.Duration].
 func parseRelativeDur(s string) (time.Duration, error) {
 	if s == "" {
-		return 0, fmt.Errorf("empty duration")
+		return 0, errors.New("empty duration")
 	}
 	unit := s[len(s)-1]
 	numStr := s[:len(s)-1]
@@ -301,7 +309,7 @@ func percentEncode(s string) string {
 	}
 	var buf strings.Builder
 	buf.Grow(len(s))
-	for i := 0; i < len(s); i++ {
+	for i := range len(s) {
 		switch s[i] {
 		case '%':
 			buf.WriteString("%25")
@@ -335,25 +343,12 @@ func percentDecode(s string) (string, error) {
 		if i+2 >= len(s) {
 			return "", fmt.Errorf("truncated percent-encoding at position %d", i)
 		}
-		hi := unhex(s[i+1])
-		lo := unhex(s[i+2])
-		if hi < 0 || lo < 0 {
+		decoded, err := hex.DecodeString(s[i+1 : i+3])
+		if err != nil {
 			return "", fmt.Errorf("invalid percent-encoding %%%c%c", s[i+1], s[i+2])
 		}
-		buf.WriteByte(byte(hi<<4 | lo))
+		buf.WriteByte(decoded[0])
 		i += 2
 	}
 	return buf.String(), nil
-}
-
-func unhex(c byte) int {
-	switch {
-	case c >= '0' && c <= '9':
-		return int(c - '0')
-	case c >= 'A' && c <= 'F':
-		return int(c-'A') + 10
-	case c >= 'a' && c <= 'f':
-		return int(c-'a') + 10
-	}
-	return -1
 }

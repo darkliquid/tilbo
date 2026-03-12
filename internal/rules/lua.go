@@ -33,29 +33,29 @@ func (r *LuaRule) Priority() int { return r.priority }
 
 // Eval creates a sandboxed Lua VM, executes the script, and calls apply(meta).
 func (r *LuaRule) Eval(_ context.Context, meta harvester.MetaMap) ([]string, error) {
-	L := lua.NewState()
-	defer L.Close()
+	l := lua.NewState()
+	defer l.Close()
 
 	// Remove unsafe globals.
 	for _, name := range []string{
 		"io", "os", "require", "load", "loadfile", "dofile", "loadstring",
 		"package", "debug",
 	} {
-		L.SetGlobal(name, lua.LNil)
+		l.SetGlobal(name, lua.LNil)
 	}
 
-	if err := L.DoString(r.source); err != nil {
+	if err := l.DoString(r.source); err != nil {
 		return nil, fmt.Errorf("lua rule %q: load script: %w", r.name, err)
 	}
 
-	applyFn := L.GetGlobal("apply")
+	applyFn := l.GetGlobal("apply")
 	if applyFn == lua.LNil {
 		return nil, fmt.Errorf("lua rule %q: missing function apply(meta)", r.name)
 	}
 
-	metaTable := metaMapToLua(L, meta)
+	metaTable := metaMapToLua(l, meta)
 
-	if err := L.CallByParam(lua.P{
+	if err := l.CallByParam(lua.P{
 		Fn:      applyFn,
 		NRet:    1,
 		Protect: true,
@@ -63,8 +63,8 @@ func (r *LuaRule) Eval(_ context.Context, meta harvester.MetaMap) ([]string, err
 		return nil, fmt.Errorf("lua rule %q: call apply: %w", r.name, err)
 	}
 
-	ret := L.Get(-1)
-	L.Pop(1)
+	ret := l.Get(-1)
+	l.Pop(1)
 
 	tbl, ok := ret.(*lua.LTable)
 	if !ok {
@@ -81,8 +81,8 @@ func (r *LuaRule) Eval(_ context.Context, meta harvester.MetaMap) ([]string, err
 }
 
 // metaMapToLua converts a MetaMap to a Lua table for passing to apply(meta).
-func metaMapToLua(L *lua.LState, meta harvester.MetaMap) *lua.LTable {
-	t := L.NewTable()
+func metaMapToLua(l *lua.LState, meta harvester.MetaMap) *lua.LTable {
+	t := l.NewTable()
 	for k, v := range meta {
 		switch val := v.(type) {
 		case string:

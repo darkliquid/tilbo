@@ -7,15 +7,16 @@ import (
 	"os"
 	"runtime"
 
-	"github.com/darkliquid/tilbo/cmd/tilbo-browser/qml"
 	"github.com/godbus/dbus/v5"
 	"github.com/mappu/miqt/qt6"
 	miqtqml "github.com/mappu/miqt/qt6/qml"
+
+	"github.com/darkliquid/tilbo/cmd/tilbo-browser/qml"
 )
 
 type Browser struct {
-	app          *qt6.QGuiApplication
-	engine       *miqtqml.QQmlApplicationEngine
+	app               *qt6.QGuiApplication
+	engine            *miqtqml.QQmlApplicationEngine
 	fsModel           *FileSystemModel
 	acModel           *AutocompleteModel
 	placesModel       *PlacesModel
@@ -27,10 +28,12 @@ type Browser struct {
 	timer             *qt6.QTimer
 }
 
+const mainThreadQueueSize = 100
+
 func NewBrowser() *Browser {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &Browser{
-		mainThreadCh: make(chan func(), 100),
+		mainThreadCh: make(chan func(), mainThreadQueueSize),
 		ctx:          ctx,
 		cancel:       cancel,
 	}
@@ -40,7 +43,7 @@ func NewBrowser() *Browser {
 func (b *Browser) loadMode(mode, argsJSON string) {
 	slog.Info("Activating browser instance in main thread", "mode", mode)
 
-	var args map[string]interface{}
+	var args map[string]any
 	if argsJSON != "" {
 		if err := json.Unmarshal([]byte(argsJSON), &args); err != nil {
 			slog.Error("Failed to parse portal args", "err", err)
@@ -57,20 +60,22 @@ func (b *Browser) loadMode(mode, argsJSON string) {
 	default:
 		componentPath = os.TempDir() + "/tilbo-qml/windows/BrowserWindow.qml"
 	}
-	
+
 	// Ensure safe memory management for miqt/Qt
 	componentURL := qt6.QUrl_FromLocalFile(componentPath)
 	b.engine.Load(componentURL)
 	// IMPORTANT: Keep QUrl alive during QML processing
 	// runtime.KeepAlive isn't explicitly needed if componentURL is used after, but just in case
 	_ = componentURL
-	
+
 	if len(b.engine.RootObjects()) == 0 {
 		slog.Error("Failed to load QML for mode", "mode", mode)
 	}
 }
 
 // Open handles the activation logic for the browser if called externally (e.g. from D-Bus in the future).
+//
+//nolint:unparam // D-Bus exported method signature requires *dbus.Error return
 func (b *Browser) Open(mode, argsJSON string) *dbus.Error {
 	slog.Info("Browser.Open requested via D-Bus API", "mode", mode)
 	// Must execute within the Qt main thread
@@ -81,6 +86,8 @@ func (b *Browser) Open(mode, argsJSON string) *dbus.Error {
 }
 
 // Hide dismisses the active window but keeps the process running.
+//
+//nolint:unparam // D-Bus exported method signature requires *dbus.Error return
 func (b *Browser) Hide() *dbus.Error {
 	b.mainThreadCh <- func() {
 		slog.Info("Hiding browser instance")
@@ -90,6 +97,8 @@ func (b *Browser) Hide() *dbus.Error {
 }
 
 // Quit forces the application to terminate.
+//
+//nolint:unparam // D-Bus exported method signature requires *dbus.Error return
 func (b *Browser) Quit() *dbus.Error {
 	slog.Info("Browser instructed to quit")
 	b.cancel()
@@ -117,6 +126,7 @@ func (b *Browser) drainMainThreadChannel() {
 	}
 }
 
+//nolint:funlen // process bootstrap includes Qt, D-Bus, and singleton activation wiring
 func main() {
 	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelDebug})))
 
@@ -128,7 +138,6 @@ func main() {
 		slog.Error("Failed to connect to session bus", "err", err)
 		os.Exit(1)
 	}
-	defer conn.Close()
 	b.dbusConn = conn
 
 	reply, err := conn.RequestName("uk.co.darkliquid.tilbo.Browser", dbus.NameFlagDoNotQueue)
@@ -144,13 +153,17 @@ func main() {
 		call := obj.Call("uk.co.darkliquid.tilbo.Browser.Open", 0, "browser", "")
 		if call.Err != nil {
 			slog.Error("Failed to activate existing instance", "err", call.Err)
+			_ = conn.Close()
 			os.Exit(1)
 		}
+		_ = conn.Close()
 		os.Exit(0)
 	}
 
 	// We are the primary instance. Start the Qt application.
-	os.Setenv("QT_QUICK_CONTROLS_STYLE", "Basic")
+	if setEnvErr := os.Setenv("QT_QUICK_CONTROLS_STYLE", "Basic"); setEnvErr != nil {
+		slog.Warn("Failed to set QT_QUICK_CONTROLS_STYLE", "err", setEnvErr)
+	}
 	b.app = qt6.NewQGuiApplication(os.Args)
 	qt6.QGuiApplication_SetQuitOnLastWindowClosed(false)
 	b.engine = miqtqml.NewQQmlApplicationEngine()
@@ -159,7 +172,7 @@ func main() {
 	daemonClient, err := ConnectDaemon()
 	if err != nil {
 		slog.Error("Failed to connect to daemon", "err", err)
-		// We shouldn't exit here, standalone browsing might still work, 
+		// We shouldn't exit here, standalone browsing might still work,
 		// but tag fetching will fail gracefully.
 	}
 
@@ -194,24 +207,24 @@ func main() {
 		b.drainMainThreadChannel()
 	})
 	b.timer.Start(1) // Every 1ms
-	
+
 	// Create tmp path for QML
 	dumbTmpPath := os.TempDir() + "/tilbo-qml"
-	_ = os.MkdirAll(dumbTmpPath+"/windows", 0755)
-	_ = os.MkdirAll(dumbTmpPath+"/components", 0755)
-	
-	_ = os.WriteFile(dumbTmpPath+"/windows/BrowserWindow.qml", []byte(qml.BrowserWindow), 0644)
-	_ = os.WriteFile(dumbTmpPath+"/windows/PortalDialog.qml", []byte(qml.PortalDialog), 0644)
-	_ = os.WriteFile(dumbTmpPath+"/components/TagSearchBar.qml", []byte(qml.TagSearchBar), 0644)
-	_ = os.WriteFile(dumbTmpPath+"/components/FileGrid.qml", []byte(qml.FileGrid), 0644)
-	_ = os.WriteFile(dumbTmpPath+"/components/FileList.qml", []byte(qml.FileList), 0644)
+	_ = os.MkdirAll(dumbTmpPath+"/windows", 0o700)
+	_ = os.MkdirAll(dumbTmpPath+"/components", 0o700)
+
+	_ = os.WriteFile(dumbTmpPath+"/windows/BrowserWindow.qml", []byte(qml.BrowserWindow), 0o600)
+	_ = os.WriteFile(dumbTmpPath+"/windows/PortalDialog.qml", []byte(qml.PortalDialog), 0o600)
+	_ = os.WriteFile(dumbTmpPath+"/components/TagSearchBar.qml", []byte(qml.TagSearchBar), 0o600)
+	_ = os.WriteFile(dumbTmpPath+"/components/FileGrid.qml", []byte(qml.FileGrid), 0o600)
+	_ = os.WriteFile(dumbTmpPath+"/components/FileList.qml", []byte(qml.FileList), 0o600)
 
 	// Export D-Bus interface
 	/*
-	if err := b.exportDBus(); err != nil {
-		slog.Error("Failed to export D-Bus interface", "err", err)
-		os.Exit(1)
-	}
+		if err := b.exportDBus(); err != nil {
+			slog.Error("Failed to export D-Bus interface", "err", err)
+			os.Exit(1)
+		}
 	*/
 
 	// Default open "browser" initially when launched directly.

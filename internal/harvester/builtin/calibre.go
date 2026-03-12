@@ -26,6 +26,15 @@ type CalibreHarvester struct {
 	binary string
 }
 
+const calibreNoneValue = "None"
+
+const (
+	calibrePriority    = 15
+	calibreRunTimeout  = 20 * time.Second
+	calibreMetaInitCap = 12
+	calibreKVInitCap   = 16
+)
+
 // NewCalibreHarvester looks up ebook-meta on PATH. Returns nil if not found.
 func NewCalibreHarvester() *CalibreHarvester {
 	bin, err := exec.LookPath("ebook-meta")
@@ -36,7 +45,7 @@ func NewCalibreHarvester() *CalibreHarvester {
 }
 
 func (h *CalibreHarvester) Name() string  { return "builtin:calibre" }
-func (h *CalibreHarvester) Priority() int { return 15 }
+func (h *CalibreHarvester) Priority() int { return calibrePriority }
 func (h *CalibreHarvester) Async() bool   { return false }
 func (h *CalibreHarvester) Matches(_ string, mime string) bool {
 	switch mime {
@@ -67,24 +76,26 @@ func (h *CalibreHarvester) Matches(_ string, mime string) bool {
 //   - "book_series"      — series name (string)
 //   - "book_series_index" — position within series (string)
 //   - "book_rating"      — rating 0–10 (float64)
+//
+//nolint:gocyclo,cyclop,gocognit // field-by-field extraction keeps mapping logic explicit and maintainable
 func (h *CalibreHarvester) Run(ctx context.Context, input harvester.Input) (harvester.MetaMap, error) {
-	ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, calibreRunTimeout)
 	defer cancel()
 
 	//nolint:gosec // binary from LookPath; path is daemon-trusted.
 	cmd := exec.CommandContext(ctx, h.binary, input.Path)
 	out, err := cmd.Output()
 	if err != nil {
-		return nil, nil
+		return harvester.MetaMap{}, nil
 	}
 
 	kv := parseCalibreKV(out)
-	meta := make(harvester.MetaMap, 12)
+	meta := make(harvester.MetaMap, calibreMetaInitCap)
 
 	set := func(dst, src string) {
 		// Calibre's ebook-meta outputs the literal string "None" for any
 		// field that has no value, so we treat it the same as the empty string.
-		if v, ok := kv[src]; ok && v != "" && v != "None" {
+		if v, ok := kv[src]; ok && v != "" && v != calibreNoneValue {
 			meta[dst] = v
 		}
 	}
@@ -96,7 +107,7 @@ func (h *CalibreHarvester) Run(ctx context.Context, input harvester.Input) (harv
 	set("book_series_index", "Series index")
 
 	// Author(s) may list "&" or "," separated names; keep as-is.
-	if v, ok := kv["Author(s)"]; ok && v != "" && v != "None" {
+	if v, ok := kv["Author(s)"]; ok && v != "" && v != calibreNoneValue {
 		// Strip the "[sort: ...]" annotation Calibre sometimes appends.
 		if i := strings.Index(v, " ["); i > 0 {
 			v = strings.TrimSpace(v[:i])
@@ -105,24 +116,24 @@ func (h *CalibreHarvester) Run(ctx context.Context, input harvester.Input) (harv
 	}
 
 	// Tags → book_subject
-	if v, ok := kv["Tags"]; ok && v != "" && v != "None" {
+	if v, ok := kv["Tags"]; ok && v != "" && v != calibreNoneValue {
 		meta["book_subject"] = v
 	}
 
 	// Comments → book_description (may contain HTML; strip tags crudely)
-	if v, ok := kv["Comments"]; ok && v != "" && v != "None" {
+	if v, ok := kv["Comments"]; ok && v != "" && v != calibreNoneValue {
 		meta["book_description"] = stripHTMLTags(v)
 	}
 
 	// Rating: Calibre reports N/10.
-	if v, ok := kv["Rating"]; ok && v != "" && v != "None" {
+	if v, ok := kv["Rating"]; ok && v != "" && v != calibreNoneValue {
 		if f, ok := parseSimpleFloat(v); ok {
 			meta["book_rating"] = f
 		}
 	}
 
 	// Published date.
-	if v, ok := kv["Published"]; ok && v != "" && v != "None" {
+	if v, ok := kv["Published"]; ok && v != "" && v != calibreNoneValue {
 		for _, layout := range []string{time.RFC3339, "2006-01-02", "2006-01-02T15:04:05+00:00"} {
 			if t, err := time.Parse(layout, strings.TrimSpace(v)); err == nil {
 				meta["book_date"] = float64(t.Unix())
@@ -132,8 +143,8 @@ func (h *CalibreHarvester) Run(ctx context.Context, input harvester.Input) (harv
 	}
 
 	// Identifiers: "isbn:9781234567890,mobi-asin:ASIN123"
-	if v, ok := kv["Identifiers"]; ok && v != "" && v != "None" {
-		for _, part := range strings.Split(v, ",") {
+	if v, ok := kv["Identifiers"]; ok && v != "" && v != calibreNoneValue {
+		for part := range strings.SplitSeq(v, ",") {
 			part = strings.TrimSpace(part)
 			key, val, found := strings.Cut(part, ":")
 			if !found {
@@ -147,7 +158,7 @@ func (h *CalibreHarvester) Run(ctx context.Context, input harvester.Input) (harv
 	}
 
 	if len(meta) == 0 {
-		return nil, nil
+		return harvester.MetaMap{}, nil
 	}
 	return meta, nil
 }
@@ -155,16 +166,16 @@ func (h *CalibreHarvester) Run(ctx context.Context, input harvester.Input) (harv
 // parseCalibreKV parses the `ebook-meta` colon-delimited output.
 // Lines have the form "Key               : Value".
 func parseCalibreKV(data []byte) map[string]string {
-	m := make(map[string]string, 16)
+	m := make(map[string]string, calibreKVInitCap)
 	sc := bufio.NewScanner(bytes.NewReader(data))
 	for sc.Scan() {
 		line := sc.Text()
-		idx := strings.IndexByte(line, ':')
-		if idx < 0 {
+		before, after, ok := strings.Cut(line, ":")
+		if !ok {
 			continue
 		}
-		key := strings.TrimSpace(line[:idx])
-		val := strings.TrimSpace(line[idx+1:])
+		key := strings.TrimSpace(before)
+		val := strings.TrimSpace(after)
 		if key != "" {
 			m[key] = val
 		}
@@ -175,14 +186,14 @@ func parseCalibreKV(data []byte) map[string]string {
 // stripHTMLTags removes HTML/XML tags from s using a simple byte scan.
 // A space is written after each closing '>' so that text nodes separated
 // only by tags remain space-delimited (e.g. "<b>bold</b>word" → "bold word"
-// rather than "boldword"). strings.Fields then collapses any resulting runs of
+// rather than "boldword"). [strings.Fields] then collapses any resulting runs of
 // whitespace into single spaces. This handles the lightweight HTML that
 // Calibre writes into the Comments field without needing a full HTML parser.
 func stripHTMLTags(s string) string {
 	var b strings.Builder
 	b.Grow(len(s))
 	inTag := false
-	for i := 0; i < len(s); i++ {
+	for i := range len(s) {
 		switch {
 		case s[i] == '<':
 			inTag = true

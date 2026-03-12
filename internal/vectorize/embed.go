@@ -1,7 +1,8 @@
-package embed
+package vectorize
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 
@@ -25,7 +26,7 @@ type ONNXEmbedder struct {
 
 // NewONNXEmbedder initializes an ONNX runtime session and loads the model from the
 // specified directory. The model should be an all-MiniLM-L6-v2 ONNX export.
-func NewONNXEmbedder(ctx context.Context, modelPath string) (*ONNXEmbedder, error) {
+func NewONNXEmbedder(_ context.Context, modelPath string) (*ONNXEmbedder, error) {
 	session, err := hugot.NewGoSession()
 	if err != nil {
 		return nil, fmt.Errorf("hugot session: %w", err)
@@ -50,7 +51,7 @@ func NewONNXEmbedder(ctx context.Context, modelPath string) (*ONNXEmbedder, erro
 
 // EmbedText returns the embedding vector for the given text.
 // It is safe for concurrent use.
-func (e *ONNXEmbedder) EmbedText(ctx context.Context, text string) ([]float32, error) {
+func (e *ONNXEmbedder) EmbedText(_ context.Context, text string) ([]float32, error) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 
@@ -61,14 +62,14 @@ func (e *ONNXEmbedder) EmbedText(ctx context.Context, text string) ([]float32, e
 
 	batchResult := result.GetOutput()
 	if len(batchResult) == 0 {
-		return nil, fmt.Errorf("no embedding returned")
+		return nil, errors.New("no embedding returned")
 	}
 
 	// For feature extraction, output is [][]float32.
 	// batchResult[0] is []float32.
 	emb, ok := batchResult[0].([]float32)
 	if !ok {
-		return nil, fmt.Errorf("unexpected output type from hugot pipeline")
+		return nil, errors.New("unexpected output type from hugot pipeline")
 	}
 	return emb, nil
 }

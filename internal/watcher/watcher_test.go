@@ -5,6 +5,7 @@ package watcher
 import (
 	"context"
 	"errors"
+	"math"
 	"testing"
 	"time"
 
@@ -154,5 +155,90 @@ func TestPathUnderWatchRoot(t *testing.T) {
 		if got != tt.want {
 			t.Fatalf("pathUnderWatchRoot(%q, %q) = %v, want %v", tt.path, tt.root, got, tt.want)
 		}
+	}
+}
+
+func TestIntToInt32Checked(t *testing.T) {
+	tests := []struct {
+		name    string
+		in      int
+		want    int32
+		wantErr bool
+	}{
+		{name: "zero", in: 0, want: 0},
+		{name: "positive", in: 42, want: 42},
+		{name: "max", in: math.MaxInt32, want: math.MaxInt32},
+		{name: "too large", in: int(math.MaxInt32) + 1, wantErr: true},
+		{name: "too small", in: int(math.MinInt32) - 1, wantErr: true},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := intToInt32Checked(tc.in, "test field")
+			if tc.wantErr {
+				if err == nil {
+					t.Fatalf("expected error for %d", tc.in)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if got != tc.want {
+				t.Fatalf("got %d, want %d", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestUintptrToInt32Checked(t *testing.T) {
+	tests := []struct {
+		name    string
+		in      uintptr
+		want    int32
+		wantErr bool
+	}{
+		{name: "zero", in: 0, want: 0},
+		{name: "small", in: 7, want: 7},
+		{name: "max", in: uintptr(math.MaxInt32), want: math.MaxInt32},
+		{name: "too large", in: uintptr(math.MaxInt32) + 1, wantErr: true},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := uintptrToInt32Checked(tc.in, "test field")
+			if tc.wantErr {
+				if err == nil {
+					t.Fatalf("expected error for %d", tc.in)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if got != tc.want {
+				t.Fatalf("got %d, want %d", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestMakePollFDPair(t *testing.T) {
+	pair, err := makePollFDPair(3, 4, "fd", "pipe")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(pair) != 2 {
+		t.Fatalf("expected 2 poll fds, got %d", len(pair))
+	}
+	if pair[0].Fd != 3 || pair[1].Fd != 4 {
+		t.Fatalf("unexpected fd values: %+v", pair)
+	}
+	if pair[0].Events != unix.POLLIN || pair[1].Events != unix.POLLIN {
+		t.Fatalf("unexpected poll events: %+v", pair)
+	}
+
+	if _, err := makePollFDPair(int(math.MaxInt32)+1, 4, "fd", "pipe"); err == nil {
+		t.Fatal("expected error for out-of-range fd")
 	}
 }

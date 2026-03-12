@@ -13,11 +13,13 @@ import (
 	ipcv1 "github.com/darkliquid/tilbo/internal/ipc/gen/tilbo/ipc/v1"
 )
 
+const dialTimeout = 5 * time.Second
+
 // Client is a thread-safe client for the tilbo IPC protocol.
 type Client struct {
-	path string
-	conn net.Conn
-	mu   sync.Mutex
+	path    string
+	conn    net.Conn
+	mu      sync.Mutex
 	writeMu sync.Mutex
 
 	nextID uint64
@@ -29,7 +31,8 @@ type Client struct {
 
 // NewClient creates a new connected IPC Client.
 func NewClient(ctx context.Context, path string) (*Client, error) {
-	conn, err := net.DialTimeout("unix", path, 5*time.Second)
+	dialer := &net.Dialer{Timeout: dialTimeout}
+	conn, err := dialer.DialContext(ctx, "unix", path)
 	if err != nil {
 		return nil, fmt.Errorf("dial ipc socket: %w", err)
 	}
@@ -80,9 +83,9 @@ func (c *Client) readLoop() {
 		}
 
 		c.mu.Lock()
-		ch, ok := c.reqs[env.RequestId]
+		ch, ok := c.reqs[env.GetRequestId()]
 		if ok {
-			delete(c.reqs, env.RequestId)
+			delete(c.reqs, env.GetRequestId())
 		}
 		c.mu.Unlock()
 
@@ -133,7 +136,7 @@ func (c *Client) Call(ctx context.Context, req *ipcv1.Request) (*ipcv1.Response,
 		return nil, ctx.Err()
 	case resp := <-ch:
 		if errResp := resp.GetError(); errResp != nil {
-			return nil, fmt.Errorf("remote error: %s (code %d)", errResp.Message, errResp.Code)
+			return nil, fmt.Errorf("remote error: %s (code %d)", errResp.GetMessage(), errResp.GetCode())
 		}
 		return resp, nil
 	}

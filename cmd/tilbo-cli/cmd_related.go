@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"os"
 	"strings"
 	"text/tabwriter"
@@ -11,6 +12,15 @@ import (
 	"github.com/spf13/cobra"
 
 	ipcv1 "github.com/darkliquid/tilbo/internal/ipc/gen/tilbo/ipc/v1"
+)
+
+const outputFormatJSON = "json"
+
+const (
+	defaultRelatedLimit = 20
+	defaultRelatedHops  = 3
+	defaultVecWeight    = 0.4
+	relatedTabPadding   = 2
 )
 
 var relatedCmd = &cobra.Command{
@@ -46,7 +56,7 @@ var relatedCmd = &cobra.Command{
 		files := resp.GetRelated().GetFiles()
 
 		switch format {
-		case "json":
+		case outputFormatJSON:
 			return printRelatedJSON(files)
 		case "tsv":
 			return printRelatedTSV(files)
@@ -58,12 +68,12 @@ var relatedCmd = &cobra.Command{
 }
 
 func init() {
-	relatedCmd.Flags().Uint32("limit", 20, "maximum results to return")
-	relatedCmd.Flags().Uint32("hops", 3, "maximum graph hops from seed")
+	relatedCmd.Flags().Uint32("limit", defaultRelatedLimit, "maximum results to return")
+	relatedCmd.Flags().Uint32("hops", defaultRelatedHops, "maximum graph hops from seed")
 	relatedCmd.Flags().Float32("hop-weight", 1.0, "weight multiplier for graph hop distance")
-	relatedCmd.Flags().Float32("vec-weight", 0.4, "weight multiplier for vector similarity")
+	relatedCmd.Flags().Float32("vec-weight", defaultVecWeight, "weight multiplier for vector similarity")
 	relatedCmd.Flags().String("format", "human", "output format: human, json, tsv")
-	_ = relatedCmd.RegisterFlagCompletionFunc("format", completeEnum("human", "json", "tsv"))
+	_ = relatedCmd.RegisterFlagCompletionFunc("format", completeEnum("human", outputFormatJSON, "tsv"))
 }
 
 type jsonRelatedResult struct {
@@ -115,7 +125,7 @@ func printRelatedHuman(files []*ipcv1.ScoredFile) {
 		fmt.Println("no related files found")
 		return
 	}
-	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+	w := tabwriter.NewWriter(os.Stdout, 0, 0, relatedTabPadding, ' ', 0)
 	for _, sf := range files {
 		f := sf.GetFile()
 		tags := "(no tags)"
@@ -125,5 +135,7 @@ func printRelatedHuman(files []*ipcv1.ScoredFile) {
 		fmt.Fprintf(w, "%s\t[%s]\t(score %.3f, %d hops)\n",
 			f.GetPath(), tags, sf.GetScore(), sf.GetHopDistance())
 	}
-	w.Flush()
+	if err := w.Flush(); err != nil {
+		slog.Warn("failed to flush related output", "err", err)
+	}
 }

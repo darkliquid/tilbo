@@ -9,8 +9,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	ipcv1 "github.com/darkliquid/tilbo/internal/ipc/gen/tilbo/ipc/v1"
 	"github.com/mappu/miqt/qt6"
+
+	ipcv1 "github.com/darkliquid/tilbo/internal/ipc/gen/tilbo/ipc/v1"
 )
 
 // FileSystemModel provides a QML-compatible data bridge for traditional folder
@@ -31,6 +32,11 @@ type FileSystemModel struct {
 	isSearchMode bool
 	entries      []folderEntry
 }
+
+const (
+	defaultSearchLimit = 1000
+	splitNMaxParts     = 2
+)
 
 type folderEntry struct {
 	Name     string
@@ -65,9 +71,11 @@ func NewFileSystemModel(parent *qt6.QObject, dc *DaemonClient, ch chan<- func())
 	m.SetItemRoleNames(m.roleNamesMap)
 
 	// Intercept SetData requests to handle actions
-	m.OnSetData(func(super func(index *qt6.QModelIndex, value *qt6.QVariant, role int) bool, index *qt6.QModelIndex, value *qt6.QVariant, role int) bool {
-		return m.setData(super, index, value, role)
-	})
+	m.OnSetData(
+		func(super func(index *qt6.QModelIndex, value *qt6.QVariant, role int) bool, index *qt6.QModelIndex, value *qt6.QVariant, role int) bool {
+			return m.setData(super, index, value, role)
+		},
+	)
 
 	m.refresh()
 
@@ -140,7 +148,7 @@ func (m *FileSystemModel) loadEntries() {
 		item.SetData(qt6.NewQVariant4(int(entry.Size)), SizeRole)
 		item.SetData(qt6.NewQVariant4(int(entry.Modified)), ModifiedRole)
 		item.SetData(qt6.NewQVariant15(entry.Tags), TagsRole)
-		
+
 		items = append(items, item)
 	}
 
@@ -157,10 +165,10 @@ func (m *FileSystemModel) loadEntries() {
 
 func (m *FileSystemModel) fetchTagsAsync(paths []string) {
 	req := &ipcv1.SearchRequest{
-		Limit:       1000,
+		Limit:       defaultSearchLimit,
 		MetaFilters: make(map[string]string),
 	}
-	
+
 	var tags []string
 	for _, p := range paths {
 		tags = append(tags, fmt.Sprintf("path:%s", p))
@@ -175,15 +183,15 @@ func (m *FileSystemModel) fetchTagsAsync(paths []string) {
 
 		// Update our local model entries with fetched tags
 		tagMap := make(map[string][]string)
-		for _, f := range resp.Files {
-			tagMap[f.Path] = f.Tags
+		for _, f := range resp.GetFiles() {
+			tagMap[f.GetPath()] = f.GetTags()
 		}
 
 		// Re-apply tags to our in-memory slice and QStandardItems
 		for i, entry := range m.entries {
 			if matchedTags, ok := tagMap[entry.Path]; ok {
 				m.entries[i].Tags = matchedTags
-				
+
 				// Update QStandardItem directly
 				idx := m.Index(i, 0, qt6.NewQModelIndex())
 				item := m.ItemFromIndex(idx)
@@ -195,7 +203,7 @@ func (m *FileSystemModel) fetchTagsAsync(paths []string) {
 	})
 }
 
-// RoleName mapping to QML context properties
+// RoleName mapping to QML context properties.
 const (
 	NameRole = int(qt6.UserRole) + iota
 	PathRole
@@ -214,15 +222,22 @@ const (
 	PlacePathRole
 )
 
-func (m *FileSystemModel) setData(super func(*qt6.QModelIndex, *qt6.QVariant, int) bool, index *qt6.QModelIndex, value *qt6.QVariant, role int) bool {
-	var row int = -1
+//nolint:funlen,gocognit // action dispatch is intentionally centralized for QML role handling
+func (m *FileSystemModel) setData(
+	super func(*qt6.QModelIndex, *qt6.QVariant, int) bool,
+	index *qt6.QModelIndex,
+	value *qt6.QVariant,
+	role int,
+) bool {
+	var row = -1
 	if index != nil && index.IsValid() {
 		row = index.Row()
 	}
 
 	// For per-item actions, validate the row index
-	isItemAction := role == ActionOpenRole || role == ActionRenameRole || role == ActionDeleteRole || role == ActionChmodRole
-	
+	isItemAction := role == ActionOpenRole || role == ActionRenameRole || role == ActionDeleteRole ||
+		role == ActionChmodRole
+
 	if isItemAction {
 		if row < 0 || row >= len(m.entries) {
 			return false
@@ -232,9 +247,12 @@ func (m *FileSystemModel) setData(super func(*qt6.QModelIndex, *qt6.QVariant, in
 	switch role {
 	case ActionOpenRole:
 		entry := m.entries[row]
-		cmd := exec.Command("xdg-open", entry.Path)
+		// #nosec G204 -- entry.Path comes from local filesystem entries selected by the user.
+		cmd := exec.CommandContext(context.Background(), "xdg-open", entry.Path)
 		if err := cmd.Start(); err == nil {
-			go cmd.Wait() // release async
+			go func() {
+				_ = cmd.Wait() // release async
+			}()
 			return true
 		}
 		return false
@@ -249,7 +267,7 @@ func (m *FileSystemModel) setData(super func(*qt6.QModelIndex, *qt6.QVariant, in
 		if err := os.Rename(entry.Path, newPath); err == nil {
 			m.entries[row].Name = newName
 			m.entries[row].Path = newPath
-			
+
 			// Update the QStandardItem directly
 			item := m.ItemFromIndex(index)
 			if item != nil {
@@ -271,11 +289,14 @@ func (m *FileSystemModel) setData(super func(*qt6.QModelIndex, *qt6.QVariant, in
 	case ActionChmodRole:
 		entry := m.entries[row]
 		mode := value.ToInt()
+		if mode < 0 || mode > 0o7777 {
+			return false
+		}
 		if err := os.Chmod(entry.Path, os.FileMode(mode)); err == nil {
 			return true
 		}
 		return false
-	
+
 	case ActionCDRole:
 		path := value.ToString()
 		if path != "" {
@@ -294,12 +315,12 @@ func (m *FileSystemModel) setData(super func(*qt6.QModelIndex, *qt6.QVariant, in
 		if chipsJSON == "" {
 			return false
 		}
-		
+
 		var chips []string
 		if err := json.Unmarshal([]byte(chipsJSON), &chips); err != nil {
 			return false
 		}
-		
+
 		if len(chips) == 0 {
 			m.isSearchMode = false
 			m.refresh()
@@ -310,7 +331,7 @@ func (m *FileSystemModel) setData(super func(*qt6.QModelIndex, *qt6.QVariant, in
 		m.executeSearch(chips)
 		return true
 	}
-	
+
 	if super != nil {
 		return super(index, value, role)
 	}
@@ -319,20 +340,21 @@ func (m *FileSystemModel) setData(super func(*qt6.QModelIndex, *qt6.QVariant, in
 
 func (m *FileSystemModel) executeSearch(chips []string) {
 	req := &ipcv1.SearchRequest{
-		Limit:       1000,
+		Limit:       defaultSearchLimit,
 		MetaFilters: make(map[string]string),
 	}
-	
+
 	// Parse chips
 	for _, chip := range chips {
-		if strings.HasPrefix(chip, "glob:") {
+		switch {
+		case strings.HasPrefix(chip, "glob:"):
 			// handled locally
-		} else if strings.HasPrefix(chip, "hidden:") {
+		case strings.HasPrefix(chip, "hidden:"):
 			// handled locally
-		} else if strings.Contains(chip, ":") {
-			parts := strings.SplitN(chip, ":", 2)
+		case strings.Contains(chip, ":"):
+			parts := strings.SplitN(chip, ":", splitNMaxParts)
 			req.MetaFilters[parts[0]] = parts[1]
-		} else {
+		default:
 			req.Tags = append(req.Tags, chip)
 		}
 	}
@@ -347,7 +369,7 @@ func (m *FileSystemModel) executeSearch(chips []string) {
 		if err != nil || resp == nil {
 			return
 		}
-		m.populateSearchResults(resp.Files, chips)
+		m.populateSearchResults(resp.GetFiles(), chips)
 	})
 }
 
@@ -361,15 +383,15 @@ func (m *FileSystemModel) populateSearchResults(files []*ipcv1.FileResult, chips
 	for _, c := range chips {
 		if c == "hidden:any" {
 			allowHidden = true
-		} else if strings.HasPrefix(c, "glob:") {
-			globStr = strings.TrimPrefix(c, "glob:")
+		} else if after, ok := strings.CutPrefix(c, "glob:"); ok {
+			globStr = after
 		}
 	}
 
 	var items []*qt6.QStandardItem
 
 	for _, f := range files {
-		name := filepath.Base(f.Path)
+		name := filepath.Base(f.GetPath())
 
 		if !allowHidden && name != "" && name[0] == '.' {
 			continue
@@ -377,29 +399,29 @@ func (m *FileSystemModel) populateSearchResults(files []*ipcv1.FileResult, chips
 
 		if globStr != "" {
 			// Simple match check
-			matched, _ := filepath.Match(globStr, f.Path)
+			matched, _ := filepath.Match(globStr, f.GetPath())
 			if !matched {
 				// If uses **, simple prefix check
 				cleanGlob := strings.TrimSuffix(globStr, "**")
-				if !strings.HasPrefix(f.Path, cleanGlob) {
+				if !strings.HasPrefix(f.GetPath(), cleanGlob) {
 					continue
 				}
 			}
 		}
 
 		isDir := false
-		info, err := os.Stat(f.Path)
+		info, err := os.Stat(f.GetPath())
 		if err == nil {
 			isDir = info.IsDir()
 		}
 
 		entry := folderEntry{
 			Name:     name,
-			Path:     f.Path,
+			Path:     f.GetPath(),
 			IsDir:    isDir,
-			Size:     f.SizeBytes,
-			Modified: f.Mtime,
-			Tags:     f.Tags,
+			Size:     f.GetSizeBytes(),
+			Modified: f.GetMtime(),
+			Tags:     f.GetTags(),
 		}
 		m.entries = append(m.entries, entry)
 

@@ -9,6 +9,12 @@ import (
 	ipcv1 "github.com/darkliquid/tilbo/internal/ipc/gen/tilbo/ipc/v1"
 )
 
+const (
+	secondsPerMinute = 60
+	secondsPerHour   = 60 * secondsPerMinute
+	secondsPerDay    = 24 * secondsPerHour
+)
+
 var daemonCmd = &cobra.Command{
 	Use:   "daemon",
 	Short: "Inspect or control the tilbo daemon",
@@ -85,10 +91,10 @@ func init() {
 
 // formatUptime returns a human-readable duration string from seconds.
 func formatUptime(seconds int64) string {
-	d := seconds / 86400
-	h := (seconds % 86400) / 3600
-	m := (seconds % 3600) / 60
-	s := seconds % 60
+	d := seconds / secondsPerDay
+	h := (seconds % secondsPerDay) / secondsPerHour
+	m := (seconds % secondsPerHour) / secondsPerMinute
+	s := seconds % secondsPerMinute
 	if d > 0 {
 		return fmt.Sprintf("%dd %dh %dm %ds", d, h, m, s)
 	}

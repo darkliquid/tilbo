@@ -15,9 +15,9 @@ type mockHarvester struct {
 	err      error
 }
 
-func (m *mockHarvester) Name() string     { return m.name }
-func (m *mockHarvester) Priority() int    { return m.priority }
-func (m *mockHarvester) Async() bool      { return m.async }
+func (m *mockHarvester) Name() string  { return m.name }
+func (m *mockHarvester) Priority() int { return m.priority }
+func (m *mockHarvester) Async() bool   { return m.async }
 func (m *mockHarvester) Matches(_, mime string) bool {
 	if m.mime == "" {
 		return true

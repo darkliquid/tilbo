@@ -1,10 +1,3 @@
-// Package watcher monitors a filesystem mount for changes using fanotify.
-//
-// Renames are always reported as paired EventDelete + EventCreate events.
-// FAN_RENAME cannot be combined with FAN_MARK_MOUNT and requires FAN_REPORT_FID
-// (which changes the event format), so FAN_MOVED_FROM / FAN_MOVED_TO are used
-// instead.
-//
 //go:build linux
 
 package watcher
@@ -16,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"math"
 	"os"
 	"path/filepath"
 	"strings"
@@ -75,6 +69,10 @@ const (
 
 	// outChanBuf is the Events channel capacity.
 	outChanBuf = 512
+
+	watcherShutdownWait = 2 * time.Second
+	fanHandleHeaderSize = 8
+	mountInfoMinFields  = 5
 )
 
 // fanotifyMetaVersion matches FANOTIFY_METADATA_VERSION in linux/fanotify.h.
@@ -93,12 +91,12 @@ const (
 // If fanotify is unavailable (e.g. in rootless containers), it falls back
 // transparently to an inotify-based recursive directory watcher.
 type Watcher struct {
-	mountPath string
-	fanfd     int
-	mountFD   int
-	inotify   *inotifyImpl // non-nil when using the inotify fallback
+	mountPath       string
+	fanfd           int
+	mountFD         int
+	inotify         *inotifyImpl // non-nil when using the inotify fallback
 	fallbackWarning string
-	out       chan Event
+	out             chan Event
 
 	mu      sync.Mutex
 	pending map[string]*debounceEntry
@@ -119,6 +117,8 @@ type Options struct {
 // New creates a Watcher for the given mount point using the specified backend and options.
 // Pass BackendAuto to prefer fanotify and fall back to inotify automatically.
 // Call Run to start delivering events.
+//
+//nolint:funlen,gocognit // backend selection and capability fallback are centralized for startup correctness
 func New(ctx context.Context, mountPath string, backend Backend, opts Options) (*Watcher, error) {
 	watchRoot := filepath.Clean(mountPath)
 	markPath := watchRoot
@@ -137,13 +137,13 @@ func New(ctx context.Context, mountPath string, backend Backend, opts Options) (
 			return nil, fmt.Errorf("watcher: inotify: %w", err)
 		}
 		return &Watcher{
-			mountPath:   watchRoot,
-			fanfd:       -1,
-			mountFD:     -1,
-			inotify:     impl,
+			mountPath:       watchRoot,
+			fanfd:           -1,
+			mountFD:         -1,
+			inotify:         impl,
 			fallbackWarning: "",
-			pending:     make(map[string]*debounceEntry),
-			watchHidden: opts.WatchHidden,
+			pending:         make(map[string]*debounceEntry),
+			watchHidden:     opts.WatchHidden,
 		}, nil
 	}
 
@@ -171,9 +171,9 @@ func New(ctx context.Context, mountPath string, backend Backend, opts Options) (
 			warn = fmt.Sprintf("%s: %v", warn, cause)
 		}
 		if hint != "" {
-			warn = warn + "; " + hint
+			warn += "; " + hint
 		}
-		warn = warn + "; inotify fallback active"
+		warn += "; inotify fallback active"
 
 		return &Watcher{
 			mountPath:       watchRoot,
@@ -222,60 +222,97 @@ func New(ctx context.Context, mountPath string, backend Backend, opts Options) (
 	slog.DebugContext(ctx, "watcher: attempting fanotify_mark",
 		"path", watchRoot, "markPath", markPath, "markType", "FAN_MARK_FILESYSTEM", "mask", fmt.Sprintf("0x%x", mask))
 
-	if err := unix.FanotifyMark(fanfd,
+	err = unix.FanotifyMark(fanfd,
 		unix.FAN_MARK_ADD|unix.FAN_MARK_FILESYSTEM,
 		mask,
 		unix.AT_FDCWD, markPath,
-	); err != nil {
-		slog.DebugContext(ctx, "watcher: FAN_MARK_FILESYSTEM failed", "path", watchRoot, "markPath", markPath, "err", err)
+	)
+	if err == nil {
+		slog.DebugContext(
+			ctx,
+			"watcher: fanotify_mark succeeded",
+			"path",
+			watchRoot,
+			"markPath",
+			markPath,
+			"markType",
+			"FAN_MARK_FILESYSTEM",
+		)
 
-		if errors.Is(err, unix.EXDEV) {
-			slog.DebugContext(ctx, "watcher: filesystem mark returned EXDEV; enabling hybrid mode",
-				"path", watchRoot, "markPath", markPath, "fanotifyMask", fmt.Sprintf("0x%x", mountMask), "inotifyMask", fmt.Sprintf("0x%x", inotifyHybridMask))
+		cleanupFanFD = false
+		cleanupMountFD = false
+		return &Watcher{
+			mountPath:       watchRoot,
+			fanfd:           fanfd,
+			mountFD:         mountFD,
+			fallbackWarning: "",
+			out:             make(chan Event, outChanBuf),
+			pending:         make(map[string]*debounceEntry),
+			watchHidden:     opts.WatchHidden,
+		}, nil
+	}
 
-			err2 := unix.FanotifyMark(fanfd,
-				unix.FAN_MARK_ADD|unix.FAN_MARK_MOUNT,
-				mountMask,
-				unix.AT_FDCWD, markPath,
-			)
-			if err2 != nil {
-				slog.DebugContext(ctx, "watcher: FAN_MARK_MOUNT for hybrid also failed", "path", watchRoot, "markPath", markPath, "err", err2)
-				return fallbackToInotify("fanotify hybrid mark failed", "FAN_MARK_MOUNT", err2)
-			}
-
-			impl, iErr := newInotifyWithMask(ctx, watchRoot, opts.WatchHidden, inotifyHybridMask)
-			if iErr != nil {
-				return fallbackToInotify("inotify companion for hybrid failed", "inotify_hybrid", iErr)
-			}
-
-			slog.InfoContext(ctx, "watcher: hybrid mode active (fanotify mount + inotify tree)",
-				"path", watchRoot, "markPath", markPath)
-			cleanupFanFD = false
-			cleanupMountFD = false
-			return &Watcher{
-				mountPath:       watchRoot,
-				fanfd:           fanfd,
-				mountFD:         mountFD,
-				inotify:         impl,
-				fallbackWarning: "fanotify degraded: FAN_MARK_FILESYSTEM returned EXDEV on subvolume; hybrid mode active (fanotify mount + inotify tree)",
-				out:             make(chan Event, outChanBuf),
-				pending:         make(map[string]*debounceEntry),
-				watchHidden:     opts.WatchHidden,
-			}, nil
-		}
-
+	slog.DebugContext(
+		ctx,
+		"watcher: FAN_MARK_FILESYSTEM failed",
+		"path",
+		watchRoot,
+		"markPath",
+		markPath,
+		"err",
+		err,
+	)
+	if !errors.Is(err, unix.EXDEV) {
 		return fallbackToInotify("fanotify mark failed", "FAN_MARK_FILESYSTEM", err)
 	}
 
-	slog.DebugContext(ctx, "watcher: fanotify_mark succeeded", "path", watchRoot, "markPath", markPath, "markType", "FAN_MARK_FILESYSTEM")
+	slog.DebugContext(
+		ctx,
+		"watcher: filesystem mark returned EXDEV; enabling hybrid mode",
+		"path",
+		watchRoot,
+		"markPath",
+		markPath,
+		"fanotifyMask",
+		fmt.Sprintf("0x%x", mountMask),
+		"inotifyMask",
+		fmt.Sprintf("0x%x", inotifyHybridMask),
+	)
 
+	err = unix.FanotifyMark(fanfd,
+		unix.FAN_MARK_ADD|unix.FAN_MARK_MOUNT,
+		mountMask,
+		unix.AT_FDCWD, markPath,
+	)
+	if err != nil {
+		slog.DebugContext(
+			ctx,
+			"watcher: FAN_MARK_MOUNT for hybrid also failed",
+			"path",
+			watchRoot,
+			"markPath",
+			markPath,
+			"err",
+			err,
+		)
+		return fallbackToInotify("fanotify hybrid mark failed", "FAN_MARK_MOUNT", err)
+	}
+
+	impl, iErr := newInotifyWithMask(ctx, watchRoot, opts.WatchHidden, inotifyHybridMask)
+	if iErr != nil {
+		return fallbackToInotify("inotify companion for hybrid failed", "inotify_hybrid", iErr)
+	}
+
+	slog.InfoContext(ctx, "watcher: hybrid mode active (fanotify mount + inotify tree)",
+		"path", watchRoot, "markPath", markPath)
 	cleanupFanFD = false
 	cleanupMountFD = false
 	return &Watcher{
 		mountPath:       watchRoot,
 		fanfd:           fanfd,
 		mountFD:         mountFD,
-		fallbackWarning: "",
+		inotify:         impl,
+		fallbackWarning: "fanotify degraded: FAN_MARK_FILESYSTEM returned EXDEV on subvolume; hybrid mode active (fanotify mount + inotify tree)",
 		out:             make(chan Event, outChanBuf),
 		pending:         make(map[string]*debounceEntry),
 		watchHidden:     opts.WatchHidden,
@@ -301,6 +338,8 @@ func (w *Watcher) Events() <-chan Event {
 
 // Run reads filesystem events until ctx is cancelled.
 // It closes the Events channel on return.
+//
+//nolint:gocognit // event-loop branching keeps fanotify/inotify/hybrid semantics explicit
 func (w *Watcher) Run(ctx context.Context) error {
 	if w.fanfd < 0 && w.inotify != nil {
 		return w.inotify.run(ctx)
@@ -330,7 +369,7 @@ func (w *Watcher) Run(ctx context.Context) error {
 				if err != nil && !errors.Is(err, context.Canceled) {
 					slog.WarnContext(ctx, "watcher: hybrid inotify exited with error", "err", err)
 				}
-			case <-time.After(2 * time.Second):
+			case <-time.After(watcherShutdownWait):
 				slog.WarnContext(ctx, "watcher: hybrid inotify shutdown timed out")
 			}
 		}()
@@ -346,12 +385,12 @@ func (w *Watcher) Run(ctx context.Context) error {
 
 	go func() {
 		<-ctx.Done()
-		pipew.Close()
+		_ = pipew.Close()
 	}()
 
-	pollfds := []unix.PollFd{
-		{Fd: int32(w.fanfd), Events: unix.POLLIN},
-		{Fd: int32(piper.Fd()), Events: unix.POLLIN},
+	pollfds, err := makePollFDPair(w.fanfd, piper.Fd(), "fanotify fd", "watcher cancel pipe fd")
+	if err != nil {
+		return err
 	}
 	buf := make([]byte, fanBufSize)
 
@@ -406,6 +445,7 @@ func (w *Watcher) processBuffer(ctx context.Context, buf []byte) {
 	}
 }
 
+//nolint:funlen,gocognit // fanotify record decoding needs linear handling of kernel info variants
 func (w *Watcher) handleMetaFID(ctx context.Context, event []byte) {
 	if len(event) < fanMetaSize {
 		return
@@ -423,10 +463,7 @@ func (w *Watcher) handleMetaFID(ctx context.Context, event []byte) {
 		objectPath string
 	)
 
-	metaLen := int(meta.Metadata_len)
-	if metaLen < fanMetaSize {
-		metaLen = fanMetaSize
-	}
+	metaLen := max(int(meta.Metadata_len), fanMetaSize)
 
 	for off := metaLen; off+fanInfoHeaderSize <= len(event); {
 		infoType := event[off]
@@ -437,7 +474,9 @@ func (w *Watcher) handleMetaFID(ctx context.Context, event []byte) {
 
 		chunk := event[off : off+infoLen]
 		switch infoType {
-		case unix.FAN_EVENT_INFO_TYPE_DFID_NAME, unix.FAN_EVENT_INFO_TYPE_OLD_DFID_NAME, unix.FAN_EVENT_INFO_TYPE_NEW_DFID_NAME:
+		case unix.FAN_EVENT_INFO_TYPE_DFID_NAME,
+			unix.FAN_EVENT_INFO_TYPE_OLD_DFID_NAME,
+			unix.FAN_EVENT_INFO_TYPE_NEW_DFID_NAME:
 			p, name, err := w.parseDFIDNameInfo(chunk)
 			if err == nil {
 				parentPath = p
@@ -496,15 +535,15 @@ func (w *Watcher) handleMetaFID(ctx context.Context, event []byte) {
 }
 
 func (w *Watcher) parseFIDInfo(info []byte) (string, error) {
-	if len(info) < fanInfoFidMinSize+8 {
-		return "", fmt.Errorf("short fanotify fid info")
+	if len(info) < fanInfoFidMinSize+fanHandleHeaderSize {
+		return "", errors.New("short fanotify fid info")
 	}
 	return w.pathFromHandle(info[fanInfoFidMinSize:])
 }
 
 func (w *Watcher) parseDFIDNameInfo(info []byte) (string, string, error) {
-	if len(info) < fanInfoFidMinSize+8 {
-		return "", "", fmt.Errorf("short fanotify dfid_name info")
+	if len(info) < fanInfoFidMinSize+fanHandleHeaderSize {
+		return "", "", errors.New("short fanotify dfid_name info")
 	}
 	parent, err := w.pathFromHandle(info[fanInfoFidMinSize:])
 	if err != nil {
@@ -512,7 +551,7 @@ func (w *Watcher) parseDFIDNameInfo(info []byte) (string, string, error) {
 	}
 
 	hBytes := int(binary.LittleEndian.Uint32(info[fanInfoFidMinSize : fanInfoFidMinSize+4]))
-	nameOff := fanInfoFidMinSize + 8 + hBytes
+	nameOff := fanInfoFidMinSize + fanHandleHeaderSize + hBytes
 	if nameOff >= len(info) {
 		return parent, "", nil
 	}
@@ -524,16 +563,19 @@ func (w *Watcher) parseDFIDNameInfo(info []byte) (string, string, error) {
 }
 
 func (w *Watcher) pathFromHandle(handleChunk []byte) (string, error) {
-	if len(handleChunk) < 8 {
-		return "", fmt.Errorf("short file_handle")
+	if len(handleChunk) < fanHandleHeaderSize {
+		return "", errors.New("short file_handle")
 	}
 	hBytes := int(binary.LittleEndian.Uint32(handleChunk[:4]))
-	hType := int32(binary.LittleEndian.Uint32(handleChunk[4:8]))
-	if hBytes < 0 || 8+hBytes > len(handleChunk) {
-		return "", fmt.Errorf("invalid file_handle length")
+	hType, err := uint32ToInt32Checked(binary.LittleEndian.Uint32(handleChunk[4:8]), "file_handle type")
+	if err != nil {
+		return "", err
+	}
+	if hBytes < 0 || fanHandleHeaderSize+hBytes > len(handleChunk) {
+		return "", errors.New("invalid file_handle length")
 	}
 
-	fh := unix.NewFileHandle(hType, handleChunk[8:8+hBytes])
+	fh := unix.NewFileHandle(hType, handleChunk[fanHandleHeaderSize:fanHandleHeaderSize+hBytes])
 	fd, err := unix.OpenByHandleAt(w.mountFD, fh, unix.O_PATH|unix.O_CLOEXEC)
 	if err != nil {
 		return "", err
@@ -545,6 +587,42 @@ func (w *Watcher) pathFromHandle(handleChunk []byte) (string, error) {
 		return "", err
 	}
 	return path, nil
+}
+
+func intToInt32Checked(v int, field string) (int32, error) {
+	if v < math.MinInt32 || v > math.MaxInt32 {
+		return 0, fmt.Errorf("watcher: %s out of int32 range: %d", field, v)
+	}
+	return int32(v), nil
+}
+
+func uintptrToInt32Checked(v uintptr, field string) (int32, error) {
+	if v > uintptr(math.MaxInt32) {
+		return 0, fmt.Errorf("watcher: %s out of int32 range: %d", field, v)
+	}
+	return int32(v), nil
+}
+
+func uint32ToInt32Checked(v uint32, field string) (int32, error) {
+	if v > math.MaxInt32 {
+		return 0, fmt.Errorf("watcher: %s out of int32 range: %d", field, v)
+	}
+	return int32(v), nil
+}
+
+func makePollFDPair(fd int, pipeFD uintptr, fdField, pipeField string) ([]unix.PollFd, error) {
+	pollFD, err := intToInt32Checked(fd, fdField)
+	if err != nil {
+		return nil, err
+	}
+	cancelFD, err := uintptrToInt32Checked(pipeFD, pipeField)
+	if err != nil {
+		return nil, err
+	}
+	return []unix.PollFd{
+		{Fd: pollFD, Events: unix.POLLIN},
+		{Fd: cancelFD, Events: unix.POLLIN},
+	}, nil
 }
 
 func fanotifyFailureHint(err error) string {
@@ -585,12 +663,12 @@ func mountPointForPath(path string) (string, error) {
 	}
 
 	best := ""
-	for _, line := range strings.Split(string(data), "\n") {
+	for line := range strings.SplitSeq(string(data), "\n") {
 		if line == "" {
 			continue
 		}
 		fields := strings.Fields(line)
-		if len(fields) < 5 {
+		if len(fields) < mountInfoMinFields {
 			continue
 		}
 		mp := unescapeMountInfoPath(fields[4])
@@ -609,58 +687,6 @@ func mountPointForPath(path string) (string, error) {
 func unescapeMountInfoPath(s string) string {
 	replacer := strings.NewReplacer("\\040", " ", "\\011", "\t", "\\012", "\n", "\\134", "\\")
 	return replacer.Replace(s)
-}
-
-// handleMeta processes a single fanotify event metadata record.
-func (w *Watcher) handleMeta(ctx context.Context, meta *unix.FanotifyEventMetadata) {
-	if meta.Mask&unix.FAN_Q_OVERFLOW != 0 {
-		slog.WarnContext(ctx, "watcher: fanotify queue overflow; some events were lost")
-		return
-	}
-
-	if meta.Fd < 0 {
-		return // FAN_NOFD; shouldn't happen for FAN_CLASS_NOTIF events
-	}
-	fd := int(meta.Fd)
-
-	// Resolve path before closing the fd — the kernel keeps a reference.
-	path, err := os.Readlink(fmt.Sprintf("/proc/self/fd/%d", fd))
-	unix.Close(fd)
-	if err != nil {
-		slog.DebugContext(ctx, "watcher: proc fd readlink failed", "err", err)
-		return
-	}
-
-	var ev Event
-	ev.Path = path
-
-	if !w.watchHidden && strings.Contains(path, "/.") {
-		return // Ignore hidden files/directories
-	}
-
-	switch {
-	case meta.Mask&unix.FAN_RENAME != 0:
-		// OldPath is not available without FAN_REPORT_DFID_NAME parsing.
-		ev.Kind = EventRename
-	case meta.Mask&unix.FAN_MOVED_FROM != 0:
-		// Pre-5.17 rename source: the file has left this path.
-		ev.Kind = EventDelete
-	case meta.Mask&unix.FAN_MOVED_TO != 0:
-		// Pre-5.17 rename destination: a file has arrived at this path.
-		ev.Kind = EventCreate
-	case meta.Mask&unix.FAN_CREATE != 0:
-		ev.Kind = EventCreate
-	case meta.Mask&unix.FAN_CLOSE_WRITE != 0:
-		ev.Kind = EventModify
-	case meta.Mask&unix.FAN_MODIFY != 0:
-		ev.Kind = EventModify
-	case meta.Mask&unix.FAN_DELETE != 0:
-		ev.Kind = EventDelete
-	default:
-		return
-	}
-
-	w.debounce(ev)
 }
 
 // debounce coalesces rapid events for the same path into a single emission
@@ -698,14 +724,15 @@ func (w *Watcher) debounce(ev Event) {
 }
 
 // kernelVersion returns the running kernel's major and minor version numbers.
-func kernelVersion() (major, minor int, err error) {
+func kernelVersion() (int, int, error) {
 	var uts unix.Utsname
-	if err = unix.Uname(&uts); err != nil {
+	if err := unix.Uname(&uts); err != nil {
 		return 0, 0, fmt.Errorf("watcher: uname: %w", err)
 	}
 	release := unix.ByteSliceToString(uts.Release[:])
-	if _, err = fmt.Sscanf(release, "%d.%d", &major, &minor); err != nil {
+	var major, minor int
+	if _, err := fmt.Sscanf(release, "%d.%d", &major, &minor); err != nil {
 		return 0, 0, fmt.Errorf("watcher: parse kernel version %q: %w", release, err)
 	}
-	return
+	return major, minor, nil
 }

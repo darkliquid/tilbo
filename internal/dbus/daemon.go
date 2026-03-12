@@ -1,6 +1,7 @@
 package dbus
 
 import (
+	"errors"
 	"fmt"
 	"log/slog"
 
@@ -26,13 +27,13 @@ func NewDaemonBus() (*DaemonBus, error) {
 
 	reply, err := conn.RequestName(DaemonInterface, godbus.NameFlagDoNotQueue)
 	if err != nil {
-		conn.Close()
+		_ = conn.Close()
 		return nil, fmt.Errorf("request name: %w", err)
 	}
 
 	if reply != godbus.RequestNameReplyPrimaryOwner {
-		conn.Close()
-		return nil, fmt.Errorf("name already taken")
+		_ = conn.Close()
+		return nil, errors.New("name already taken")
 	}
 
 	return &DaemonBus{conn: conn}, nil

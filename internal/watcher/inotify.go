@@ -5,6 +5,7 @@ package watcher
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -61,7 +62,7 @@ func newInotifyWithMask(ctx context.Context, mountPath string, watchHidden bool,
 	}
 
 	if err := impl.addWatchRecursive(ctx, mountPath); err != nil {
-		unix.Close(fd)
+		_ = unix.Close(fd)
 		return nil, err
 	}
 
@@ -71,16 +72,20 @@ func newInotifyWithMask(ctx context.Context, mountPath string, watchHidden bool,
 
 // addWatch registers dir with inotify. Missing or non-directory paths are
 // silently ignored so that a race between creation and watch-add is safe.
-func (i *inotifyImpl) addWatch(ctx context.Context, dir string) error {
+func (i *inotifyImpl) addWatch(_ context.Context, dir string) error {
 	wd, err := unix.InotifyAddWatch(i.fd, dir, i.mask)
 	if err != nil {
-		if err == unix.ENOTDIR || err == unix.ENOENT {
+		if errors.Is(err, unix.ENOTDIR) || errors.Is(err, unix.ENOENT) {
 			return nil
 		}
 		return fmt.Errorf("inotify_add_watch %q: %w", dir, err)
 	}
+	wd32, err := intToInt32Checked(wd, "inotify watch descriptor")
+	if err != nil {
+		return fmt.Errorf("inotify_add_watch %q: %w", dir, err)
+	}
 	i.mu.Lock()
-	i.wdToDir[int32(wd)] = dir
+	i.wdToDir[wd32] = dir
 	i.mu.Unlock()
 	return nil
 }
@@ -123,6 +128,8 @@ func (i *inotifyImpl) addWatchRecursive(ctx context.Context, root string) error 
 }
 
 // run is the event loop. It blocks until ctx is cancelled.
+//
+//nolint:gocognit // poll/read loop keeps shutdown and fd-error semantics explicit
 func (i *inotifyImpl) run(ctx context.Context) error {
 	defer unix.Close(i.fd)
 	defer close(i.out)
@@ -138,12 +145,12 @@ func (i *inotifyImpl) run(ctx context.Context) error {
 		<-ctx.Done()
 		// Closing the inotify fd guarantees poll/read wake up on shutdown.
 		_ = unix.Close(i.fd)
-		pipew.Close()
+		_ = pipew.Close()
 	}()
 
-	pollfds := []unix.PollFd{
-		{Fd: int32(i.fd), Events: unix.POLLIN},
-		{Fd: int32(piper.Fd()), Events: unix.POLLIN},
+	pollfds, err := makePollFDPair(i.fd, piper.Fd(), "inotify fd", "inotify cancel pipe fd")
+	if err != nil {
+		return err
 	}
 	buf := make([]byte, fanBufSize)
 
@@ -184,6 +191,8 @@ func (i *inotifyImpl) run(ctx context.Context) error {
 }
 
 // processEvents parses a raw inotify read buffer and dispatches events.
+//
+//nolint:gocognit // event decoding branches mirror kernel masks and rename state handling
 func (i *inotifyImpl) processEvents(ctx context.Context, buf []byte) {
 	for offset := 0; offset+inotifyEventBaseSize <= len(buf); {
 		ev := (*unix.InotifyEvent)(unsafe.Pointer(&buf[offset]))
@@ -193,8 +202,8 @@ func (i *inotifyImpl) processEvents(ctx context.Context, buf []byte) {
 		nameStart := offset + inotifyEventBaseSize
 		if nameLen > 0 && nameStart+nameLen <= len(buf) {
 			raw := buf[nameStart : nameStart+nameLen]
-			if end := bytes.IndexByte(raw, 0); end >= 0 {
-				name = string(raw[:end])
+			if before, _, ok := bytes.Cut(raw, []byte{0}); ok {
+				name = string(before)
 			} else {
 				name = string(raw)
 			}

@@ -3,6 +3,7 @@ package rules
 import (
 	"context"
 	"log/slog"
+	"maps"
 	"runtime"
 	"strings"
 
@@ -64,6 +65,8 @@ func (s *Sweeper) Sweep(ctx context.Context) error {
 }
 
 // sweepFile processes a single file. Returns true if any tags were added.
+//
+//nolint:funlen,gocognit // single-pass sweep keeps read/eval/apply flow together
 func (s *Sweeper) sweepFile(ctx context.Context, path string) (bool, error) {
 	existingTags, err := s.tags.ReadTags(ctx, path)
 	if err != nil {
@@ -96,14 +99,14 @@ func (s *Sweeper) sweepFile(ctx context.Context, path string) (bool, error) {
 			continue
 		}
 		strVal := harvester.ValueToString(v)
-		if err := s.tags.WriteMeta(ctx, path, k, strVal); err != nil {
+		if writeErr := s.tags.WriteMeta(ctx, path, k, strVal); writeErr != nil {
 			slog.DebugContext(ctx, "sweep: write meta xattr error",
-				"path", path, "key", k, "err", err)
+				"path", path, "key", k, "err", writeErr)
 		}
 		if idErr == nil {
-			if err := s.idx.UpsertMeta(ctx, fileID, k, strVal, "harvester"); err != nil {
+			if upsertErr := s.idx.UpsertMeta(ctx, fileID, k, strVal, "harvester"); upsertErr != nil {
 				slog.DebugContext(ctx, "sweep: upsert meta index error",
-					"path", path, "key", k, "err", err)
+					"path", path, "key", k, "err", upsertErr)
 			}
 		}
 	}
@@ -138,9 +141,7 @@ func (s *Sweeper) sweepFile(ctx context.Context, path string) (bool, error) {
 	if sourceMap == nil {
 		sourceMap = make(map[string]string)
 	}
-	for tag, src := range diff.Sources {
-		sourceMap[tag] = src
-	}
+	maps.Copy(sourceMap, diff.Sources)
 	if err := s.tags.WriteSource(ctx, path, sourceMap); err != nil {
 		slog.DebugContext(ctx, "sweep: write source xattr error", "path", path, "err", err)
 	}

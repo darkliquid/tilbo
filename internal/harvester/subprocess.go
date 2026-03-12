@@ -11,6 +11,8 @@ import (
 	"time"
 )
 
+const defaultHarvesterTimeout = 5 * time.Second
+
 // SubprocessHarvester implements Harvester by launching an external process.
 // The process receives file information as JSON on stdin and emits additional
 // metadata as JSON on stdout. A non-zero exit code means nothing to contribute.
@@ -27,7 +29,7 @@ func newSubprocessHarvester(cfg Config) *SubprocessHarvester {
 func (h *SubprocessHarvester) Run(ctx context.Context, input Input) (MetaMap, error) {
 	timeout := time.Duration(h.cfg.Harvester.TimeoutMS) * time.Millisecond
 	if timeout <= 0 {
-		timeout = 5 * time.Second
+		timeout = defaultHarvesterTimeout
 	}
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
@@ -58,13 +60,13 @@ func (h *SubprocessHarvester) Run(ctx context.Context, input Input) (MetaMap, er
 				"exit_code", exitErr.ExitCode(),
 				"stderr", stderr.String(),
 			)
-			return nil, nil
+			return MetaMap{}, nil
 		}
 		return nil, fmt.Errorf("harvester %q: run: %w", h.Name(), err)
 	}
 
 	if len(out) == 0 {
-		return nil, nil
+		return MetaMap{}, nil
 	}
 
 	var meta MetaMap

@@ -27,6 +27,8 @@ type PlacesModel struct {
 	lastRefresh  time.Time
 }
 
+const mountsMinFields = 3
+
 func NewPlacesModel(parent *qt6.QObject) *PlacesModel {
 	m := &PlacesModel{
 		QStandardItemModel: qt6.NewQStandardItemModel3(parent),
@@ -60,7 +62,7 @@ func isFUSEMounted(mountPoint string) bool {
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
 		fields := strings.Fields(scanner.Text())
-		if len(fields) < 3 {
+		if len(fields) < mountsMinFields {
 			continue
 		}
 		// fields[1] = mountpoint, fields[2] = fstype

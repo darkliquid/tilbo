@@ -8,6 +8,8 @@ import (
 	"github.com/godbus/dbus/v5/prop"
 )
 
+var _ = (*Browser).exportDBus
+
 // exportDBus registers the custom Browser interface and the XDG FileChooser interface.
 func (b *Browser) exportDBus() error {
 	// Export standard browser methods
@@ -72,7 +74,11 @@ func (b *Browser) exportDBus() error {
 			},
 		},
 	}
-	err = b.dbusConn.Export(introspect.NewIntrospectable(node), "/uk/co/darkliquid/tilbo/Browser", "org.freedesktop.DBus.Introspectable")
+	err = b.dbusConn.Export(
+		introspect.NewIntrospectable(node),
+		"/uk/co/darkliquid/tilbo/Browser",
+		"org.freedesktop.DBus.Introspectable",
+	)
 	if err != nil {
 		return fmt.Errorf("export introspectable: %w", err)
 	}
@@ -83,7 +89,13 @@ func (b *Browser) exportDBus() error {
 // OpenFile implements the org.freedesktop.impl.portal.FileChooser interface.
 // Because it must return (uint32, map[string]dbus.Variant, *dbus.Error), this method
 // blocks the D-Bus handler goroutine. We use a channel internally to wait for Qt to respond.
-func (b *Browser) OpenFile(handle dbus.ObjectPath, appID string, parentWindow string, title string, options map[string]dbus.Variant) (uint32, map[string]dbus.Variant, *dbus.Error) {
+func (b *Browser) OpenFile(
+	_ dbus.ObjectPath,
+	_ string,
+	_ string,
+	_ string,
+	_ map[string]dbus.Variant,
+) (uint32, map[string]dbus.Variant, *dbus.Error) {
 	resultCh := make(chan struct {
 		response uint32
 		results  map[string]dbus.Variant
@@ -111,6 +123,6 @@ func (b *Browser) OpenFile(handle dbus.ObjectPath, appID string, parentWindow st
 	case result := <-resultCh:
 		return result.response, result.results, nil
 	case <-b.ctx.Done():
-		return 1, nil, dbus.NewError("org.freedesktop.DBus.Error.Cancelled", []interface{}{"Daemon shutting down"})
+		return 1, nil, dbus.NewError("org.freedesktop.DBus.Error.Cancelled", []any{"Daemon shutting down"})
 	}
 }

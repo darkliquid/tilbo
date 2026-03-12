@@ -16,7 +16,7 @@ import (
 // the resulting harvesters in a Pipeline.
 type Registry struct {
 	dirs    []string
-	cache   wazero.CompilationCache    // shared WASM compilation cache; may be nil
+	cache   wazero.CompilationCache // shared WASM compilation cache; may be nil
 	closers []func(context.Context) error
 }
 

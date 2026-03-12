@@ -18,11 +18,17 @@ import (
 // Runs synchronously at priority 10 against image/* MIME types.
 type EXIFHarvester struct{}
 
+const (
+	exifPriority    = 10
+	exifMetaInitCap = 14
+	flashFiredMask  = 0x1
+)
+
 // NewEXIFHarvester returns an EXIFHarvester.
 func NewEXIFHarvester() *EXIFHarvester { return &EXIFHarvester{} }
 
 func (*EXIFHarvester) Name() string  { return "builtin:exif" }
-func (*EXIFHarvester) Priority() int { return 10 }
+func (*EXIFHarvester) Priority() int { return exifPriority }
 func (*EXIFHarvester) Async() bool   { return false }
 func (*EXIFHarvester) Matches(_ string, mime string) bool {
 	return matchesMIMEPrefix(mime, "image/")
@@ -43,15 +49,17 @@ func (*EXIFHarvester) Matches(_ string, mime string) bool {
 //   - "gps_lon"         — decimal degrees, positive = E (float64)
 //   - "image_width"     — pixel width from EXIF (float64)
 //   - "image_height"    — pixel height from EXIF (float64)
+//
+//nolint:gocyclo,cyclop,funlen,gocognit // per-tag extraction with guards is intentionally explicit for metadata correctness
 func (*EXIFHarvester) Run(_ context.Context, input harvester.Input) (harvester.MetaMap, error) {
 	imgfmt := mimeToImageFormat(input.MIME, input.Path)
 	if imgfmt == imagemeta.ImageFormatAuto {
-		return nil, nil // unsupported format
+		return harvester.MetaMap{}, nil // unsupported format
 	}
 
 	f, err := os.Open(input.Path)
 	if err != nil {
-		return nil, nil
+		return harvester.MetaMap{}, nil
 	}
 	defer f.Close()
 
@@ -69,13 +77,13 @@ func (*EXIFHarvester) Run(_ context.Context, input harvester.Input) (harvester.M
 	})
 	if err != nil {
 		if imagemeta.IsInvalidFormat(err) {
-			return nil, nil
+			return harvester.MetaMap{}, nil
 		}
-		return nil, nil
+		return harvester.MetaMap{}, nil
 	}
 
 	exif := tags.EXIF()
-	meta := make(harvester.MetaMap, 14)
+	meta := make(harvester.MetaMap, exifMetaInitCap)
 
 	getStr := func(key string) (string, bool) {
 		if ti, ok := exif[key]; ok {
@@ -118,7 +126,7 @@ func (*EXIFHarvester) Run(_ context.Context, input harvester.Input) (harvester.M
 		// Flash tag bit 0 is the "Flash fired" indicator per EXIF 2.32
 		// spec (JEITA CP-3451D, Table 9). Higher bits encode return light
 		// detected, strobe return, flash mode, red-eye reduction, etc.
-		meta["flash"] = int(v)&0x1 == 1
+		meta["flash"] = int(v)&flashFiredMask == 1
 	}
 	if v, ok := getFloat("Orientation"); ok && v > 0 {
 		meta["orientation"] = v
@@ -142,7 +150,7 @@ func (*EXIFHarvester) Run(_ context.Context, input harvester.Input) (harvester.M
 	}
 
 	if len(meta) == 0 {
-		return nil, nil
+		return harvester.MetaMap{}, nil
 	}
 	return meta, nil
 }
@@ -209,7 +217,7 @@ func mimeToImageFormat(mime, path string) imagemeta.ImageFormat {
 // extensionOf returns the file extension (dot included) from path.
 // It scans backwards and stops at '/' so that a dot in a parent directory
 // name (e.g. "/photos.2024/img") is never mistaken for an extension.
-// This is equivalent to path/filepath.Ext but avoids importing that package
+// This is equivalent to [path/filepath.Ext] but avoids importing that package
 // in files that do not otherwise need it.
 func extensionOf(path string) string {
 	for i := len(path) - 1; i >= 0 && path[i] != '/'; i-- {

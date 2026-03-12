@@ -31,9 +31,9 @@ type MIMEHarvester struct{}
 // NewMIMEHarvester returns a MIMEHarvester.
 func NewMIMEHarvester() *MIMEHarvester { return &MIMEHarvester{} }
 
-func (*MIMEHarvester) Name() string     { return "builtin:mime" }
-func (*MIMEHarvester) Priority() int    { return -100 }
-func (*MIMEHarvester) Async() bool      { return false }
+func (*MIMEHarvester) Name() string             { return "builtin:mime" }
+func (*MIMEHarvester) Priority() int            { return -100 }
+func (*MIMEHarvester) Async() bool              { return false }
 func (*MIMEHarvester) Matches(_, _ string) bool { return true }
 
 // Run detects the MIME type for input.Path and returns a MetaMap containing:
@@ -42,7 +42,7 @@ func (*MIMEHarvester) Run(_ context.Context, input harvester.Input) (harvester.M
 	// Open and read the magic bytes.
 	f, err := os.Open(input.Path)
 	if err != nil {
-		return nil, nil // file unreadable — skip gracefully
+		return harvester.MetaMap{}, nil // file unreadable — skip gracefully
 	}
 	defer f.Close()
 

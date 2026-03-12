@@ -446,7 +446,7 @@ func TestSearch_Pagination(t *testing.T) {
 	ctx := context.Background()
 	db := testDB(t)
 
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		addFile(t, db, "/files/"+string(rune('a'+i))+".txt", int64(i), 100)
 	}
 
@@ -495,7 +495,7 @@ func TestSearch_DefaultLimit(t *testing.T) {
 	db := testDB(t)
 
 	// Insert 60 files; default limit is 50.
-	for i := 0; i < 60; i++ {
+	for i := range 60 {
 		addFile(t, db, "/files/"+string(rune('a'+i%26))+string(rune('0'+i/26))+".txt", int64(i), 100)
 	}
 

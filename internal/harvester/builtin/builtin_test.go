@@ -24,15 +24,19 @@ func tmpFile(t *testing.T, name string, data []byte) string {
 }
 
 // JPEG magic header (SOI + APP0 marker).
-var jpegHeader = []byte{0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10, 'J', 'F', 'I', 'F', 0x00}
+func jpegHeader() []byte {
+	return []byte{0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10, 'J', 'F', 'I', 'F', 0x00}
+}
 
 // PNG magic header.
-var pngHeader = []byte{0x89, 'P', 'N', 'G', 0x0D, 0x0A, 0x1A, 0x0A}
+func pngHeader() []byte {
+	return []byte{0x89, 'P', 'N', 'G', 0x0D, 0x0A, 0x1A, 0x0A}
+}
 
 // --- MIMEHarvester ---
 
 func TestMIMEHarvester_DetectsJPEG(t *testing.T) {
-	path := tmpFile(t, "photo.jpg", jpegHeader)
+	path := tmpFile(t, "photo.jpg", jpegHeader())
 	h := NewMIMEHarvester()
 	meta, err := h.Run(context.Background(), harvester.Input{Path: path})
 	if err != nil {
@@ -45,7 +49,7 @@ func TestMIMEHarvester_DetectsJPEG(t *testing.T) {
 }
 
 func TestMIMEHarvester_DetectsPNG(t *testing.T) {
-	path := tmpFile(t, "image.png", pngHeader)
+	path := tmpFile(t, "image.png", pngHeader())
 	h := NewMIMEHarvester()
 	meta, err := h.Run(context.Background(), harvester.Input{Path: path})
 	if err != nil {
@@ -393,7 +397,10 @@ func TestCalibreHarvester_Interface(t *testing.T) {
 // --- helpers tested directly ---
 
 func TestParseFrameRate(t *testing.T) {
-	cases := []struct{ in string; want float64 }{
+	cases := []struct {
+		in   string
+		want float64
+	}{
 		{"30000/1001", 30000.0 / 1001.0},
 		{"25/1", 25},
 		{"0/0", 0},

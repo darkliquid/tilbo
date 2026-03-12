@@ -10,7 +10,7 @@ import (
 // We can just verify the sidecar is written directly by setting it up so that
 // we force an ENOTSUP.
 
-func TestSidecarIntegration(t *testing.T) {
+func TestSidecarIntegration(_ *testing.T) {
 	// Creating an actual mock for pkg/xattr is hard since it uses syscalls.
 	// But we can test sidecar integration by writing a sidecar directly,
 	// then reading it when the xattr read returns ENODATA and falls back.

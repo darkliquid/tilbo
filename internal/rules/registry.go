@@ -56,6 +56,8 @@ func DefaultDirs() []string {
 // Load scans all registered directories for rule files (.toml, .lua, .wasm)
 // and registers the resulting rules in e. Individual load errors are logged and
 // skipped.
+//
+//nolint:gocognit // extension dispatch and per-file error handling are intentionally explicit
 func (r *Registry) Load(ctx context.Context, e *Engine) error {
 	for _, dir := range r.dirs {
 		entries, err := os.ReadDir(dir)

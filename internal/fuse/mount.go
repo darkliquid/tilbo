@@ -14,6 +14,11 @@ import (
 	"github.com/darkliquid/tilbo/internal/index"
 )
 
+const (
+	defaultCacheTTLDir  = 2 * time.Second
+	defaultCacheTTLAttr = 30 * time.Second
+)
+
 // Server wraps the FUSE mount server and manages its lifecycle.
 type Server struct {
 	server *gofuse.Server
@@ -24,32 +29,35 @@ type Server struct {
 // Mount mounts the tilbo virtual filesystem at mountPoint.
 // The returned Server must be stopped via Unmount.
 func Mount(ctx context.Context, mountPoint string, idx *index.DB, g *graph.Graph) (*Server, error) {
-	if err := os.MkdirAll(mountPoint, 0o755); err != nil {
+	if err := os.MkdirAll(mountPoint, 0o750); err != nil {
 		return nil, fmt.Errorf("fuse: create mount point %s: %w", mountPoint, err)
 	}
 
 	// Pre-check /dev/fuse access. Without it the kernel mount call blocks
 	// silently and only times out seconds later.
-	if f, err := os.OpenFile("/dev/fuse", os.O_RDWR, 0); err != nil {
-		return nil, fmt.Errorf("fuse: /dev/fuse not accessible (add user to 'fuse' group or install fuse package): %w", err)
-	} else {
-		f.Close()
+	f, err := os.OpenFile("/dev/fuse", os.O_RDWR, 0)
+	if err != nil {
+		return nil, fmt.Errorf(
+			"fuse: /dev/fuse not accessible (add user to 'fuse' group or install fuse package): %w",
+			err,
+		)
 	}
+	_ = f.Close()
 	slog.DebugContext(ctx, "fuse: /dev/fuse accessible, attempting mount", "path", mountPoint)
 
 	root := NewRoot(idx, g)
 
-	cacheTTLDir := 2 * time.Second
-	cacheTTLAttr := 30 * time.Second
+	cacheTTLDir := defaultCacheTTLDir
+	cacheTTLAttr := defaultCacheTTLAttr
 
 	fuseOpts := &fs.Options{
 		MountOptions: gofuse.MountOptions{
-			AllowOther:    false,
-			Debug:         false,
-			FsName:        "tilbo",
-			Name:          "tilbo",
-			DirectMount:   false,
-			Options:       []string{"auto_unmount", "default_permissions"},
+			AllowOther:  false,
+			Debug:       false,
+			FsName:      "tilbo",
+			Name:        "tilbo",
+			DirectMount: false,
+			Options:     []string{"auto_unmount", "default_permissions"},
 		},
 		EntryTimeout: &cacheTTLDir,
 		AttrTimeout:  &cacheTTLAttr,

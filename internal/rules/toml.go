@@ -2,6 +2,7 @@ package rules
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math"
 	"path/filepath"
@@ -9,6 +10,11 @@ import (
 	"time"
 
 	"github.com/darkliquid/tilbo/internal/harvester"
+)
+
+const (
+	floatEqualEpsilon = 1e-9
+	globSplitMaxParts = 2
 )
 
 // matchCond is a normalised condition for a single metadata field.
@@ -70,6 +76,8 @@ func (r *TOMLRule) matches(meta harvester.MetaMap) bool {
 }
 
 // evalCond evaluates a single condition against a metadata value.
+//
+//nolint:gocognit // branching mirrors the condition grammar for readable semantics
 func evalCond(cond matchCond, val any) bool {
 	if cond.not != nil {
 		return !evalCond(*cond.not, val)
@@ -92,24 +100,8 @@ func evalCond(cond matchCond, val any) bool {
 		return equalValues(cond.eq, val)
 	}
 
-	if cond.gte != nil || cond.lte != nil || cond.gt != nil || cond.lt != nil {
-		n, ok := toFloat(val)
-		if !ok {
-			return false
-		}
-		if cond.gte != nil && n < *cond.gte {
-			return false
-		}
-		if cond.lte != nil && n > *cond.lte {
-			return false
-		}
-		if cond.gt != nil && n <= *cond.gt {
-			return false
-		}
-		if cond.lt != nil && n >= *cond.lt {
-			return false
-		}
-		return true
+	if hasNumericComparators(cond) {
+		return evalNumericComparators(cond, val)
 	}
 
 	if cond.hasBetween {
@@ -148,6 +140,30 @@ func evalCond(cond matchCond, val any) bool {
 	return false
 }
 
+func hasNumericComparators(cond matchCond) bool {
+	return cond.gte != nil || cond.lte != nil || cond.gt != nil || cond.lt != nil
+}
+
+func evalNumericComparators(cond matchCond, val any) bool {
+	n, ok := toFloat(val)
+	if !ok {
+		return false
+	}
+	if cond.gte != nil && n < *cond.gte {
+		return false
+	}
+	if cond.lte != nil && n > *cond.lte {
+		return false
+	}
+	if cond.gt != nil && n <= *cond.gt {
+		return false
+	}
+	if cond.lt != nil && n >= *cond.lt {
+		return false
+	}
+	return true
+}
+
 // parseMatchCond converts a raw TOML value (string or map[string]any) into a matchCond.
 // A bare string is treated as a glob pattern.
 func parseMatchCond(raw any) (matchCond, error) {
@@ -161,6 +177,7 @@ func parseMatchCond(raw any) (matchCond, error) {
 	}
 }
 
+//nolint:funlen,gocognit // condition grammar decoding is intentionally consolidated in one parser
 func parseCondMap(m map[string]any) (matchCond, error) {
 	var cond matchCond
 	for k, v := range m {
@@ -206,7 +223,7 @@ func parseCondMap(m map[string]any) (matchCond, error) {
 		case "between":
 			arr, ok := v.([]any)
 			if !ok || len(arr) != 2 {
-				return cond, fmt.Errorf("between: expected [min, max] array")
+				return cond, errors.New("between: expected [min, max] array")
 			}
 			mn, err := mustFloat(arr[0], "between min")
 			if err != nil {
@@ -222,14 +239,14 @@ func parseCondMap(m map[string]any) (matchCond, error) {
 		case "in":
 			arr, ok := v.([]any)
 			if !ok {
-				return cond, fmt.Errorf("in: expected array")
+				return cond, errors.New("in: expected array")
 			}
 			cond.in = arr
 
 		case "before":
 			s, ok := v.(string)
 			if !ok {
-				return cond, fmt.Errorf("before: expected string")
+				return cond, errors.New("before: expected string")
 			}
 			t, err := parseDate(s)
 			if err != nil {
@@ -240,7 +257,7 @@ func parseCondMap(m map[string]any) (matchCond, error) {
 		case "after":
 			s, ok := v.(string)
 			if !ok {
-				return cond, fmt.Errorf("after: expected string")
+				return cond, errors.New("after: expected string")
 			}
 			t, err := parseDate(s)
 			if err != nil {
@@ -299,7 +316,7 @@ func equalValues(a, b any) bool {
 	fa, aOK := toFloat(a)
 	fb, bOK := toFloat(b)
 	if aOK && bOK {
-		return math.Abs(fa-fb) < 1e-9
+		return math.Abs(fa-fb) < floatEqualEpsilon
 	}
 	as, aOK := a.(string)
 	bs, bOK := b.(string)
@@ -309,13 +326,13 @@ func equalValues(a, b any) bool {
 	return false
 }
 
-// globMatchSimple handles "prefix/*" style patterns that filepath.Match rejects
+// globMatchSimple handles "prefix/*" style patterns that [filepath.Match] rejects
 // on non-path strings (e.g. MIME types like "video/x-matroska").
 func globMatchSimple(pattern, s string) bool {
 	if !strings.Contains(pattern, "*") {
 		return pattern == s
 	}
-	parts := strings.SplitN(pattern, "*", 2)
+	parts := strings.SplitN(pattern, "*", globSplitMaxParts)
 	prefix, suffix := parts[0], parts[1]
 	if !strings.HasPrefix(s, prefix) {
 		return false
@@ -327,7 +344,7 @@ func globMatchSimple(pattern, s string) bool {
 	return strings.HasSuffix(rest, suffix)
 }
 
-// toTime converts a value to time.Time. Accepts Unix timestamps (float64) or
+// toTime converts a value to [time.Time]. Accepts Unix timestamps (float64) or
 // ISO date/RFC3339 strings.
 func toTime(v any) (time.Time, bool) {
 	switch n := v.(type) {

@@ -36,6 +36,8 @@ type MagikaHarvester struct {
 	binary string
 }
 
+const magikaRunTimeout = 15 * time.Second
+
 // NewMagikaHarvester looks up magika on PATH. Returns nil if not found.
 func NewMagikaHarvester() *MagikaHarvester {
 	bin, err := exec.LookPath("magika")
@@ -45,9 +47,9 @@ func NewMagikaHarvester() *MagikaHarvester {
 	return &MagikaHarvester{binary: bin}
 }
 
-func (h *MagikaHarvester) Name() string          { return "builtin:magika" }
-func (h *MagikaHarvester) Priority() int         { return -1 }
-func (h *MagikaHarvester) Async() bool           { return false }
+func (h *MagikaHarvester) Name() string             { return "builtin:magika" }
+func (h *MagikaHarvester) Priority() int            { return -1 }
+func (h *MagikaHarvester) Async() bool              { return false }
 func (h *MagikaHarvester) Matches(_, _ string) bool { return true }
 
 // magikaResult is the per-file entry in `magika --json-output` output.
@@ -58,11 +60,11 @@ type magikaResult struct {
 }
 
 type magikaLabel struct {
-	CTLABEL  string  `json:"ct_label"`   // e.g. "jpeg"
-	MIME     string  `json:"mime_type"`  // e.g. "image/jpeg"
-	Group    string  `json:"group"`      // e.g. "image"
-	Score    float64 `json:"score"`      // 0.0–1.0 confidence
-	IsText   bool    `json:"is_text"`
+	CTLABEL string  `json:"ct_label"`  // e.g. "jpeg"
+	MIME    string  `json:"mime_type"` // e.g. "image/jpeg"
+	Group   string  `json:"group"`     // e.g. "image"
+	Score   float64 `json:"score"`     // 0.0–1.0 confidence
+	IsText  bool    `json:"is_text"`
 }
 
 // Run invokes `magika --json-output <path>` and returns:
@@ -74,30 +76,30 @@ type magikaLabel struct {
 // If the score is below 0.5 the result is discarded and MIME is left to the
 // byte-magic harvester.
 func (h *MagikaHarvester) Run(ctx context.Context, input harvester.Input) (harvester.MetaMap, error) {
-	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, magikaRunTimeout)
 	defer cancel()
 
 	//nolint:gosec // binary from LookPath; path is daemon-trusted.
 	cmd := exec.CommandContext(ctx, h.binary, "--json-output", input.Path)
 	out, err := cmd.Output()
 	if err != nil {
-		return nil, nil
+		return harvester.MetaMap{}, nil
 	}
 
 	var results []magikaResult
 	if err := json.Unmarshal(out, &results); err != nil || len(results) == 0 {
-		return nil, nil
+		return harvester.MetaMap{}, nil
 	}
 
 	r := results[0].Output
 	if r.Score < 0.5 || r.MIME == "" {
-		return nil, nil
+		return harvester.MetaMap{}, nil
 	}
 
 	meta := harvester.MetaMap{
-		"mime":          r.MIME,
-		"magika_label":  r.CTLABEL,
-		"magika_score":  r.Score,
+		"mime":         r.MIME,
+		"magika_label": r.CTLABEL,
+		"magika_score": r.Score,
 	}
 	if r.Group != "" {
 		meta["magika_group"] = r.Group

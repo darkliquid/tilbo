@@ -3,6 +3,7 @@ package rules
 import (
 	"context"
 	"log/slog"
+	"slices"
 	"sort"
 	"sync"
 
@@ -101,10 +102,5 @@ func (e *Engine) Eval(
 
 // isSuppressed reports whether the (tag, ruleName) pair is in the overrides map.
 func isSuppressed(tag, ruleName string, overrides map[string][]string) bool {
-	for _, suppressed := range overrides[tag] {
-		if suppressed == ruleName {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(overrides[tag], ruleName)
 }

@@ -25,8 +25,8 @@ func TestFraming_EmptyPayload(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ReadEnvelope: %v", err)
 	}
-	if got.RequestId != 1 {
-		t.Errorf("RequestId: got %d, want 1", got.RequestId)
+	if got.GetRequestId() != 1 {
+		t.Errorf("RequestId: got %d, want 1", got.GetRequestId())
 	}
 }
 
@@ -87,17 +87,20 @@ func TestFraming_MultipleEnvelopes(t *testing.T) {
 		if err != nil {
 			t.Fatalf("ReadEnvelope %d: %v", i, err)
 		}
-		if got.RequestId != i {
-			t.Errorf("envelope %d: got id %d", i, got.RequestId)
+		if got.GetRequestId() != i {
+			t.Errorf("envelope %d: got id %d", i, got.GetRequestId())
 		}
 	}
 }
 
 // --- Server tests ---
 
-func startTestServer(t *testing.T, handler func(context.Context, *ipcv1.Request) (*ipcv1.Response, error)) (sockPath string) {
+func startTestServer(
+	t *testing.T,
+	handler func(context.Context, *ipcv1.Request) (*ipcv1.Response, error),
+) string {
 	t.Helper()
-	sockPath = t.TempDir() + "/test.sock"
+	sockPath := t.TempDir() + "/test.sock"
 	ctx := context.Background()
 	srv := NewServer(sockPath, handler)
 	if err := srv.Start(ctx); err != nil {
@@ -210,7 +213,7 @@ func TestServer_AllRequestTypes(t *testing.T) {
 
 	// Echo back a search response regardless of request type, just to verify routing.
 	sockPath := startTestServer(t, func(_ context.Context, req *ipcv1.Request) (*ipcv1.Response, error) {
-		switch req.Kind.(type) {
+		switch req.GetKind().(type) {
 		case *ipcv1.Request_Search:
 			return &ipcv1.Response{Kind: &ipcv1.Response_Search{Search: &ipcv1.SearchResponse{Total: 42}}}, nil
 		case *ipcv1.Request_ListTags:

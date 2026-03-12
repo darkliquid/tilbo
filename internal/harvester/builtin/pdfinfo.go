@@ -17,11 +17,16 @@ import (
 // Runs synchronously at priority 10 against application/pdf MIME types.
 type PDFHarvester struct{}
 
+const (
+	pdfPriority    = 10
+	pdfMetaInitCap = 10
+)
+
 // NewPDFHarvester returns a PDFHarvester.
 func NewPDFHarvester() *PDFHarvester { return &PDFHarvester{} }
 
 func (*PDFHarvester) Name() string  { return "builtin:pdf" }
-func (*PDFHarvester) Priority() int { return 10 }
+func (*PDFHarvester) Priority() int { return pdfPriority }
 func (*PDFHarvester) Async() bool   { return false }
 func (*PDFHarvester) Matches(_ string, mime string) bool {
 	return mime == "application/pdf"
@@ -41,7 +46,7 @@ func (*PDFHarvester) Matches(_ string, mime string) bool {
 func (*PDFHarvester) Run(_ context.Context, input harvester.Input) (harvester.MetaMap, error) {
 	f, err := os.Open(input.Path)
 	if err != nil {
-		return nil, nil
+		return harvester.MetaMap{}, nil
 	}
 	defer f.Close()
 
@@ -50,10 +55,10 @@ func (*PDFHarvester) Run(_ context.Context, input harvester.Input) (harvester.Me
 
 	info, err := pdfapi.PDFInfo(f, input.Path, nil, false, conf)
 	if err != nil {
-		return nil, nil // not a valid PDF or parse error — skip
+		return harvester.MetaMap{}, nil // not a valid PDF or parse error — skip
 	}
 
-	meta := make(harvester.MetaMap, 10)
+	meta := make(harvester.MetaMap, pdfMetaInitCap)
 
 	if info.PageCount > 0 {
 		meta["pdf_pages"] = float64(info.PageCount)
@@ -92,7 +97,7 @@ func (*PDFHarvester) Run(_ context.Context, input harvester.Input) (harvester.Me
 	}
 
 	if len(meta) == 0 {
-		return nil, nil
+		return harvester.MetaMap{}, nil
 	}
 	return meta, nil
 }

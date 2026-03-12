@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"strconv"
 	"strings"
 
 	"github.com/darkliquid/tilbo/internal/index/dbgen"
@@ -22,7 +21,36 @@ type SearchParams struct {
 	Untagged    bool              // if true, only files with no tags
 	Limit       uint32            // 0 = 50
 	Offset      uint32
-	SortBy      []string // "mtime:desc", "name:asc", "size:desc"
+	SortBy      []string // e.g. ["mtime:desc", "name:asc"]
+}
+
+func buildOrderClauses(sortBy []string) []string {
+	if len(sortBy) == 0 {
+		return nil
+	}
+
+	orderClauses := make([]string, 0, len(sortBy))
+	for _, s := range sortBy {
+		col, dir, _ := strings.Cut(s, ":")
+		if dir == "" {
+			dir = "asc"
+		}
+		dir = strings.ToUpper(dir)
+		if dir != "ASC" && dir != "DESC" {
+			dir = "ASC"
+		}
+
+		switch col {
+		case "mtime":
+			orderClauses = append(orderClauses, "f.mtime "+dir)
+		case "name":
+			orderClauses = append(orderClauses, "f.path "+dir)
+		case "size":
+			orderClauses = append(orderClauses, "f.size_bytes "+dir)
+		}
+	}
+
+	return orderClauses
 }
 
 // SearchResult is one file returned by Search.
@@ -34,7 +62,11 @@ type SearchResult struct {
 	SizeBytes int64
 }
 
+const searchArgsCap = 16
+
 // Search returns files matching params and the total count before limit/offset.
+//
+//nolint:funlen,gocognit // SQL builder keeps filter and ordering semantics centralized
 func (d *DB) Search(ctx context.Context, p SearchParams) ([]SearchResult, int, error) {
 	limit := int(p.Limit)
 	if limit <= 0 {
@@ -42,7 +74,7 @@ func (d *DB) Search(ctx context.Context, p SearchParams) ([]SearchResult, int, e
 	}
 
 	var sb strings.Builder
-	args := make([]any, 0, 16)
+	args := make([]any, 0, searchArgsCap)
 
 	sb.WriteString("SELECT f.id, f.path, f.mtime, f.size_bytes FROM files f WHERE 1=1")
 
@@ -60,14 +92,14 @@ func (d *DB) Search(ctx context.Context, p SearchParams) ([]SearchResult, int, e
 		placeholders := strings.Repeat("?,", len(p.Tags))
 		placeholders = placeholders[:len(placeholders)-1]
 		if p.TagsAny {
-			sb.WriteString(fmt.Sprintf(` AND EXISTS (
+			fmt.Fprintf(&sb, ` AND EXISTS (
 				SELECT 1 FROM file_tags ft JOIN tags t ON t.id = ft.tag_id
-				WHERE ft.file_id = f.id AND t.name IN (%s))`, placeholders))
+				WHERE ft.file_id = f.id AND t.name IN (%s))`, placeholders)
 		} else {
-			sb.WriteString(fmt.Sprintf(` AND (
+			fmt.Fprintf(&sb, ` AND (
 				SELECT COUNT(DISTINCT t.name) FROM file_tags ft
 				JOIN tags t ON t.id = ft.tag_id
-				WHERE ft.file_id = f.id AND t.name IN (%s)) = %d`, placeholders, len(p.Tags)))
+				WHERE ft.file_id = f.id AND t.name IN (%s)) = %d`, placeholders, len(p.Tags))
 		}
 		for _, t := range p.Tags {
 			args = append(args, t)
@@ -78,9 +110,9 @@ func (d *DB) Search(ctx context.Context, p SearchParams) ([]SearchResult, int, e
 	if len(p.TagExclude) > 0 {
 		placeholders := strings.Repeat("?,", len(p.TagExclude))
 		placeholders = placeholders[:len(placeholders)-1]
-		sb.WriteString(fmt.Sprintf(` AND NOT EXISTS (
+		fmt.Fprintf(&sb, ` AND NOT EXISTS (
 			SELECT 1 FROM file_tags ft JOIN tags t ON t.id = ft.tag_id
-			WHERE ft.file_id = f.id AND t.name IN (%s))`, placeholders))
+			WHERE ft.file_id = f.id AND t.name IN (%s))`, placeholders)
 		for _, t := range p.TagExclude {
 			args = append(args, t)
 		}
@@ -113,14 +145,17 @@ func (d *DB) Search(ctx context.Context, p SearchParams) ([]SearchResult, int, e
 		var cond string
 		switch op {
 		case "eq", "":
-			cond = fmt.Sprintf(`AND EXISTS (SELECT 1 FROM metadata WHERE file_id = f.id AND key = ? AND value = ?)`)
+			cond = `AND EXISTS (SELECT 1 FROM metadata WHERE file_id = f.id AND key = ? AND value = ?)`
 			args = append(args, key, val)
 		case "contains":
-			cond = fmt.Sprintf(`AND EXISTS (SELECT 1 FROM metadata WHERE file_id = f.id AND key = ? AND value LIKE ?)`)
+			cond = `AND EXISTS (SELECT 1 FROM metadata WHERE file_id = f.id AND key = ? AND value LIKE ?)`
 			args = append(args, key, "%"+val+"%")
 		case "gt", "gte", "lt", "lte":
 			sqlOp := map[string]string{"gt": ">", "gte": ">=", "lt": "<", "lte": "<="}[op]
-			cond = fmt.Sprintf(`AND EXISTS (SELECT 1 FROM metadata WHERE file_id = f.id AND key = ? AND CAST(value AS REAL) %s ?)`, sqlOp)
+			cond = fmt.Sprintf(
+				`AND EXISTS (SELECT 1 FROM metadata WHERE file_id = f.id AND key = ? AND CAST(value AS REAL) %s ?)`,
+				sqlOp,
+			)
 			args = append(args, key, val)
 		default:
 			continue
@@ -137,35 +172,12 @@ func (d *DB) Search(ctx context.Context, p SearchParams) ([]SearchResult, int, e
 	}
 
 	// ORDER BY.
-	sb.WriteString(" ORDER BY ")
-	if len(p.SortBy) > 0 {
-		var orderClauses []string
-		for _, s := range p.SortBy {
-			col, dir, _ := strings.Cut(s, ":")
-			if dir == "" {
-				dir = "asc"
-			}
-			dir = strings.ToUpper(dir)
-			if dir != "ASC" && dir != "DESC" {
-				dir = "ASC"
-			}
-			switch col {
-			case "mtime":
-				orderClauses = append(orderClauses, "f.mtime "+dir)
-			case "name":
-				orderClauses = append(orderClauses, "f.path "+dir)
-			case "size":
-				orderClauses = append(orderClauses, "f.size_bytes "+dir)
-			}
-		}
-		if len(orderClauses) > 0 {
-			sb.WriteString(strings.Join(orderClauses, ", "))
-		} else {
-			sb.WriteString("f.mtime DESC")
-		}
-	} else {
-		sb.WriteString("f.mtime DESC")
+	orderBy := "f.mtime DESC"
+	if orderClauses := buildOrderClauses(p.SortBy); len(orderClauses) > 0 {
+		orderBy = strings.Join(orderClauses, ", ")
 	}
+	sb.WriteString(" ORDER BY ")
+	sb.WriteString(orderBy)
 
 	sb.WriteString(" LIMIT ? OFFSET ?")
 	args = append(args, limit, int(p.Offset))
@@ -207,27 +219,33 @@ func (d *DB) Search(ctx context.Context, p SearchParams) ([]SearchResult, int, e
 		trows, err := d.db.QueryContext(ctx,
 			"SELECT t.name FROM file_tags ft JOIN tags t ON t.id = ft.tag_id WHERE ft.file_id = ?", fr.id)
 		if err == nil {
-			for trows.Next() {
-				var name string
-				if err := trows.Scan(&name); err == nil {
-					sr.Tags = append(sr.Tags, name)
+			func() {
+				defer trows.Close()
+				for trows.Next() {
+					var name string
+					if scanErr := trows.Scan(&name); scanErr == nil {
+						sr.Tags = append(sr.Tags, name)
+					}
 				}
-			}
-			trows.Close()
+				_ = trows.Err()
+			}()
 		}
 
 		// Metadata.
 		mrows, err := d.db.QueryContext(ctx,
 			"SELECT key, value FROM metadata WHERE file_id = ?", fr.id)
 		if err == nil {
-			sr.Metadata = make(map[string]string)
-			for mrows.Next() {
-				var k, v string
-				if err := mrows.Scan(&k, &v); err == nil {
-					sr.Metadata[k] = v
+			func() {
+				defer mrows.Close()
+				sr.Metadata = make(map[string]string)
+				for mrows.Next() {
+					var k, v string
+					if err := mrows.Scan(&k, &v); err == nil {
+						sr.Metadata[k] = v
+					}
 				}
-			}
-			mrows.Close()
+				_ = mrows.Err()
+			}()
 		}
 
 		results = append(results, sr)
@@ -236,7 +254,10 @@ func (d *DB) Search(ctx context.Context, p SearchParams) ([]SearchResult, int, e
 }
 
 // GetFileMeta returns all metadata key-value pairs and their sources for path.
-func (d *DB) GetFileMeta(ctx context.Context, path string) (vals map[string]string, sources map[string]string, err error) {
+func (d *DB) GetFileMeta(
+	ctx context.Context,
+	path string,
+) (map[string]string, map[string]string, error) {
 	fileID, err := d.q.GetFileIDByPath(ctx, path)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -250,8 +271,8 @@ func (d *DB) GetFileMeta(ctx context.Context, path string) (vals map[string]stri
 		return nil, nil, fmt.Errorf("index: get meta %q: %w", path, err)
 	}
 
-	vals = make(map[string]string)
-	sources = make(map[string]string)
+	vals := make(map[string]string)
+	sources := make(map[string]string)
 	for _, r := range rows {
 		vals[r.Key] = r.Value
 		sources[r.Key] = r.Source
@@ -297,6 +318,8 @@ func (d *DB) GetFileTags(ctx context.Context, path string) ([]string, error) {
 // ModifyFileTags adds or removes tags for a file identified by path.
 // For TAG_OPERATION_ADD/REMOVE the file must already be in the index.
 // For TAG_OPERATION_SET the existing tags are fully replaced.
+//
+//nolint:gocognit // explicit operation handling keeps DB and graph updates aligned
 func (d *DB) ModifyFileTags(ctx context.Context, path string, tags []string, op string) error {
 	fileID, err := d.GetFileIDByPath(ctx, path)
 	if err != nil {
@@ -334,17 +357,4 @@ func (d *DB) ModifyFileTags(ctx context.Context, path string, tags []string, op 
 		return fmt.Errorf("index: unknown tag operation %q", op)
 	}
 	return nil
-}
-
-// metaValueToString converts any meta value to its string representation for
-// display. Numeric float64 values from the index are stored as text.
-func metaValueToString(v any) string {
-	switch n := v.(type) {
-	case float64:
-		return strconv.FormatFloat(n, 'f', -1, 64)
-	case string:
-		return n
-	default:
-		return fmt.Sprintf("%v", v)
-	}
 }

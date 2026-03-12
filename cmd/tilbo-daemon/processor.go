@@ -6,13 +6,14 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"maps"
 	"strings"
 
-	"github.com/darkliquid/tilbo/internal/embed"
 	"github.com/darkliquid/tilbo/internal/graph"
 	"github.com/darkliquid/tilbo/internal/harvester"
 	"github.com/darkliquid/tilbo/internal/index"
 	"github.com/darkliquid/tilbo/internal/rules"
+	"github.com/darkliquid/tilbo/internal/vectorize"
 	"github.com/darkliquid/tilbo/internal/xattr"
 )
 
@@ -25,14 +26,21 @@ type Processor struct {
 	pipeline *harvester.Pipeline
 	engine   *rules.Engine
 	g        *graph.Graph
-	embedder *embed.ONNXEmbedder
+	embedder *vectorize.ONNXEmbedder
 
 	// OnFileTagged is called when a file's tags have been modified.
 	OnFileTagged func(path string, added []string, removed []string)
 }
 
 // newProcessor creates a Processor.
-func newProcessor(idx *index.DB, tags *xattr.Service, pipeline *harvester.Pipeline, engine *rules.Engine, g *graph.Graph, embedder *embed.ONNXEmbedder) *Processor {
+func newProcessor(
+	idx *index.DB,
+	tags *xattr.Service,
+	pipeline *harvester.Pipeline,
+	engine *rules.Engine,
+	g *graph.Graph,
+	embedder *vectorize.ONNXEmbedder,
+) *Processor {
 	return &Processor{
 		idx:      idx,
 		tags:     tags,
@@ -84,14 +92,14 @@ func (p *Processor) processFile(ctx context.Context, path string) error {
 			continue
 		}
 		strVal := harvester.ValueToString(v)
-		if err := p.tags.WriteMeta(ctx, path, k, strVal); err != nil {
+		if writeErr := p.tags.WriteMeta(ctx, path, k, strVal); writeErr != nil {
 			slog.DebugContext(ctx, "processor: write meta xattr error",
-				"path", path, "key", k, "err", err)
+				"path", path, "key", k, "err", writeErr)
 		}
 		if idErr == nil {
-			if err := p.idx.UpsertMeta(ctx, fileID, k, strVal, "harvester"); err != nil {
+			if upsertErr := p.idx.UpsertMeta(ctx, fileID, k, strVal, "harvester"); upsertErr != nil {
 				slog.DebugContext(ctx, "processor: upsert meta index error",
-					"path", path, "key", k, "err", err)
+					"path", path, "key", k, "err", upsertErr)
 			}
 		}
 	}
@@ -119,37 +127,50 @@ func (p *Processor) processFile(ctx context.Context, path string) error {
 		return fmt.Errorf("eval rules: %w", err)
 	}
 
-	if p.embedder != nil {
-		textParts := []string{path}
-		textParts = append(textParts, existingTags...)
-		if desc, ok := meta["description"].(string); ok && desc != "" {
-			textParts = append(textParts, desc)
-		}
-		if title, ok := meta["title"].(string); ok && title != "" {
-			textParts = append(textParts, title)
-		}
-		if text, ok := meta["text"].(string); ok && text != "" {
-			textParts = append(textParts, text)
-		}
-		text := strings.Join(textParts, " ")
-
-		vec, err := p.embedder.EmbedText(ctx, text)
-		if err != nil {
-			slog.DebugContext(ctx, "processor: embedding generation failed", "path", path, "err", err)
-		} else {
-			if err := p.idx.UpsertEmbedding(ctx, fileID, vec); err != nil {
-				slog.DebugContext(ctx, "processor: embedding index upsert failed", "path", path, "err", err)
-			} else {
-				p.g.SetEmbedding(path, vec)
-			}
-		}
-	}
+	p.updateEmbedding(ctx, path, fileID, existingTags, meta)
 
 	if len(diff.Added) == 0 {
 		return nil
 	}
 
 	return p.applyDiff(ctx, path, fileID, existingTags, diff)
+}
+
+func (p *Processor) updateEmbedding(
+	ctx context.Context,
+	path string,
+	fileID int64,
+	existingTags []string,
+	meta harvester.MetaMap,
+) {
+	if p.embedder == nil {
+		return
+	}
+
+	textParts := []string{path}
+	textParts = append(textParts, existingTags...)
+	if desc, ok := meta["description"].(string); ok && desc != "" {
+		textParts = append(textParts, desc)
+	}
+	if title, ok := meta["title"].(string); ok && title != "" {
+		textParts = append(textParts, title)
+	}
+	if text, ok := meta["text"].(string); ok && text != "" {
+		textParts = append(textParts, text)
+	}
+
+	vec, err := p.embedder.EmbedText(ctx, strings.Join(textParts, " "))
+	if err != nil {
+		slog.DebugContext(ctx, "processor: embedding generation failed", "path", path, "err", err)
+		return
+	}
+
+	if err := p.idx.UpsertEmbedding(ctx, fileID, vec); err != nil {
+		slog.DebugContext(ctx, "processor: embedding index upsert failed", "path", path, "err", err)
+		return
+	}
+
+	p.g.SetEmbedding(path, vec)
 }
 
 // handleAsyncResult is called on a goroutine when an async harvester completes.
@@ -169,15 +190,18 @@ func (p *Processor) handleAsyncResult(ctx context.Context, path, harvesterName s
 	for k, v := range existingMeta {
 		meta[k] = harvester.ParseMetaValue(v)
 	}
-
 	for k, v := range asyncMeta {
 		meta[k] = v
 		if strings.HasPrefix(k, "_") {
 			continue
 		}
 		strVal := harvester.ValueToString(v)
-		_ = p.tags.WriteMeta(ctx, path, k, strVal)
-		_ = p.idx.UpsertMeta(ctx, fileID, k, strVal, "harvester:"+harvesterName)
+		if writeErr := p.tags.WriteMeta(ctx, path, k, strVal); writeErr != nil {
+			slog.DebugContext(ctx, "processor: write async meta xattr error", "path", path, "key", k, "err", writeErr)
+		}
+		if upsertErr := p.idx.UpsertMeta(ctx, fileID, k, strVal, harvesterName); upsertErr != nil {
+			slog.DebugContext(ctx, "processor: upsert async meta index error", "path", path, "key", k, "err", upsertErr)
+		}
 	}
 
 	overrides, _ := p.idx.GetTagOverrides(ctx, fileID)
@@ -185,13 +209,21 @@ func (p *Processor) handleAsyncResult(ctx context.Context, path, harvesterName s
 	if err != nil || len(diff.Added) == 0 {
 		return
 	}
-	if err := p.applyDiff(ctx, path, fileID, existingTags, diff); err != nil {
-		slog.DebugContext(ctx, "processor: apply async diff error", "path", path, "err", err)
+
+	p.updateEmbedding(ctx, path, fileID, existingTags, meta)
+	if applyErr := p.applyDiff(ctx, path, fileID, existingTags, diff); applyErr != nil {
+		slog.DebugContext(ctx, "processor: apply async diff error", "path", path, "err", applyErr)
 	}
 }
 
 // applyDiff writes new tags to xattr, updates provenance, and updates the index.
-func (p *Processor) applyDiff(ctx context.Context, path string, fileID int64, existingTags []string, diff rules.TagDiff) error {
+func (p *Processor) applyDiff(
+	ctx context.Context,
+	path string,
+	fileID int64,
+	existingTags []string,
+	diff rules.TagDiff,
+) error {
 	newTags := make([]string, len(existingTags), len(existingTags)+len(diff.Added))
 	copy(newTags, existingTags)
 	newTags = append(newTags, diff.Added...)
@@ -205,9 +237,7 @@ func (p *Processor) applyDiff(ctx context.Context, path string, fileID int64, ex
 	if sourceMap == nil {
 		sourceMap = make(map[string]string)
 	}
-	for tag, src := range diff.Sources {
-		sourceMap[tag] = src
-	}
+	maps.Copy(sourceMap, diff.Sources)
 	if err := p.tags.WriteSource(ctx, path, sourceMap); err != nil {
 		slog.DebugContext(ctx, "processor: write source xattr error", "path", path, "err", err)
 	}

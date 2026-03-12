@@ -17,8 +17,9 @@ import (
 	"io"
 	"strings"
 
-	"github.com/darkliquid/tilbo/internal/sidecar"
 	"github.com/pkg/xattr"
+
+	"github.com/darkliquid/tilbo/internal/sidecar"
 )
 
 const (
@@ -58,13 +59,14 @@ func (s *Service) ReadTags(ctx context.Context, path string) ([]string, error) {
 	val, err := xattr.Get(path, XattrTagKey)
 	if err != nil && isNotSupported(err) && s.sidecarStore != nil {
 		sc, scErr := s.sidecarStore.Read(ctx, path)
-		if scErr == nil {
+		switch {
+		case scErr == nil:
 			val = []byte(sc.Tags)
 			err = nil
-		} else if errors.Is(scErr, sidecar.ErrNoSidecar) {
+		case errors.Is(scErr, sidecar.ErrNoSidecar):
 			err = nil
 			val = nil
-		} else {
+		default:
 			return nil, fmt.Errorf("sidecar read tags %q: %w", path, scErr)
 		}
 	}
@@ -115,24 +117,29 @@ func (s *Service) WriteTags(ctx context.Context, path string, tags []string) err
 	}
 
 	valStr := strings.TrimRight(buf.String(), "\r\n")
-	if err := xattr.Set(path, XattrTagKey, []byte(valStr)); err != nil {
-		if isNotSupported(err) && s.sidecarStore != nil {
-			sc, scErr := s.sidecarStore.Read(ctx, path)
-			if errors.Is(scErr, sidecar.ErrNoSidecar) {
-				sc = &sidecar.Data{}
-			} else if scErr != nil {
-				return fmt.Errorf("sidecar read for tags update %q: %w", path, scErr)
-			}
+	err := xattr.Set(path, XattrTagKey, []byte(valStr))
+	if err == nil {
+		return nil
+	}
 
-			sc.Tags = valStr
-			if err := s.sidecarStore.Write(ctx, path, sc); err != nil {
-				return fmt.Errorf("sidecar write tags %q: %w", path, err)
-			}
-
-			return nil
-		}
-
+	if !isNotSupported(err) || s.sidecarStore == nil {
 		return fmt.Errorf("xattr write tags %q: %w", path, err)
+	}
+
+	return s.writeTagsSidecarFallback(ctx, path, valStr)
+}
+
+func (s *Service) writeTagsSidecarFallback(ctx context.Context, path, valStr string) error {
+	sc, scErr := s.sidecarStore.Read(ctx, path)
+	if errors.Is(scErr, sidecar.ErrNoSidecar) {
+		sc = &sidecar.Data{}
+	} else if scErr != nil {
+		return fmt.Errorf("sidecar read for tags update %q: %w", path, scErr)
+	}
+
+	sc.Tags = valStr
+	if err := s.sidecarStore.Write(ctx, path, sc); err != nil {
+		return fmt.Errorf("sidecar write tags %q: %w", path, err)
 	}
 
 	return nil
@@ -178,32 +185,36 @@ func (s *Service) WriteMeta(ctx context.Context, path, key, value string) error 
 		return err
 	}
 
-	if err := xattr.Set(path, XattrMetaPrefix+key, []byte(value)); err != nil {
-		if isNotSupported(err) && s.sidecarStore != nil {
-			sc, scErr := s.sidecarStore.Read(ctx, path)
-			if errors.Is(scErr, sidecar.ErrNoSidecar) {
-				sc = &sidecar.Data{Meta: make(map[string]string)}
-			} else if scErr != nil {
-				return fmt.Errorf("sidecar read for meta update %q: %w", path, scErr)
-			}
+	err := xattr.Set(path, XattrMetaPrefix+key, []byte(value))
+	if err == nil {
+		return nil
+	}
 
-			if sc.Meta == nil {
-				sc.Meta = make(map[string]string)
-			}
-
-			sc.Meta[key] = value
-			if err := s.sidecarStore.Write(ctx, path, sc); err != nil {
-				return fmt.Errorf("sidecar write meta %q key %q: %w", path, key, err)
-			}
-
-			return nil
-		}
-
+	if !isNotSupported(err) || s.sidecarStore == nil {
 		return fmt.Errorf("xattr write meta %q key %q: %w", path, key, err)
 	}
 
-	return nil
+	return s.writeMetaSidecarFallback(ctx, path, key, value)
+}
 
+func (s *Service) writeMetaSidecarFallback(ctx context.Context, path, key, value string) error {
+	sc, scErr := s.sidecarStore.Read(ctx, path)
+	if errors.Is(scErr, sidecar.ErrNoSidecar) {
+		sc = &sidecar.Data{Meta: make(map[string]string)}
+	} else if scErr != nil {
+		return fmt.Errorf("sidecar read for meta update %q: %w", path, scErr)
+	}
+
+	if sc.Meta == nil {
+		sc.Meta = make(map[string]string)
+	}
+
+	sc.Meta[key] = value
+	if err := s.sidecarStore.Write(ctx, path, sc); err != nil {
+		return fmt.Errorf("sidecar write meta %q key %q: %w", path, key, err)
+	}
+
+	return nil
 }
 
 // ReadAllMeta returns all metadata key-value pairs for the file at path.
@@ -302,27 +313,32 @@ func (s *Service) WriteSource(ctx context.Context, path string, source map[strin
 		return fmt.Errorf("xattr marshal source: %w", err)
 	}
 
-	if err := xattr.Set(path, XattrSourceKey, data); err != nil {
-		if isNotSupported(err) {
-			sc, scErr := s.sidecarStore.Read(ctx, path)
-			if errors.Is(scErr, sidecar.ErrNoSidecar) {
-				sc = &sidecar.Data{Source: make(map[string]string)}
-			} else if scErr != nil {
-				return fmt.Errorf("sidecar read for source update %q: %w", path, scErr)
-			}
+	err = xattr.Set(path, XattrSourceKey, data)
+	if err == nil {
+		return nil
+	}
 
-			sc.Source = source
-			if err := s.sidecarStore.Write(ctx, path, sc); err != nil {
-				return fmt.Errorf("sidecar write source %q: %w", path, err)
-			}
-
-			return nil
-		}
-
+	if !isNotSupported(err) || s.sidecarStore == nil {
 		return fmt.Errorf("xattr write source %q: %w", path, err)
 	}
-	return nil
 
+	return s.writeSourceSidecarFallback(ctx, path, source)
+}
+
+func (s *Service) writeSourceSidecarFallback(ctx context.Context, path string, source map[string]string) error {
+	sc, scErr := s.sidecarStore.Read(ctx, path)
+	if errors.Is(scErr, sidecar.ErrNoSidecar) {
+		sc = &sidecar.Data{Source: make(map[string]string)}
+	} else if scErr != nil {
+		return fmt.Errorf("sidecar read for source update %q: %w", path, scErr)
+	}
+
+	sc.Source = source
+	if err := s.sidecarStore.Write(ctx, path, sc); err != nil {
+		return fmt.Errorf("sidecar write source %q: %w", path, err)
+	}
+
+	return nil
 }
 
 // BatchReadTags reads tags from multiple files concurrently.

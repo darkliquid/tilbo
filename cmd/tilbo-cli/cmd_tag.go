@@ -9,6 +9,8 @@ import (
 	ipcv1 "github.com/darkliquid/tilbo/internal/ipc/gen/tilbo/ipc/v1"
 )
 
+const minTagArgs = 2
+
 var tagCmd = &cobra.Command{
 	Use:   "tag",
 	Short: "Manage file tags",
@@ -17,7 +19,7 @@ var tagCmd = &cobra.Command{
 var tagAddCmd = &cobra.Command{
 	Use:               "add <path> <tag>...",
 	Short:             "Add one or more tags to a file",
-	Args:              cobra.MinimumNArgs(2),
+	Args:              cobra.MinimumNArgs(minTagArgs),
 	ValidArgsFunction: completeTagsVariadic,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ctx := cmd.Context()
@@ -48,7 +50,7 @@ var tagRemoveCmd = &cobra.Command{
 	Use:               "remove <path> <tag>...",
 	Aliases:           []string{"rm"},
 	Short:             "Remove one or more tags from a file",
-	Args:              cobra.MinimumNArgs(2),
+	Args:              cobra.MinimumNArgs(minTagArgs),
 	ValidArgsFunction: completeFileTags,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ctx := cmd.Context()

@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -26,9 +27,14 @@ var (
 	sleepFn            = time.Sleep
 )
 
+const (
+	daemonConnectTimeout = 2 * time.Second
+	daemonRetryBackoff   = 150 * time.Millisecond
+)
+
 func ConnectDaemon() (*DaemonClient, error) {
-	userId := os.Getuid()
-	sockPath := fmt.Sprintf("/run/user/%d/tilbo.sock", userId)
+	userID := os.Getuid()
+	sockPath := fmt.Sprintf("/run/user/%d/tilbo.sock", userID)
 
 	c, err := newIPCClient(context.Background(), sockPath)
 	if err == nil {
@@ -38,24 +44,24 @@ func ConnectDaemon() (*DaemonClient, error) {
 	slog.Info("Failed to connect to daemon, attempting background spawn", "sockPath", sockPath, "err", err)
 
 	if spawnErr := spawnDaemonProcess(); spawnErr != nil {
-		return nil, fmt.Errorf("connect to daemon socket %s: %w (spawn daemon: %v)", sockPath, err, spawnErr)
+		return nil, fmt.Errorf("connect to daemon socket %s: %w (spawn daemon: %w)", sockPath, err, spawnErr)
 	}
 
-	deadline := nowFn().Add(2 * time.Second)
+	deadline := nowFn().Add(daemonConnectTimeout)
 	for nowFn().Before(deadline) {
 		c, err = newIPCClient(context.Background(), sockPath)
 		if err == nil {
 			slog.Info("Connected to daemon after spawn", "sockPath", sockPath)
 			return &DaemonClient{client: c}, nil
 		}
-		sleepFn(150 * time.Millisecond)
+		sleepFn(daemonRetryBackoff)
 	}
 
 	return nil, fmt.Errorf("connect to daemon socket %s after spawn: %w", sockPath, err)
 }
 
 func spawnDaemon() error {
-	cmd := exec.Command("tilbo-daemon")
+	cmd := exec.CommandContext(context.Background(), "tilbo-daemon")
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
 
 	if err := cmd.Start(); err != nil {
@@ -79,12 +85,12 @@ func (c *DaemonClient) Status(ctx context.Context) (*ipcv1.StatusResponse, error
 	if err != nil {
 		return nil, err
 	}
-	if errKind, ok := resp.Kind.(*ipcv1.Response_Error); ok {
+	if errKind, ok := resp.GetKind().(*ipcv1.Response_Error); ok {
 		return nil, fmt.Errorf("daemon: %s (code %d)", errKind.Error.GetMessage(), errKind.Error.GetCode())
 	}
-	status, ok := resp.Kind.(*ipcv1.Response_Status)
+	status, ok := resp.GetKind().(*ipcv1.Response_Status)
 	if !ok || status.Status == nil {
-		return nil, fmt.Errorf("unexpected response type")
+		return nil, errors.New("unexpected response type")
 	}
 	return status.Status, nil
 }
@@ -96,10 +102,12 @@ func permissionPromptFromWarnings(warnings []string) string {
 
 	for _, w := range warnings {
 		l := strings.ToLower(w)
-		if strings.Contains(l, "fanotify") || strings.Contains(l, "fuse") || strings.Contains(l, "permission") || strings.Contains(l, "cap_sys_admin") {
+		if strings.Contains(l, "fanotify") || strings.Contains(l, "fuse") || strings.Contains(l, "permission") ||
+			strings.Contains(l, "cap_sys_admin") {
 			relevant = append(relevant, w)
 		}
-		if strings.Contains(l, "cap_sys_admin") || strings.Contains(l, "operation not permitted") || strings.Contains(l, "permission") {
+		if strings.Contains(l, "cap_sys_admin") || strings.Contains(l, "operation not permitted") ||
+			strings.Contains(l, "permission") {
 			needsCaps = true
 		}
 		if strings.Contains(l, "/dev/fuse") || strings.Contains(l, "fuse") {
@@ -133,86 +141,96 @@ func permissionPromptFromWarnings(warnings []string) string {
 
 // SearchAsync issues an IPC search request and pushes the response back to the main thread channel.
 // b.mainThreadCh is passed so the callback executes on the Qt main thread.
-func (c *DaemonClient) SearchAsync(ctx context.Context, req *ipcv1.SearchRequest, mainThreadCh chan<- func(), callback func(*ipcv1.SearchResponse, error)) {
-	go func() {
-		resp, err := c.client.Call(ctx, &ipcv1.Request{
-			Kind: &ipcv1.Request_Search{
-				Search: req,
-			},
-		})
-
-		var searchResp *ipcv1.SearchResponse
-		var callErr error
-
-		if err != nil {
-			callErr = err
-		} else if errKind, ok := resp.Kind.(*ipcv1.Response_Error); ok {
-			callErr = fmt.Errorf("daemon: %s (code %d)", errKind.Error.GetMessage(), errKind.Error.GetCode())
-		} else if s, ok := resp.Kind.(*ipcv1.Response_Search); ok {
-			searchResp = s.Search
-		} else {
-			callErr = fmt.Errorf("unexpected response type")
-		}
-
-		slog.Debug("Async search completed", "resp", searchResp, "err", callErr)
-		mainThreadCh <- func() {
+func (c *DaemonClient) SearchAsync(
+	ctx context.Context,
+	req *ipcv1.SearchRequest,
+	mainThreadCh chan<- func(),
+	callback func(*ipcv1.SearchResponse, error),
+) {
+	asyncCall(c,
+		ctx,
+		&ipcv1.Request{Kind: &ipcv1.Request_Search{Search: req}},
+		mainThreadCh,
+		func(resp *ipcv1.Response) (*ipcv1.SearchResponse, error) {
+			if s, ok := resp.GetKind().(*ipcv1.Response_Search); ok {
+				return s.Search, nil
+			}
+			return nil, errors.New("unexpected response type")
+		},
+		func(searchResp *ipcv1.SearchResponse, callErr error) {
+			slog.Debug("Async search completed", "resp", searchResp, "err", callErr)
 			callback(searchResp, callErr)
-		}
-	}()
+		},
+	)
 }
 
 // RelatedAsync issues an IPC related request and pushes the response back to the main thread channel.
-func (c *DaemonClient) RelatedAsync(ctx context.Context, req *ipcv1.RelatedRequest, mainThreadCh chan<- func(), callback func(*ipcv1.RelatedResponse, error)) {
-	go func() {
-		resp, err := c.client.Call(ctx, &ipcv1.Request{
-			Kind: &ipcv1.Request_Related{
-				Related: req,
-			},
-		})
-
-		var relatedResp *ipcv1.RelatedResponse
-		var callErr error
-
-		if err != nil {
-			callErr = err
-		} else if errKind, ok := resp.Kind.(*ipcv1.Response_Error); ok {
-			callErr = fmt.Errorf("daemon: %s (code %d)", errKind.Error.GetMessage(), errKind.Error.GetCode())
-		} else if r, ok := resp.Kind.(*ipcv1.Response_Related); ok {
-			relatedResp = r.Related
-		} else {
-			callErr = fmt.Errorf("unexpected response type")
-		}
-
-		mainThreadCh <- func() {
-			callback(relatedResp, callErr)
-		}
-	}()
+func (c *DaemonClient) RelatedAsync(
+	ctx context.Context,
+	req *ipcv1.RelatedRequest,
+	mainThreadCh chan<- func(),
+	callback func(*ipcv1.RelatedResponse, error),
+) {
+	asyncCall(c,
+		ctx,
+		&ipcv1.Request{Kind: &ipcv1.Request_Related{Related: req}},
+		mainThreadCh,
+		func(resp *ipcv1.Response) (*ipcv1.RelatedResponse, error) {
+			if r, ok := resp.GetKind().(*ipcv1.Response_Related); ok {
+				return r.Related, nil
+			}
+			return nil, errors.New("unexpected response type")
+		},
+		callback,
+	)
 }
 
 // ListTagsAsync issues an IPC list_tags request to fetch autocomplete suggestions.
-func (c *DaemonClient) ListTagsAsync(ctx context.Context, req *ipcv1.ListTagsRequest, mainThreadCh chan<- func(), callback func(*ipcv1.ListTagsResponse, error)) {
-	go func() {
-		resp, err := c.client.Call(ctx, &ipcv1.Request{
-			Kind: &ipcv1.Request_ListTags{
-				ListTags: req,
-			},
-		})
+func (c *DaemonClient) ListTagsAsync(
+	ctx context.Context,
+	req *ipcv1.ListTagsRequest,
+	mainThreadCh chan<- func(),
+	callback func(*ipcv1.ListTagsResponse, error),
+) {
+	asyncCall(c,
+		ctx,
+		&ipcv1.Request{Kind: &ipcv1.Request_ListTags{ListTags: req}},
+		mainThreadCh,
+		func(resp *ipcv1.Response) (*ipcv1.ListTagsResponse, error) {
+			if r, ok := resp.GetKind().(*ipcv1.Response_ListTags); ok {
+				return r.ListTags, nil
+			}
+			return nil, errors.New("unexpected response type")
+		},
+		callback,
+	)
+}
 
-		var listTagsResp *ipcv1.ListTagsResponse
+//nolint:revive // context-as-argument: Qt callback pattern justifies deviation
+func asyncCall[T any](
+	c *DaemonClient,
+	ctx context.Context,
+	req *ipcv1.Request,
+	mainThreadCh chan<- func(),
+	decode func(*ipcv1.Response) (*T, error),
+	callback func(*T, error),
+) {
+	go func() {
+		resp, err := c.client.Call(ctx, req)
+
+		var out *T
 		var callErr error
 
 		if err != nil {
 			callErr = err
-		} else if errKind, ok := resp.Kind.(*ipcv1.Response_Error); ok {
+		} else if errKind, ok := resp.GetKind().(*ipcv1.Response_Error); ok {
 			callErr = fmt.Errorf("daemon: %s (code %d)", errKind.Error.GetMessage(), errKind.Error.GetCode())
-		} else if r, ok := resp.Kind.(*ipcv1.Response_ListTags); ok {
-			listTagsResp = r.ListTags
 		} else {
-			callErr = fmt.Errorf("unexpected response type")
+			out, callErr = decode(resp)
 		}
 
 		mainThreadCh <- func() {
-			callback(listTagsResp, callErr)
+			callback(out, callErr)
 		}
 	}()
 }

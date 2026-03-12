@@ -13,6 +13,12 @@ import (
 // Matches all-MiniLM-L6-v2 output.
 const EmbeddingDim = 384
 
+const (
+	bytesPerFloat32 = 4
+	knnBaseArgCount = 2
+	knnFilterScale  = 10
+)
+
 // KNNResult is one file returned by KNNSearch.
 type KNNResult struct {
 	FileID   int64
@@ -25,9 +31,9 @@ type KNNResult struct {
 // The format is identical to the one expected by the sqlite-vec extension,
 // so the data is compatible if a vec0 table is used in future.
 func SerializeFloat32(v []float32) []byte {
-	b := make([]byte, len(v)*4)
+	b := make([]byte, len(v)*bytesPerFloat32)
 	for i, f := range v {
-		binary.LittleEndian.PutUint32(b[i*4:], math.Float32bits(f))
+		binary.LittleEndian.PutUint32(b[i*bytesPerFloat32:], math.Float32bits(f))
 	}
 	return b
 }
@@ -35,9 +41,9 @@ func SerializeFloat32(v []float32) []byte {
 // DeserializeFloat32 decodes a little-endian byte blob produced by
 // SerializeFloat32 back into a float32 slice.
 func DeserializeFloat32(b []byte) []float32 {
-	v := make([]float32, len(b)/4)
+	v := make([]float32, len(b)/bytesPerFloat32)
 	for i := range v {
-		v[i] = math.Float32frombits(binary.LittleEndian.Uint32(b[i*4:]))
+		v[i] = math.Float32frombits(binary.LittleEndian.Uint32(b[i*bytesPerFloat32:]))
 	}
 	return v
 }
@@ -55,12 +61,17 @@ func (d *DB) UpsertEmbedding(ctx context.Context, fileID int64, vec []float32) e
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback() //nolint:errcheck
+	defer tx.Rollback() //nolint:errcheck // best-effort rollback; commit path handles success
 
 	if _, err := tx.ExecContext(ctx, "DELETE FROM file_embeddings WHERE file_id = ?", fileID); err != nil {
 		return fmt.Errorf("index: upsert embedding delete old file=%d: %w", fileID, err)
 	}
-	if _, err := tx.ExecContext(ctx, "INSERT INTO file_embeddings(file_id, embedding) VALUES (?, ?)", fileID, blob); err != nil {
+	if _, err := tx.ExecContext(
+		ctx,
+		"INSERT INTO file_embeddings(file_id, embedding) VALUES (?, ?)",
+		fileID,
+		blob,
+	); err != nil {
 		return fmt.Errorf("index: upsert embedding insert file=%d: %w", fileID, err)
 	}
 
@@ -122,11 +133,11 @@ func (d *DB) KNNSearch(ctx context.Context, vec []float32, k int, filterTags []s
 				HAVING COUNT(DISTINCT t.name) = %d
 			)
 			ORDER BY fe.distance`, ph, len(filterTags))
-		args = make([]any, 2+len(filterTags))
+		args = make([]any, knnBaseArgCount+len(filterTags))
 		args[0] = blob
-		args[1] = k * 10 // increase k since we filter post-match 
+		args[1] = k * knnFilterScale // increase k since we filter post-match
 		for i, t := range filterTags {
-			args[2+i] = t
+			args[knnBaseArgCount+i] = t
 		}
 	}
 
@@ -147,7 +158,7 @@ func (d *DB) KNNSearch(ctx context.Context, vec []float32, k int, filterTags []s
 		if err := rows.Scan(&fileID, &path, &dist); err != nil {
 			return nil, fmt.Errorf("index: KNN scan: %w", err)
 		}
-		
+
 		results = append(results, KNNResult{FileID: fileID, Path: path, Distance: dist})
 		if len(results) == k {
 			break
@@ -172,7 +183,7 @@ func (d *DB) ListEmbeddings(ctx context.Context) (map[string][]float32, error) {
 		// optional and only generated when an embed model is configured.
 		if strings.Contains(err.Error(), "no such function") || strings.Contains(err.Error(), "no such module") {
 			slog.DebugContext(ctx, "index: sqlite-vec extension not available; embeddings not loaded", "err", err)
-			return nil, nil
+			return map[string][]float32{}, nil
 		}
 		return nil, fmt.Errorf("index: list embeddings: %w", err)
 	}

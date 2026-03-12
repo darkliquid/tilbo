@@ -1,4 +1,4 @@
-package sync
+package sync //nolint:revive,nolintlint // package path is stable API surface; nolintlint cannot infer revive hit location
 
 import (
 	"context"
@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/fs"
 	"log/slog"
+	"math"
 	"path/filepath"
 	"runtime"
 	"sync/atomic"
@@ -71,15 +72,20 @@ func (s *Syncer) setState(state ipcv1.DaemonState) {
 // setLowIOPrio sets the current thread to the lowest I/O priority (IDLE class).
 func setLowIOPrio() {
 	const (
-		IOPRIO_CLASS_SHIFT = 13
-		IOPRIO_CLASS_IDLE  = 3
-		IOPRIO_WHO_PROCESS = 1
-		SYS_IOPRIO_SET     = 251 // valid for amd64/arm64
+		ioprioClassShift = 13
+		ioprioClassIdle  = 3
+		ioprioWhoProcess = 1
+		sysIoprioSet     = 251 // valid for amd64/arm64
 	)
 
 	// Best-effort. If it fails, we just continue.
 	// We use the current process/thread ID.
-	_, _, _ = unix.Syscall(SYS_IOPRIO_SET, uintptr(IOPRIO_WHO_PROCESS), 0, uintptr(IOPRIO_CLASS_IDLE<<IOPRIO_CLASS_SHIFT))
+	_, _, _ = unix.Syscall(
+		sysIoprioSet,
+		uintptr(ioprioWhoProcess),
+		0,
+		uintptr(ioprioClassIdle<<ioprioClassShift),
+	)
 }
 
 // Run performs a full filesystem walk of the watchPath, upserting all discovered
@@ -105,10 +111,10 @@ func (s *Syncer) Run(ctx context.Context) error {
 	// We keep the thread locked for the duration of the scan to maintain the priority.
 	defer runtime.UnlockOSThread()
 
-	err := filepath.WalkDir(s.watchPath, func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			slog.DebugContext(ctx, "syncer: walk error", "path", path, "err", err)
-			return nil // ignore permission errors and keep going
+	err := filepath.WalkDir(s.watchPath, func(path string, d fs.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			slog.DebugContext(ctx, "syncer: walk error", "path", path, "err", walkErr)
+			return nil // ignore per-file walk errors and continue background scan
 		}
 
 		if ctx.Err() != nil {
@@ -121,7 +127,7 @@ func (s *Syncer) Run(ctx context.Context) error {
 
 		info, err := d.Info()
 		if err != nil {
-			return nil
+			return nil //nolint:nilerr // ignore file-specific stat/read errors and continue scan
 		}
 
 		sysStat, ok := info.Sys().(*syscall.Stat_t)
@@ -151,7 +157,7 @@ func (s *Syncer) Run(ctx context.Context) error {
 
 	if s.OnIndexUpdated != nil {
 		stats, _ := s.idx.GetStats(ctx)
-		s.OnIndexUpdated(uint64(stats.FilesCount), uint64(stats.TagsCount))
+		s.OnIndexUpdated(saturatingUint64FromInt64(stats.FilesCount), saturatingUint64FromInt64(stats.TagsCount))
 	}
 
 	slog.InfoContext(ctx, "syncer: completed full scan", "indexed", s.filesIndexed.Load())
@@ -160,7 +166,6 @@ func (s *Syncer) Run(ctx context.Context) error {
 
 // SyncFile processes a single file, reading its xattrs and updating the index.
 func (s *Syncer) SyncFile(ctx context.Context, path string, stat *syscall.Stat_t) error {
-
 	// 1. Read all xattrs. If none exist, we still want to ensure the file is in the index
 	// so the harvester pipeline (M2) can process it if rules apply.
 	tags, err := s.tags.ReadTags(ctx, path)
@@ -179,7 +184,9 @@ func (s *Syncer) SyncFile(ctx context.Context, path string, stat *syscall.Stat_t
 	}
 
 	// 2. Upsert the file record
-	fileID, err := s.idx.UpsertFile(ctx, path, int64(stat.Ino), int64(stat.Dev), stat.Mtim.Sec, stat.Size)
+	inode := saturatingInt64FromUint64(stat.Ino)
+	device := saturatingInt64FromUint64(stat.Dev)
+	fileID, err := s.idx.UpsertFile(ctx, path, inode, device, stat.Mtim.Sec, stat.Size)
 	if err != nil {
 		return fmt.Errorf("upsert file: %w", err)
 	}
@@ -207,4 +214,18 @@ func (s *Syncer) SyncFile(ctx context.Context, path string, stat *syscall.Stat_t
 
 	s.filesIndexed.Add(1)
 	return nil
+}
+
+func saturatingUint64FromInt64(v int64) uint64 {
+	if v <= 0 {
+		return 0
+	}
+	return uint64(v)
+}
+
+func saturatingInt64FromUint64(v uint64) int64 {
+	if v > math.MaxInt64 {
+		return math.MaxInt64
+	}
+	return int64(v)
 }

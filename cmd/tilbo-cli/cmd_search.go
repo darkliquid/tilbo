@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"os"
 	"strings"
 	"text/tabwriter"
@@ -11,6 +12,11 @@ import (
 	"github.com/spf13/cobra"
 
 	ipcv1 "github.com/darkliquid/tilbo/internal/ipc/gen/tilbo/ipc/v1"
+)
+
+const (
+	defaultSearchLimit = 50
+	searchTabPadding   = 2
 )
 
 var searchCmd = &cobra.Command{
@@ -79,18 +85,24 @@ func init() {
 	f.String("fts", "", "full-text search query against metadata values")
 	f.StringToString("meta", nil, "metadata filters: key=op:value (e.g. iso=gt:1600)")
 	f.StringSlice("sort", []string{"mtime:desc"}, "sort order: field:asc|desc (mtime, name, size)")
-	f.Uint32("limit", 50, "maximum results to return")
+	f.Uint32("limit", defaultSearchLimit, "maximum results to return")
 	f.Uint32("offset", 0, "result offset for pagination")
 	f.String("format", "human", "output format: human, json, tsv")
 
-	_ = searchCmd.RegisterFlagCompletionFunc("tags", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-		already, _ := cmd.Flags().GetStringSlice("tags")
-		return completeTags(already, cmd, args, toComplete)
-	})
-	_ = searchCmd.RegisterFlagCompletionFunc("exclude", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-		already, _ := cmd.Flags().GetStringSlice("exclude")
-		return completeTags(already, cmd, args, toComplete)
-	})
+	_ = searchCmd.RegisterFlagCompletionFunc(
+		"tags",
+		func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+			already, _ := cmd.Flags().GetStringSlice("tags")
+			return completeTags(already, cmd, args, toComplete)
+		},
+	)
+	_ = searchCmd.RegisterFlagCompletionFunc(
+		"exclude",
+		func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+			already, _ := cmd.Flags().GetStringSlice("exclude")
+			return completeTags(already, cmd, args, toComplete)
+		},
+	)
 	_ = searchCmd.RegisterFlagCompletionFunc("format", completeEnum("human", "json", "tsv"))
 	_ = searchCmd.RegisterFlagCompletionFunc("sort", completeEnum(
 		"mtime:asc", "mtime:desc",
@@ -142,7 +154,7 @@ func printSearchHuman(files []*ipcv1.FileResult, total uint32) {
 		fmt.Println("no results")
 		return
 	}
-	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+	w := tabwriter.NewWriter(os.Stdout, 0, 0, searchTabPadding, ' ', 0)
 	for _, f := range files {
 		tags := "(no tags)"
 		if len(f.GetTags()) > 0 {
@@ -150,8 +162,10 @@ func printSearchHuman(files []*ipcv1.FileResult, total uint32) {
 		}
 		fmt.Fprintf(w, "%s\t[%s]\n", f.GetPath(), tags)
 	}
-	w.Flush()
-	if total > uint32(len(files)) {
+	if err := w.Flush(); err != nil {
+		slog.Warn("failed to flush search output", "err", err)
+	}
+	if int64(total) > int64(len(files)) {
 		fmt.Printf("\nshowing %d of %d results\n", len(files), total)
 	}
 }

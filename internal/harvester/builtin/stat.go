@@ -9,7 +9,9 @@ import (
 	"github.com/darkliquid/tilbo/internal/harvester"
 )
 
-// StatHarvester extracts file-system metadata from os.Stat: size tiers, mtime
+const hoursPerDay = 24
+
+// StatHarvester extracts file-system metadata from [os.Stat]: size tiers, mtime
 // components, and basic permission flags. It runs at priority -100 alongside
 // the MIME harvester so this data is available to all rules.
 type StatHarvester struct{}
@@ -17,9 +19,9 @@ type StatHarvester struct{}
 // NewStatHarvester returns a StatHarvester.
 func NewStatHarvester() *StatHarvester { return &StatHarvester{} }
 
-func (*StatHarvester) Name() string          { return "builtin:stat" }
-func (*StatHarvester) Priority() int         { return -100 }
-func (*StatHarvester) Async() bool           { return false }
+func (*StatHarvester) Name() string             { return "builtin:stat" }
+func (*StatHarvester) Priority() int            { return -100 }
+func (*StatHarvester) Async() bool              { return false }
 func (*StatHarvester) Matches(_, _ string) bool { return true }
 
 // sizeTier maps a byte count to a human-readable bucket name.
@@ -31,18 +33,18 @@ func (*StatHarvester) Matches(_, _ string) bool { return true }
 //	huge   ≥ 100 GiB
 func sizeTier(n int64) string {
 	const (
-		KiB = 1024
-		MiB = 1024 * KiB
-		GiB = 1024 * MiB
+		kiB = 1024
+		miB = 1024 * kiB
+		giB = 1024 * miB
 	)
 	switch {
-	case n < 64*KiB:
+	case n < 64*kiB:
 		return "tiny"
-	case n < 10*MiB:
+	case n < 10*miB:
 		return "small"
-	case n < GiB:
+	case n < giB:
 		return "medium"
-	case n < 100*GiB:
+	case n < 100*giB:
 		return "large"
 	default:
 		return "huge"
@@ -60,7 +62,7 @@ func sizeTier(n int64) string {
 func (*StatHarvester) Run(_ context.Context, input harvester.Input) (harvester.MetaMap, error) {
 	fi, err := os.Lstat(input.Path)
 	if err != nil {
-		return nil, nil
+		return nil, err
 	}
 
 	mode := fi.Mode()
@@ -83,7 +85,7 @@ func (*StatHarvester) Run(_ context.Context, input harvester.Input) (harvester.M
 	}
 
 	// mtime_age_days — days since last modification; convenient for archive rules.
-	ageDays := time.Since(mt).Hours() / 24
+	ageDays := time.Since(mt).Hours() / hoursPerDay
 	if ageDays >= 0 {
 		meta["mtime_age_days"] = ageDays
 	}

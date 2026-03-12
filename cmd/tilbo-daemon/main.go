@@ -22,7 +22,6 @@ import (
 
 	"github.com/darkliquid/tilbo/internal/bookmarks"
 	"github.com/darkliquid/tilbo/internal/dbus"
-	"github.com/darkliquid/tilbo/internal/embed"
 	tilbofuse "github.com/darkliquid/tilbo/internal/fuse"
 	"github.com/darkliquid/tilbo/internal/graph"
 	"github.com/darkliquid/tilbo/internal/harvester"
@@ -31,6 +30,7 @@ import (
 	ipcv1 "github.com/darkliquid/tilbo/internal/ipc/gen/tilbo/ipc/v1"
 	"github.com/darkliquid/tilbo/internal/rules"
 	isync "github.com/darkliquid/tilbo/internal/sync"
+	"github.com/darkliquid/tilbo/internal/vectorize"
 	"github.com/darkliquid/tilbo/internal/watcher"
 	"github.com/darkliquid/tilbo/internal/xattr"
 )
@@ -44,11 +44,20 @@ var (
 	buildDate = "unknown"
 )
 
+const (
+	fuseMountWaitTimeout = 5 * time.Second
+	shutdownWaitTimeout  = 2 * time.Second
+)
+
 func main() {
 	var (
-		watchPath      = flag.String("watch", defaultWatchPath(), "filesystem path to watch")
-		dbPath         = flag.String("db", defaultDBPath(), "path to the SQLite index database")
-		fuseMount      = flag.String("fuse-mount", defaultFuseMountPath(), "FUSE virtual filesystem mount point (empty to disable)")
+		watchPath = flag.String("watch", defaultWatchPath(), "filesystem path to watch")
+		dbPath    = flag.String("db", defaultDBPath(), "path to the SQLite index database")
+		fuseMount = flag.String(
+			"fuse-mount",
+			defaultFuseMountPath(),
+			"FUSE virtual filesystem mount point (empty to disable)",
+		)
 		sockOverride   = flag.String("socket", "", "override default Unix socket path")
 		logFormat      = flag.String("log-format", "text", "log format: text or json")
 		logLevel       = flag.String("log-level", "info", "log level: debug, info, warn, error")
@@ -86,23 +95,44 @@ func main() {
 
 	// signal.NotifyContext cancels on SIGTERM or SIGINT.
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
-	defer stop()
 
 	// Separate channel for SIGHUP (config reload).
 	hupCh := make(chan os.Signal, 1)
 	signal.Notify(hupCh, syscall.SIGHUP)
-	defer signal.Stop(hupCh)
 
-	if err := run(ctx, hupCh, *watchPath, *dbPath, *fuseMount, sockPath, watcher.Backend(*watcherBackend), *watchHidden, *embedModel); err != nil {
+	if err := run(
+		ctx,
+		hupCh,
+		*watchPath,
+		*dbPath,
+		*fuseMount,
+		sockPath,
+		watcher.Backend(*watcherBackend),
+		*watchHidden,
+		*embedModel,
+	); err != nil {
 		slog.Error("daemon error", "err", err)
+		signal.Stop(hupCh)
+		stop()
 		os.Exit(1)
 	}
+	signal.Stop(hupCh)
+	stop()
 	slog.Info("tilbo-daemon stopped")
 }
 
 // run is the main daemon loop. It returns nil on clean shutdown and a non-nil
 // error if any component fails unexpectedly.
-func run(ctx context.Context, hupCh <-chan os.Signal, watchPath, dbPath, fuseMount, sockPath string, watcherBackend watcher.Backend, watchHidden bool, embedModelPath string) error {
+//
+//nolint:gocyclo,cyclop,funlen,gocognit // daemon startup/shutdown orchestration is intentionally centralized for lifecycle safety
+func run(
+	ctx context.Context,
+	hupCh <-chan os.Signal,
+	watchPath, dbPath, fuseMount, sockPath string,
+	watcherBackend watcher.Backend,
+	watchHidden bool,
+	embedModelPath string,
+) error {
 	// Ensure the database directory exists.
 	if err := os.MkdirAll(filepath.Dir(dbPath), 0o700); err != nil {
 		return fmt.Errorf("create db dir: %w", err)
@@ -118,11 +148,11 @@ func run(ctx context.Context, hupCh <-chan os.Signal, watchPath, dbPath, fuseMou
 			slog.Debug("skip index close during canceled shutdown")
 			return
 		}
-		if err := idx.Close(); err != nil {
-			slog.Error("close index", "err", err)
+		if closeErr := idx.Close(); closeErr != nil {
+			slog.Error("close index", "err", closeErr)
 		}
 	}()
-	slog.Info("index ready", "path", dbPath)
+	slog.InfoContext(ctx, "index ready", "path", dbPath)
 
 	// Start the filesystem watcher (fanotify, inotify, or auto-detected).
 	w, err := watcher.New(ctx, watchPath, watcherBackend, watcher.Options{WatchHidden: watchHidden})
@@ -142,23 +172,25 @@ func run(ctx context.Context, hupCh <-chan os.Signal, watchPath, dbPath, fuseMou
 
 	watchErrCh := make(chan error, 1)
 	go func() { watchErrCh <- w.Run(ctx) }()
-	slog.Info("watcher running", "path", watchPath)
+	slog.InfoContext(ctx, "watcher running", "path", watchPath)
 
 	tags := xattr.New(nil)
 
 	// Initialize the background syncer.
 	syncer := isync.New(idx, tags, watchPath)
-	
+
 	// Start D-Bus so we can report daemon state changes.
 	dbusConn, dbusErr := dbus.NewDaemonBus()
 	if dbusErr != nil {
-		slog.Warn("dbus: failed to connect; continuing without D-Bus signals", "err", dbusErr)
+		slog.WarnContext(ctx, "dbus: failed to connect; continuing without D-Bus signals", "err", dbusErr)
 	} else {
 		defer dbusConn.Close()
 		syncer.OnStateChanged = func(state ipcv1.DaemonState) {
 			s := "idle"
 			// Translate protobuf states into strings for D-Bus
 			switch state {
+			case ipcv1.DaemonState_DAEMON_STATE_UNSPECIFIED, ipcv1.DaemonState_DAEMON_STATE_IDLE:
+				s = "idle"
 			case ipcv1.DaemonState_DAEMON_STATE_SCANNING:
 				s = "scanning"
 			case ipcv1.DaemonState_DAEMON_STATE_READY:
@@ -178,8 +210,8 @@ func run(ctx context.Context, hupCh <-chan os.Signal, watchPath, dbPath, fuseMou
 		syncErrCh <- syncer.Run(ctx)
 	}()
 	defer func() {
-		if err := waitForSyncerShutdown(syncErrCh); err != nil && !errors.Is(err, context.Canceled) {
-			slog.Warn("syncer shutdown timed out or failed", "err", err)
+		if syncErr := waitForSyncerShutdown(syncErrCh); syncErr != nil && !errors.Is(syncErr, context.Canceled) {
+			slog.Warn("syncer shutdown timed out or failed", "err", syncErr)
 		}
 	}()
 
@@ -190,7 +222,7 @@ func run(ctx context.Context, hupCh <-chan os.Signal, watchPath, dbPath, fuseMou
 	_ = os.MkdirAll(wasmCacheDir, 0o700)
 	wasmCache, err := wazero.NewCompilationCacheWithDir(wasmCacheDir)
 	if err != nil {
-		slog.Warn("wasm cache unavailable; compilation cache disabled", "err", err)
+		slog.WarnContext(ctx, "wasm cache unavailable; compilation cache disabled", "err", err)
 		wasmCache = nil
 	}
 
@@ -199,45 +231,45 @@ func run(ctx context.Context, hupCh <-chan os.Signal, watchPath, dbPath, fuseMou
 	registerBuiltins(pipeline)
 
 	harvReg := harvester.NewRegistry(harvester.DefaultDirs(), wasmCache)
-	if err := harvReg.Load(ctx, pipeline); err != nil {
-		slog.Warn("harvester registry load error", "err", err)
+	if loadErr := harvReg.Load(ctx, pipeline); loadErr != nil {
+		slog.WarnContext(ctx, "harvester registry load error", "err", loadErr)
 	}
 	defer harvReg.Close(ctx)
 
 	// Rule engine.
 	engine := rules.NewEngine()
 	ruleReg := rules.NewRegistry(rules.DefaultDirs(), wasmCache)
-	if err := ruleReg.Load(ctx, engine); err != nil {
-		slog.Warn("rule registry load error", "err", err)
+	if loadErr := ruleReg.Load(ctx, engine); loadErr != nil {
+		slog.WarnContext(ctx, "rule registry load error", "err", loadErr)
 	}
 	defer ruleReg.Close(ctx)
 
 	// --- M4: in-memory bipartite file-tag graph ---
 
 	fileGraph := graph.New()
-	if pairs, err := idx.ListFileTagPairs(ctx); err != nil {
-		slog.Warn("graph: failed to load file-tag pairs", "err", err)
+	if pairs, pairsErr := idx.ListFileTagPairs(ctx); pairsErr != nil {
+		slog.WarnContext(ctx, "graph: failed to load file-tag pairs", "err", pairsErr)
 	} else {
 		fileGraph.Load(ctx, pairs)
-		slog.Info("graph loaded", "pairs", len(pairs))
+		slog.InfoContext(ctx, "graph loaded", "pairs", len(pairs))
 	}
 
-	if embs, err := idx.ListEmbeddings(ctx); err != nil {
-		slog.Warn("graph: failed to load embeddings", "err", err)
+	if embs, embsErr := idx.ListEmbeddings(ctx); embsErr != nil {
+		slog.WarnContext(ctx, "graph: failed to load embeddings", "err", embsErr)
 	} else {
 		fileGraph.LoadEmbeddings(ctx, embs)
-		slog.Info("embeddings loaded", "vectors", len(embs))
+		slog.InfoContext(ctx, "embeddings loaded", "vectors", len(embs))
 	}
 
-	var embedder *embed.ONNXEmbedder
+	var embedder *vectorize.ONNXEmbedder
 	if embedModelPath != "" {
-		emb, err := embed.NewONNXEmbedder(ctx, embedModelPath)
-		if err != nil {
-			slog.Warn("failed to init embedder; continuing without vector search", "err", err)
+		emb, embErr := vectorize.NewONNXEmbedder(ctx, embedModelPath)
+		if embErr != nil {
+			slog.WarnContext(ctx, "failed to init embedder; continuing without vector search", "err", embErr)
 		} else {
 			embedder = emb
 			defer embedder.Close()
-			slog.Info("embedder initialized", "model", embedModelPath)
+			slog.InfoContext(ctx, "embedder initialized", "model", embedModelPath)
 		}
 	}
 
@@ -253,12 +285,12 @@ func run(ctx context.Context, hupCh <-chan os.Signal, watchPath, dbPath, fuseMou
 	sweeper := rules.NewSweeper(idx, tags, pipeline, engine)
 
 	// Start the IPC server.
-	if err := os.MkdirAll(filepath.Dir(sockPath), 0o700); err != nil {
-		return fmt.Errorf("create socket dir: %w", err)
+	if mkErr := os.MkdirAll(filepath.Dir(sockPath), 0o700); mkErr != nil {
+		return fmt.Errorf("create socket dir: %w", mkErr)
 	}
 
 	handleIPCRequest := func(ctx context.Context, req *ipcv1.Request) (*ipcv1.Response, error) {
-		switch r := req.Kind.(type) {
+		switch r := req.GetKind().(type) {
 		case *ipcv1.Request_Status:
 			state := syncer.State()
 			statusWarningsMu.Lock()
@@ -296,12 +328,12 @@ func run(ctx context.Context, hupCh <-chan os.Signal, watchPath, dbPath, fuseMou
 			var reloadErrs []string
 			engine.Reset()
 			newReg := rules.NewRegistry(rules.DefaultDirs(), wasmCache)
-			if err := newReg.Load(ctx, engine); err != nil {
-				reloadErrs = append(reloadErrs, err.Error())
+			if loadErr := newReg.Load(ctx, engine); loadErr != nil {
+				reloadErrs = append(reloadErrs, loadErr.Error())
 			}
 			go func() {
-				if err := sweeper.Sweep(ctx); err != nil && !errors.Is(err, context.Canceled) {
-					slog.WarnContext(ctx, "post-reload sweep error", "err", err)
+				if sweepErr := sweeper.Sweep(ctx); sweepErr != nil && !errors.Is(sweepErr, context.Canceled) {
+					slog.WarnContext(ctx, "post-reload sweep error", "err", sweepErr)
 				}
 			}()
 			return &ipcv1.Response{Kind: &ipcv1.Response_ReloadRules{
@@ -309,17 +341,17 @@ func run(ctx context.Context, hupCh <-chan os.Signal, watchPath, dbPath, fuseMou
 			}}, nil
 
 		default:
-			return nil, fmt.Errorf("unimplemented request type: %T", req.Kind)
+			return nil, fmt.Errorf("unimplemented request type: %T", req.GetKind())
 		}
 	}
 
 	ipcServer := ipc.NewServer(sockPath, handleIPCRequest)
-	if err := ipcServer.Start(ctx); err != nil {
-		return fmt.Errorf("start ipc server: %w", err)
+	if startErr := ipcServer.Start(ctx); startErr != nil {
+		return fmt.Errorf("start ipc server: %w", startErr)
 	}
 	defer ipcServer.Stop()
 
-	slog.Info("tilbo-daemon ready", "socket", sockPath)
+	slog.InfoContext(ctx, "tilbo-daemon ready", "socket", sockPath)
 	startFuseMount(ctx, fuseMount, idx, fileGraph, appendStatusWarning)
 
 	// Main event loop.
@@ -328,27 +360,30 @@ func run(ctx context.Context, hupCh <-chan os.Signal, watchPath, dbPath, fuseMou
 		case ev, ok := <-w.Events():
 			if !ok {
 				// Events channel closed: watcher has stopped.
-				return cleanShutdownErr(waitForWatcherShutdown(watchErrCh), ctx)
+				return cleanShutdownErr(ctx, waitForWatcherShutdown(watchErrCh))
 			}
-			handleFSEvent(ctx, ev, syncer, idx, proc, fileGraph)
+			handleFSEvent(ctx, ev, syncer, idx, proc)
 
-		case err := <-watchErrCh:
-			return cleanShutdownErr(err, ctx)
+		case watchErr := <-watchErrCh:
+			return cleanShutdownErr(ctx, watchErr)
 
 		case <-hupCh:
-			slog.Info("SIGHUP: reloading harvester and rule configuration")
-			reloadConfig(ctx, pipeline, engine, ruleReg, sweeper, wasmCache)
+			slog.InfoContext(ctx, "SIGHUP: reloading harvester and rule configuration")
+			reloadConfig(ctx, engine, ruleReg, sweeper, wasmCache)
 
 		case <-ctx.Done():
-			slog.Info("shutdown signal received; waiting for watcher")
-			return cleanShutdownErr(waitForWatcherShutdown(watchErrCh), ctx)
+			slog.InfoContext(ctx, "shutdown signal received; waiting for watcher")
+			return cleanShutdownErr(ctx, waitForWatcherShutdown(watchErrCh))
 		}
 	}
 }
 
 func fuseCapabilityWarning(err error, mountPoint string) string {
 	if isPermissionErr(err) {
-		return fmt.Sprintf("fuse mount at %q failed due to missing permissions. grant access to /dev/fuse and CAP_SYS_ADMIN, then restart tilbo-daemon", mountPoint)
+		return fmt.Sprintf(
+			"fuse mount at %q failed due to missing permissions. grant access to /dev/fuse and CAP_SYS_ADMIN, then restart tilbo-daemon",
+			mountPoint,
+		)
 	}
 	return fmt.Sprintf("fuse mount at %q failed: %v", mountPoint, err)
 }
@@ -388,7 +423,13 @@ func fuseMountDiagnostics(mountPoint string) string {
 	return strings.Join(parts, ", ")
 }
 
-func startFuseMount(ctx context.Context, fuseMount string, idx *index.DB, fileGraph *graph.Graph, appendStatusWarning func(string)) {
+func startFuseMount(
+	ctx context.Context,
+	fuseMount string,
+	idx *index.DB,
+	fileGraph *graph.Graph,
+	appendStatusWarning func(string),
+) {
 	if fuseMount == "" {
 		return
 	}
@@ -423,7 +464,7 @@ func startFuseMount(ctx context.Context, fuseMount string, idx *index.DB, fileGr
 				slog.Warn("fuse: unmount error", "err", err)
 			}
 
-		case <-time.After(5 * time.Second):
+		case <-time.After(fuseMountWaitTimeout):
 			diag := fuseMountDiagnostics(fuseMount)
 			slog.Warn("fuse: mount timed out; continuing without FUSE", "path", fuseMount, "diagnostics", diag)
 			appendStatusWarning(fmt.Sprintf("fuse mount timed out at %q. diagnostics: %s", fuseMount, diag))
@@ -433,7 +474,8 @@ func startFuseMount(ctx context.Context, fuseMount string, idx *index.DB, fileGr
 					{"fusermount3", "-u", "-z", fuseMount},
 					{"umount", "-l", fuseMount},
 				} {
-					if exec.Command(argv[0], argv[1:]...).Run() == nil { //nolint:gosec
+					//nolint:gosec // argv comes from fixed internal command list
+					if exec.CommandContext(context.Background(), argv[0], argv[1:]...).Run() == nil {
 						break
 					}
 				}
@@ -446,13 +488,19 @@ func startFuseMount(ctx context.Context, fuseMount string, idx *index.DB, fileGr
 }
 
 // reloadConfig reloads harvester and rule registries and triggers a rule sweep.
-func reloadConfig(ctx context.Context, pipeline *harvester.Pipeline, engine *rules.Engine, oldRuleReg *rules.Registry, sweeper *rules.Sweeper, cache wazero.CompilationCache) {
+func reloadConfig(
+	ctx context.Context,
+	engine *rules.Engine,
+	oldRuleReg *rules.Registry,
+	sweeper *rules.Sweeper,
+	cache wazero.CompilationCache,
+) {
 	oldRuleReg.Close(ctx)
 	engine.Reset()
 
 	newRuleReg := rules.NewRegistry(rules.DefaultDirs(), cache)
 	if err := newRuleReg.Load(ctx, engine); err != nil {
-		slog.Error("rule registry reload error", "err", err)
+		slog.ErrorContext(ctx, "rule registry reload error", "err", err)
 	}
 	// Replace the old registry pointer so the next SIGHUP closes the new one.
 	// Note: oldRuleReg pointer not updated here; caller must handle if needed.
@@ -460,7 +508,7 @@ func reloadConfig(ctx context.Context, pipeline *harvester.Pipeline, engine *rul
 	// (Close is idempotent — it nils the closers slice after running them).
 	_ = newRuleReg // held alive by sweeper/engine references
 
-	slog.Info("SIGHUP: rules reloaded; starting sweep")
+	slog.InfoContext(ctx, "SIGHUP: rules reloaded; starting sweep")
 	go func() {
 		if err := sweeper.Sweep(ctx); err != nil && !errors.Is(err, context.Canceled) {
 			slog.Warn("sweep error", "err", err)
@@ -469,7 +517,12 @@ func reloadConfig(ctx context.Context, pipeline *harvester.Pipeline, engine *rul
 }
 
 // handleRelated handles a RelatedFiles IPC request using the in-memory graph.
-func handleRelated(ctx context.Context, req *ipcv1.RelatedRequest, g *graph.Graph, idx *index.DB) (*ipcv1.Response, error) {
+func handleRelated(
+	ctx context.Context,
+	req *ipcv1.RelatedRequest,
+	g *graph.Graph,
+	idx *index.DB,
+) (*ipcv1.Response, error) {
 	maxHops := int(req.GetMaxHops())
 	if maxHops <= 0 {
 		maxHops = 2
@@ -505,7 +558,7 @@ func handleRelated(ctx context.Context, req *ipcv1.RelatedRequest, g *graph.Grap
 				SizeBytes: summary.SizeBytes,
 			},
 			Score:       r.Score,
-			HopDistance: uint32(r.HopDistance),
+			HopDistance: hopDistanceToUint32(r.HopDistance),
 		})
 	}
 	return &ipcv1.Response{
@@ -515,8 +568,24 @@ func handleRelated(ctx context.Context, req *ipcv1.RelatedRequest, g *graph.Grap
 	}, nil
 }
 
+func hopDistanceToUint32(v int) uint32 {
+	if v <= 0 {
+		return 0
+	}
+	if v > int(^uint32(0)) {
+		return ^uint32(0)
+	}
+	return uint32(v)
+}
+
 // handleFSEvent dispatches a filesystem event to the processing pipeline.
-func handleFSEvent(ctx context.Context, ev watcher.Event, syncer *isync.Syncer, idx *index.DB, proc *Processor, g *graph.Graph) {
+func handleFSEvent(
+	ctx context.Context,
+	ev watcher.Event,
+	syncer *isync.Syncer,
+	idx *index.DB,
+	proc *Processor,
+) {
 	slog.DebugContext(ctx, "fs event",
 		"path", ev.Path,
 		"old_path", ev.OldPath,
@@ -559,21 +628,24 @@ func handleFSEvent(ctx context.Context, ev watcher.Event, syncer *isync.Syncer, 
 
 // cleanShutdownErr returns nil if err is a context cancellation (expected on
 // shutdown) and the original error otherwise.
-func cleanShutdownErr(err error, ctx context.Context) error {
-	if err == nil || errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+func cleanShutdownErr(ctx context.Context, err error) error {
+	switch {
+	case err == nil:
 		return nil
-	}
-	if ctx.Err() != nil {
+	case errors.Is(err, context.Canceled), errors.Is(err, context.DeadlineExceeded):
 		return nil
+	case ctx.Err() != nil:
+		return nil //nolint:nilerr // context cancellation during shutdown is expected
+	default:
+		return err
 	}
-	return err
 }
 
 func waitForWatcherShutdown(watchErrCh <-chan error) error {
 	select {
 	case err := <-watchErrCh:
 		return err
-	case <-time.After(2 * time.Second):
+	case <-time.After(shutdownWaitTimeout):
 		slog.Warn("watcher shutdown timed out; continuing process exit")
 		return nil
 	}
@@ -583,8 +655,8 @@ func waitForSyncerShutdown(syncErrCh <-chan error) error {
 	select {
 	case err := <-syncErrCh:
 		return err
-	case <-time.After(2 * time.Second):
-		return fmt.Errorf("syncer shutdown timed out")
+	case <-time.After(shutdownWaitTimeout):
+		return errors.New("syncer shutdown timed out")
 	}
 }
 

@@ -166,8 +166,12 @@ func TestUpsertMeta(t *testing.T) {
 	}
 
 	var val, src string
-	if err := db.db.QueryRowContext(ctx,
-		"SELECT value, source FROM metadata WHERE file_id = ? AND key = ?", fileID, "author").Scan(&val, &src); err != nil {
+	if err := db.db.QueryRowContext(
+		ctx,
+		"SELECT value, source FROM metadata WHERE file_id = ? AND key = ?",
+		fileID,
+		"author",
+	).Scan(&val, &src); err != nil {
 		t.Fatalf("select metadata: %v", err)
 	}
 	if val != "bob" || src != "harvester" {

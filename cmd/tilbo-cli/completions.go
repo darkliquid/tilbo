@@ -14,9 +14,16 @@ import (
 // Kept short so a slow or unavailable daemon does not stall the shell prompt.
 const completionTimeout = 2 * time.Second
 
+const minMetaKeyArgs = 2
+
 // completeTags returns tag names from the daemon that match toComplete,
 // excluding any tags in the exclude list (already typed by the user).
-func completeTags(exclude []string, cmd *cobra.Command, _ []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func completeTags(
+	exclude []string,
+	cmd *cobra.Command,
+	_ []string,
+	toComplete string,
+) ([]string, cobra.ShellCompDirective) {
 	ctx, cancel := context.WithTimeout(cmd.Context(), completionTimeout)
 	defer cancel()
 
@@ -101,7 +108,7 @@ func completeMetaKey(cmd *cobra.Command, args []string, toComplete string) ([]st
 	if len(args) == 0 {
 		return nil, cobra.ShellCompDirectiveDefault
 	}
-	if len(args) >= 2 {
+	if len(args) >= minMetaKeyArgs {
 		return nil, cobra.ShellCompDirectiveNoFileComp
 	}
 

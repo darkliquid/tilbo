@@ -6,8 +6,9 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/darkliquid/tilbo/internal/xattr"
 	pkgxattr "github.com/pkg/xattr"
+
+	"github.com/darkliquid/tilbo/internal/xattr"
 )
 
 // newFile creates a temporary file and returns its path.
@@ -50,8 +51,8 @@ func TestReadWriteTags(t *testing.T) {
 
 	// Write tags.
 	want := []string{"work", "go", "important"}
-	if err := svc.WriteTags(ctx, path, want); err != nil {
-		t.Fatalf("WriteTags: %v", err)
+	if writeErr := svc.WriteTags(ctx, path, want); writeErr != nil {
+		t.Fatalf("WriteTags: %v", writeErr)
 	}
 
 	// Read back.
@@ -132,8 +133,8 @@ func TestReadWriteMeta(t *testing.T) {
 	}
 
 	// Write and read back.
-	if err := svc.WriteMeta(ctx, path, "codec", "h265"); err != nil {
-		t.Fatalf("WriteMeta: %v", err)
+	if writeErr := svc.WriteMeta(ctx, path, "codec", "h265"); writeErr != nil {
+		t.Fatalf("WriteMeta: %v", writeErr)
 	}
 	val, err = svc.ReadMeta(ctx, path, "codec")
 	if err != nil {
@@ -150,8 +151,8 @@ func TestReadAllMeta(t *testing.T) {
 
 	svc := xattr.New(nil)
 
-	if err := svc.WriteMeta(ctx, path, "codec", "h265"); err != nil {
-		t.Fatal(err)
+	if writeErr := svc.WriteMeta(ctx, path, "codec", "h265"); writeErr != nil {
+		t.Fatal(writeErr)
 	}
 	if err := svc.WriteMeta(ctx, path, "width", "1920"); err != nil {
 		t.Fatal(err)
@@ -196,8 +197,8 @@ func TestReadWriteSource(t *testing.T) {
 		"video": "rule:hd-video",
 		"work":  "manual",
 	}
-	if err := svc.WriteSource(ctx, path, want); err != nil {
-		t.Fatalf("WriteSource: %v", err)
+	if writeErr := svc.WriteSource(ctx, path, want); writeErr != nil {
+		t.Fatalf("WriteSource: %v", writeErr)
 	}
 
 	got, err := svc.ReadSource(ctx, path)

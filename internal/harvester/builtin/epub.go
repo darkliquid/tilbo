@@ -17,11 +17,16 @@ import (
 // Runs synchronously at priority 10 against application/epub+zip MIME types.
 type EPUBHarvester struct{}
 
+const (
+	epubPriority    = 10
+	epubMetaInitCap = 10
+)
+
 // NewEPUBHarvester returns an EPUBHarvester.
 func NewEPUBHarvester() *EPUBHarvester { return &EPUBHarvester{} }
 
 func (*EPUBHarvester) Name() string  { return "builtin:epub" }
-func (*EPUBHarvester) Priority() int { return 10 }
+func (*EPUBHarvester) Priority() int { return epubPriority }
 func (*EPUBHarvester) Async() bool   { return false }
 func (*EPUBHarvester) Matches(_ string, mime string) bool {
 	return mime == "application/epub+zip"
@@ -40,18 +45,18 @@ func (*EPUBHarvester) Matches(_ string, mime string) bool {
 func (*EPUBHarvester) Run(_ context.Context, input harvester.Input) (harvester.MetaMap, error) {
 	zr, err := zip.OpenReader(input.Path)
 	if err != nil {
-		return nil, nil
+		return harvester.MetaMap{}, nil
 	}
 	defer zr.Close()
 
 	opfPath, err := epubOPFPath(zr)
 	if err != nil || opfPath == "" {
-		return nil, nil
+		return harvester.MetaMap{}, nil
 	}
 
 	opfData, err := epubReadFile(zr, opfPath)
 	if err != nil {
-		return nil, nil
+		return harvester.MetaMap{}, nil
 	}
 
 	return parseOPF(opfData)
@@ -96,14 +101,14 @@ type opfPackage struct {
 }
 
 type opfMetadata struct {
-	Titles       []opfDCElem `xml:"title"`
-	Creators     []opfCreator `xml:"creator"`
-	Publishers   []opfDCElem `xml:"publisher"`
-	Languages    []opfDCElem `xml:"language"`
-	Subjects     []opfDCElem `xml:"subject"`
-	Descriptions []opfDCElem `xml:"description"`
+	Titles       []opfDCElem     `xml:"title"`
+	Creators     []opfCreator    `xml:"creator"`
+	Publishers   []opfDCElem     `xml:"publisher"`
+	Languages    []opfDCElem     `xml:"language"`
+	Subjects     []opfDCElem     `xml:"subject"`
+	Descriptions []opfDCElem     `xml:"description"`
 	Identifiers  []opfIdentifier `xml:"identifier"`
-	Dates        []opfDate `xml:"date"`
+	Dates        []opfDate       `xml:"date"`
 	// EPUB3 <meta> elements (for series etc.)
 	Metas []opfMeta `xml:"meta"`
 }
@@ -136,13 +141,14 @@ type opfMeta struct {
 	Value    string `xml:",chardata"`     // EPUB3
 }
 
+//nolint:gocyclo,cyclop,funlen,gocognit // explicit OPF precedence rules are clearer as linear field extraction
 func parseOPF(data []byte) (harvester.MetaMap, error) {
 	var pkg opfPackage
 	if err := xml.Unmarshal(data, &pkg); err != nil {
-		return nil, nil
+		return nil, err
 	}
 	md := pkg.Metadata
-	meta := make(harvester.MetaMap, 10)
+	meta := make(harvester.MetaMap, epubMetaInitCap)
 
 	// Title
 	if len(md.Titles) > 0 {
@@ -247,7 +253,7 @@ func parseOPF(data []byte) (harvester.MetaMap, error) {
 	}
 
 	if len(meta) == 0 {
-		return nil, nil
+		return harvester.MetaMap{}, nil
 	}
 	return meta, nil
 }
@@ -278,5 +284,5 @@ func epubReadFile(zr *zip.ReadCloser, name string) ([]byte, error) {
 			return io.ReadAll(rc)
 		}
 	}
-	return nil, nil
+	return []byte{}, nil
 }

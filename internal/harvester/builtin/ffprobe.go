@@ -17,6 +17,14 @@ type FFProbeHarvester struct {
 	binary string
 }
 
+const (
+	ffprobePriority        = 10
+	ffprobeRunTimeout      = 30 * time.Second
+	ffprobeMetaInitCap     = 12
+	bitrateKbpsDivisor     = 1000
+	splitFractionPartCount = 2
+)
+
 // NewFFProbeHarvester looks up ffprobe on PATH. Returns nil if not found.
 func NewFFProbeHarvester() *FFProbeHarvester {
 	bin, err := exec.LookPath("ffprobe")
@@ -27,7 +35,7 @@ func NewFFProbeHarvester() *FFProbeHarvester {
 }
 
 func (h *FFProbeHarvester) Name() string  { return "builtin:ffprobe" }
-func (h *FFProbeHarvester) Priority() int { return 10 }
+func (h *FFProbeHarvester) Priority() int { return ffprobePriority }
 func (h *FFProbeHarvester) Async() bool   { return true }
 func (h *FFProbeHarvester) Matches(_ string, mime string) bool {
 	return matchesMIMEPrefix(mime, "video/", "audio/")
@@ -40,15 +48,15 @@ type ffprobeOutput struct {
 }
 
 type ffprobeStream struct {
-	CodecType        string         `json:"codec_type"`
-	CodecName        string         `json:"codec_name"`
-	Width            int            `json:"width"`
-	Height           int            `json:"height"`
-	AvgFrameRate     string         `json:"avg_frame_rate"`
-	Channels         int            `json:"channels"`
-	ColorTransfer    string         `json:"color_transfer"`
-	ColorPrimaries   string         `json:"color_primaries"`
-	Tags             map[string]any `json:"tags"`
+	CodecType      string         `json:"codec_type"`
+	CodecName      string         `json:"codec_name"`
+	Width          int            `json:"width"`
+	Height         int            `json:"height"`
+	AvgFrameRate   string         `json:"avg_frame_rate"`
+	Channels       int            `json:"channels"`
+	ColorTransfer  string         `json:"color_transfer"`
+	ColorPrimaries string         `json:"color_primaries"`
+	Tags           map[string]any `json:"tags"`
 }
 
 type ffprobeFormat struct {
@@ -67,8 +75,10 @@ type ffprobeFormat struct {
 //   - "duration_seconds"         — total duration (float64)
 //   - "bitrate_kbps"             — bit rate in kbps (float64)
 //   - "title", "artist", "album" — audio tag fields when present (string)
+//
+//nolint:gocognit // stream/tag extraction keeps codec-specific branches explicit
 func (h *FFProbeHarvester) Run(ctx context.Context, input harvester.Input) (harvester.MetaMap, error) {
-	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, ffprobeRunTimeout)
 	defer cancel()
 
 	//nolint:gosec // binary path comes from exec.LookPath; input.Path is a daemon-trusted file path.
@@ -82,22 +92,22 @@ func (h *FFProbeHarvester) Run(ctx context.Context, input harvester.Input) (harv
 
 	out, err := cmd.Output()
 	if err != nil {
-		return nil, nil // ffprobe can't handle the file — skip gracefully
+		return harvester.MetaMap{}, nil // ffprobe can't handle the file — skip gracefully
 	}
 
 	var fp ffprobeOutput
 	if err := json.Unmarshal(out, &fp); err != nil {
-		return nil, nil
+		return harvester.MetaMap{}, nil
 	}
 
-	meta := make(harvester.MetaMap, 12)
+	meta := make(harvester.MetaMap, ffprobeMetaInitCap)
 
 	// Duration and bitrate from format block.
 	if d, err := strconv.ParseFloat(fp.Format.Duration, 64); err == nil && d > 0 {
 		meta["duration_seconds"] = d
 	}
 	if br, err := strconv.ParseFloat(fp.Format.BitRate, 64); err == nil && br > 0 {
-		meta["bitrate_kbps"] = br / 1000
+		meta["bitrate_kbps"] = br / bitrateKbpsDivisor
 	}
 
 	// Audio tags (title, artist, album) from format tags.
@@ -149,7 +159,7 @@ func (h *FFProbeHarvester) Run(ctx context.Context, input harvester.Input) (harv
 	}
 
 	if len(meta) == 0 {
-		return nil, nil
+		return harvester.MetaMap{}, nil
 	}
 	return meta, nil
 }
@@ -177,7 +187,7 @@ func parseFrameRate(s string) float64 {
 
 // splitFraction parses a "num/den" rational string and writes the components
 // into *num and *den. Returns (2, nil) on success — the integer follows the
-// fmt.Sscanf convention of returning the count of successfully parsed items.
+// [fmt.Sscanf] convention of returning the count of successfully parsed items.
 func splitFraction(s string, num, den *int64) (int, error) {
 	for i, c := range s {
 		if c == '/' {
@@ -190,7 +200,7 @@ func splitFraction(s string, num, den *int64) (int, error) {
 				return 0, err
 			}
 			*num, *den = n, d
-			return 2, nil
+			return splitFractionPartCount, nil
 		}
 	}
 	return 0, strconv.ErrSyntax

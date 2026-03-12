@@ -4,9 +4,12 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
+	"math"
 
 	ipcv1 "github.com/darkliquid/tilbo/internal/ipc/gen/tilbo/ipc/v1"
 )
+
+const frameLenPrefixBytes = 4
 
 // WriteEnvelope writes a length-prefixed protobuf message to w.
 func WriteEnvelope(w io.Writer, env *ipcv1.Envelope) error {
@@ -14,11 +17,15 @@ func WriteEnvelope(w io.Writer, env *ipcv1.Envelope) error {
 	if size > 100*1024*1024 { // 100MB sanity limit
 		return fmt.Errorf("message too large: %d bytes", size)
 	}
+	if size > math.MaxUint32 {
+		return fmt.Errorf("message too large for framing: %d bytes", size)
+	}
 
-	buf := make([]byte, 4+size)
-	binary.LittleEndian.PutUint32(buf[0:4], uint32(size))
+	buf := make([]byte, frameLenPrefixBytes+size)
+	// #nosec G115 -- size is bounded by max frame checks above.
+	binary.LittleEndian.PutUint32(buf[0:frameLenPrefixBytes], uint32(size))
 
-	if _, err := env.MarshalToVT(buf[4:]); err != nil {
+	if _, err := env.MarshalToVT(buf[frameLenPrefixBytes:]); err != nil {
 		return fmt.Errorf("marshal envelope: %w", err)
 	}
 
@@ -31,7 +38,7 @@ func WriteEnvelope(w io.Writer, env *ipcv1.Envelope) error {
 
 // ReadEnvelope reads a length-prefixed protobuf message from r.
 func ReadEnvelope(r io.Reader) (*ipcv1.Envelope, error) {
-	var lenBuf [4]byte
+	var lenBuf [frameLenPrefixBytes]byte
 	if _, err := io.ReadFull(r, lenBuf[:]); err != nil {
 		return nil, fmt.Errorf("read frame length: %w", err)
 	}

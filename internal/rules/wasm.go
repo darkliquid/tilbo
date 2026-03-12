@@ -17,6 +17,8 @@ import (
 	"github.com/darkliquid/tilbo/internal/harvester"
 )
 
+const wasmEvalTimeout = 5 * time.Second
+
 // WASMRule evaluates a WASM module to produce tags. The module reads a
 // JSON-encoded MetaMap from stdin and writes a JSON-encoded []string to stdout.
 // A non-zero exit code means the rule adds no tags.
@@ -28,7 +30,13 @@ type WASMRule struct {
 	compiled wazero.CompiledModule
 }
 
-func newWASMRule(ctx context.Context, name string, priority int, path string, cache wazero.CompilationCache) (*WASMRule, error) {
+func newWASMRule(
+	ctx context.Context,
+	name string,
+	priority int,
+	path string,
+	cache wazero.CompilationCache,
+) (*WASMRule, error) {
 	rtCfg := wazero.NewRuntimeConfig()
 	if cache != nil {
 		rtCfg = rtCfg.WithCompilationCache(cache)
@@ -73,7 +81,7 @@ func (r *WASMRule) Priority() int { return r.priority }
 
 // Eval runs the WASM module with meta on stdin and decodes the returned tag list.
 func (r *WASMRule) Eval(ctx context.Context, meta harvester.MetaMap) ([]string, error) {
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, wasmEvalTimeout)
 	defer cancel()
 
 	inJSON, err := json.Marshal(meta)

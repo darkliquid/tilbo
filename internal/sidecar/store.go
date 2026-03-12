@@ -70,7 +70,7 @@ func (s *Store) Read(ctx context.Context, path string) (*Data, error) {
 	if err := json.Unmarshal(b, &data); err != nil {
 		return nil, fmt.Errorf("parse sidecar JSON: %w", err)
 	}
-	
+
 	if data.Meta == nil {
 		data.Meta = make(map[string]string)
 	}
@@ -90,8 +90,8 @@ func (s *Store) Write(ctx context.Context, path string, data *Data) error {
 
 	// If everything is empty, we can just delete the sidecar to keep things clean.
 	if data.Tags == "" && len(data.Meta) == 0 && len(data.Source) == 0 {
-		if err := s.db.DeleteSidecar(ctx, inode, dev); err != nil {
-			return fmt.Errorf("remove sidecar from db: %w", err)
+		if delErr := s.db.DeleteSidecar(ctx, inode, dev); delErr != nil {
+			return fmt.Errorf("remove sidecar from db: %w", delErr)
 		}
 		return nil
 	}

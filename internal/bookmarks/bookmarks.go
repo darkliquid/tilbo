@@ -9,7 +9,9 @@ import (
 	"strings"
 )
 
-// InjectVirtualTags ensures that the standard tilbo root folders are present 
+const bookmarkLineMaxParts = 2
+
+// InjectVirtualTags ensures that the standard tilbo root folders are present
 // in standard GTK file chooser sidebars for non-portal applications.
 func InjectVirtualTags(fuseMountPath string) {
 	configDir, err := os.UserConfigDir()
@@ -41,7 +43,7 @@ func InjectVirtualTags(fuseMountPath string) {
 
 func injectBookmarks(file string, toAdd []struct{ URI, Label string }) error {
 	// Create parent directory if missing
-	if err := os.MkdirAll(filepath.Dir(file), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(file), 0o750); err != nil {
 		return err
 	}
 
@@ -58,12 +60,12 @@ func injectBookmarks(file string, toAdd []struct{ URI, Label string }) error {
 				continue
 			}
 			lines = append(lines, line)
-			
+
 			// A bookmark line is "URI Label" or just "URI"
-			parts := strings.SplitN(line, " ", 2)
+			parts := strings.SplitN(line, " ", bookmarkLineMaxParts)
 			existingURIs[parts[0]] = true
 		}
-		f.Close()
+		_ = f.Close()
 	} else if !os.IsNotExist(err) {
 		return err
 	}
@@ -82,5 +84,6 @@ func injectBookmarks(file string, toAdd []struct{ URI, Label string }) error {
 	}
 
 	// Write back
-	return os.WriteFile(file, []byte(strings.Join(lines, "\n")+"\n"), 0644)
+	// #nosec G703 -- file path is controlled by InjectVirtualTags() known config targets.
+	return os.WriteFile(file, []byte(strings.Join(lines, "\n")+"\n"), 0o600)
 }

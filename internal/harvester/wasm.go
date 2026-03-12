@@ -70,7 +70,7 @@ func (h *WASMHarvester) Close(ctx context.Context) error {
 func (h *WASMHarvester) Run(ctx context.Context, input Input) (MetaMap, error) {
 	timeout := time.Duration(h.cfg.Harvester.TimeoutMS) * time.Millisecond
 	if timeout <= 0 {
-		timeout = 5 * time.Second
+		timeout = defaultHarvesterTimeout
 	}
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
@@ -100,7 +100,7 @@ func (h *WASMHarvester) Run(ctx context.Context, input Input) (MetaMap, error) {
 					"exit_code", exitErr.ExitCode(),
 					"stderr", stderr.String(),
 				)
-				return nil, nil
+				return MetaMap{}, nil
 			}
 			// Exit code 0: success; fall through to read stdout.
 		} else {
@@ -109,7 +109,7 @@ func (h *WASMHarvester) Run(ctx context.Context, input Input) (MetaMap, error) {
 	}
 
 	if stdout.Len() == 0 {
-		return nil, nil
+		return MetaMap{}, nil
 	}
 
 	var meta MetaMap

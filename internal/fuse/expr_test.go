@@ -5,6 +5,7 @@ import (
 	"time"
 )
 
+//nolint:gocognit // table assertions intentionally enumerate parser edge cases
 func TestParseExpr_Tags(t *testing.T) {
 	cases := []struct {
 		name       string
@@ -68,6 +69,7 @@ func TestParseExpr_Tags(t *testing.T) {
 	}
 }
 
+//nolint:gocognit // table assertions intentionally enumerate parser edge cases
 func TestParseExpr_Special(t *testing.T) {
 	t.Run("@recent", func(t *testing.T) {
 		e, err := ParseExpr("@recent")

@@ -12,19 +12,19 @@ type mockDB struct {
 	data map[uint64][]byte
 }
 
-func (m *mockDB) ReadSidecar(ctx context.Context, inode, dev uint64) ([]byte, error) {
+func (m *mockDB) ReadSidecar(_ context.Context, inode, _ uint64) ([]byte, error) {
 	if b, ok := m.data[inode]; ok {
 		return b, nil
 	}
 	return nil, nil
 }
 
-func (m *mockDB) WriteSidecar(ctx context.Context, inode, dev uint64, data []byte) error {
+func (m *mockDB) WriteSidecar(_ context.Context, inode, _ uint64, data []byte) error {
 	m.data[inode] = data
 	return nil
 }
 
-func (m *mockDB) DeleteSidecar(ctx context.Context, inode, dev uint64) error {
+func (m *mockDB) DeleteSidecar(_ context.Context, inode, _ uint64) error {
 	delete(m.data, inode)
 	return nil
 }

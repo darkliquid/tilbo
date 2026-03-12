@@ -3,9 +3,12 @@ package harvester
 import (
 	"context"
 	"log/slog"
+	"maps"
 	"sort"
 	"sync"
 )
+
+const mergedMetaInitCap = 32
 
 // Pipeline executes registered harvesters concurrently for a given file and merges
 // their outputs into a single MetaMap. Higher-priority harvesters win on key conflicts.
@@ -115,11 +118,9 @@ func runAndMerge(ctx context.Context, hs []Harvester, input Input) (MetaMap, err
 		return results[i].priority < results[j].priority
 	})
 
-	merged := make(MetaMap, 32)
+	merged := make(MetaMap, mergedMetaInitCap)
 	for _, r := range results {
-		for k, v := range r.meta {
-			merged[k] = v
-		}
+		maps.Copy(merged, r.meta)
 	}
 	return merged, nil
 }

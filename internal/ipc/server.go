@@ -27,6 +27,8 @@ type Server struct {
 	ln      net.Listener
 }
 
+const genericErrorCode = 3
+
 // NewServer creates a new IPC Server listening on path.
 func NewServer(path string, handler Handler) *Server {
 	return &Server{
@@ -42,7 +44,7 @@ func (s *Server) Start(ctx context.Context) error {
 		return fmt.Errorf("remove stale socket: %w", err)
 	}
 
-	ln, err := net.Listen("unix", s.path)
+	ln, err := (&net.ListenConfig{}).Listen(ctx, "unix", s.path)
 	if err != nil {
 		return fmt.Errorf("listen %q: %w", s.path, err)
 	}
@@ -57,10 +59,14 @@ func (s *Server) Start(ctx context.Context) error {
 func (s *Server) Stop() {
 	if s.closing.CompareAndSwap(false, true) {
 		if s.ln != nil {
-			s.ln.Close()
+			if err := s.ln.Close(); err != nil {
+				slog.Debug("ipc server close listener", "err", err)
+			}
 		}
 		s.wg.Wait()
-		os.Remove(s.path)
+		if err := os.Remove(s.path); err != nil && !os.IsNotExist(err) {
+			slog.Debug("ipc server remove socket", "path", s.path, "err", err)
+		}
 	}
 }
 
@@ -109,7 +115,7 @@ func (s *Server) handleConn(ctx context.Context, conn net.Conn) {
 func (s *Server) processEnvelope(ctx context.Context, conn net.Conn, env *ipcv1.Envelope) {
 	req := env.GetRequest()
 	if req == nil {
-		slog.WarnContext(ctx, "ipc server received non-request envelope", "req_id", env.RequestId)
+		slog.WarnContext(ctx, "ipc server received non-request envelope", "req_id", env.GetRequestId())
 		return
 	}
 
@@ -118,7 +124,7 @@ func (s *Server) processEnvelope(ctx context.Context, conn net.Conn, env *ipcv1.
 		resp = &ipcv1.Response{
 			Kind: &ipcv1.Response_Error{
 				Error: &ipcv1.ErrorResponse{
-					Code:    3, // generic invalid/internal error code
+					Code:    genericErrorCode, // generic invalid/internal error code
 					Message: err.Error(),
 				},
 			},
@@ -127,7 +133,7 @@ func (s *Server) processEnvelope(ctx context.Context, conn net.Conn, env *ipcv1.
 		resp = &ipcv1.Response{
 			Kind: &ipcv1.Response_Error{
 				Error: &ipcv1.ErrorResponse{
-					Code:    3,
+					Code:    genericErrorCode,
 					Message: "internal error: nil response",
 				},
 			},
@@ -135,7 +141,7 @@ func (s *Server) processEnvelope(ctx context.Context, conn net.Conn, env *ipcv1.
 	}
 
 	outEnv := &ipcv1.Envelope{
-		RequestId: env.RequestId,
+		RequestId: env.GetRequestId(),
 		Payload: &ipcv1.Envelope_Response{
 			Response: resp,
 		},

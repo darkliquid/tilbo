@@ -21,7 +21,7 @@ var ruleCmd = &cobra.Command{
 var ruleListCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List all configured tagging rules",
-	RunE: func(cmd *cobra.Command, args []string) error {
+	RunE: func(cmd *cobra.Command, _ []string) error {
 		engine := rules.NewEngine()
 		reg := rules.NewRegistry(rules.DefaultDirs(), nil)
 		if err := reg.Load(cmd.Context(), engine); err != nil {
@@ -39,7 +39,7 @@ var ruleListCmd = &cobra.Command{
 var ruleValidateCmd = &cobra.Command{
 	Use:   "validate",
 	Short: "Validate rule syntax and configuration",
-	RunE: func(cmd *cobra.Command, args []string) error {
+	RunE: func(cmd *cobra.Command, _ []string) error {
 		engine := rules.NewEngine()
 		reg := rules.NewRegistry(rules.DefaultDirs(), nil)
 		err := reg.Load(cmd.Context(), engine)
@@ -53,11 +53,11 @@ var ruleValidateCmd = &cobra.Command{
 }
 
 var ruleTestCmd = &cobra.Command{
-	Use:   "test <path>",
-	Short: "Test rules evaluation against a local file",
-	Args:  cobra.ExactArgs(1),
+	Use:               "test <path>",
+	Short:             "Test rules evaluation against a local file",
+	Args:              cobra.ExactArgs(1),
 	ValidArgsFunction: completeFilePathOnly,
-	RunE: func(cmd *cobra.Command, args []string) error {
+	RunE: func(_ *cobra.Command, args []string) error {
 		path := absPath(args[0])
 		ctx := context.Background()
 

@@ -22,11 +22,18 @@ import (
 // will override these results when ffprobe is installed.
 type MediaHarvester struct{}
 
+const (
+	mediaPriority           = 5
+	mediaMetaInitCap        = 12
+	mkvDefaultTimecodeScale = 1_000_000
+	nanosPerSecond          = 1e9
+)
+
 // NewMediaHarvester returns a MediaHarvester.
 func NewMediaHarvester() *MediaHarvester { return &MediaHarvester{} }
 
 func (*MediaHarvester) Name() string  { return "builtin:media" }
-func (*MediaHarvester) Priority() int { return 5 }
+func (*MediaHarvester) Priority() int { return mediaPriority }
 func (*MediaHarvester) Async() bool   { return false }
 func (*MediaHarvester) Matches(_ string, mime string) bool {
 	return matchesMIMEPrefix(mime, "video/") || matchesMIMEPrefix(mime, "audio/")
@@ -46,7 +53,7 @@ func (*MediaHarvester) Matches(_ string, mime string) bool {
 //   - "year"             — release year from tags (float64)
 //   - "track"            — track number (float64)
 func (*MediaHarvester) Run(_ context.Context, input harvester.Input) (harvester.MetaMap, error) {
-	meta := make(harvester.MetaMap, 12)
+	meta := make(harvester.MetaMap, mediaMetaInitCap)
 
 	switch {
 	case isMP4MIME(input.MIME) || isMP4Ext(input.Path):
@@ -59,7 +66,7 @@ func (*MediaHarvester) Run(_ context.Context, input harvester.Input) (harvester.
 	readAudioTags(input.Path, meta)
 
 	if len(meta) == 0 {
-		return nil, nil
+		return harvester.MetaMap{}, nil
 	}
 	return meta, nil
 }
@@ -86,11 +93,9 @@ func probeMP4(path string, meta harvester.MetaMap) {
 		case mp4.CodecAVC1:
 			if t.AVC != nil {
 				meta["codec"] = "h264"
-				if _, hasW := meta["width"]; !hasW {
-					// width/height come from the track edit list / sample dimensions;
-					// go-mp4 doesn't surface pixel dimensions directly in ProbeInfo,
-					// so we skip them here (ffprobe will fill them if available).
-				}
+				// Width/height come from track edit list/sample dimensions. go-mp4
+				// doesn't expose pixel dimensions directly in ProbeInfo, so ffprobe
+				// remains the source for those fields when available.
 			}
 		case mp4.CodecMP4A:
 			meta["audio_codec"] = "aac"
@@ -157,7 +162,9 @@ func (h *mkvHandler) HandleFloat(id mkvparse.ElementID, value float64, _ mkvpars
 func (h *mkvHandler) HandleInteger(id mkvparse.ElementID, value int64, _ mkvparse.ElementInfo) error {
 	switch {
 	case h.inInfo && id == mkvparse.TimecodeScaleElement:
-		h.timecodeScale = uint64(value)
+		if value > 0 {
+			h.timecodeScale = uint64(value)
+		}
 	case h.inAudio && id == mkvparse.ChannelsElement:
 		h.audioChannels = float64(value)
 	default:
@@ -188,7 +195,7 @@ func probeMKV(path string, meta harvester.MetaMap) {
 	}
 	defer f.Close()
 
-	h := &mkvHandler{timecodeScale: 1_000_000} // default per Matroska spec
+	h := &mkvHandler{timecodeScale: mkvDefaultTimecodeScale} // default per Matroska spec
 	if err := mkvparse.ParseSections(f, h,
 		mkvparse.InfoElement,
 		mkvparse.TracksElement,
@@ -198,7 +205,7 @@ func probeMKV(path string, meta harvester.MetaMap) {
 
 	if h.duration > 0 && h.timecodeScale > 0 {
 		// duration is in timecode units; timecodeScale is ns per unit.
-		meta["duration_seconds"] = h.duration * float64(h.timecodeScale) / 1e9
+		meta["duration_seconds"] = h.duration * float64(h.timecodeScale) / nanosPerSecond
 	}
 	if h.title != "" {
 		meta["title"] = h.title

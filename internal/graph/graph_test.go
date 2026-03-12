@@ -172,7 +172,7 @@ func TestGraph_SeedNotInResults(t *testing.T) {
 func buildGraph(nFiles, nCommonTags, nSpecificTags, tagsPerFile int) (*Graph, string) {
 	pairs := make([][2]string, 0, nFiles*tagsPerFile)
 	firstPath := ""
-	for i := 0; i < nFiles; i++ {
+	for i := range nFiles {
 		path := fmt.Sprintf("/bench/%d", i)
 		if i == 0 {
 			firstPath = path

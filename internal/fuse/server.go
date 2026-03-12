@@ -17,11 +17,27 @@ import (
 	"github.com/darkliquid/tilbo/internal/index"
 )
 
+const (
+	rootSpecialDirCount = 4
+
+	attrTimeoutLongSec = 30
+	attrTimeoutFastSec = 2
+
+	browseRelatedHops  = 3
+	browseRelatedLimit = 100
+	browseVecWeight    = 0.4
+
+	searchLimitLarge = 10_000
+
+	dirReadOnlyMode = 0o555
+	symlinkMode     = 0o777
+)
+
 // stableInode returns a stable inode number for a real file path using FNV-64a.
 // Collision handling is done by the inodeMap in Root.
 func stableInode(realPath string) uint64 {
 	h := fnv.New64a()
-	h.Write([]byte(realPath))
+	_, _ = h.Write([]byte(realPath))
 	ino := h.Sum64()
 	if ino == 0 {
 		ino = 1
@@ -40,9 +56,9 @@ type Root struct {
 	g   *graph.Graph
 
 	// inodeMap resolves stable inode collisions: realPath → inode.
-	mu       sync.Mutex
-	inoMap   map[string]uint64
-	inoUsed  map[uint64]string
+	mu      sync.Mutex
+	inoMap  map[string]uint64
+	inoUsed map[uint64]string
 }
 
 // NewRoot creates the root node for the FUSE filesystem.
@@ -64,14 +80,15 @@ func (r *Root) allocInode(realPath string) uint64 {
 	}
 	ino := stableInode(realPath)
 	// Linear probe on collision.
-	probe := realPath
+	var probe strings.Builder
+	probe.WriteString(realPath)
 	for {
 		if existing, conflict := r.inoUsed[ino]; !conflict || existing == realPath {
 			break
 		}
-		probe += "\x00"
+		probe.WriteString("\x00")
 		h := fnv.New64a()
-		h.Write([]byte(probe))
+		_, _ = h.Write([]byte(probe.String()))
 		ino = h.Sum64()
 		if ino == 0 {
 			ino = 1
@@ -97,7 +114,7 @@ func (r *Root) Readdir(ctx context.Context) (fs.DirStream, syscall.Errno) {
 		slog.WarnContext(ctx, "fuse: readdir root: list tags failed", "err", err)
 		return nil, syscall.EIO
 	}
-	entries := make([]fuse.DirEntry, 0, len(tags)+4)
+	entries := make([]fuse.DirEntry, 0, len(tags)+rootSpecialDirCount)
 	for _, tag := range tags {
 		entries = append(entries, fuse.DirEntry{
 			Name: percentEncode(tag),
@@ -121,9 +138,9 @@ func (r *Root) Rmdir(_ context.Context, _ string) syscall.Errno { return syscall
 // browser; everything else is parsed as a tag expression and returns a TagDir.
 func (r *Root) Lookup(ctx context.Context, name string, out *fuse.EntryOut) (*fs.Inode, syscall.Errno) {
 	if name == "@browse" {
-		out.SetAttrTimeout(30)
-		out.SetEntryTimeout(2)
-		out.Attr.Mode = syscall.S_IFDIR | 0o555
+		out.SetAttrTimeout(attrTimeoutLongSec)
+		out.SetEntryTimeout(attrTimeoutFastSec)
+		out.Mode = syscall.S_IFDIR | dirReadOnlyMode
 		child := r.NewPersistentInode(ctx, &BrowseDir{root: r},
 			fs.StableAttr{Mode: syscall.S_IFDIR})
 		return child, 0
@@ -135,9 +152,9 @@ func (r *Root) Lookup(ctx context.Context, name string, out *fuse.EntryOut) (*fs
 		return nil, syscall.ENOENT
 	}
 
-	out.SetAttrTimeout(30)
-	out.SetEntryTimeout(2)
-	out.Attr.Mode = syscall.S_IFDIR | 0o555
+	out.SetAttrTimeout(attrTimeoutLongSec)
+	out.SetEntryTimeout(attrTimeoutFastSec)
+	out.Mode = syscall.S_IFDIR | dirReadOnlyMode
 
 	child := r.NewPersistentInode(ctx, &TagDir{
 		root: r,
@@ -149,8 +166,8 @@ func (r *Root) Lookup(ctx context.Context, name string, out *fuse.EntryOut) (*fs
 
 // Getattr returns attributes for the root directory.
 func (r *Root) Getattr(_ context.Context, _ fs.FileHandle, out *fuse.AttrOut) syscall.Errno {
-	out.Mode = syscall.S_IFDIR | 0o555
-	out.SetTimeout(30)
+	out.Mode = syscall.S_IFDIR | dirReadOnlyMode
+	out.SetTimeout(attrTimeoutLongSec)
 	return 0
 }
 
@@ -177,11 +194,11 @@ var _ fs.NodeRmdirer = (*TagDir)(nil)
 // query executes the tag expression against the index and returns results.
 func (d *TagDir) query(ctx context.Context) ([]index.SearchResult, error) {
 	if d.expr.IsSimilar() {
-		results := d.root.g.Related(ctx, d.expr.SeedPath, 3, 100, 1.0, 0.4)
+		results := d.root.g.Related(ctx, d.expr.SeedPath, browseRelatedHops, browseRelatedLimit, 1.0, browseVecWeight)
 		return graphToSearchResults(results), nil
 	}
 
-	params, err := d.expr.ToSearchParams(10_000)
+	params, err := d.expr.ToSearchParams(searchLimitLarge)
 	if err != nil {
 		return nil, err
 	}
@@ -241,10 +258,10 @@ func (d *TagDir) Lookup(ctx context.Context, name string, out *fuse.EntryOut) (*
 		}
 
 		ino := d.root.allocInode(r.Path)
-		out.Attr.Ino = ino
-		out.SetAttrTimeout(30)
+		out.Ino = ino
+		out.SetAttrTimeout(attrTimeoutLongSec)
 		out.SetEntryTimeout(1)
-		out.Attr.Mode = syscall.S_IFLNK | 0o777
+		out.Mode = syscall.S_IFLNK | symlinkMode
 
 		child := d.NewPersistentInode(ctx, &FileLink{
 			realPath: r.Path,
@@ -259,14 +276,20 @@ func (d *TagDir) Lookup(ctx context.Context, name string, out *fuse.EntryOut) (*
 
 // Getattr returns directory attributes.
 func (d *TagDir) Getattr(_ context.Context, _ fs.FileHandle, out *fuse.AttrOut) syscall.Errno {
-	out.Mode = syscall.S_IFDIR | 0o555
-	out.SetTimeout(2)
+	out.Mode = syscall.S_IFDIR | dirReadOnlyMode
+	out.SetTimeout(attrTimeoutFastSec)
 	return 0
 }
 
 // Rename handles cross-directory moves: retag semantics.
 // Source and destination must both be TagDir nodes; file is retagged accordingly.
-func (d *TagDir) Rename(ctx context.Context, name string, newParent fs.InodeEmbedder, newName string, flags uint32) syscall.Errno {
+func (d *TagDir) Rename(
+	ctx context.Context,
+	name string,
+	newParent fs.InodeEmbedder,
+	newName string,
+	_ uint32,
+) syscall.Errno {
 	dest, ok := newParent.(*TagDir)
 	if !ok {
 		// Moving out of the FUSE mount — not supported.
@@ -367,9 +390,14 @@ func (l *FileLink) Getattr(_ context.Context, _ fs.FileHandle, out *fuse.AttrOut
 	if err != nil {
 		return syscall.ENOENT
 	}
-	out.Mode = syscall.S_IFLNK | 0o777
-	out.Size = uint64(st.Size())
-	out.SetTimeout(30)
+	out.Mode = syscall.S_IFLNK | symlinkMode
+	if st.Size() > 0 {
+		// #nosec G115 -- negative values are rejected by the guard above.
+		out.Size = uint64(st.Size())
+	} else {
+		out.Size = 0
+	}
+	out.SetTimeout(attrTimeoutLongSec)
 	return 0
 }
 
@@ -429,9 +457,9 @@ func (d *BrowseDir) Readdir(ctx context.Context) (fs.DirStream, syscall.Errno) {
 //   - "!<tag>"  → new BrowseDir with <tag> added to excludeTags
 //   - "<tag>"   → new BrowseDir with <tag> added to includeTags
 func (d *BrowseDir) Lookup(ctx context.Context, name string, out *fuse.EntryOut) (*fs.Inode, syscall.Errno) {
-	out.SetAttrTimeout(2)
-	out.SetEntryTimeout(2)
-	out.Attr.Mode = syscall.S_IFDIR | 0o555
+	out.SetAttrTimeout(attrTimeoutFastSec)
+	out.SetEntryTimeout(attrTimeoutFastSec)
+	out.Mode = syscall.S_IFDIR | dirReadOnlyMode
 
 	if name == "@files" {
 		child := d.NewPersistentInode(ctx, &BrowseFilesDir{
@@ -472,8 +500,8 @@ func (d *BrowseDir) Lookup(ctx context.Context, name string, out *fuse.EntryOut)
 
 // Getattr returns directory attributes.
 func (d *BrowseDir) Getattr(_ context.Context, _ fs.FileHandle, out *fuse.AttrOut) syscall.Errno {
-	out.Mode = syscall.S_IFDIR | 0o555
-	out.SetTimeout(2)
+	out.Mode = syscall.S_IFDIR | dirReadOnlyMode
+	out.SetTimeout(attrTimeoutFastSec)
 	return 0
 }
 
@@ -501,7 +529,7 @@ func (f *BrowseFilesDir) browseQuery(ctx context.Context) ([]index.SearchResult,
 	results, _, err := f.root.idx.Search(ctx, index.SearchParams{
 		Tags:       f.includeTags,
 		TagExclude: f.excludeTags,
-		Limit:      10_000,
+		Limit:      searchLimitLarge,
 		SortBy:     []string{"mtime:desc"},
 	})
 	return results, err
@@ -551,10 +579,10 @@ func (f *BrowseFilesDir) Lookup(ctx context.Context, name string, out *fuse.Entr
 			return nil, syscall.ENOENT
 		}
 		ino := f.root.allocInode(r.Path)
-		out.Attr.Ino = ino
-		out.SetAttrTimeout(30)
+		out.Ino = ino
+		out.SetAttrTimeout(attrTimeoutLongSec)
 		out.SetEntryTimeout(1)
-		out.Attr.Mode = syscall.S_IFLNK | 0o777
+		out.Mode = syscall.S_IFLNK | symlinkMode
 		child := f.NewPersistentInode(ctx, &FileLink{realPath: r.Path},
 			fs.StableAttr{Mode: syscall.S_IFLNK, Ino: ino})
 		return child, 0
@@ -564,8 +592,8 @@ func (f *BrowseFilesDir) Lookup(ctx context.Context, name string, out *fuse.Entr
 
 // Getattr returns directory attributes.
 func (f *BrowseFilesDir) Getattr(_ context.Context, _ fs.FileHandle, out *fuse.AttrOut) syscall.Errno {
-	out.Mode = syscall.S_IFDIR | 0o555
-	out.SetTimeout(2)
+	out.Mode = syscall.S_IFDIR | dirReadOnlyMode
+	out.SetTimeout(attrTimeoutFastSec)
 	return 0
 }
 

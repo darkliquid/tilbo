@@ -96,17 +96,9 @@ func absPath(path string) string {
 	return filepath.Join(cwd, path)
 }
 
-// checkErr prints an error message and exits if err is non-nil.
-func checkErr(err error) {
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "error: %v\n", err)
-		os.Exit(1)
-	}
-}
-
 // daemonError extracts an error message from a response if it is an ErrorResponse.
 func daemonError(resp *ipcv1.Response) error {
-	if e, ok := resp.Kind.(*ipcv1.Response_Error); ok {
+	if e, ok := resp.GetKind().(*ipcv1.Response_Error); ok {
 		return fmt.Errorf("daemon: %s (code %d)", e.Error.GetMessage(), e.Error.GetCode())
 	}
 	return nil

@@ -4,12 +4,16 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"maps"
+	"math"
 
 	"github.com/darkliquid/tilbo/internal/graph"
 	"github.com/darkliquid/tilbo/internal/index"
 	ipcv1 "github.com/darkliquid/tilbo/internal/ipc/gen/tilbo/ipc/v1"
 	"github.com/darkliquid/tilbo/internal/xattr"
 )
+
+const daemonInternalErrCode = 3
 
 // errResponse wraps an error as an IPC ErrorResponse.
 func errResponse(code uint32, msg string) *ipcv1.Response {
@@ -33,15 +37,13 @@ func handleSearch(ctx context.Context, req *ipcv1.SearchRequest, idx *index.DB) 
 
 	results, total, err := idx.Search(ctx, params)
 	if err != nil {
-		return errResponse(3, fmt.Sprintf("search failed: %v", err)), nil
+		return errResponse(daemonInternalErrCode, fmt.Sprintf("search failed: %v", err)), nil
 	}
 
 	files := make([]*ipcv1.FileResult, 0, len(results))
 	for _, r := range results {
 		meta := make(map[string]string, len(r.Metadata))
-		for k, v := range r.Metadata {
-			meta[k] = v
-		}
+		maps.Copy(meta, r.Metadata)
 		files = append(files, &ipcv1.FileResult{
 			Path:      r.Path,
 			Tags:      r.Tags,
@@ -54,19 +56,31 @@ func handleSearch(ctx context.Context, req *ipcv1.SearchRequest, idx *index.DB) 
 	return &ipcv1.Response{Kind: &ipcv1.Response_Search{
 		Search: &ipcv1.SearchResponse{
 			Files: files,
-			Total: uint32(total),
+			Total: saturatingUint32FromInt(total),
 		},
 	}}, nil
 }
 
+func saturatingUint32FromInt(v int) uint32 {
+	if v <= 0 {
+		return 0
+	}
+	if v > math.MaxUint32 {
+		return math.MaxUint32
+	}
+	return uint32(v)
+}
+
 // handleTag executes an Add/Remove/Set tag IPC request.
+//
+//nolint:gocognit // preserves explicit operation semantics and D-Bus diff emission in one flow
 func handleTag(
 	ctx context.Context,
 	req *ipcv1.TagRequest,
 	idx *index.DB,
 	tags *xattr.Service,
 	g *graph.Graph,
-	OnFileTagged func(path string, added, removed []string),
+	onFileTagged func(path string, added, removed []string),
 ) (*ipcv1.Response, error) {
 	opStr := map[ipcv1.TagOperation]string{
 		ipcv1.TagOperation_TAG_OPERATION_UNSPECIFIED: "",
@@ -75,7 +89,7 @@ func handleTag(
 		ipcv1.TagOperation_TAG_OPERATION_SET:         "set",
 	}[req.GetOperation()]
 	if opStr == "" {
-		return errResponse(3, "invalid tag operation"), nil
+		return errResponse(daemonInternalErrCode, "invalid tag operation"), nil
 	}
 
 	pathsOK := make([]string, 0)
@@ -85,7 +99,7 @@ func handleTag(
 	for _, path := range req.GetPaths() {
 		// Calculate differences to emit D-Bus signal
 		var added, removed []string
-		if OnFileTagged != nil {
+		if onFileTagged != nil {
 			oldTags, _ := idx.GetFileTags(ctx, path)
 			// At this point we already modified the index... wait, no we haven't?
 			// The index modification is below, so GetFileTags here gets the *old* tags!
@@ -95,20 +109,38 @@ func handleTag(
 			}
 			newSet := make(map[string]bool)
 			switch req.GetOperation() {
+			case ipcv1.TagOperation_TAG_OPERATION_UNSPECIFIED:
+				for t := range oldSet {
+					newSet[t] = true
+				}
 			case ipcv1.TagOperation_TAG_OPERATION_ADD:
-				for t := range oldSet { newSet[t] = true }
-				for _, t := range req.GetTags() { newSet[t] = true }
+				for t := range oldSet {
+					newSet[t] = true
+				}
+				for _, t := range req.GetTags() {
+					newSet[t] = true
+				}
 			case ipcv1.TagOperation_TAG_OPERATION_REMOVE:
-				for t := range oldSet { newSet[t] = true }
-				for _, t := range req.GetTags() { delete(newSet, t) }
+				for t := range oldSet {
+					newSet[t] = true
+				}
+				for _, t := range req.GetTags() {
+					delete(newSet, t)
+				}
 			case ipcv1.TagOperation_TAG_OPERATION_SET:
-				for _, t := range req.GetTags() { newSet[t] = true }
+				for _, t := range req.GetTags() {
+					newSet[t] = true
+				}
 			}
 			for t := range newSet {
-				if !oldSet[t] { added = append(added, t) }
+				if !oldSet[t] {
+					added = append(added, t)
+				}
 			}
 			for t := range oldSet {
-				if !newSet[t] { removed = append(removed, t) }
+				if !newSet[t] {
+					removed = append(removed, t)
+				}
 			}
 		}
 
@@ -128,8 +160,8 @@ func handleTag(
 		}
 		pathsOK = append(pathsOK, path)
 
-		if OnFileTagged != nil && (len(added) > 0 || len(removed) > 0) {
-			OnFileTagged(path, added, removed)
+		if onFileTagged != nil && (len(added) > 0 || len(removed) > 0) {
+			onFileTagged(path, added, removed)
 		}
 	}
 
@@ -146,7 +178,7 @@ func handleTag(
 func handleMetadata(ctx context.Context, req *ipcv1.MetadataRequest, idx *index.DB) (*ipcv1.Response, error) {
 	vals, sources, err := idx.GetFileMeta(ctx, req.GetPath())
 	if err != nil {
-		return errResponse(3, fmt.Sprintf("metadata query failed: %v", err)), nil
+		return errResponse(daemonInternalErrCode, fmt.Sprintf("metadata query failed: %v", err)), nil
 	}
 	if vals == nil {
 		return errResponse(1, fmt.Sprintf("file not found: %s", req.GetPath())), nil
@@ -163,18 +195,19 @@ func handleMetadata(ctx context.Context, req *ipcv1.MetadataRequest, idx *index.
 
 // handleMetadataSet sets or deletes a single metadata key for a file.
 func handleMetadataSet(ctx context.Context, req *ipcv1.MetadataSetRequest, idx *index.DB) (*ipcv1.Response, error) {
-	fileID, err := idx.GetFileIDByPath(ctx, req.GetPath())
-	if err != nil {
+	fileID, lookupErr := idx.GetFileIDByPath(ctx, req.GetPath())
+	if lookupErr != nil {
+		//nolint:nilerr // handler reports domain errors via response payload
 		return errResponse(1, fmt.Sprintf("file not in index: %s", req.GetPath())), nil
 	}
 
 	if req.GetValue() == "" {
 		if err := idx.DeleteMeta(ctx, req.GetPath(), req.GetKey()); err != nil {
-			return errResponse(3, fmt.Sprintf("delete meta failed: %v", err)), nil
+			return errResponse(daemonInternalErrCode, fmt.Sprintf("delete meta failed: %v", err)), nil
 		}
 	} else {
 		if err := idx.UpsertMeta(ctx, fileID, req.GetKey(), req.GetValue(), "user"); err != nil {
-			return errResponse(3, fmt.Sprintf("set meta failed: %v", err)), nil
+			return errResponse(daemonInternalErrCode, fmt.Sprintf("set meta failed: %v", err)), nil
 		}
 	}
 
@@ -187,7 +220,7 @@ func handleMetadataSet(ctx context.Context, req *ipcv1.MetadataSetRequest, idx *
 func handleListTags(ctx context.Context, req *ipcv1.ListTagsRequest, idx *index.DB) (*ipcv1.Response, error) {
 	all, err := idx.ListAllTags(ctx)
 	if err != nil {
-		return errResponse(3, fmt.Sprintf("list tags failed: %v", err)), nil
+		return errResponse(daemonInternalErrCode, fmt.Sprintf("list tags failed: %v", err)), nil
 	}
 	prefix := req.GetPrefix()
 	tags := all

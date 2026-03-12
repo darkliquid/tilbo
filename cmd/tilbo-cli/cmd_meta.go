@@ -12,6 +12,12 @@ import (
 	ipcv1 "github.com/darkliquid/tilbo/internal/ipc/gen/tilbo/ipc/v1"
 )
 
+const (
+	metaTabPadding  = 2
+	metaSetArgCount = 3
+	metaDelArgCount = 2
+)
+
 var metaCmd = &cobra.Command{
 	Use:   "meta",
 	Short: "Manage file metadata",
@@ -66,7 +72,7 @@ var metaShowCmd = &cobra.Command{
 				keys = append(keys, k)
 			}
 			sort.Strings(keys)
-			w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+			w := tabwriter.NewWriter(os.Stdout, 0, 0, metaTabPadding, ' ', 0)
 			fmt.Fprintln(w, "KEY\tVALUE\tSOURCE")
 			for _, k := range keys {
 				fmt.Fprintf(w, "%s\t%s\t%s\n", k, meta[k], sources[k])
@@ -79,7 +85,7 @@ var metaShowCmd = &cobra.Command{
 var metaSetCmd = &cobra.Command{
 	Use:               "set <path> <key> <value>",
 	Short:             "Set a metadata key on a file",
-	Args:              cobra.ExactArgs(3),
+	Args:              cobra.ExactArgs(metaSetArgCount),
 	ValidArgsFunction: completeFilePathOnly, // key and value are free-form
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ctx := cmd.Context()
@@ -109,7 +115,7 @@ var metaDeleteCmd = &cobra.Command{
 	Use:               "delete <path> <key>",
 	Aliases:           []string{"del", "rm"},
 	Short:             "Delete a metadata key from a file",
-	Args:              cobra.ExactArgs(2),
+	Args:              cobra.ExactArgs(metaDelArgCount),
 	ValidArgsFunction: completeMetaKey,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ctx := cmd.Context()
