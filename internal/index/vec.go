@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
+	"log/slog"
 	"math"
 	"strings"
 )
@@ -166,6 +167,13 @@ func (d *DB) ListEmbeddings(ctx context.Context) (map[string][]float32, error) {
 		JOIN files f ON f.id = fe.file_id`
 	rows, err := d.db.QueryContext(ctx, query)
 	if err != nil {
+		// "no such function: vec_to_blob" means the sqlite-vec extension is not
+		// loaded. Treat as empty rather than a hard error; embeddings are
+		// optional and only generated when an embed model is configured.
+		if strings.Contains(err.Error(), "no such function") || strings.Contains(err.Error(), "no such module") {
+			slog.DebugContext(ctx, "index: sqlite-vec extension not available; embeddings not loaded", "err", err)
+			return nil, nil
+		}
 		return nil, fmt.Errorf("index: list embeddings: %w", err)
 	}
 	defer rows.Close()

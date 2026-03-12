@@ -123,6 +123,31 @@ FUSE virtual filesystem, and exposes a Unix socket IPC endpoint.
 | `--log-format <fmt>` | `text` | Log format: `text` or `json` |
 | `--log-level <lvl>` | `info` | Log level: `debug`, `info`, `warn`, `error` |
 
+### Watcher Permissions and Fallback Modes
+
+`tilbo-daemon` prefers fanotify, but fanotify setup depends on kernel and runtime permissions.
+
+- `CAP_SYS_ADMIN` is required for fanotify mark setup and FID handle resolution.
+- On a normal supported mount, the daemon uses full fanotify mode.
+- If `FAN_MARK_FILESYSTEM` fails with `EXDEV` (common with btrfs subvolumes), the daemon switches to a hybrid mode:
+  - fanotify mount marks for write/modify notifications,
+  - inotify for create/delete/move events under the configured watch root.
+- If fanotify is unavailable (for example missing capability), the daemon falls back fully to inotify.
+
+To grant capability to a local build:
+
+```sh
+sudo setcap cap_sys_admin+ep ./tilbo-daemon
+```
+
+Verify capability:
+
+```sh
+getcap ./tilbo-daemon
+```
+
+Note: rebuilding the binary clears file capabilities, so re-apply `setcap` after each rebuild.
+
 ### Signals
 
 | Signal | Behaviour |

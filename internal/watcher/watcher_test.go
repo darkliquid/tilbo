@@ -136,3 +136,23 @@ func TestDebounce_IndependentPaths(t *testing.T) {
 		t.Errorf("/tmp/b.txt: want EventDelete, got %v", seen["/tmp/b.txt"])
 	}
 }
+
+func TestPathUnderWatchRoot(t *testing.T) {
+	tests := []struct {
+		path string
+		root string
+		want bool
+	}{
+		{path: "/home/darkliquid", root: "/home/darkliquid", want: true},
+		{path: "/home/darkliquid/docs/file.txt", root: "/home/darkliquid", want: true},
+		{path: "/home/darkliquid-elsewhere/file.txt", root: "/home/darkliquid", want: false},
+		{path: "/", root: "/", want: true},
+	}
+
+	for _, tt := range tests {
+		got := pathUnderWatchRoot(tt.path, tt.root)
+		if got != tt.want {
+			t.Fatalf("pathUnderWatchRoot(%q, %q) = %v, want %v", tt.path, tt.root, got, tt.want)
+		}
+	}
+}

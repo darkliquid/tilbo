@@ -21,7 +21,7 @@ import (
 // (Wd + Mask + Cookie + Len fields; the variable-length Name follows).
 const inotifyEventBaseSize = int(unsafe.Sizeof(unix.InotifyEvent{}))
 
-const inotifyMask = unix.IN_CREATE | unix.IN_CLOSE_WRITE | unix.IN_MODIFY |
+const inotifyDefaultMask = unix.IN_CREATE | unix.IN_CLOSE_WRITE | unix.IN_MODIFY |
 	unix.IN_DELETE | unix.IN_MOVED_FROM | unix.IN_MOVED_TO
 
 // inotifyImpl is an inotify-based fallback used when fanotify is unavailable.
@@ -29,6 +29,7 @@ const inotifyMask = unix.IN_CREATE | unix.IN_CLOSE_WRITE | unix.IN_MODIFY |
 // created at runtime.
 type inotifyImpl struct {
 	fd      int
+	mask    uint32
 	mu      sync.Mutex
 	wdToDir map[int32]string // watch descriptor → absolute directory path
 	out     chan Event
@@ -40,6 +41,11 @@ type inotifyImpl struct {
 
 // newInotify creates an inotify watcher rooted at mountPath.
 func newInotify(ctx context.Context, mountPath string, watchHidden bool) (*inotifyImpl, error) {
+	return newInotifyWithMask(ctx, mountPath, watchHidden, inotifyDefaultMask)
+}
+
+// newInotifyWithMask creates an inotify watcher rooted at mountPath with a custom mask.
+func newInotifyWithMask(ctx context.Context, mountPath string, watchHidden bool, mask uint32) (*inotifyImpl, error) {
 	fd, err := unix.InotifyInit1(unix.IN_CLOEXEC | unix.IN_NONBLOCK)
 	if err != nil {
 		return nil, fmt.Errorf("inotify_init: %w", err)
@@ -47,6 +53,7 @@ func newInotify(ctx context.Context, mountPath string, watchHidden bool) (*inoti
 
 	impl := &inotifyImpl{
 		fd:          fd,
+		mask:        mask,
 		wdToDir:     make(map[int32]string),
 		out:         make(chan Event, outChanBuf),
 		pending:     make(map[string]*debounceEntry),
@@ -65,7 +72,7 @@ func newInotify(ctx context.Context, mountPath string, watchHidden bool) (*inoti
 // addWatch registers dir with inotify. Missing or non-directory paths are
 // silently ignored so that a race between creation and watch-add is safe.
 func (i *inotifyImpl) addWatch(ctx context.Context, dir string) error {
-	wd, err := unix.InotifyAddWatch(i.fd, dir, inotifyMask)
+	wd, err := unix.InotifyAddWatch(i.fd, dir, i.mask)
 	if err != nil {
 		if err == unix.ENOTDIR || err == unix.ENOENT {
 			return nil
@@ -129,6 +136,8 @@ func (i *inotifyImpl) run(ctx context.Context) error {
 
 	go func() {
 		<-ctx.Done()
+		// Closing the inotify fd guarantees poll/read wake up on shutdown.
+		_ = unix.Close(i.fd)
 		pipew.Close()
 	}()
 
@@ -151,6 +160,12 @@ func (i *inotifyImpl) run(ctx context.Context) error {
 		}
 		if pollfds[1].Revents&(unix.POLLIN|unix.POLLHUP) != 0 {
 			return ctx.Err()
+		}
+		if pollfds[0].Revents&(unix.POLLERR|unix.POLLHUP|unix.POLLNVAL) != 0 {
+			if ctx.Err() != nil {
+				return ctx.Err()
+			}
+			return fmt.Errorf("inotify: poll: revents=0x%x", pollfds[0].Revents)
 		}
 		if pollfds[0].Revents&unix.POLLIN == 0 {
 			continue

@@ -163,6 +163,16 @@ func main() {
 		// but tag fetching will fail gracefully.
 	}
 
+	daemonPermissionMessage := ""
+	if daemonClient != nil {
+		status, statusErr := daemonClient.Status(b.ctx)
+		if statusErr != nil {
+			slog.Warn("Failed to query daemon status", "err", statusErr)
+		} else {
+			daemonPermissionMessage = permissionPromptFromWarnings(status.GetWarnings())
+		}
+	}
+
 	// Initialize Traditional Tagged Filesystem Model
 	b.fsModel = NewFileSystemModel(b.app.QObject, daemonClient, b.mainThreadCh)
 	// Access the underlying QObject pointer correctly in miqt.
@@ -175,6 +185,8 @@ func main() {
 	b.engine.RootContext().SetContextProperty("placesModel", b.placesModel.QObject)
 
 	b.engine.RootContext().SetContextProperty2("daemonConnected", qt6.NewQVariant8(daemonClient != nil))
+	b.engine.RootContext().SetContextProperty2("daemonNeedsPermission", qt6.NewQVariant8(daemonPermissionMessage != ""))
+	b.engine.RootContext().SetContextProperty2("daemonPermissionMessage", qt6.NewQVariant14(daemonPermissionMessage))
 
 	// Setup thread-safety bridge
 	b.timer = qt6.NewQTimer()

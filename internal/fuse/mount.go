@@ -28,6 +28,15 @@ func Mount(ctx context.Context, mountPoint string, idx *index.DB, g *graph.Graph
 		return nil, fmt.Errorf("fuse: create mount point %s: %w", mountPoint, err)
 	}
 
+	// Pre-check /dev/fuse access. Without it the kernel mount call blocks
+	// silently and only times out seconds later.
+	if f, err := os.OpenFile("/dev/fuse", os.O_RDWR, 0); err != nil {
+		return nil, fmt.Errorf("fuse: /dev/fuse not accessible (add user to 'fuse' group or install fuse package): %w", err)
+	} else {
+		f.Close()
+	}
+	slog.DebugContext(ctx, "fuse: /dev/fuse accessible, attempting mount", "path", mountPoint)
+
 	root := NewRoot(idx, g)
 
 	cacheTTLDir := 2 * time.Second

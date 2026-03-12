@@ -13,12 +13,17 @@ import (
 	"os/exec"
 	"os/signal"
 	"path/filepath"
+	"strings"
+	"sync"
 	"syscall"
 	"time"
 
 	"github.com/tetratelabs/wazero"
 
+	"github.com/darkliquid/tilbo/internal/bookmarks"
+	"github.com/darkliquid/tilbo/internal/dbus"
 	"github.com/darkliquid/tilbo/internal/embed"
+	tilbofuse "github.com/darkliquid/tilbo/internal/fuse"
 	"github.com/darkliquid/tilbo/internal/graph"
 	"github.com/darkliquid/tilbo/internal/harvester"
 	"github.com/darkliquid/tilbo/internal/index"
@@ -28,10 +33,6 @@ import (
 	isync "github.com/darkliquid/tilbo/internal/sync"
 	"github.com/darkliquid/tilbo/internal/watcher"
 	"github.com/darkliquid/tilbo/internal/xattr"
-	"github.com/darkliquid/tilbo/internal/dbus"
-	"github.com/darkliquid/tilbo/internal/bookmarks"
-
-	tilbofuse "github.com/darkliquid/tilbo/internal/fuse"
 )
 
 // version, commit, and buildDate are injected at build time by goreleaser via
@@ -113,6 +114,10 @@ func run(ctx context.Context, hupCh <-chan os.Signal, watchPath, dbPath, fuseMou
 		return fmt.Errorf("open index: %w", err)
 	}
 	defer func() {
+		if ctx.Err() != nil {
+			slog.Debug("skip index close during canceled shutdown")
+			return
+		}
 		if err := idx.Close(); err != nil {
 			slog.Error("close index", "err", err)
 		}
@@ -123,6 +128,16 @@ func run(ctx context.Context, hupCh <-chan os.Signal, watchPath, dbPath, fuseMou
 	w, err := watcher.New(ctx, watchPath, watcherBackend, watcher.Options{WatchHidden: watchHidden})
 	if err != nil {
 		return fmt.Errorf("create watcher: %w", err)
+	}
+	statusWarnings := append([]string(nil), w.CapabilityWarnings()...)
+	var statusWarningsMu sync.Mutex
+	appendStatusWarning := func(warning string) {
+		if warning == "" {
+			return
+		}
+		statusWarningsMu.Lock()
+		defer statusWarningsMu.Unlock()
+		statusWarnings = append(statusWarnings, warning)
 	}
 
 	watchErrCh := make(chan error, 1)
@@ -158,9 +173,13 @@ func run(ctx context.Context, hupCh <-chan os.Signal, watchPath, dbPath, fuseMou
 		}
 	}
 
+	syncErrCh := make(chan error, 1)
 	go func() {
-		if err := syncer.Run(ctx); err != nil {
-			slog.Error("syncer failed", "err", err)
+		syncErrCh <- syncer.Run(ctx)
+	}()
+	defer func() {
+		if err := waitForSyncerShutdown(syncErrCh); err != nil && !errors.Is(err, context.Canceled) {
+			slog.Warn("syncer shutdown timed out or failed", "err", err)
 		}
 	}()
 
@@ -233,56 +252,6 @@ func run(ctx context.Context, hupCh <-chan os.Signal, watchPath, dbPath, fuseMou
 	// Sweeper (re-evaluates all files after rule reload).
 	sweeper := rules.NewSweeper(idx, tags, pipeline, engine)
 
-	// --- M3: FUSE virtual filesystem ---
-	// Mount in a goroutine so a blocking mount(2) call (e.g. in rootless
-	// containers where the kernel stalls the syscall) does not prevent the IPC
-	// server from starting. If the mount does not complete within 5 s we log a
-	// warning and continue without FUSE.
-	if fuseMount != "" {
-		type mountResult struct {
-			srv *tilbofuse.Server
-			err error
-		}
-		ch := make(chan mountResult, 1)
-		go func() {
-			srv, err := tilbofuse.Mount(ctx, fuseMount, idx, fileGraph)
-			ch <- mountResult{srv, err}
-		}()
-		select {
-		case res := <-ch:
-			if res.err != nil {
-				slog.Warn("fuse: mount failed; continuing without FUSE", "path", fuseMount, "err", res.err)
-			} else {
-				bookmarks.InjectVirtualTags(fuseMount)
-				slog.Info("fuse: mounted successfully", "path", fuseMount)
-				defer func() {
-					if err := res.srv.Unmount(); err != nil {
-						slog.Warn("fuse: unmount error", "err", err)
-					}
-				}()
-			}
-		case <-time.After(5 * time.Second):
-			slog.Warn("fuse: mount timed out; continuing without FUSE", "path", fuseMount)
-			// Attempt a lazy unmount so the mount point doesn't block
-			// subsequent accesses if the kernel-side mount was established
-			// before the FUSE server connected. Errors are expected when the
-			// mount was never set up; ignore them.
-			go func() {
-				for _, argv := range [][]string{
-					{"fusermount3", "-u", "-z", fuseMount},
-					{"umount", "-l", fuseMount},
-				} {
-					if exec.Command(argv[0], argv[1:]...).Run() == nil { //nolint:gosec
-						break
-					}
-				}
-			}()
-		case <-ctx.Done():
-			return ctx.Err()
-		}
-	}
-	// --- end M3 ---
-
 	// Start the IPC server.
 	if err := os.MkdirAll(filepath.Dir(sockPath), 0o700); err != nil {
 		return fmt.Errorf("create socket dir: %w", err)
@@ -292,11 +261,15 @@ func run(ctx context.Context, hupCh <-chan os.Signal, watchPath, dbPath, fuseMou
 		switch r := req.Kind.(type) {
 		case *ipcv1.Request_Status:
 			state := syncer.State()
+			statusWarningsMu.Lock()
+			warnings := append([]string(nil), statusWarnings...)
+			statusWarningsMu.Unlock()
 			return &ipcv1.Response{
 				Kind: &ipcv1.Response_Status{
 					Status: &ipcv1.StatusResponse{
 						State:        state.State,
 						FilesIndexed: state.FilesIndexed,
+						Warnings:     warnings,
 					},
 				},
 			}, nil
@@ -347,6 +320,7 @@ func run(ctx context.Context, hupCh <-chan os.Signal, watchPath, dbPath, fuseMou
 	defer ipcServer.Stop()
 
 	slog.Info("tilbo-daemon ready", "socket", sockPath)
+	startFuseMount(ctx, fuseMount, idx, fileGraph, appendStatusWarning)
 
 	// Main event loop.
 	for {
@@ -354,7 +328,7 @@ func run(ctx context.Context, hupCh <-chan os.Signal, watchPath, dbPath, fuseMou
 		case ev, ok := <-w.Events():
 			if !ok {
 				// Events channel closed: watcher has stopped.
-				return cleanShutdownErr(<-watchErrCh, ctx)
+				return cleanShutdownErr(waitForWatcherShutdown(watchErrCh), ctx)
 			}
 			handleFSEvent(ctx, ev, syncer, idx, proc, fileGraph)
 
@@ -367,9 +341,108 @@ func run(ctx context.Context, hupCh <-chan os.Signal, watchPath, dbPath, fuseMou
 
 		case <-ctx.Done():
 			slog.Info("shutdown signal received; waiting for watcher")
-			return cleanShutdownErr(<-watchErrCh, ctx)
+			return cleanShutdownErr(waitForWatcherShutdown(watchErrCh), ctx)
 		}
 	}
+}
+
+func fuseCapabilityWarning(err error, mountPoint string) string {
+	if isPermissionErr(err) {
+		return fmt.Sprintf("fuse mount at %q failed due to missing permissions. grant access to /dev/fuse and CAP_SYS_ADMIN, then restart tilbo-daemon", mountPoint)
+	}
+	return fmt.Sprintf("fuse mount at %q failed: %v", mountPoint, err)
+}
+
+func isPermissionErr(err error) bool {
+	if err == nil {
+		return false
+	}
+	if errors.Is(err, os.ErrPermission) || errors.Is(err, syscall.EPERM) || errors.Is(err, syscall.EACCES) {
+		return true
+	}
+	msg := strings.ToLower(err.Error())
+	return strings.Contains(msg, "permission denied") || strings.Contains(msg, "operation not permitted")
+}
+
+func fuseMountDiagnostics(mountPoint string) string {
+	var parts []string
+
+	if _, err := os.Stat(mountPoint); err != nil {
+		parts = append(parts, fmt.Sprintf("mountpoint stat=%v", err))
+	} else {
+		parts = append(parts, "mountpoint=ok")
+	}
+
+	if _, err := os.Stat("/dev/fuse"); err != nil {
+		parts = append(parts, fmt.Sprintf("/dev/fuse=%v", err))
+	} else {
+		parts = append(parts, "/dev/fuse=present")
+	}
+
+	if _, err := exec.LookPath("fusermount3"); err != nil {
+		parts = append(parts, "fusermount3=missing")
+	} else {
+		parts = append(parts, "fusermount3=present")
+	}
+
+	return strings.Join(parts, ", ")
+}
+
+func startFuseMount(ctx context.Context, fuseMount string, idx *index.DB, fileGraph *graph.Graph, appendStatusWarning func(string)) {
+	if fuseMount == "" {
+		return
+	}
+
+	type mountResult struct {
+		srv *tilbofuse.Server
+		err error
+	}
+
+	go func() {
+		ch := make(chan mountResult, 1)
+		slog.Debug("fuse: starting mount attempt", "path", fuseMount)
+
+		go func() {
+			srv, err := tilbofuse.Mount(ctx, fuseMount, idx, fileGraph)
+			ch <- mountResult{srv, err}
+		}()
+
+		select {
+		case res := <-ch:
+			if res.err != nil {
+				slog.Warn("fuse: mount failed; continuing without FUSE", "path", fuseMount, "err", res.err)
+				appendStatusWarning(fuseCapabilityWarning(res.err, fuseMount))
+				return
+			}
+
+			bookmarks.InjectVirtualTags(fuseMount)
+			slog.Info("fuse: mounted successfully", "path", fuseMount)
+
+			<-ctx.Done()
+			if err := res.srv.Unmount(); err != nil {
+				slog.Warn("fuse: unmount error", "err", err)
+			}
+
+		case <-time.After(5 * time.Second):
+			diag := fuseMountDiagnostics(fuseMount)
+			slog.Warn("fuse: mount timed out; continuing without FUSE", "path", fuseMount, "diagnostics", diag)
+			appendStatusWarning(fmt.Sprintf("fuse mount timed out at %q. diagnostics: %s", fuseMount, diag))
+
+			go func() {
+				for _, argv := range [][]string{
+					{"fusermount3", "-u", "-z", fuseMount},
+					{"umount", "-l", fuseMount},
+				} {
+					if exec.Command(argv[0], argv[1:]...).Run() == nil { //nolint:gosec
+						break
+					}
+				}
+			}()
+
+		case <-ctx.Done():
+			slog.Debug("fuse: mount canceled before completion", "path", fuseMount)
+		}
+	}()
 }
 
 // reloadConfig reloads harvester and rule registries and triggers a rule sweep.
@@ -494,6 +567,25 @@ func cleanShutdownErr(err error, ctx context.Context) error {
 		return nil
 	}
 	return err
+}
+
+func waitForWatcherShutdown(watchErrCh <-chan error) error {
+	select {
+	case err := <-watchErrCh:
+		return err
+	case <-time.After(2 * time.Second):
+		slog.Warn("watcher shutdown timed out; continuing process exit")
+		return nil
+	}
+}
+
+func waitForSyncerShutdown(syncErrCh <-chan error) error {
+	select {
+	case err := <-syncErrCh:
+		return err
+	case <-time.After(2 * time.Second):
+		return fmt.Errorf("syncer shutdown timed out")
+	}
 }
 
 // setupLogging configures the default slog handler.
