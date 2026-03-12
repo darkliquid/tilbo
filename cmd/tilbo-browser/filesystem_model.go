@@ -210,6 +210,8 @@ const (
 	ActionCDRole
 	ActionToggleHiddenRole
 	ActionSearchRole
+	PlaceNameRole
+	PlacePathRole
 )
 
 func (m *FileSystemModel) setData(super func(*qt6.QModelIndex, *qt6.QVariant, int) bool, index *qt6.QModelIndex, value *qt6.QVariant, role int) bool {

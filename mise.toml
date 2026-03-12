@@ -24,7 +24,7 @@ outputs = ["tilbo-cli"]
 description = "Build tilbo browser"
 depends = ["generate"]
 run = "go build -v ./cmd/tilbo-browser"
-sources = ["**/*.go"]
+sources = ["**/*.go", "**/*.qml"]
 outputs = ["tilbo-browser"]
 
 [tasks.build]

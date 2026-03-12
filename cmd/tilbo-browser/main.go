@@ -16,13 +16,15 @@ import (
 type Browser struct {
 	app          *qt6.QGuiApplication
 	engine       *miqtqml.QQmlApplicationEngine
-	fsModel      *FileSystemModel
-	acModel      *AutocompleteModel
-	dbusConn     *dbus.Conn
-	mainThreadCh chan func()
-	ctx          context.Context
-	cancel       context.CancelFunc
-	timer        *qt6.QTimer
+	fsModel           *FileSystemModel
+	acModel           *AutocompleteModel
+	placesModel       *PlacesModel
+	placesRefreshTick int
+	dbusConn          *dbus.Conn
+	mainThreadCh      chan func()
+	ctx               context.Context
+	cancel            context.CancelFunc
+	timer             *qt6.QTimer
 }
 
 func NewBrowser() *Browser {
@@ -98,6 +100,12 @@ func (b *Browser) Quit() *dbus.Error {
 }
 
 func (b *Browser) drainMainThreadChannel() {
+	// Periodically refresh the places model (~every 2 seconds at 1ms tick rate).
+	b.placesRefreshTick++
+	if b.placesRefreshTick >= 2000 && b.placesModel != nil {
+		b.placesRefreshTick = 0
+		b.placesModel.Refresh()
+	}
 	// Drain all pending tasks from the channel
 	for {
 		select {
@@ -162,7 +170,10 @@ func main() {
 
 	b.acModel = NewAutocompleteModel(b.app.QObject, daemonClient, b.mainThreadCh)
 	b.engine.RootContext().SetContextProperty("acModel", b.acModel.QObject)
-	
+
+	b.placesModel = NewPlacesModel(b.app.QObject)
+	b.engine.RootContext().SetContextProperty("placesModel", b.placesModel.QObject)
+
 	b.engine.RootContext().SetContextProperty2("daemonConnected", qt6.NewQVariant8(daemonClient != nil))
 
 	// Setup thread-safety bridge
