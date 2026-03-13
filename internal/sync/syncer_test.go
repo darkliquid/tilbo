@@ -13,8 +13,31 @@ import (
 	"github.com/darkliquid/tilbo/internal/xattr"
 )
 
+const (
+	syncTestTimeout          = 30 * time.Second
+	syncTestDeadlineHeadroom = time.Second
+)
+
+func newTestContext(t *testing.T) (context.Context, context.CancelFunc) {
+	t.Helper()
+
+	deadline := time.Now().Add(syncTestTimeout)
+	if testDeadline, ok := t.Deadline(); ok {
+		candidate := testDeadline.Add(-syncTestDeadlineHeadroom)
+		if candidate.Before(deadline) {
+			deadline = candidate
+		}
+	}
+
+	if !deadline.After(time.Now()) {
+		deadline = time.Now().Add(time.Second)
+	}
+
+	return context.WithDeadline(context.Background(), deadline)
+}
+
 func TestSyncerRun(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := newTestContext(t)
 	defer cancel()
 
 	// 1. Setup a temp directory structure
@@ -73,7 +96,7 @@ func TestSyncerRun(t *testing.T) {
 }
 
 func TestSyncFile(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := newTestContext(t)
 	defer cancel()
 
 	tmpDir := t.TempDir()

@@ -18,6 +18,7 @@
 !*.mdx
 !*.txt
 !*.wasm
+!*.qml
 
 # Specific project files
 !.gitignore
