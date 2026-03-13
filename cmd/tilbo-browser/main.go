@@ -18,6 +18,11 @@ import (
 
 	"github.com/darkliquid/tilbo/cmd/tilbo-browser/models"
 	"github.com/darkliquid/tilbo/cmd/tilbo-browser/pkg/browser"
+	"github.com/darkliquid/tilbo/cmd/tilbo-browser/pkg/browser/commandcore"
+	"github.com/darkliquid/tilbo/cmd/tilbo-browser/pkg/browser/commands/openportal"
+	"github.com/darkliquid/tilbo/cmd/tilbo-browser/pkg/browser/commands/refreshplaces"
+	"github.com/darkliquid/tilbo/cmd/tilbo-browser/pkg/browser/commands/shutdown"
+	"github.com/darkliquid/tilbo/cmd/tilbo-browser/pkg/browser/daemon"
 	"github.com/darkliquid/tilbo/cmd/tilbo-browser/qml"
 )
 
@@ -126,8 +131,8 @@ func (b *Browser) Open(mode, argsJSON string) *dbus.Error {
 		return dbus.MakeFailedError(errors.New("controller not ready"))
 	}
 
-	err := b.controller.Dispatch(browser.OpenPortalCommand{
-		CommandBase: browser.CommandBase{OpID: "dbus-open"},
+	err := b.controller.Dispatch(openportal.Command{
+		CommandBase: commandcore.Base{OpID: "dbus-open"},
 		Mode:        mode,
 	})
 	if err != nil {
@@ -155,8 +160,8 @@ func (b *Browser) Quit() *dbus.Error {
 		return dbus.MakeFailedError(errors.New("controller not ready"))
 	}
 
-	err := b.controller.Dispatch(browser.ShutdownCommand{
-		CommandBase: browser.CommandBase{OpID: "dbus-quit"},
+	err := b.controller.Dispatch(shutdown.Command{
+		CommandBase: commandcore.Base{OpID: "dbus-quit"},
 		Reason:      "dbus-quit",
 	})
 	if err != nil {
@@ -172,8 +177,8 @@ func (b *Browser) drainMainThreadChannel() {
 	b.placesRefreshTick++
 	if b.placesRefreshTick >= placesRefreshTickThreshold {
 		b.placesRefreshTick = 0
-		_ = b.controller.Dispatch(browser.RefreshPlacesCommand{
-			CommandBase: browser.CommandBase{OpID: "places-tick"},
+		_ = b.controller.Dispatch(refreshplaces.Command{
+			CommandBase: commandcore.Base{OpID: "places-tick"},
 		})
 	}
 	// Drain all pending tasks from the channel
@@ -358,36 +363,38 @@ func main() {
 
 	b.controller = browser.NewController(b.ctx)
 	if daemonClient != nil {
-		b.controller.SetDaemonAdapter(browser.NewDaemonAdapter(daemonClient))
+		b.controller.SetDaemonAdapter(daemon.NewAdapter(daemonClient))
 	}
-	b.controller.EventBus().Subscribe(browser.EventShutdownInitiated, func(_ context.Context, evt browser.Event) {
-		if _, ok := evt.(browser.ShutdownInitiatedEvent); !ok {
-			return
-		}
-
-		b.postToMainThread(func() {
-			b.cancel()
-			qt6.QCoreApplication_Quit()
-		})
-	})
-	b.controller.EventBus().Subscribe(browser.EventFileOperationDone, func(_ context.Context, evt browser.Event) {
-		if _, ok := evt.(browser.FileOperationDoneEvent); !ok {
-			return
-		}
-
-		b.postToMainThread(func() {
-			if b.fsModel != nil {
-				b.fsModel.Refresh()
+	b.controller.EventBus().
+		Subscribe(commandcore.EventShutdownInitiated, func(_ context.Context, evt commandcore.Event) {
+			if _, ok := evt.(commandcore.ShutdownInitiatedEvent); !ok {
+				return
 			}
+
+			b.postToMainThread(func() {
+				b.cancel()
+				qt6.QCoreApplication_Quit()
+			})
 		})
-	})
+	b.controller.EventBus().
+		Subscribe(commandcore.EventFileOperationDone, func(_ context.Context, evt commandcore.Event) {
+			if _, ok := evt.(commandcore.FileOperationDoneEvent); !ok {
+				return
+			}
+
+			b.postToMainThread(func() {
+				if b.fsModel != nil {
+					b.fsModel.Refresh()
+				}
+			})
+		})
 	projSubs, projections := browser.NewProjectionSet()
 	b.controller.RegisterProjectionSubscribers(projSubs)
 	b.projections = projections
 	b.fsModel.BindController(b.controller)
 	b.acModel.BindController(b.controller)
-	_ = b.controller.Dispatch(browser.OpenPortalCommand{
-		CommandBase: browser.CommandBase{OpID: "startup-open"},
+	_ = b.controller.Dispatch(openportal.Command{
+		CommandBase: commandcore.Base{OpID: "startup-open"},
 		Mode:        browserWindowMode,
 	})
 	startPath := "/"
@@ -395,8 +402,8 @@ func main() {
 		startPath = cwd
 	}
 	b.fsModel.SetPath(startPath)
-	_ = b.controller.Dispatch(browser.RefreshPlacesCommand{
-		CommandBase: browser.CommandBase{OpID: "places-initial"},
+	_ = b.controller.Dispatch(refreshplaces.Command{
+		CommandBase: commandcore.Base{OpID: "places-initial"},
 	})
 
 	b.engine.RootContext().SetContextProperty2("daemonConnected", qt6.NewQVariant8(daemonClient != nil))

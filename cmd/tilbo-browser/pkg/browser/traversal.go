@@ -3,17 +3,19 @@ package browser
 import (
 	"os"
 	"path/filepath"
+
+	"github.com/darkliquid/tilbo/cmd/tilbo-browser/pkg/browser/commandcore"
 )
 
 // LoadDirectory lists a filesystem path and returns normalized directory entries
 // with an additional slice of absolute paths intended for follow-up tag hydration.
-func LoadDirectory(path string, hidden bool) ([]DirectoryEntry, []string, error) {
+func LoadDirectory(path string, hidden bool) ([]commandcore.DirectoryEntry, []string, error) {
 	dirEntries, err := os.ReadDir(path)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	entries := make([]DirectoryEntry, 0, len(dirEntries))
+	entries := make([]commandcore.DirectoryEntry, 0, len(dirEntries))
 	pathsToHydrate := make([]string, 0, len(dirEntries))
 
 	for _, de := range dirEntries {
@@ -28,7 +30,7 @@ func LoadDirectory(path string, hidden bool) ([]DirectoryEntry, []string, error)
 		// Keep listing fast and non-blocking. Metadata for selected items is
 		// enriched on demand via the sidebar path.
 
-		entries = append(entries, DirectoryEntry{
+		entries = append(entries, commandcore.DirectoryEntry{
 			Name:   name,
 			Path:   fullPath,
 			IsDir:  de.IsDir(),

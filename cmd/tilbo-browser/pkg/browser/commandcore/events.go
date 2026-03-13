@@ -1,6 +1,9 @@
 package commandcore
 
-import "time"
+import (
+	"context"
+	"time"
+)
 
 // EventType identifies a browser event kind.
 type EventType string
@@ -27,6 +30,9 @@ type Event interface {
 	OperationID() string
 	OccurredAt() time.Time
 }
+
+// EventSubscriber consumes one event.
+type EventSubscriber func(context.Context, Event)
 
 // EventBase stores shared event fields.
 type EventBase struct {

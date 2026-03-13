@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+
+	"github.com/darkliquid/tilbo/cmd/tilbo-browser/pkg/browser/commandcore"
 )
 
 const minSignedInt32 = 1<<31 - 1
@@ -12,7 +14,7 @@ const minSignedInt32 = 1<<31 - 1
 const defaultSearchLimit uint32 = 1000
 
 // LocalSearch executes a fallback search strategy using glob chips.
-func LocalSearch(chips []string, limit uint32, allowHidden bool) ([]SearchFile, error) {
+func LocalSearch(chips []string, limit uint32, allowHidden bool) ([]commandcore.SearchFile, error) {
 	if limit == 0 {
 		limit = defaultSearchLimit
 	}
@@ -20,12 +22,12 @@ func LocalSearch(chips []string, limit uint32, allowHidden bool) ([]SearchFile, 
 	globPatterns := globPatternsFromChips(chips)
 
 	if len(globPatterns) == 0 {
-		return []SearchFile{}, nil
+		return []commandcore.SearchFile{}, nil
 	}
 
 	maxResults := maxResultsFromLimit(limit)
 	seen := make(map[string]struct{})
-	files := make([]SearchFile, 0, maxResults)
+	files := make([]commandcore.SearchFile, 0, maxResults)
 
 	for _, pattern := range globPatterns {
 		matches, err := sortedGlob(pattern)
@@ -72,12 +74,12 @@ func sortedGlob(pattern string) ([]string, error) {
 }
 
 func appendSearchMatches(
-	files []SearchFile,
+	files []commandcore.SearchFile,
 	matches []string,
 	seen map[string]struct{},
 	maxResults int,
 	allowHidden bool,
-) []SearchFile {
+) []commandcore.SearchFile {
 	for _, match := range matches {
 		if len(files) >= maxResults {
 			return files
@@ -97,7 +99,7 @@ func appendSearchMatches(
 			continue
 		}
 
-		files = append(files, SearchFile{
+		files = append(files, commandcore.SearchFile{
 			Path:  match,
 			Tags:  []string{},
 			Size:  info.Size(),
@@ -109,11 +111,11 @@ func appendSearchMatches(
 }
 
 // FilterSearchFilesByHidden filters SearchFile entries by hidden file visibility.
-func FilterSearchFilesByHidden(files []SearchFile, allowHidden bool) []SearchFile {
+func FilterSearchFilesByHidden(files []commandcore.SearchFile, allowHidden bool) []commandcore.SearchFile {
 	if allowHidden {
-		out := make([]SearchFile, 0, len(files))
+		out := make([]commandcore.SearchFile, 0, len(files))
 		for _, f := range files {
-			out = append(out, SearchFile{
+			out = append(out, commandcore.SearchFile{
 				Path:  f.Path,
 				Tags:  append([]string(nil), f.Tags...),
 				Size:  f.Size,
@@ -123,13 +125,13 @@ func FilterSearchFilesByHidden(files []SearchFile, allowHidden bool) []SearchFil
 		return out
 	}
 
-	out := make([]SearchFile, 0, len(files))
+	out := make([]commandcore.SearchFile, 0, len(files))
 	for _, f := range files {
 		base := filepath.Base(f.Path)
 		if base != "" && base[0] == '.' {
 			continue
 		}
-		out = append(out, SearchFile{
+		out = append(out, commandcore.SearchFile{
 			Path:  f.Path,
 			Tags:  append([]string(nil), f.Tags...),
 			Size:  f.Size,

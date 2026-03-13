@@ -1,17 +1,17 @@
-package browser_test
+package operations_test
 
 import (
 	"os"
 	"path/filepath"
 	"testing"
 
-	"github.com/darkliquid/tilbo/cmd/tilbo-browser/pkg/browser"
+	"github.com/darkliquid/tilbo/cmd/tilbo-browser/pkg/browser/operations"
 )
 
 func TestFileSystemOpsRenameDeleteChmod(t *testing.T) {
 	t.Parallel()
 
-	ops := browser.NewFileSystemOps()
+	ops := operations.NewFileSystem()
 	root := t.TempDir()
 	oldPath := filepath.Join(root, "old.txt")
 

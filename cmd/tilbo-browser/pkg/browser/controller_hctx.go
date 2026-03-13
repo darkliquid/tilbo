@@ -21,7 +21,7 @@ func (c *Controller) Mutate(fn func(*State)) {
 }
 
 // Publish emits an event to all registered subscribers.
-func (c *Controller) Publish(ctx context.Context, evt Event) {
+func (c *Controller) Publish(ctx context.Context, evt commandcore.Event) {
 	c.events.Publish(ctx, evt)
 }
 
@@ -46,7 +46,7 @@ func (c *Controller) CancelOp(targetOpID string) bool {
 }
 
 // LoadDir lists a filesystem path. Returns entries, paths for hydration, and any error.
-func (c *Controller) LoadDir(path string, hidden bool) ([]DirectoryEntry, []string, error) {
+func (c *Controller) LoadDir(path string, hidden bool) ([]commandcore.DirectoryEntry, []string, error) {
 	return LoadDirectory(path, hidden)
 }
 
@@ -60,13 +60,13 @@ func (c *Controller) HydrateTags(ctx context.Context, paths []string) (map[strin
 }
 
 // LocalSearch performs a local glob-based file search.
-func (c *Controller) LocalSearch(chips []string, limit uint32, allowHidden bool) ([]SearchFile, error) {
+func (c *Controller) LocalSearch(chips []string, limit uint32, allowHidden bool) ([]commandcore.SearchFile, error) {
 	return LocalSearch(chips, limit, allowHidden)
 }
 
 // SearchDaemon runs a daemon-backed search.
 // Returns nil, nil if no daemon is connected.
-func (c *Controller) SearchDaemon(ctx context.Context, chips []string, limit uint32) ([]SearchFile, error) {
+func (c *Controller) SearchDaemon(ctx context.Context, chips []string, limit uint32) ([]commandcore.SearchFile, error) {
 	if c.daemon == nil {
 		return nil, nil
 	}
@@ -83,7 +83,7 @@ func (c *Controller) Autocomplete(ctx context.Context, prefix string) ([]string,
 }
 
 // BuildPlaces constructs the sidebar places list.
-func (c *Controller) BuildPlaces() ([]PlaceEntry, error) {
+func (c *Controller) BuildPlaces() ([]commandcore.PlaceEntry, error) {
 	return BuildPlaces()
 }
 

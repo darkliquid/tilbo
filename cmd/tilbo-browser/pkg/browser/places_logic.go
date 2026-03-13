@@ -4,6 +4,8 @@ import (
 	"bufio"
 	"os"
 	"strings"
+
+	"github.com/darkliquid/tilbo/cmd/tilbo-browser/pkg/browser/commandcore"
 )
 
 const mountsMinFields = 3
@@ -11,7 +13,7 @@ const mountsMinFields = 3
 const defaultPlacesCapacity = 6
 
 // BuildPlaces creates the places list used by the sidebar.
-func BuildPlaces() ([]PlaceEntry, error) {
+func BuildPlaces() ([]commandcore.PlaceEntry, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return nil, err
@@ -20,8 +22,8 @@ func BuildPlaces() ([]PlaceEntry, error) {
 	fuseMount := fuseMountPath()
 	fuseActive := isFUSEMounted(fuseMount)
 
-	places := make([]PlaceEntry, 0, defaultPlacesCapacity)
-	for _, p := range []PlaceEntry{
+	places := make([]commandcore.PlaceEntry, 0, defaultPlacesCapacity)
+	for _, p := range []commandcore.PlaceEntry{
 		{Name: "Home", Path: home},
 		{Name: "Documents", Path: xdgDir("XDG_DOCUMENTS_DIR", home+"/Documents")},
 		{Name: "Downloads", Path: xdgDir("XDG_DOWNLOAD_DIR", home+"/Downloads")},
@@ -33,9 +35,9 @@ func BuildPlaces() ([]PlaceEntry, error) {
 
 	if fuseActive {
 		places = append(places,
-			PlaceEntry{Name: "@recent", Path: fuseMount + "/@recent"},
-			PlaceEntry{Name: "@untagged", Path: fuseMount + "/@untagged"},
-			PlaceEntry{Name: "@browse", Path: fuseMount + "/@browse"},
+			commandcore.PlaceEntry{Name: "@recent", Path: fuseMount + "/@recent"},
+			commandcore.PlaceEntry{Name: "@untagged", Path: fuseMount + "/@untagged"},
+			commandcore.PlaceEntry{Name: "@browse", Path: fuseMount + "/@browse"},
 		)
 	}
 

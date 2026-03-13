@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/darkliquid/tilbo/cmd/tilbo-browser/pkg/browser"
+	"github.com/darkliquid/tilbo/cmd/tilbo-browser/pkg/browser/commandcore"
 )
 
 func TestLoadDirectoryFiltersHiddenFiles(t *testing.T) {
@@ -64,7 +65,7 @@ func TestLoadDirectoryIncludesHiddenWhenEnabled(t *testing.T) {
 		t.Fatalf("expected 2 hydration paths, got %d", len(hydratePaths))
 	}
 
-	entryByPath := make(map[string]browser.DirectoryEntry, len(entries))
+	entryByPath := make(map[string]commandcore.DirectoryEntry, len(entries))
 	for _, entry := range entries {
 		entryByPath[entry.Path] = entry
 	}

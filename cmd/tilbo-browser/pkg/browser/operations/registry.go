@@ -1,4 +1,4 @@
-package browser
+package operations
 
 import (
 	"context"
@@ -8,19 +8,19 @@ import (
 
 const defaultOperationContextTimeout = 30 * time.Second
 
-// OperationRegistry tracks cancellation funcs for in-flight operations.
-type OperationRegistry struct {
+// Registry tracks cancellation funcs for in-flight operations.
+type Registry struct {
 	mu      sync.Mutex
 	cancels map[string]context.CancelFunc
 }
 
-// NewOperationRegistry creates an operation registry.
-func NewOperationRegistry() *OperationRegistry {
-	return &OperationRegistry{cancels: make(map[string]context.CancelFunc)}
+// NewRegistry creates a new operation registry.
+func NewRegistry() *Registry {
+	return &Registry{cancels: make(map[string]context.CancelFunc)}
 }
 
 // Register adds a cancel func for an operation id.
-func (r *OperationRegistry) Register(opID string, cancel context.CancelFunc) {
+func (r *Registry) Register(opID string, cancel context.CancelFunc) {
 	if opID == "" || cancel == nil {
 		return
 	}
@@ -30,7 +30,7 @@ func (r *OperationRegistry) Register(opID string, cancel context.CancelFunc) {
 }
 
 // Cancel requests cancellation for an operation id.
-func (r *OperationRegistry) Cancel(opID string) bool {
+func (r *Registry) Cancel(opID string) bool {
 	r.mu.Lock()
 	cancel, ok := r.cancels[opID]
 	if ok {
@@ -47,14 +47,14 @@ func (r *OperationRegistry) Cancel(opID string) bool {
 }
 
 // Done removes operation registration without canceling.
-func (r *OperationRegistry) Done(opID string) {
+func (r *Registry) Done(opID string) {
 	r.mu.Lock()
 	delete(r.cancels, opID)
 	r.mu.Unlock()
 }
 
 // ContextFor creates a timeout child context for one operation.
-func (r *OperationRegistry) ContextFor(
+func (r *Registry) ContextFor(
 	parent context.Context,
 	opID string,
 	timeout time.Duration,

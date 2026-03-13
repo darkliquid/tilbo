@@ -14,6 +14,15 @@ import (
 	"github.com/mappu/miqt/qt6"
 
 	browserruntime "github.com/darkliquid/tilbo/cmd/tilbo-browser/pkg/browser"
+	"github.com/darkliquid/tilbo/cmd/tilbo-browser/pkg/browser/commandcore"
+	"github.com/darkliquid/tilbo/cmd/tilbo-browser/pkg/browser/commands/chmodfile"
+	"github.com/darkliquid/tilbo/cmd/tilbo-browser/pkg/browser/commands/deletefile"
+	"github.com/darkliquid/tilbo/cmd/tilbo-browser/pkg/browser/commands/navigate"
+	"github.com/darkliquid/tilbo/cmd/tilbo-browser/pkg/browser/commands/openfile"
+	"github.com/darkliquid/tilbo/cmd/tilbo-browser/pkg/browser/commands/renamefile"
+	"github.com/darkliquid/tilbo/cmd/tilbo-browser/pkg/browser/commands/search"
+	"github.com/darkliquid/tilbo/cmd/tilbo-browser/pkg/browser/commands/submitportal"
+	"github.com/darkliquid/tilbo/cmd/tilbo-browser/pkg/browser/commands/togglehidden"
 )
 
 // FileSystemModel provides a QML-compatible data bridge for traditional folder
@@ -103,8 +112,8 @@ func (m *FileSystemModel) ShowHidden(show bool) {
 		return
 	}
 
-	_ = m.controller.Dispatch(browserruntime.ToggleHiddenCommand{
-		CommandBase: browserruntime.CommandBase{OpID: m.nextOpID("toggle-hidden")},
+	_ = m.controller.Dispatch(togglehidden.Command{
+		CommandBase: commandcore.Base{OpID: m.nextOpID("toggle-hidden")},
 		Show:        show,
 	})
 	m.Refresh()
@@ -123,8 +132,8 @@ func (m *FileSystemModel) Refresh() {
 		return
 	}
 
-	_ = m.controller.Dispatch(browserruntime.NavigateCommand{
-		CommandBase: browserruntime.CommandBase{OpID: m.nextOpID("navigate")},
+	_ = m.controller.Dispatch(navigate.Command{
+		CommandBase: commandcore.Base{OpID: m.nextOpID("navigate")},
 		Path:        m.currentPath,
 	})
 }
@@ -135,7 +144,7 @@ func (m *FileSystemModel) nextOpID(prefix string) string {
 }
 
 // ApplyProjectionDirectory updates the model using controller projection output.
-func (m *FileSystemModel) ApplyProjectionDirectory(path string, entries []browserruntime.DirectoryEntry) {
+func (m *FileSystemModel) ApplyProjectionDirectory(path string, entries []commandcore.DirectoryEntry) {
 	wasSearchMode := m.isSearchMode
 	prevPath := m.currentPath
 
@@ -163,7 +172,7 @@ func (m *FileSystemModel) ApplyProjectionDirectory(path string, entries []browse
 }
 
 // ApplyProjectionSearch updates the model using controller search projection output.
-func (m *FileSystemModel) ApplyProjectionSearch(files []browserruntime.SearchFile) {
+func (m *FileSystemModel) ApplyProjectionSearch(files []commandcore.SearchFile) {
 	wasSearchMode := m.isSearchMode
 
 	converted := make([]folderEntry, 0, len(files))
@@ -284,8 +293,8 @@ func (m *FileSystemModel) setData(
 			return false
 		}
 		entry := m.entries[row]
-		err := m.controller.Dispatch(browserruntime.OpenFileCommand{
-			CommandBase: browserruntime.CommandBase{OpID: m.nextOpID("open")},
+		err := m.controller.Dispatch(openfile.Command{
+			CommandBase: commandcore.Base{OpID: m.nextOpID("open")},
 			Path:        entry.Path,
 		})
 		return err == nil
@@ -300,8 +309,8 @@ func (m *FileSystemModel) setData(
 			return false
 		}
 
-		err := m.controller.Dispatch(browserruntime.RenameFileCommand{
-			CommandBase: browserruntime.CommandBase{OpID: m.nextOpID("rename")},
+		err := m.controller.Dispatch(renamefile.Command{
+			CommandBase: commandcore.Base{OpID: m.nextOpID("rename")},
 			OldPath:     entry.Path,
 			NewName:     newName,
 		})
@@ -312,8 +321,8 @@ func (m *FileSystemModel) setData(
 			return false
 		}
 		entry := m.entries[row]
-		err := m.controller.Dispatch(browserruntime.DeleteFileCommand{
-			CommandBase: browserruntime.CommandBase{OpID: m.nextOpID("delete")},
+		err := m.controller.Dispatch(deletefile.Command{
+			CommandBase: commandcore.Base{OpID: m.nextOpID("delete")},
 			Path:        entry.Path,
 		})
 		return err == nil
@@ -327,8 +336,8 @@ func (m *FileSystemModel) setData(
 		if mode < 0 || mode > 0o7777 {
 			return false
 		}
-		err := m.controller.Dispatch(browserruntime.ChmodFileCommand{
-			CommandBase: browserruntime.CommandBase{OpID: m.nextOpID("chmod")},
+		err := m.controller.Dispatch(chmodfile.Command{
+			CommandBase: commandcore.Base{OpID: m.nextOpID("chmod")},
 			Path:        entry.Path,
 			Mode:        uint32(mode),
 		})
@@ -382,8 +391,8 @@ func (m *FileSystemModel) setData(
 			}
 		}
 
-		err := m.controller.Dispatch(browserruntime.SubmitPortalCommand{
-			CommandBase:   browserruntime.CommandBase{OpID: m.nextOpID("portal-submit")},
+		err := m.controller.Dispatch(submitportal.Command{
+			CommandBase:   commandcore.Base{OpID: m.nextOpID("portal-submit")},
 			SelectedFiles: append([]string(nil), selected...),
 		})
 		return err == nil
@@ -400,8 +409,8 @@ func (m *FileSystemModel) executeSearch(chips []string) {
 		return
 	}
 
-	_ = m.controller.Dispatch(browserruntime.SearchCommand{
-		CommandBase: browserruntime.CommandBase{OpID: m.nextOpID("search")},
+	_ = m.controller.Dispatch(search.Command{
+		CommandBase: commandcore.Base{OpID: m.nextOpID("search")},
 		Chips:       append([]string(nil), chips...),
 		Limit:       defaultSearchLimit,
 	})

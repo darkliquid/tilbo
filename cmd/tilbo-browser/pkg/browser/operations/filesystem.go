@@ -1,4 +1,4 @@
-package browser
+package operations
 
 import (
 	"context"
@@ -10,16 +10,16 @@ import (
 
 const defaultOpenWaitTimeout = 3 * time.Second
 
-// FileSystemOps wraps filesystem side effects used by controller handlers.
-type FileSystemOps struct{}
+// FileSystem wraps filesystem side effects used by controller handlers.
+type FileSystem struct{}
 
-// NewFileSystemOps creates a filesystem operation helper.
-func NewFileSystemOps() *FileSystemOps {
-	return &FileSystemOps{}
+// NewFileSystem creates a filesystem operation helper.
+func NewFileSystem() *FileSystem {
+	return &FileSystem{}
 }
 
 // Open opens a file path using xdg-open.
-func (o *FileSystemOps) Open(ctx context.Context, path string) error {
+func (o *FileSystem) Open(ctx context.Context, path string) error {
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -41,7 +41,7 @@ func (o *FileSystemOps) Open(ctx context.Context, path string) error {
 }
 
 // Rename renames a file or directory to a sibling name.
-func (o *FileSystemOps) Rename(oldPath, newName string) (string, error) {
+func (o *FileSystem) Rename(oldPath, newName string) (string, error) {
 	newPath := filepath.Join(filepath.Dir(oldPath), newName)
 	if err := os.Rename(oldPath, newPath); err != nil {
 		return "", err
@@ -51,11 +51,11 @@ func (o *FileSystemOps) Rename(oldPath, newName string) (string, error) {
 }
 
 // Delete removes a file tree.
-func (o *FileSystemOps) Delete(path string) error {
+func (o *FileSystem) Delete(path string) error {
 	return os.RemoveAll(path)
 }
 
 // Chmod changes file mode bits.
-func (o *FileSystemOps) Chmod(path string, mode uint32) error {
+func (o *FileSystem) Chmod(path string, mode uint32) error {
 	return os.Chmod(path, os.FileMode(mode))
 }

@@ -1,28 +1,30 @@
-package browser
+package commands
 
 import (
 	"context"
 	"errors"
 	"fmt"
 	"sync"
+
+	"github.com/darkliquid/tilbo/cmd/tilbo-browser/pkg/browser/commandcore"
 )
 
 // CommandHandler handles one command.
-type CommandHandler func(context.Context, Command) error
+type CommandHandler func(context.Context, commandcore.Command) error
 
 // CommandBus stores handlers and dispatches commands.
 type CommandBus struct {
 	mu       sync.RWMutex
-	handlers map[CommandType][]CommandHandler
+	handlers map[commandcore.Type][]CommandHandler
 }
 
 // NewCommandBus creates an empty command bus.
 func NewCommandBus() *CommandBus {
-	return &CommandBus{handlers: make(map[CommandType][]CommandHandler)}
+	return &CommandBus{handlers: make(map[commandcore.Type][]CommandHandler)}
 }
 
 // Register adds a handler for a command type.
-func (b *CommandBus) Register(t CommandType, h CommandHandler) {
+func (b *CommandBus) Register(t commandcore.Type, h CommandHandler) {
 	if h == nil {
 		return
 	}
@@ -32,7 +34,7 @@ func (b *CommandBus) Register(t CommandType, h CommandHandler) {
 }
 
 // Dispatch executes handlers for a command type in registration order.
-func (b *CommandBus) Dispatch(ctx context.Context, cmd Command) error {
+func (b *CommandBus) Dispatch(ctx context.Context, cmd commandcore.Command) error {
 	if cmd == nil {
 		return errors.New("command is nil")
 	}
@@ -54,22 +56,19 @@ func (b *CommandBus) Dispatch(ctx context.Context, cmd Command) error {
 	return nil
 }
 
-// EventSubscriber consumes one event.
-type EventSubscriber func(context.Context, Event)
-
 // EventBus stores subscribers and publishes events.
 type EventBus struct {
 	mu          sync.RWMutex
-	subscribers map[EventType][]EventSubscriber
+	subscribers map[commandcore.EventType][]commandcore.EventSubscriber
 }
 
 // NewEventBus creates an empty event bus.
 func NewEventBus() *EventBus {
-	return &EventBus{subscribers: make(map[EventType][]EventSubscriber)}
+	return &EventBus{subscribers: make(map[commandcore.EventType][]commandcore.EventSubscriber)}
 }
 
 // Subscribe adds a subscriber for an event type.
-func (b *EventBus) Subscribe(t EventType, sub EventSubscriber) {
+func (b *EventBus) Subscribe(t commandcore.EventType, sub commandcore.EventSubscriber) {
 	if sub == nil {
 		return
 	}
@@ -79,13 +78,13 @@ func (b *EventBus) Subscribe(t EventType, sub EventSubscriber) {
 }
 
 // Publish emits one event to all current subscribers.
-func (b *EventBus) Publish(ctx context.Context, evt Event) {
+func (b *EventBus) Publish(ctx context.Context, evt commandcore.Event) {
 	if evt == nil {
 		return
 	}
 
 	b.mu.RLock()
-	subs := append([]EventSubscriber(nil), b.subscribers[evt.Type()]...)
+	subs := append([]commandcore.EventSubscriber(nil), b.subscribers[evt.Type()]...)
 	b.mu.RUnlock()
 
 	for _, sub := range subs {

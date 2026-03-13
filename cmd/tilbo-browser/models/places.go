@@ -6,6 +6,7 @@ import (
 	"github.com/mappu/miqt/qt6"
 
 	"github.com/darkliquid/tilbo/cmd/tilbo-browser/pkg/browser"
+	"github.com/darkliquid/tilbo/cmd/tilbo-browser/pkg/browser/commandcore"
 )
 
 type placeEntry struct {
@@ -63,7 +64,7 @@ func (m *PlacesModel) Refresh() {
 }
 
 // ApplyProjectionPlaces updates the model from controller projection state.
-func (m *PlacesModel) ApplyProjectionPlaces(entries []browser.PlaceEntry) {
+func (m *PlacesModel) ApplyProjectionPlaces(entries []commandcore.PlaceEntry) {
 	places := make([]placeEntry, 0, len(entries))
 	for _, e := range entries {
 		places = append(places, placeEntry{Name: e.Name, Path: e.Path})

@@ -10,6 +10,13 @@ import (
 	"time"
 
 	"github.com/darkliquid/tilbo/cmd/tilbo-browser/pkg/browser"
+	"github.com/darkliquid/tilbo/cmd/tilbo-browser/pkg/browser/commandcore"
+	"github.com/darkliquid/tilbo/cmd/tilbo-browser/pkg/browser/commands/autocomplete"
+	"github.com/darkliquid/tilbo/cmd/tilbo-browser/pkg/browser/commands/navigate"
+	"github.com/darkliquid/tilbo/cmd/tilbo-browser/pkg/browser/commands/search"
+	"github.com/darkliquid/tilbo/cmd/tilbo-browser/pkg/browser/commands/shutdown"
+	"github.com/darkliquid/tilbo/cmd/tilbo-browser/pkg/browser/commands/submitportal"
+	"github.com/darkliquid/tilbo/cmd/tilbo-browser/pkg/browser/daemon"
 	ipcv1 "github.com/darkliquid/tilbo/internal/ipc/gen/tilbo/ipc/v1"
 )
 
@@ -27,8 +34,8 @@ func TestControllerDispatchNavigate(t *testing.T) {
 	c := browser.NewController(context.Background())
 
 	var seen atomic.Bool
-	c.EventBus().Subscribe(browser.EventDirectoryLoaded, func(_ context.Context, evt browser.Event) {
-		e, ok := evt.(browser.DirectoryLoadedEvent)
+	c.EventBus().Subscribe(commandcore.EventDirectoryLoaded, func(_ context.Context, evt commandcore.Event) {
+		e, ok := evt.(commandcore.DirectoryLoadedEvent)
 		if !ok {
 			t.Fatalf("unexpected event type %T", evt)
 		}
@@ -38,7 +45,7 @@ func TestControllerDispatchNavigate(t *testing.T) {
 		seen.Store(true)
 	})
 
-	err := c.Dispatch(browser.NavigateCommand{CommandBase: browser.CommandBase{OpID: "nav-1"}, Path: "/tmp"})
+	err := c.Dispatch(navigate.Command{CommandBase: commandcore.Base{OpID: "nav-1"}, Path: "/tmp"})
 	if err != nil {
 		t.Fatalf("dispatch navigate failed: %v", err)
 	}
@@ -61,7 +68,7 @@ func TestControllerDispatchShutdownCancelsContext(t *testing.T) {
 	t.Parallel()
 
 	c := browser.NewController(context.Background())
-	err := c.Dispatch(browser.ShutdownCommand{CommandBase: browser.CommandBase{OpID: "sd-1"}, Reason: "test"})
+	err := c.Dispatch(shutdown.Command{CommandBase: commandcore.Base{OpID: "sd-1"}, Reason: "test"})
 	if err != nil {
 		t.Fatalf("dispatch shutdown failed: %v", err)
 	}
@@ -77,7 +84,7 @@ func TestControllerSearchUsesDaemonResults(t *testing.T) {
 	t.Parallel()
 
 	c := browser.NewController(context.Background())
-	c.SetDaemonAdapter(browser.NewDaemonAdapter(&controllerFakeCaller{
+	c.SetDaemonAdapter(daemon.NewAdapter(&controllerFakeCaller{
 		callFn: func(_ context.Context, req *ipcv1.Request) (*ipcv1.Response, error) {
 			if req.GetSearch() == nil {
 				t.Fatal("expected search request")
@@ -98,8 +105,8 @@ func TestControllerSearchUsesDaemonResults(t *testing.T) {
 	}))
 
 	var got atomic.Bool
-	c.EventBus().Subscribe(browser.EventSearchCompleted, func(_ context.Context, evt browser.Event) {
-		e, ok := evt.(browser.SearchCompletedEvent)
+	c.EventBus().Subscribe(commandcore.EventSearchCompleted, func(_ context.Context, evt commandcore.Event) {
+		e, ok := evt.(commandcore.SearchCompletedEvent)
 		if !ok {
 			t.Fatalf("unexpected event type %T", evt)
 		}
@@ -109,8 +116,8 @@ func TestControllerSearchUsesDaemonResults(t *testing.T) {
 		got.Store(true)
 	})
 
-	err := c.Dispatch(browser.SearchCommand{
-		CommandBase: browser.CommandBase{OpID: "search-1"},
+	err := c.Dispatch(search.Command{
+		CommandBase: commandcore.Base{OpID: "search-1"},
 		Chips:       []string{"tag:example"},
 		Limit:       5,
 	})
@@ -131,7 +138,7 @@ func TestControllerAutocompleteUsesDaemonResults(t *testing.T) {
 	t.Parallel()
 
 	c := browser.NewController(context.Background())
-	c.SetDaemonAdapter(browser.NewDaemonAdapter(&controllerFakeCaller{
+	c.SetDaemonAdapter(daemon.NewAdapter(&controllerFakeCaller{
 		callFn: func(_ context.Context, req *ipcv1.Request) (*ipcv1.Response, error) {
 			if req.GetListTags() == nil {
 				t.Fatal("expected list tags request")
@@ -143,8 +150,8 @@ func TestControllerAutocompleteUsesDaemonResults(t *testing.T) {
 	}))
 
 	var got atomic.Bool
-	c.EventBus().Subscribe(browser.EventAutocompleteUpdated, func(_ context.Context, evt browser.Event) {
-		e, ok := evt.(browser.AutocompleteUpdatedEvent)
+	c.EventBus().Subscribe(commandcore.EventAutocompleteUpdated, func(_ context.Context, evt commandcore.Event) {
+		e, ok := evt.(commandcore.AutocompleteUpdatedEvent)
 		if !ok {
 			t.Fatalf("unexpected event type %T", evt)
 		}
@@ -154,8 +161,8 @@ func TestControllerAutocompleteUsesDaemonResults(t *testing.T) {
 		got.Store(true)
 	})
 
-	err := c.Dispatch(browser.AutocompleteCommand{
-		CommandBase: browser.CommandBase{OpID: "ac-1"},
+	err := c.Dispatch(autocomplete.Command{
+		CommandBase: commandcore.Base{OpID: "ac-1"},
 		Prefix:      "tag:",
 	})
 	if err != nil {
@@ -181,7 +188,7 @@ func TestControllerNavigateHydratesTagsFromDaemon(t *testing.T) {
 	}
 
 	c := browser.NewController(context.Background())
-	c.SetDaemonAdapter(browser.NewDaemonAdapter(&controllerFakeCaller{
+	c.SetDaemonAdapter(daemon.NewAdapter(&controllerFakeCaller{
 		callFn: func(_ context.Context, req *ipcv1.Request) (*ipcv1.Response, error) {
 			hydrateReq := req.GetHydrateTags()
 			if hydrateReq == nil {
@@ -193,15 +200,15 @@ func TestControllerNavigateHydratesTagsFromDaemon(t *testing.T) {
 			return &ipcv1.Response{
 				Kind: &ipcv1.Response_HydrateTags{
 					HydrateTags: &ipcv1.HydrateTagsResponse{Entries: []*ipcv1.HydratedPathTags{{
-							Path: filePath,
-							Tags: []string{"tagged"},
-						}}},
+						Path: filePath,
+						Tags: []string{"tagged"},
+					}}},
 				},
 			}, nil
 		},
 	}))
 
-	err := c.Dispatch(browser.NavigateCommand{CommandBase: browser.CommandBase{OpID: "nav-tags"}, Path: dir})
+	err := c.Dispatch(navigate.Command{CommandBase: commandcore.Base{OpID: "nav-tags"}, Path: dir})
 	if err != nil {
 		t.Fatalf("dispatch navigate failed: %v", err)
 	}
@@ -230,22 +237,22 @@ func TestControllerRegisterProjectionSubscribers(t *testing.T) {
 	subs, projections := browser.NewProjectionSet()
 	c.RegisterProjectionSubscribers(subs)
 
-	c.EventBus().Publish(context.Background(), browser.DirectoryLoadedEvent{
-		EventBase: browser.EventBase{At: time.Now(), OpID: "proj-dir"},
+	c.EventBus().Publish(context.Background(), commandcore.DirectoryLoadedEvent{
+		EventBase: commandcore.EventBase{At: time.Now(), OpID: "proj-dir"},
 		Path:      "/tmp",
-		Entries:   []browser.DirectoryEntry{{Path: "/tmp/a"}},
+		Entries:   []commandcore.DirectoryEntry{{Path: "/tmp/a"}},
 	})
-	c.EventBus().Publish(context.Background(), browser.OperationFailedEvent{
-		EventBase: browser.EventBase{At: time.Now(), OpID: "proj-fail"},
-		Command:   browser.CommandSearch,
+	c.EventBus().Publish(context.Background(), commandcore.OperationFailedEvent{
+		EventBase: commandcore.EventBase{At: time.Now(), OpID: "proj-fail"},
+		Command:   commandcore.Search,
 		Err:       errors.New("proj-error"),
 	})
-	c.EventBus().Publish(context.Background(), browser.AutocompleteUpdatedEvent{
-		EventBase: browser.EventBase{At: time.Now(), OpID: "proj-ac"},
+	c.EventBus().Publish(context.Background(), commandcore.AutocompleteUpdatedEvent{
+		EventBase: commandcore.EventBase{At: time.Now(), OpID: "proj-ac"},
 		Items:     []string{"tag:x"},
 	})
-	c.EventBus().Publish(context.Background(), browser.PortalOpenedEvent{
-		EventBase: browser.EventBase{At: time.Now(), OpID: "proj-portal-open"},
+	c.EventBus().Publish(context.Background(), commandcore.PortalOpenedEvent{
+		EventBase: commandcore.EventBase{At: time.Now(), OpID: "proj-portal-open"},
 		Mode:      "portal",
 	})
 
@@ -271,17 +278,17 @@ func TestControllerSubmitPortalPublishesClosedEvent(t *testing.T) {
 	t.Parallel()
 
 	c := browser.NewController(context.Background())
-	got := make(chan browser.PortalClosedEvent, 1)
-	c.EventBus().Subscribe(browser.EventPortalClosed, func(_ context.Context, evt browser.Event) {
-		e, ok := evt.(browser.PortalClosedEvent)
+	got := make(chan commandcore.PortalClosedEvent, 1)
+	c.EventBus().Subscribe(commandcore.EventPortalClosed, func(_ context.Context, evt commandcore.Event) {
+		e, ok := evt.(commandcore.PortalClosedEvent)
 		if !ok {
 			t.Fatalf("unexpected event type %T", evt)
 		}
 		got <- e
 	})
 
-	err := c.Dispatch(browser.SubmitPortalCommand{
-		CommandBase:   browser.CommandBase{OpID: "portal-submit"},
+	err := c.Dispatch(submitportal.Command{
+		CommandBase:   commandcore.Base{OpID: "portal-submit"},
 		SelectedFiles: []string{"/tmp/a"},
 	})
 	if err != nil {

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/darkliquid/tilbo/cmd/tilbo-browser/pkg/browser"
+	"github.com/darkliquid/tilbo/cmd/tilbo-browser/pkg/browser/commandcore"
 )
 
 func TestProjectionStateSnapshotDetached(t *testing.T) {
@@ -15,7 +16,7 @@ func TestProjectionStateSnapshotDetached(t *testing.T) {
 	ps := browser.NewProjectionState(browser.State{
 		CurrentPath: "/tmp",
 		SearchChips: []string{"a"},
-		DirectoryEntries: []browser.DirectoryEntry{{
+		DirectoryEntries: []commandcore.DirectoryEntry{{
 			Path: "/tmp/a",
 		}},
 	})
@@ -42,10 +43,10 @@ func TestDirectoryProjectionConsumesEvent(t *testing.T) {
 
 	sub, ps := browser.NewDirectoryProjection()
 	now := time.Now()
-	sub(context.Background(), browser.DirectoryLoadedEvent{
-		EventBase: browser.EventBase{At: now, OpID: "d1"},
+	sub(context.Background(), commandcore.DirectoryLoadedEvent{
+		EventBase: commandcore.EventBase{At: now, OpID: "d1"},
 		Path:      "/tmp",
-		Entries:   []browser.DirectoryEntry{{Path: "/tmp/x"}},
+		Entries:   []commandcore.DirectoryEntry{{Path: "/tmp/x"}},
 	})
 
 	s, v := ps.Snapshot()
@@ -62,10 +63,10 @@ func TestSearchProjectionConsumesEvent(t *testing.T) {
 
 	sub, ps := browser.NewSearchProjection()
 	now := time.Now()
-	sub(context.Background(), browser.SearchCompletedEvent{
-		EventBase: browser.EventBase{At: now, OpID: "s1"},
+	sub(context.Background(), commandcore.SearchCompletedEvent{
+		EventBase: commandcore.EventBase{At: now, OpID: "s1"},
 		Chips:     []string{"tag:a"},
-		Files:     []browser.SearchFile{{Path: "/tmp/a"}},
+		Files:     []commandcore.SearchFile{{Path: "/tmp/a"}},
 	})
 
 	s, v := ps.Snapshot()
@@ -82,9 +83,9 @@ func TestPlacesProjectionConsumesEvent(t *testing.T) {
 
 	sub, ps := browser.NewPlacesProjection()
 	now := time.Now()
-	sub(context.Background(), browser.PlacesRefreshedEvent{
-		EventBase: browser.EventBase{At: now, OpID: "p1"},
-		Places:    []browser.PlaceEntry{{Name: "Home", Path: "/home/u"}},
+	sub(context.Background(), commandcore.PlacesRefreshedEvent{
+		EventBase: commandcore.EventBase{At: now, OpID: "p1"},
+		Places:    []commandcore.PlaceEntry{{Name: "Home", Path: "/home/u"}},
 	})
 
 	s, v := ps.Snapshot()
@@ -100,8 +101,8 @@ func TestAutocompleteProjectionConsumesEvent(t *testing.T) {
 	t.Parallel()
 
 	sub, ps := browser.NewAutocompleteProjection()
-	sub(context.Background(), browser.AutocompleteUpdatedEvent{
-		EventBase: browser.EventBase{At: time.Now(), OpID: "ac1"},
+	sub(context.Background(), commandcore.AutocompleteUpdatedEvent{
+		EventBase: commandcore.EventBase{At: time.Now(), OpID: "ac1"},
 		Items:     []string{"tag:a", "tag:b"},
 	})
 
@@ -118,12 +119,12 @@ func TestPortalProjectionConsumesEvents(t *testing.T) {
 	t.Parallel()
 
 	sub, ps := browser.NewPortalProjection()
-	sub(context.Background(), browser.PortalOpenedEvent{
-		EventBase: browser.EventBase{At: time.Now(), OpID: "po1"},
+	sub(context.Background(), commandcore.PortalOpenedEvent{
+		EventBase: commandcore.EventBase{At: time.Now(), OpID: "po1"},
 		Mode:      "portal",
 	})
-	sub(context.Background(), browser.PortalClosedEvent{
-		EventBase:     browser.EventBase{At: time.Now(), OpID: "pc1"},
+	sub(context.Background(), commandcore.PortalClosedEvent{
+		EventBase:     commandcore.EventBase{At: time.Now(), OpID: "pc1"},
 		SelectedFiles: []string{"/tmp/a"},
 	})
 
@@ -143,9 +144,9 @@ func TestFailureProjectionConsumesOperationFailed(t *testing.T) {
 	t.Parallel()
 
 	sub, ps := browser.NewFailureProjection()
-	sub(context.Background(), browser.OperationFailedEvent{
-		EventBase: browser.EventBase{At: time.Now(), OpID: "f1"},
-		Command:   browser.CommandSearch,
+	sub(context.Background(), commandcore.OperationFailedEvent{
+		EventBase: commandcore.EventBase{At: time.Now(), OpID: "f1"},
+		Command:   commandcore.Search,
 		Err:       errors.New("boom"),
 	})
 
@@ -162,22 +163,22 @@ func TestProjectionSetWiresDistinctStates(t *testing.T) {
 	t.Parallel()
 
 	subs, ps := browser.NewProjectionSet()
-	subs.Directory(context.Background(), browser.DirectoryLoadedEvent{
-		EventBase: browser.EventBase{At: time.Now(), OpID: "a"},
+	subs.Directory(context.Background(), commandcore.DirectoryLoadedEvent{
+		EventBase: commandcore.EventBase{At: time.Now(), OpID: "a"},
 		Path:      "/tmp",
-		Entries:   []browser.DirectoryEntry{{Path: "/tmp/one"}},
+		Entries:   []commandcore.DirectoryEntry{{Path: "/tmp/one"}},
 	})
-	subs.Search(context.Background(), browser.SearchCompletedEvent{
-		EventBase: browser.EventBase{At: time.Now(), OpID: "b"},
+	subs.Search(context.Background(), commandcore.SearchCompletedEvent{
+		EventBase: commandcore.EventBase{At: time.Now(), OpID: "b"},
 		Chips:     []string{"tag:b"},
-		Files:     []browser.SearchFile{{Path: "/tmp/two"}},
+		Files:     []commandcore.SearchFile{{Path: "/tmp/two"}},
 	})
-	subs.Auto(context.Background(), browser.AutocompleteUpdatedEvent{
-		EventBase: browser.EventBase{At: time.Now(), OpID: "c"},
+	subs.Auto(context.Background(), commandcore.AutocompleteUpdatedEvent{
+		EventBase: commandcore.EventBase{At: time.Now(), OpID: "c"},
 		Items:     []string{"tag:c"},
 	})
-	subs.Portal(context.Background(), browser.PortalOpenedEvent{
-		EventBase: browser.EventBase{At: time.Now(), OpID: "d"},
+	subs.Portal(context.Background(), commandcore.PortalOpenedEvent{
+		EventBase: commandcore.EventBase{At: time.Now(), OpID: "d"},
 		Mode:      "portal",
 	})
 

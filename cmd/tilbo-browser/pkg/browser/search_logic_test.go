@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/darkliquid/tilbo/cmd/tilbo-browser/pkg/browser"
+	"github.com/darkliquid/tilbo/cmd/tilbo-browser/pkg/browser/commandcore"
 )
 
 func TestLocalSearchUsesGlobChips(t *testing.T) {
@@ -36,7 +37,7 @@ func TestLocalSearchUsesGlobChips(t *testing.T) {
 func TestFilterSearchFilesByHidden(t *testing.T) {
 	t.Parallel()
 
-	files := []browser.SearchFile{
+	files := []commandcore.SearchFile{
 		{Path: "/tmp/.hidden.txt", Tags: []string{"hidden"}},
 		{Path: "/tmp/visible.txt", Tags: []string{"visible"}},
 	}

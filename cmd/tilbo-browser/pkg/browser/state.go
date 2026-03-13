@@ -26,10 +26,10 @@ func NewStateStore() *StateStore {
 		state: State{
 			CurrentPath:      "/",
 			SearchChips:      []string{},
-			DirectoryEntries: []DirectoryEntry{},
-			SearchResults:    []SearchFile{},
+			DirectoryEntries: []commandcore.DirectoryEntry{},
+			SearchResults:    []commandcore.SearchFile{},
 			Autocomplete:     []string{},
-			Places:           []PlaceEntry{},
+			Places:           []commandcore.PlaceEntry{},
 			SelectedIndices:  []int{},
 			WindowMode:       "browser",
 			PortalSelection:  []string{},
@@ -45,10 +45,10 @@ func (s *StateStore) Snapshot() (State, uint64) {
 
 	copyState := s.state
 	copyState.SearchChips = append([]string(nil), s.state.SearchChips...)
-	copyState.DirectoryEntries = append([]DirectoryEntry(nil), s.state.DirectoryEntries...)
-	copyState.SearchResults = append([]SearchFile(nil), s.state.SearchResults...)
+	copyState.DirectoryEntries = append([]commandcore.DirectoryEntry(nil), s.state.DirectoryEntries...)
+	copyState.SearchResults = append([]commandcore.SearchFile(nil), s.state.SearchResults...)
 	copyState.Autocomplete = append([]string(nil), s.state.Autocomplete...)
-	copyState.Places = append([]PlaceEntry(nil), s.state.Places...)
+	copyState.Places = append([]commandcore.PlaceEntry(nil), s.state.Places...)
 	copyState.SelectedIndices = append([]int(nil), s.state.SelectedIndices...)
 	copyState.PortalSelection = append([]string(nil), s.state.PortalSelection...)
 	copyState.InFlightOps = make(map[string]OperationMeta, len(s.state.InFlightOps))

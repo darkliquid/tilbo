@@ -4,6 +4,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/darkliquid/tilbo/cmd/tilbo-browser/pkg/browser/commandcore"
+	"github.com/darkliquid/tilbo/cmd/tilbo-browser/pkg/browser/commands"
 	"github.com/darkliquid/tilbo/cmd/tilbo-browser/pkg/browser/commands/autocomplete"
 	"github.com/darkliquid/tilbo/cmd/tilbo-browser/pkg/browser/commands/canceloperation"
 	"github.com/darkliquid/tilbo/cmd/tilbo-browser/pkg/browser/commands/chmodfile"
@@ -17,6 +19,8 @@ import (
 	"github.com/darkliquid/tilbo/cmd/tilbo-browser/pkg/browser/commands/shutdown"
 	"github.com/darkliquid/tilbo/cmd/tilbo-browser/pkg/browser/commands/submitportal"
 	"github.com/darkliquid/tilbo/cmd/tilbo-browser/pkg/browser/commands/togglehidden"
+	"github.com/darkliquid/tilbo/cmd/tilbo-browser/pkg/browser/daemon"
+	"github.com/darkliquid/tilbo/cmd/tilbo-browser/pkg/browser/operations"
 )
 
 const defaultOperationTimeout = 30 * time.Second
@@ -26,12 +30,12 @@ type Controller struct {
 	ctx    context.Context
 	cancel context.CancelFunc
 
-	commands *CommandBus
-	events   *EventBus
+	commands *commands.CommandBus
+	events   *commands.EventBus
 	state    *StateStore
-	ops      *OperationRegistry
-	fsOps    *FileSystemOps
-	daemon   *DaemonAdapter
+	ops      *operations.Registry
+	fsOps    *operations.FileSystem
+	daemon   *daemon.Adapter
 }
 
 // NewController creates a controller with default wiring.
@@ -44,11 +48,11 @@ func NewController(parent context.Context) *Controller {
 	c := &Controller{
 		ctx:      ctx,
 		cancel:   cancel,
-		commands: NewCommandBus(),
-		events:   NewEventBus(),
+		commands: commands.NewCommandBus(),
+		events:   commands.NewEventBus(),
 		state:    NewStateStore(),
-		ops:      NewOperationRegistry(),
-		fsOps:    NewFileSystemOps(),
+		ops:      operations.NewRegistry(),
+		fsOps:    operations.NewFileSystem(),
 	}
 
 	c.registerHandlers()
@@ -57,37 +61,37 @@ func NewController(parent context.Context) *Controller {
 }
 
 // CommandBus exposes the command bus for external wiring.
-func (c *Controller) CommandBus() *CommandBus { return c.commands }
+func (c *Controller) CommandBus() *commands.CommandBus { return c.commands }
 
 // EventBus exposes the event bus for external wiring.
-func (c *Controller) EventBus() *EventBus { return c.events }
+func (c *Controller) EventBus() *commands.EventBus { return c.events }
 
 // StateStore exposes the state store for projection models.
 func (c *Controller) StateStore() *StateStore { return c.state }
 
 // SetDaemonAdapter sets or replaces the daemon adapter used by controller handlers.
-func (c *Controller) SetDaemonAdapter(adapter *DaemonAdapter) { c.daemon = adapter }
+func (c *Controller) SetDaemonAdapter(adapter *daemon.Adapter) { c.daemon = adapter }
 
 // RegisterProjectionSubscribers wires projection subscribers to controller events.
 func (c *Controller) RegisterProjectionSubscribers(subs ProjectionSubscribers) {
 	if subs.Directory != nil {
-		c.events.Subscribe(EventDirectoryLoaded, subs.Directory)
+		c.events.Subscribe(commandcore.EventDirectoryLoaded, subs.Directory)
 	}
 	if subs.Search != nil {
-		c.events.Subscribe(EventSearchCompleted, subs.Search)
+		c.events.Subscribe(commandcore.EventSearchCompleted, subs.Search)
 	}
 	if subs.Auto != nil {
-		c.events.Subscribe(EventAutocompleteUpdated, subs.Auto)
+		c.events.Subscribe(commandcore.EventAutocompleteUpdated, subs.Auto)
 	}
 	if subs.Places != nil {
-		c.events.Subscribe(EventPlacesRefreshed, subs.Places)
+		c.events.Subscribe(commandcore.EventPlacesRefreshed, subs.Places)
 	}
 	if subs.Portal != nil {
-		c.events.Subscribe(EventPortalOpened, subs.Portal)
-		c.events.Subscribe(EventPortalClosed, subs.Portal)
+		c.events.Subscribe(commandcore.EventPortalOpened, subs.Portal)
+		c.events.Subscribe(commandcore.EventPortalClosed, subs.Portal)
 	}
 	if subs.Failures != nil {
-		c.events.Subscribe(EventOperationFailed, subs.Failures)
+		c.events.Subscribe(commandcore.EventOperationFailed, subs.Failures)
 	}
 }
 
@@ -95,60 +99,60 @@ func (c *Controller) RegisterProjectionSubscribers(subs ProjectionSubscribers) {
 func (c *Controller) Done() <-chan struct{} { return c.ctx.Done() }
 
 // Dispatch sends one command into the controller.
-func (c *Controller) Dispatch(cmd Command) error {
+func (c *Controller) Dispatch(cmd commandcore.Command) error {
 	return c.commands.Dispatch(c.ctx, cmd)
 }
 
 // Shutdown requests controller shutdown.
 func (c *Controller) Shutdown(reason string) {
-	_ = c.Dispatch(ShutdownCommand{CommandBase: CommandBase{OpID: "shutdown"}, Reason: reason})
+	_ = c.Dispatch(shutdown.Command{CommandBase: commandcore.Base{OpID: "shutdown"}, Reason: reason})
 }
 
 // registerHandlers wires each command type to its package handler, passing the
 // controller as the HandlerContext implementation.
 func (c *Controller) registerHandlers() {
-	c.commands.Register(CommandNavigate, func(ctx context.Context, cmd Command) error {
+	c.commands.Register(commandcore.Navigate, func(ctx context.Context, cmd commandcore.Command) error {
 		return navigate.Handle(ctx, cmd, c)
 	})
-	c.commands.Register(CommandSearch, func(ctx context.Context, cmd Command) error {
+	c.commands.Register(commandcore.Search, func(ctx context.Context, cmd commandcore.Command) error {
 		return search.Handle(ctx, cmd, c)
 	})
-	c.commands.Register(CommandAutocomplete, func(ctx context.Context, cmd Command) error {
+	c.commands.Register(commandcore.Autocomplete, func(ctx context.Context, cmd commandcore.Command) error {
 		return autocomplete.Handle(ctx, cmd, c)
 	})
-	c.commands.Register(CommandToggleHidden, func(ctx context.Context, cmd Command) error {
+	c.commands.Register(commandcore.ToggleHidden, func(ctx context.Context, cmd commandcore.Command) error {
 		return togglehidden.Handle(ctx, cmd, c)
 	})
-	c.commands.Register(CommandCancelOperation, func(ctx context.Context, cmd Command) error {
+	c.commands.Register(commandcore.CancelOperation, func(ctx context.Context, cmd commandcore.Command) error {
 		return canceloperation.Handle(ctx, cmd, c)
 	})
-	c.commands.Register(CommandShutdown, func(ctx context.Context, cmd Command) error {
+	c.commands.Register(commandcore.Shutdown, func(ctx context.Context, cmd commandcore.Command) error {
 		return shutdown.Handle(ctx, cmd, c)
 	})
-	c.commands.Register(CommandOpenFile, func(ctx context.Context, cmd Command) error {
+	c.commands.Register(commandcore.OpenFile, func(ctx context.Context, cmd commandcore.Command) error {
 		return openfile.Handle(ctx, cmd, c)
 	})
-	c.commands.Register(CommandRenameFile, func(ctx context.Context, cmd Command) error {
+	c.commands.Register(commandcore.RenameFile, func(ctx context.Context, cmd commandcore.Command) error {
 		return renamefile.Handle(ctx, cmd, c)
 	})
-	c.commands.Register(CommandDeleteFile, func(ctx context.Context, cmd Command) error {
+	c.commands.Register(commandcore.DeleteFile, func(ctx context.Context, cmd commandcore.Command) error {
 		return deletefile.Handle(ctx, cmd, c)
 	})
-	c.commands.Register(CommandChmodFile, func(ctx context.Context, cmd Command) error {
+	c.commands.Register(commandcore.ChmodFile, func(ctx context.Context, cmd commandcore.Command) error {
 		return chmodfile.Handle(ctx, cmd, c)
 	})
-	c.commands.Register(CommandRefreshPlaces, func(ctx context.Context, cmd Command) error {
+	c.commands.Register(commandcore.RefreshPlaces, func(ctx context.Context, cmd commandcore.Command) error {
 		return refreshplaces.Handle(ctx, cmd, c)
 	})
-	c.commands.Register(CommandOpenPortal, func(ctx context.Context, cmd Command) error {
+	c.commands.Register(commandcore.OpenPortal, func(ctx context.Context, cmd commandcore.Command) error {
 		return openportal.Handle(ctx, cmd, c)
 	})
-	c.commands.Register(CommandSubmitPortal, func(ctx context.Context, cmd Command) error {
+	c.commands.Register(commandcore.SubmitPortal, func(ctx context.Context, cmd commandcore.Command) error {
 		return submitportal.Handle(ctx, cmd, c)
 	})
 }
 
-func (c *Controller) registerInFlight(opID string, cmdType CommandType) {
+func (c *Controller) registerInFlight(opID string, cmdType commandcore.Type) {
 	if opID == "" {
 		return
 	}

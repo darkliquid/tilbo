@@ -4,6 +4,8 @@ import (
 	"context"
 	"maps"
 	"sync"
+
+	"github.com/darkliquid/tilbo/cmd/tilbo-browser/pkg/browser/commandcore"
 )
 
 // ProjectionState holds a versioned state view driven by event subscribers.
@@ -46,10 +48,10 @@ func (p *ProjectionState) mutate(fn func(*State)) {
 }
 
 // NewDirectoryProjection returns a subscriber that projects directory events.
-func NewDirectoryProjection() (EventSubscriber, *ProjectionState) {
-	ps := NewProjectionState(State{DirectoryEntries: []DirectoryEntry{}})
-	sub := func(_ context.Context, evt Event) {
-		e, ok := evt.(DirectoryLoadedEvent)
+func NewDirectoryProjection() (commandcore.EventSubscriber, *ProjectionState) {
+	ps := NewProjectionState(State{DirectoryEntries: []commandcore.DirectoryEntry{}})
+	sub := func(_ context.Context, evt commandcore.Event) {
+		e, ok := evt.(commandcore.DirectoryLoadedEvent)
 		if !ok {
 			return
 		}
@@ -57,7 +59,7 @@ func NewDirectoryProjection() (EventSubscriber, *ProjectionState) {
 		ps.mutate(func(s *State) {
 			s.CurrentPath = e.Path
 			s.IsSearchMode = false
-			s.DirectoryEntries = append([]DirectoryEntry(nil), e.Entries...)
+			s.DirectoryEntries = append([]commandcore.DirectoryEntry(nil), e.Entries...)
 			s.LastDirectoryLoad = e.OccurredAt()
 		})
 	}
@@ -66,10 +68,10 @@ func NewDirectoryProjection() (EventSubscriber, *ProjectionState) {
 }
 
 // NewSearchProjection returns a subscriber that projects search events.
-func NewSearchProjection() (EventSubscriber, *ProjectionState) {
-	ps := NewProjectionState(State{SearchResults: []SearchFile{}, SearchChips: []string{}})
-	sub := func(_ context.Context, evt Event) {
-		e, ok := evt.(SearchCompletedEvent)
+func NewSearchProjection() (commandcore.EventSubscriber, *ProjectionState) {
+	ps := NewProjectionState(State{SearchResults: []commandcore.SearchFile{}, SearchChips: []string{}})
+	sub := func(_ context.Context, evt commandcore.Event) {
+		e, ok := evt.(commandcore.SearchCompletedEvent)
 		if !ok {
 			return
 		}
@@ -77,7 +79,7 @@ func NewSearchProjection() (EventSubscriber, *ProjectionState) {
 		ps.mutate(func(s *State) {
 			s.IsSearchMode = true
 			s.SearchChips = append([]string(nil), e.Chips...)
-			s.SearchResults = append([]SearchFile(nil), e.Files...)
+			s.SearchResults = append([]commandcore.SearchFile(nil), e.Files...)
 			s.LastSearch = e.OccurredAt()
 		})
 	}
@@ -86,10 +88,10 @@ func NewSearchProjection() (EventSubscriber, *ProjectionState) {
 }
 
 // NewAutocompleteProjection returns a subscriber that projects autocomplete events.
-func NewAutocompleteProjection() (EventSubscriber, *ProjectionState) {
+func NewAutocompleteProjection() (commandcore.EventSubscriber, *ProjectionState) {
 	ps := NewProjectionState(State{Autocomplete: []string{}})
-	sub := func(_ context.Context, evt Event) {
-		e, ok := evt.(AutocompleteUpdatedEvent)
+	sub := func(_ context.Context, evt commandcore.Event) {
+		e, ok := evt.(commandcore.AutocompleteUpdatedEvent)
 		if !ok {
 			return
 		}
@@ -103,16 +105,16 @@ func NewAutocompleteProjection() (EventSubscriber, *ProjectionState) {
 }
 
 // NewPlacesProjection returns a subscriber that projects places events.
-func NewPlacesProjection() (EventSubscriber, *ProjectionState) {
-	ps := NewProjectionState(State{Places: []PlaceEntry{}})
-	sub := func(_ context.Context, evt Event) {
-		e, ok := evt.(PlacesRefreshedEvent)
+func NewPlacesProjection() (commandcore.EventSubscriber, *ProjectionState) {
+	ps := NewProjectionState(State{Places: []commandcore.PlaceEntry{}})
+	sub := func(_ context.Context, evt commandcore.Event) {
+		e, ok := evt.(commandcore.PlacesRefreshedEvent)
 		if !ok {
 			return
 		}
 
 		ps.mutate(func(s *State) {
-			s.Places = append([]PlaceEntry(nil), e.Places...)
+			s.Places = append([]commandcore.PlaceEntry(nil), e.Places...)
 			s.LastPlacesRefresh = e.OccurredAt()
 		})
 	}
@@ -121,16 +123,16 @@ func NewPlacesProjection() (EventSubscriber, *ProjectionState) {
 }
 
 // NewPortalProjection returns a subscriber that projects portal mode events.
-func NewPortalProjection() (EventSubscriber, *ProjectionState) {
+func NewPortalProjection() (commandcore.EventSubscriber, *ProjectionState) {
 	ps := NewProjectionState(State{WindowMode: "browser"})
-	sub := func(_ context.Context, evt Event) {
+	sub := func(_ context.Context, evt commandcore.Event) {
 		switch e := evt.(type) {
-		case PortalOpenedEvent:
+		case commandcore.PortalOpenedEvent:
 			ps.mutate(func(s *State) {
 				s.WindowMode = e.Mode
 				s.PortalSelection = []string{}
 			})
-		case PortalClosedEvent:
+		case commandcore.PortalClosedEvent:
 			ps.mutate(func(s *State) {
 				s.WindowMode = "browser"
 				s.PortalSelection = append([]string(nil), e.SelectedFiles...)
@@ -142,10 +144,10 @@ func NewPortalProjection() (EventSubscriber, *ProjectionState) {
 }
 
 // NewFailureProjection returns a subscriber that projects operation failures.
-func NewFailureProjection() (EventSubscriber, *ProjectionState) {
+func NewFailureProjection() (commandcore.EventSubscriber, *ProjectionState) {
 	ps := NewProjectionState(State{})
-	sub := func(_ context.Context, evt Event) {
-		e, ok := evt.(OperationFailedEvent)
+	sub := func(_ context.Context, evt commandcore.Event) {
+		e, ok := evt.(commandcore.OperationFailedEvent)
 		if !ok {
 			return
 		}
@@ -172,12 +174,12 @@ type Projections struct {
 
 // ProjectionSubscribers groups event subscribers by domain.
 type ProjectionSubscribers struct {
-	Directory EventSubscriber
-	Search    EventSubscriber
-	Auto      EventSubscriber
-	Places    EventSubscriber
-	Portal    EventSubscriber
-	Failures  EventSubscriber
+	Directory commandcore.EventSubscriber
+	Search    commandcore.EventSubscriber
+	Auto      commandcore.EventSubscriber
+	Places    commandcore.EventSubscriber
+	Portal    commandcore.EventSubscriber
+	Failures  commandcore.EventSubscriber
 }
 
 // NewProjectionSet creates a default projection state and subscriber set.
@@ -209,10 +211,10 @@ func NewProjectionSet() (ProjectionSubscribers, Projections) {
 func cloneState(s State) State {
 	out := s
 	out.SearchChips = append([]string(nil), s.SearchChips...)
-	out.DirectoryEntries = append([]DirectoryEntry(nil), s.DirectoryEntries...)
-	out.SearchResults = append([]SearchFile(nil), s.SearchResults...)
+	out.DirectoryEntries = append([]commandcore.DirectoryEntry(nil), s.DirectoryEntries...)
+	out.SearchResults = append([]commandcore.SearchFile(nil), s.SearchResults...)
 	out.Autocomplete = append([]string(nil), s.Autocomplete...)
-	out.Places = append([]PlaceEntry(nil), s.Places...)
+	out.Places = append([]commandcore.PlaceEntry(nil), s.Places...)
 	out.SelectedIndices = append([]int(nil), s.SelectedIndices...)
 	out.PortalSelection = append([]string(nil), s.PortalSelection...)
 	out.InFlightOps = make(map[string]OperationMeta, len(s.InFlightOps))

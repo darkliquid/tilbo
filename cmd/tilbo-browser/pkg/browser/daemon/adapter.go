@@ -1,4 +1,4 @@
-package browser
+package daemon
 
 import (
 	"context"
@@ -14,22 +14,22 @@ type requestCaller interface {
 	Call(ctx context.Context, req *ipcv1.Request) (*ipcv1.Response, error)
 }
 
-// DaemonAdapter translates controller search/tag hydration requests to daemon IPC.
-type DaemonAdapter struct {
+// Adapter translates controller search/tag hydration requests to daemon IPC.
+type Adapter struct {
 	caller requestCaller
 }
 
-// NewDaemonAdapter constructs a daemon adapter from a request caller.
-func NewDaemonAdapter(caller requestCaller) *DaemonAdapter {
+// NewAdapter constructs a daemon adapter from a request caller.
+func NewAdapter(caller requestCaller) *Adapter {
 	if caller == nil {
 		return nil
 	}
 
-	return &DaemonAdapter{caller: caller}
+	return &Adapter{caller: caller}
 }
 
 // Search executes daemon search for non-local chips.
-func (a *DaemonAdapter) Search(ctx context.Context, chips []string, limit uint32) ([]SearchFile, error) {
+func (a *Adapter) Search(ctx context.Context, chips []string, limit uint32) ([]commandcore.SearchFile, error) {
 	if a == nil || a.caller == nil {
 		return nil, errors.New("daemon adapter not configured")
 	}
@@ -49,7 +49,7 @@ func (a *DaemonAdapter) Search(ctx context.Context, chips []string, limit uint32
 }
 
 // HydrateTags fetches tags for the provided paths.
-func (a *DaemonAdapter) HydrateTags(ctx context.Context, paths []string) (map[string][]string, error) {
+func (a *Adapter) HydrateTags(ctx context.Context, paths []string) (map[string][]string, error) {
 	if a == nil || a.caller == nil {
 		return nil, errors.New("daemon adapter not configured")
 	}
@@ -79,7 +79,7 @@ func (a *DaemonAdapter) HydrateTags(ctx context.Context, paths []string) (map[st
 }
 
 // Autocomplete fetches daemon tag suggestions for a prefix.
-func (a *DaemonAdapter) Autocomplete(ctx context.Context, prefix string) ([]string, error) {
+func (a *Adapter) Autocomplete(ctx context.Context, prefix string) ([]string, error) {
 	if a == nil || a.caller == nil {
 		return nil, errors.New("daemon adapter not configured")
 	}
@@ -102,7 +102,7 @@ func (a *DaemonAdapter) Autocomplete(ctx context.Context, prefix string) ([]stri
 // SearchRequestFromChips builds an IPC search request from browser chips.
 func SearchRequestFromChips(chips []string, limit uint32) *ipcv1.SearchRequest {
 	if limit == 0 {
-		limit = defaultSearchLimit
+		limit = commandcore.DefaultSearchLimit
 	}
 
 	req := &ipcv1.SearchRequest{
@@ -131,15 +131,15 @@ func SearchRequestFromChips(chips []string, limit uint32) *ipcv1.SearchRequest {
 	return req
 }
 
-// SearchFilesFromIPC maps daemon file results to runtime SearchFile values.
-func SearchFilesFromIPC(files []*ipcv1.FileResult) []SearchFile {
+// SearchFilesFromIPC maps daemon file results to runtime commandcore.SearchFile values.
+func SearchFilesFromIPC(files []*ipcv1.FileResult) []commandcore.SearchFile {
 	if len(files) == 0 {
-		return []SearchFile{}
+		return []commandcore.SearchFile{}
 	}
 
-	out := make([]SearchFile, 0, len(files))
+	out := make([]commandcore.SearchFile, 0, len(files))
 	for _, f := range files {
-		out = append(out, SearchFile{
+		out = append(out, commandcore.SearchFile{
 			Path:  f.GetPath(),
 			Tags:  append([]string(nil), f.GetTags()...),
 			Size:  f.GetSizeBytes(),

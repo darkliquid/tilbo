@@ -1,11 +1,11 @@
-package browser_test
+package daemon_test
 
 import (
 	"context"
 	"errors"
 	"testing"
 
-	"github.com/darkliquid/tilbo/cmd/tilbo-browser/pkg/browser"
+	"github.com/darkliquid/tilbo/cmd/tilbo-browser/pkg/browser/daemon"
 	ipcv1 "github.com/darkliquid/tilbo/internal/ipc/gen/tilbo/ipc/v1"
 )
 
@@ -42,7 +42,7 @@ func TestDaemonAdapterSearchBuildsRequestAndMapsResponse(t *testing.T) {
 		},
 	}
 
-	adapter := browser.NewDaemonAdapter(caller)
+	adapter := daemon.NewAdapter(caller)
 	files, err := adapter.Search(context.Background(), []string{"tag1", "glob:/tmp/*", "mime:text/plain"}, 25)
 	if err != nil {
 		t.Fatalf("search failed: %v", err)
@@ -80,7 +80,7 @@ func TestDaemonAdapterHydrateTags(t *testing.T) {
 		},
 	}
 
-	adapter := browser.NewDaemonAdapter(caller)
+	adapter := daemon.NewAdapter(caller)
 	tagMap, err := adapter.HydrateTags(context.Background(), []string{"/tmp/a"})
 	if err != nil {
 		t.Fatalf("hydrate tags failed: %v", err)
@@ -104,7 +104,7 @@ func TestDaemonAdapterHydrateTags(t *testing.T) {
 func TestDaemonAdapterSearchPropagatesCallerError(t *testing.T) {
 	t.Parallel()
 
-	adapter := browser.NewDaemonAdapter(&fakeCaller{err: errors.New("boom")})
+	adapter := daemon.NewAdapter(&fakeCaller{err: errors.New("boom")})
 	_, err := adapter.Search(context.Background(), []string{"tag"}, 1)
 	if err == nil {
 		t.Fatal("expected error")
@@ -122,7 +122,7 @@ func TestDaemonAdapterAutocompleteMapsListTagsResponse(t *testing.T) {
 		},
 	}
 
-	adapter := browser.NewDaemonAdapter(caller)
+	adapter := daemon.NewAdapter(caller)
 	tags, err := adapter.Autocomplete(context.Background(), "tag:")
 	if err != nil {
 		t.Fatalf("autocomplete failed: %v", err)
@@ -138,7 +138,7 @@ func TestDaemonAdapterAutocompleteMapsListTagsResponse(t *testing.T) {
 func TestSearchRequestFromChipsBuildsExpectedFields(t *testing.T) {
 	t.Parallel()
 
-	req := browser.SearchRequestFromChips(
+	req := daemon.SearchRequestFromChips(
 		[]string{"tag1", "mime:text/plain", "glob:/tmp/*", "hidden:any"},
 		25,
 	)
@@ -160,7 +160,7 @@ func TestSearchRequestFromChipsBuildsExpectedFields(t *testing.T) {
 func TestSearchRequestFromChipsFallsBackToFTS(t *testing.T) {
 	t.Parallel()
 
-	req := browser.SearchRequestFromChips([]string{"glob:/tmp/*", "hidden:any"}, 0)
+	req := daemon.SearchRequestFromChips([]string{"glob:/tmp/*", "hidden:any"}, 0)
 	if req.GetLimit() == 0 {
 		t.Fatal("expected default limit to be set")
 	}
@@ -172,13 +172,13 @@ func TestSearchRequestFromChipsFallsBackToFTS(t *testing.T) {
 func TestSearchAllowHidden(t *testing.T) {
 	t.Parallel()
 
-	if browser.SearchAllowHidden([]string{"tag:a"}, false) {
+	if daemon.SearchAllowHidden([]string{"tag:a"}, false) {
 		t.Fatal("expected hidden disabled without hidden:any chip")
 	}
-	if !browser.SearchAllowHidden([]string{"hidden:any"}, false) {
+	if !daemon.SearchAllowHidden([]string{"hidden:any"}, false) {
 		t.Fatal("expected hidden enabled by hidden:any chip")
 	}
-	if !browser.SearchAllowHidden([]string{"tag:a"}, true) {
+	if !daemon.SearchAllowHidden([]string{"tag:a"}, true) {
 		t.Fatal("expected hidden enabled when current state is true")
 	}
 }
@@ -192,7 +192,7 @@ func TestSearchFilesFromIPCMapsFields(t *testing.T) {
 		SizeBytes: 10,
 		Mtime:     20,
 	}}
-	out := browser.SearchFilesFromIPC(in)
+	out := daemon.SearchFilesFromIPC(in)
 
 	if len(out) != 1 {
 		t.Fatalf("expected one mapped file, got %d", len(out))
@@ -209,7 +209,7 @@ func TestSearchFilesFromIPCCopiesTagsSlice(t *testing.T) {
 	t.Parallel()
 
 	in := []*ipcv1.FileResult{{Path: "/tmp/a", Tags: []string{"x"}}}
-	out := browser.SearchFilesFromIPC(in)
+	out := daemon.SearchFilesFromIPC(in)
 	out[0].Tags[0] = "mut"
 
 	if in[0].GetTags()[0] != "x" {
