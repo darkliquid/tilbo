@@ -16,14 +16,14 @@ import (
 	"github.com/mappu/miqt/qt6"
 	miqtqml "github.com/mappu/miqt/qt6/qml"
 
+	"github.com/darkliquid/tilbo/cmd/tilbo-browser/commands/openportal"
+	"github.com/darkliquid/tilbo/cmd/tilbo-browser/commands/refreshplaces"
+	"github.com/darkliquid/tilbo/cmd/tilbo-browser/commands/shutdown"
+	"github.com/darkliquid/tilbo/cmd/tilbo-browser/core"
+	"github.com/darkliquid/tilbo/cmd/tilbo-browser/daemon"
 	"github.com/darkliquid/tilbo/cmd/tilbo-browser/models"
-	"github.com/darkliquid/tilbo/cmd/tilbo-browser/pkg/browser"
-	"github.com/darkliquid/tilbo/cmd/tilbo-browser/pkg/browser/commandcore"
-	"github.com/darkliquid/tilbo/cmd/tilbo-browser/pkg/browser/commands/openportal"
-	"github.com/darkliquid/tilbo/cmd/tilbo-browser/pkg/browser/commands/refreshplaces"
-	"github.com/darkliquid/tilbo/cmd/tilbo-browser/pkg/browser/commands/shutdown"
-	"github.com/darkliquid/tilbo/cmd/tilbo-browser/pkg/browser/daemon"
 	"github.com/darkliquid/tilbo/cmd/tilbo-browser/qml"
+	"github.com/darkliquid/tilbo/cmd/tilbo-browser/state"
 )
 
 type Browser struct {
@@ -38,8 +38,8 @@ type Browser struct {
 	ctx               context.Context
 	cancel            context.CancelFunc
 	timer             *qt6.QTimer
-	controller        *browser.Controller
-	projections       browser.Projections
+	controller        *state.Controller
+	projections       state.Projections
 	placesProjectionV uint64
 	dirProjectionV    uint64
 	searchProjectionV uint64
@@ -132,7 +132,7 @@ func (b *Browser) Open(mode, argsJSON string) *dbus.Error {
 	}
 
 	err := b.controller.Dispatch(openportal.Command{
-		CommandBase: commandcore.Base{OpID: "dbus-open"},
+		CommandBase: core.Base{OpID: "dbus-open"},
 		Mode:        mode,
 	})
 	if err != nil {
@@ -161,7 +161,7 @@ func (b *Browser) Quit() *dbus.Error {
 	}
 
 	err := b.controller.Dispatch(shutdown.Command{
-		CommandBase: commandcore.Base{OpID: "dbus-quit"},
+		CommandBase: core.Base{OpID: "dbus-quit"},
 		Reason:      "dbus-quit",
 	})
 	if err != nil {
@@ -178,7 +178,7 @@ func (b *Browser) drainMainThreadChannel() {
 	if b.placesRefreshTick >= placesRefreshTickThreshold {
 		b.placesRefreshTick = 0
 		_ = b.controller.Dispatch(refreshplaces.Command{
-			CommandBase: commandcore.Base{OpID: "places-tick"},
+			CommandBase: core.Base{OpID: "places-tick"},
 		})
 	}
 	// Drain all pending tasks from the channel
@@ -361,13 +361,13 @@ func main() {
 	b.placesModel = models.NewPlacesModel(b.app.QObject)
 	b.engine.RootContext().SetContextProperty("placesModel", b.placesModel.QObject)
 
-	b.controller = browser.NewController(b.ctx)
+	b.controller = state.NewController(b.ctx)
 	if daemonClient != nil {
 		b.controller.SetDaemonAdapter(daemon.NewAdapter(daemonClient))
 	}
 	b.controller.EventBus().
-		Subscribe(commandcore.EventShutdownInitiated, func(_ context.Context, evt commandcore.Event) {
-			if _, ok := evt.(commandcore.ShutdownInitiatedEvent); !ok {
+		Subscribe(core.EventShutdownInitiated, func(_ context.Context, evt core.Event) {
+			if _, ok := evt.(core.ShutdownInitiatedEvent); !ok {
 				return
 			}
 
@@ -377,8 +377,8 @@ func main() {
 			})
 		})
 	b.controller.EventBus().
-		Subscribe(commandcore.EventFileOperationDone, func(_ context.Context, evt commandcore.Event) {
-			if _, ok := evt.(commandcore.FileOperationDoneEvent); !ok {
+		Subscribe(core.EventFileOperationDone, func(_ context.Context, evt core.Event) {
+			if _, ok := evt.(core.FileOperationDoneEvent); !ok {
 				return
 			}
 
@@ -388,13 +388,13 @@ func main() {
 				}
 			})
 		})
-	projSubs, projections := browser.NewProjectionSet()
+	projSubs, projections := state.NewProjectionSet()
 	b.controller.RegisterProjectionSubscribers(projSubs)
 	b.projections = projections
 	b.fsModel.BindController(b.controller)
 	b.acModel.BindController(b.controller)
 	_ = b.controller.Dispatch(openportal.Command{
-		CommandBase: commandcore.Base{OpID: "startup-open"},
+		CommandBase: core.Base{OpID: "startup-open"},
 		Mode:        browserWindowMode,
 	})
 	startPath := "/"
@@ -403,7 +403,7 @@ func main() {
 	}
 	b.fsModel.SetPath(startPath)
 	_ = b.controller.Dispatch(refreshplaces.Command{
-		CommandBase: commandcore.Base{OpID: "places-initial"},
+		CommandBase: core.Base{OpID: "places-initial"},
 	})
 
 	b.engine.RootContext().SetContextProperty2("daemonConnected", qt6.NewQVariant8(daemonClient != nil))

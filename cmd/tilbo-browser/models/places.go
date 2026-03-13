@@ -5,8 +5,8 @@ import (
 
 	"github.com/mappu/miqt/qt6"
 
-	"github.com/darkliquid/tilbo/cmd/tilbo-browser/pkg/browser"
-	"github.com/darkliquid/tilbo/cmd/tilbo-browser/pkg/browser/commandcore"
+	"github.com/darkliquid/tilbo/cmd/tilbo-browser/core"
+	"github.com/darkliquid/tilbo/cmd/tilbo-browser/state"
 )
 
 type placeEntry struct {
@@ -44,7 +44,7 @@ func NewPlacesModel(parent *qt6.QObject) *PlacesModel {
 // Refresh rebuilds the places list. Call from the Qt main thread only.
 func (m *PlacesModel) Refresh() {
 	m.lastRefresh = time.Now()
-	entries, err := browser.BuildPlaces()
+	entries, err := state.BuildPlaces()
 	if err != nil {
 		m.entries = m.entries[:0]
 		m.Clear()
@@ -64,7 +64,7 @@ func (m *PlacesModel) Refresh() {
 }
 
 // ApplyProjectionPlaces updates the model from controller projection state.
-func (m *PlacesModel) ApplyProjectionPlaces(entries []commandcore.PlaceEntry) {
+func (m *PlacesModel) ApplyProjectionPlaces(entries []core.PlaceEntry) {
 	places := make([]placeEntry, 0, len(entries))
 	for _, e := range entries {
 		places = append(places, placeEntry{Name: e.Name, Path: e.Path})

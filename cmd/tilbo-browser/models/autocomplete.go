@@ -6,9 +6,9 @@ import (
 
 	"github.com/mappu/miqt/qt6"
 
-	browserruntime "github.com/darkliquid/tilbo/cmd/tilbo-browser/pkg/browser"
-	"github.com/darkliquid/tilbo/cmd/tilbo-browser/pkg/browser/commandcore"
-	"github.com/darkliquid/tilbo/cmd/tilbo-browser/pkg/browser/commands/autocomplete"
+	"github.com/darkliquid/tilbo/cmd/tilbo-browser/commands/autocomplete"
+	"github.com/darkliquid/tilbo/cmd/tilbo-browser/core"
+	browserruntime "github.com/darkliquid/tilbo/cmd/tilbo-browser/state"
 )
 
 type AutocompleteModel struct {
@@ -49,7 +49,7 @@ func NewAutocompleteModel(parent *qt6.QObject) *AutocompleteModel {
 
 				prefix := value.ToString()
 				err := m.controller.Dispatch(autocomplete.Command{
-					CommandBase: commandcore.Base{OpID: m.nextOpID("autocomplete")},
+					CommandBase: core.Base{OpID: m.nextOpID("autocomplete")},
 					Prefix:      prefix,
 				})
 				return err == nil
