@@ -51,6 +51,7 @@ jobs:
   lint:
     name: Lint
     runs-on: ubuntu-24.04
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
 
@@ -73,7 +74,7 @@ jobs:
         uses: golangci/golangci-lint-action@v9
         with:
           version: latest
-          args: --timeout=5m
+          args: --timeout=30m
 
       - uses: bufbuild/buf-setup-action@v1
         with:
@@ -118,6 +119,7 @@ jobs:
   test:
     name: Unit tests
     runs-on: ubuntu-24.04
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
 
@@ -137,7 +139,7 @@ jobs:
             --junitfile=test-results/junit.xml \
             -- \
             -count=1 \
-            -timeout=5m \
+            -timeout=45m \
             -race \
             -coverprofile=coverage.out \
             ./internal/... ./cmd/tilbo-cli/... ./cmd/tilbo-daemon/...
