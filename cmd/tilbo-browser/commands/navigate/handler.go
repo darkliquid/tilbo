@@ -23,7 +23,7 @@ const metadataWorkers = 8
 
 // Handle executes a navigate command: loads the directory and publishes a
 // DirectoryLoadedEvent (with optional tag hydration from the daemon).
-func Handle(ctx context.Context, cmd core.Command, hctx core.HandlerContext) error {
+func Handle(_ context.Context, cmd core.Command, hctx core.HandlerContext) error {
 	nav, ok := cmd.(Command)
 	if !ok {
 		return fmt.Errorf("navigate handler received %T", cmd)
@@ -42,125 +42,173 @@ func Handle(ctx context.Context, cmd core.Command, hctx core.HandlerContext) err
 	})
 
 	opCtx, cancel := hctx.OpContext(nav.OperationID(), core.DefaultOperationTimeout)
-	go func() {
-		defer cancel()
-		defer hctx.FinishOp(nav.OperationID())
-
-		slog.Debug("navigate.loadDir.start", "path", nav.Path)
-		t0 := time.Now()
-		entries, paths, err := hctx.LoadDir(nav.Path, hidden)
-		slog.Debug(
-			"navigate.loadDir",
-			"path", nav.Path,
-			"n", len(entries),
-			"dur", time.Since(t0).Round(time.Millisecond),
-		)
-		if err != nil {
-			hctx.Mutate(func(s *core.State) {
-				s.LastError = err.Error()
-			})
-			hctx.Publish(ctx, core.OperationFailedEvent{
-				EventBase: core.EventBase{OpID: nav.OperationID(), At: time.Now()},
-				Command:   nav.Type(),
-				Err:       err,
-			})
-			return
-		}
-
-		select {
-		case <-opCtx.Done():
-			return
-		default:
-		}
-
-		// Publish directory contents immediately so the UI is responsive even when
-		// metadata enrichment and daemon tag hydration are slow.
-		hctx.Mutate(func(s *core.State) {
-			s.DirectoryEntries = append([]core.DirectoryEntry(nil), entries...)
-			s.LastDirectoryLoad = time.Now()
-		})
-
-		hctx.Publish(ctx, core.DirectoryLoadedEvent{
-			EventBase: core.EventBase{OpID: nav.OperationID(), At: time.Now()},
-			Path:      nav.Path,
-			Entries:   entries,
-		})
-
-		// Enrich entries with size and mtime using a bounded worker pool.
-		// This runs after the initial render so navigation stays instant.
-		tmeta := time.Now()
-		entries = enrichMetadata(opCtx, entries)
-		slog.Debug(
-			"navigate.enrichMetadata",
-			"path", nav.Path,
-			"n", len(entries),
-			"dur", time.Since(tmeta).Round(time.Millisecond),
-		)
-
-		select {
-		case <-opCtx.Done():
-			return
-		default:
-		}
-
-		latest, _ := hctx.Snapshot()
-		if latest.CurrentPath != nav.Path || latest.IsSearchMode {
-			return
-		}
-
-		hctx.Mutate(func(s *core.State) {
-			s.DirectoryEntries = append([]core.DirectoryEntry(nil), entries...)
-			s.LastDirectoryLoad = time.Now()
-		})
-
-		hctx.Publish(ctx, core.DirectoryLoadedEvent{
-			EventBase: core.EventBase{OpID: nav.OperationID(), At: time.Now()},
-			Path:      nav.Path,
-			Entries:   entries,
-		})
-
-		// Hydrating tags per entry can be expensive in very large directories.
-		// Keep navigation responsive by limiting path count and time budget.
-		if len(paths) == 0 || len(paths) > maxHydratePaths {
-			return
-		}
-
-		hydrateCtx, cancelHydrate := context.WithTimeout(opCtx, hydrateTimeout)
-		defer cancelHydrate()
-
-		t1 := time.Now()
-		tagMap, hydrateErr := hctx.HydrateTags(hydrateCtx, paths)
-		if hydrateErr != nil {
-			slog.Debug(
-				"navigate.hydrateTags",
-				"n", len(paths),
-				"dur", time.Since(t1).Round(time.Millisecond),
-				"err", hydrateErr,
-			)
-			return
-		}
-		slog.Debug("navigate.hydrateTags", "n", len(paths), "dur", time.Since(t1).Round(time.Millisecond))
-
-		hydrated := core.MergeEntryTags(entries, tagMap)
-
-		latest, _ = hctx.Snapshot()
-		if latest.CurrentPath != nav.Path || latest.IsSearchMode {
-			return
-		}
-
-		hctx.Mutate(func(s *core.State) {
-			s.DirectoryEntries = append([]core.DirectoryEntry(nil), hydrated...)
-			s.LastDirectoryLoad = time.Now()
-		})
-
-		hctx.Publish(ctx, core.DirectoryLoadedEvent{
-			EventBase: core.EventBase{OpID: nav.OperationID(), At: time.Now()},
-			Path:      nav.Path,
-			Entries:   hydrated,
-		})
-	}()
+	go handle(opCtx, hctx, nav, cancel, hidden)
 
 	return nil
+}
+
+func loadDirectoryContext(
+	opCtx context.Context,
+	hctx core.HandlerContext,
+	nav Command,
+	hidden bool,
+) ([]core.DirectoryEntry, []string, bool) {
+	slog.DebugContext(opCtx, "navigate.loadDir.start", "path", nav.Path)
+	t0 := time.Now()
+	entries, paths, err := hctx.LoadDir(nav.Path, hidden)
+	slog.DebugContext(opCtx,
+		"navigate.loadDir",
+		"path", nav.Path,
+		"n", len(entries),
+		"dur", time.Since(t0).Round(time.Millisecond),
+	)
+	if err != nil {
+		hctx.Mutate(func(s *core.State) {
+			s.LastError = err.Error()
+		})
+		hctx.Publish(opCtx, core.OperationFailedEvent{
+			EventBase: core.EventBase{OpID: nav.OperationID(), At: time.Now()},
+			Command:   nav.Type(),
+			Err:       err,
+		})
+		return nil, nil, false
+	}
+
+	select {
+	case <-opCtx.Done():
+		return nil, nil, false
+	default:
+	}
+
+	// Publish directory contents immediately so the UI is responsive even when
+	// metadata enrichment and daemon tag hydration are slow.
+	hctx.Mutate(func(s *core.State) {
+		s.DirectoryEntries = append([]core.DirectoryEntry(nil), entries...)
+		s.LastDirectoryLoad = time.Now()
+	})
+
+	hctx.Publish(opCtx, core.DirectoryLoadedEvent{
+		EventBase: core.EventBase{OpID: nav.OperationID(), At: time.Now()},
+		Path:      nav.Path,
+		Entries:   entries,
+	})
+
+	return entries, paths, true
+}
+
+func updateSizeAndMtime(
+	opCtx context.Context,
+	hctx core.HandlerContext,
+	nav Command,
+	entries []core.DirectoryEntry,
+) ([]core.DirectoryEntry, core.State, bool) {
+	// Enrich entries with size and mtime using a bounded worker pool.
+	// This runs after the initial render so navigation stays instant.
+	tmeta := time.Now()
+	entries = enrichMetadata(opCtx, entries)
+	slog.DebugContext(opCtx,
+		"navigate.enrichMetadata",
+		"path", nav.Path,
+		"n", len(entries),
+		"dur", time.Since(tmeta).Round(time.Millisecond),
+	)
+
+	select {
+	case <-opCtx.Done():
+		return nil, core.State{}, false
+	default:
+	}
+
+	latest, _ := hctx.Snapshot()
+	if latest.CurrentPath != nav.Path || latest.IsSearchMode {
+		return nil, latest, false
+	}
+
+	hctx.Mutate(func(s *core.State) {
+		s.DirectoryEntries = append([]core.DirectoryEntry(nil), entries...)
+		s.LastDirectoryLoad = time.Now()
+	})
+
+	hctx.Publish(opCtx, core.DirectoryLoadedEvent{
+		EventBase: core.EventBase{OpID: nav.OperationID(), At: time.Now()},
+		Path:      nav.Path,
+		Entries:   entries,
+	})
+
+	return entries, latest, true
+}
+
+func hydrateTags(
+	opCtx context.Context,
+	hctx core.HandlerContext,
+	nav Command,
+	entries []core.DirectoryEntry,
+	paths []string,
+	latest core.State,
+) {
+	// Hydrating tags per entry can be expensive in very large directories.
+	// Keep navigation responsive by limiting path count and time budget.
+	if len(paths) == 0 || len(paths) > maxHydratePaths {
+		return
+	}
+
+	hydrateCtx, cancelHydrate := context.WithTimeout(opCtx, hydrateTimeout)
+	defer cancelHydrate()
+
+	t1 := time.Now()
+	tagMap, hydrateErr := hctx.HydrateTags(hydrateCtx, paths)
+	if hydrateErr != nil {
+		slog.DebugContext(
+			opCtx,
+			"navigate.hydrateTags",
+			"n", len(paths),
+			"dur", time.Since(t1).Round(time.Millisecond),
+			"err", hydrateErr,
+		)
+		return
+	}
+	slog.DebugContext(opCtx, "navigate.hydrateTags", "n", len(paths), "dur", time.Since(t1).Round(time.Millisecond))
+
+	hydrated := core.MergeEntryTags(entries, tagMap)
+
+	latest, _ = hctx.Snapshot()
+	if latest.CurrentPath != nav.Path || latest.IsSearchMode {
+		return
+	}
+
+	hctx.Mutate(func(s *core.State) {
+		s.DirectoryEntries = append([]core.DirectoryEntry(nil), hydrated...)
+		s.LastDirectoryLoad = time.Now()
+	})
+
+	hctx.Publish(opCtx, core.DirectoryLoadedEvent{
+		EventBase: core.EventBase{OpID: nav.OperationID(), At: time.Now()},
+		Path:      nav.Path,
+		Entries:   hydrated,
+	})
+}
+
+func handle(
+	opCtx context.Context,
+	hctx core.HandlerContext,
+	nav Command,
+	cancel context.CancelFunc,
+	hidden bool,
+) {
+	defer cancel()
+	defer hctx.FinishOp(nav.OperationID())
+
+	entries, paths, ok := loadDirectoryContext(opCtx, hctx, nav, hidden)
+	if !ok {
+		return
+	}
+
+	entries, latest, ok := updateSizeAndMtime(opCtx, hctx, nav, entries)
+	if !ok {
+		return
+	}
+
+	hydrateTags(opCtx, hctx, nav, entries, paths, latest)
 }
 
 // enrichMetadata runs lstat on every entry using a fixed worker pool to

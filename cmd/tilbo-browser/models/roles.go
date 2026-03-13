@@ -1,3 +1,4 @@
+// Package models defines Qt/QML model types and shared role constants.
 package models
 
 import "github.com/mappu/miqt/qt6"

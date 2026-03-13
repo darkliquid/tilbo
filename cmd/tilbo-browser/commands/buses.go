@@ -1,3 +1,4 @@
+// Package commands provides command and event bus primitives for the browser runtime.
 package commands
 
 import (

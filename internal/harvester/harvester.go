@@ -58,8 +58,8 @@ type Harvester interface {
 	Async() bool
 	// Matches reports whether this harvester should run for the given path and MIME type.
 	Matches(path, mime string) bool
-	// Run executes the harvester for the given input. Returns nil, nil when the
-	// harvester has nothing to contribute.
+	// Run executes the harvester for the given input. Returns an empty MetaMap
+	// and nil error when the harvester has nothing to contribute.
 	Run(ctx context.Context, input Input) (MetaMap, error)
 }
 

@@ -14,17 +14,17 @@ type testCommand struct {
 	t    core.Type
 }
 
-func (c testCommand) Type() core.Type { return c.t }
-func (c testCommand) OperationID() string    { return c.base.OperationID() }
+func (c testCommand) Type() core.Type     { return c.t }
+func (c testCommand) OperationID() string { return c.base.OperationID() }
 
 type testEvent struct {
 	base core.EventBase
 	t    core.EventType
 }
 
-func (e testEvent) Type() core.EventType { return e.t }
-func (e testEvent) OperationID() string         { return e.base.OperationID() }
-func (e testEvent) OccurredAt() time.Time       { return e.base.OccurredAt() }
+func (e testEvent) Type() core.EventType  { return e.t }
+func (e testEvent) OperationID() string   { return e.base.OperationID() }
+func (e testEvent) OccurredAt() time.Time { return e.base.OccurredAt() }
 
 func TestCommandBusDispatchOrder(t *testing.T) {
 	t.Parallel()

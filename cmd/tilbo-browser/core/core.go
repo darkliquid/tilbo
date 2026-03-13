@@ -1,4 +1,4 @@
-// Package commandcore defines browser command types for commandcore operations.
+// Package core defines browser command types and event identifiers.
 package core
 
 // Type identifies a browser command kind.

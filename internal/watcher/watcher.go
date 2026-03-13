@@ -101,7 +101,8 @@ type Watcher struct {
 	mu      sync.Mutex
 	pending map[string]*debounceEntry
 
-	watchHidden bool
+	watchHidden  bool
+	excludePaths []string // absolute paths to skip entirely
 }
 
 type debounceEntry struct {
@@ -112,6 +113,10 @@ type debounceEntry struct {
 // Options configure the behavior of the Watcher.
 type Options struct {
 	WatchHidden bool // If true, hidden files and directories (starting with '.') are monitored.
+	// ExcludePaths is a list of absolute paths that the watcher will never
+	// recurse into or emit events for. Use this to exclude mount points such
+	// as the FUSE virtual filesystem that must not be indexed.
+	ExcludePaths []string
 }
 
 // New creates a Watcher for the given mount point using the specified backend and options.
@@ -132,7 +137,7 @@ func New(ctx context.Context, mountPath string, backend Backend, opts Options) (
 	// When inotify is forced, skip fanotify entirely.
 	if backend == BackendInotify {
 		slog.InfoContext(ctx, "watcher: using inotify backend (forced)")
-		impl, err := newInotify(ctx, mountPath, opts.WatchHidden)
+		impl, err := newInotify(ctx, mountPath, opts.WatchHidden, opts.ExcludePaths)
 		if err != nil {
 			return nil, fmt.Errorf("watcher: inotify: %w", err)
 		}
@@ -144,6 +149,7 @@ func New(ctx context.Context, mountPath string, backend Backend, opts Options) (
 			fallbackWarning: "",
 			pending:         make(map[string]*debounceEntry),
 			watchHidden:     opts.WatchHidden,
+			excludePaths:    opts.ExcludePaths,
 		}, nil
 	}
 
@@ -159,7 +165,7 @@ func New(ctx context.Context, mountPath string, backend Backend, opts Options) (
 
 		slog.WarnContext(ctx, "watcher: fanotify unavailable; using inotify fallback",
 			"path", watchRoot, "markPath", markPath, "reason", reason, "markType", markType, "err", cause, "hint", hint)
-		impl, iErr := newInotify(ctx, watchRoot, opts.WatchHidden)
+		impl, iErr := newInotify(ctx, watchRoot, opts.WatchHidden, opts.ExcludePaths)
 		if iErr != nil {
 			return nil, fmt.Errorf("watcher: inotify fallback: %w", iErr)
 		}
@@ -183,6 +189,7 @@ func New(ctx context.Context, mountPath string, backend Backend, opts Options) (
 			fallbackWarning: warn,
 			pending:         make(map[string]*debounceEntry),
 			watchHidden:     opts.WatchHidden,
+			excludePaths:    opts.ExcludePaths,
 		}, nil
 	}
 
@@ -249,6 +256,7 @@ func New(ctx context.Context, mountPath string, backend Backend, opts Options) (
 			out:             make(chan Event, outChanBuf),
 			pending:         make(map[string]*debounceEntry),
 			watchHidden:     opts.WatchHidden,
+			excludePaths:    opts.ExcludePaths,
 		}, nil
 	}
 
@@ -298,7 +306,7 @@ func New(ctx context.Context, mountPath string, backend Backend, opts Options) (
 		return fallbackToInotify("fanotify hybrid mark failed", "FAN_MARK_MOUNT", err)
 	}
 
-	impl, iErr := newInotifyWithMask(ctx, watchRoot, opts.WatchHidden, inotifyHybridMask)
+	impl, iErr := newInotifyWithMask(ctx, watchRoot, opts.WatchHidden, opts.ExcludePaths, inotifyHybridMask)
 	if iErr != nil {
 		return fallbackToInotify("inotify companion for hybrid failed", "inotify_hybrid", iErr)
 	}
@@ -316,6 +324,7 @@ func New(ctx context.Context, mountPath string, backend Backend, opts Options) (
 		out:             make(chan Event, outChanBuf),
 		pending:         make(map[string]*debounceEntry),
 		watchHidden:     opts.WatchHidden,
+		excludePaths:    opts.ExcludePaths,
 	}, nil
 }
 
@@ -506,6 +515,9 @@ func (w *Watcher) handleMetaFID(ctx context.Context, event []byte) {
 	if !pathUnderWatchRoot(path, w.mountPath) {
 		return
 	}
+	if w.isExcluded(path) {
+		return
+	}
 
 	if !w.watchHidden && strings.Contains(path, "/.") {
 		return
@@ -641,6 +653,16 @@ func fanotifyFailureHint(err error) string {
 	default:
 		return ""
 	}
+}
+
+// isExcluded reports whether path falls under any of the watcher's excluded paths.
+func (w *Watcher) isExcluded(path string) bool {
+	for _, ex := range w.excludePaths {
+		if path == ex || strings.HasPrefix(path, ex+"/") {
+			return true
+		}
+	}
+	return false
 }
 
 func pathUnderWatchRoot(path, root string) bool {

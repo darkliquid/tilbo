@@ -8,5 +8,5 @@ type Command struct {
 	CommandBase core.Base
 }
 
-func (c Command) Type() core.Type { return core.RefreshPlaces }
-func (c Command) OperationID() string    { return c.CommandBase.OperationID() }
+func (c Command) Type() core.Type     { return core.RefreshPlaces }
+func (c Command) OperationID() string { return c.CommandBase.OperationID() }

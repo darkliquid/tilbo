@@ -11,5 +11,5 @@ type Command struct {
 	NewName string
 }
 
-func (c Command) Type() core.Type { return core.RenameFile }
-func (c Command) OperationID() string    { return c.CommandBase.OperationID() }
+func (c Command) Type() core.Type     { return core.RenameFile }
+func (c Command) OperationID() string { return c.CommandBase.OperationID() }

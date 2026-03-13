@@ -155,7 +155,11 @@ func run(
 	slog.InfoContext(ctx, "index ready", "path", dbPath)
 
 	// Start the filesystem watcher (fanotify, inotify, or auto-detected).
-	w, err := watcher.New(ctx, watchPath, watcherBackend, watcher.Options{WatchHidden: watchHidden})
+	watchOpts := watcher.Options{WatchHidden: watchHidden}
+	if fuseMount != "" {
+		watchOpts.ExcludePaths = []string{fuseMount}
+	}
+	w, err := watcher.New(ctx, watchPath, watcherBackend, watchOpts)
 	if err != nil {
 		return fmt.Errorf("create watcher: %w", err)
 	}

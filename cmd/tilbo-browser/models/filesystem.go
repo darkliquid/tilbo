@@ -37,16 +37,16 @@ type FileSystemModel struct {
 	roleNamesMap map[int][]byte
 
 	// Internal state
-	currentPath    string
-	hidden         bool
-	isSearchMode   bool
-	entries        []folderEntry
-	loadVersion    uint64
-	controller     *browserruntime.Controller
-	mainThreadFn   func(func())
-	metadataMu     sync.Mutex
-	metadataOut    map[string]string
-	metadataWork   map[string]struct{}
+	currentPath  string
+	hidden       bool
+	isSearchMode bool
+	entries      []folderEntry
+	loadVersion  uint64
+	controller   *browserruntime.Controller
+	mainThreadFn func(func())
+	metadataMu   sync.Mutex
+	metadataOut  map[string]string
+	metadataWork map[string]struct{}
 }
 
 const (

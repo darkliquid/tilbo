@@ -35,30 +35,38 @@ type inotifyImpl struct {
 	wdToDir map[int32]string // watch descriptor → absolute directory path
 	out     chan Event
 
-	pendMu      sync.Mutex
-	pending     map[string]*debounceEntry
-	watchHidden bool
+	pendMu       sync.Mutex
+	pending      map[string]*debounceEntry
+	watchHidden  bool
+	excludePaths []string // absolute paths to skip entirely (e.g. FUSE mount)
 }
 
 // newInotify creates an inotify watcher rooted at mountPath.
-func newInotify(ctx context.Context, mountPath string, watchHidden bool) (*inotifyImpl, error) {
-	return newInotifyWithMask(ctx, mountPath, watchHidden, inotifyDefaultMask)
+func newInotify(ctx context.Context, mountPath string, watchHidden bool, excludePaths []string) (*inotifyImpl, error) {
+	return newInotifyWithMask(ctx, mountPath, watchHidden, excludePaths, inotifyDefaultMask)
 }
 
 // newInotifyWithMask creates an inotify watcher rooted at mountPath with a custom mask.
-func newInotifyWithMask(ctx context.Context, mountPath string, watchHidden bool, mask uint32) (*inotifyImpl, error) {
+func newInotifyWithMask(
+	ctx context.Context,
+	mountPath string,
+	watchHidden bool,
+	excludePaths []string,
+	mask uint32,
+) (*inotifyImpl, error) {
 	fd, err := unix.InotifyInit1(unix.IN_CLOEXEC | unix.IN_NONBLOCK)
 	if err != nil {
 		return nil, fmt.Errorf("inotify_init: %w", err)
 	}
 
 	impl := &inotifyImpl{
-		fd:          fd,
-		mask:        mask,
-		wdToDir:     make(map[int32]string),
-		out:         make(chan Event, outChanBuf),
-		pending:     make(map[string]*debounceEntry),
-		watchHidden: watchHidden,
+		fd:           fd,
+		mask:         mask,
+		wdToDir:      make(map[int32]string),
+		out:          make(chan Event, outChanBuf),
+		pending:      make(map[string]*debounceEntry),
+		watchHidden:  watchHidden,
+		excludePaths: excludePaths,
 	}
 
 	if err := impl.addWatchRecursive(ctx, mountPath); err != nil {
@@ -68,6 +76,16 @@ func newInotifyWithMask(ctx context.Context, mountPath string, watchHidden bool,
 
 	slog.InfoContext(ctx, "watcher: using inotify fallback", "root", mountPath)
 	return impl, nil
+}
+
+// isExcluded reports whether path falls under any of the excluded paths.
+func (i *inotifyImpl) isExcluded(path string) bool {
+	for _, ex := range i.excludePaths {
+		if path == ex || strings.HasPrefix(path, ex+"/") {
+			return true
+		}
+	}
+	return false
 }
 
 // addWatch registers dir with inotify. Missing or non-directory paths are
@@ -99,6 +117,10 @@ func (i *inotifyImpl) addWatchRecursive(ctx context.Context, root string) error 
 		if err != nil {
 			slog.WarnContext(ctx, "inotify: unreadable directory", "path", path, "err", err)
 			return nil // skip unreadable entries; don't abort the walk
+		}
+		if d.IsDir() && path != root && i.isExcluded(path) {
+			slog.DebugContext(ctx, "inotify: skipping excluded path", "path", path)
+			return filepath.SkipDir
 		}
 		if !i.watchHidden && strings.HasPrefix(d.Name(), ".") && path != root {
 			if d.IsDir() {
@@ -223,6 +245,10 @@ func (i *inotifyImpl) processEvents(ctx context.Context, buf []byte) {
 		}
 
 		mask := ev.Mask
+
+		if i.isExcluded(path) {
+			continue
+		}
 
 		// Ignore hidden files/directories during event processing implicitly
 		if !i.watchHidden && strings.Contains(path, "/.") {

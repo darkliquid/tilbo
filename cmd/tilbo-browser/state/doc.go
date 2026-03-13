@@ -1,3 +1,3 @@
-// Package browser contains the controller-first command/event runtime for the
-// tilbo browser rewrite.
+// Package state contains the controller-first command/event runtime for the
+// tilbo file browser.
 package state

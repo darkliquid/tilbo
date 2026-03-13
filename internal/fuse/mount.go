@@ -43,7 +43,12 @@ func Mount(ctx context.Context, mountPoint string, idx *index.DB, g *graph.Graph
 		)
 	}
 	_ = f.Close()
-	slog.DebugContext(ctx, "fuse: /dev/fuse accessible, attempting mount", "path", mountPoint)
+
+	// Enable go-fuse internal debug output when slog is at debug level.
+	// This logs the fusermount3 command and FUSE init exchange.
+	// Logger is left nil so go-fuse uses log.Default() internally; the
+	// depguard rule forbids importing "log" directly in non-main packages.
+	fuseDebug := slog.Default().Handler().Enabled(ctx, slog.LevelDebug)
 
 	root := NewRoot(idx, g)
 
@@ -52,17 +57,25 @@ func Mount(ctx context.Context, mountPoint string, idx *index.DB, g *graph.Graph
 
 	fuseOpts := &fs.Options{
 		MountOptions: gofuse.MountOptions{
-			AllowOther:  false,
-			Debug:       false,
-			FsName:      "tilbo",
-			Name:        "tilbo",
-			DirectMount: false,
-			Options:     []string{"auto_unmount", "default_permissions"},
+			AllowOther: false,
+			Debug:      fuseDebug,
+			FsName:     "tilbo",
+			Name:       "tilbo",
+			// DirectMount=true tries a direct syscall first (no fusermount3
+			// dependency), then falls back to fusermount3 if permission is denied.
+			DirectMount: true,
+			// default_permissions lets the kernel enforce permission checks from
+			// file attributes rather than deferring everything to the daemon.
+			// auto_unmount is intentionally omitted: the daemon handles unmount
+			// via Unmount() on ctx.Done(), so we don't need fusermount3 to stay
+			// alive monitoring us.
+			Options: []string{"default_permissions"},
 		},
 		EntryTimeout: &cacheTTLDir,
 		AttrTimeout:  &cacheTTLAttr,
 	}
 
+	slog.DebugContext(ctx, "fuse: calling fs.Mount", "path", mountPoint, "directMount", true, "debug", fuseDebug)
 	srv, err := fs.Mount(mountPoint, root, fuseOpts)
 	if err != nil {
 		return nil, fmt.Errorf("fuse: mount %s: %w", mountPoint, err)

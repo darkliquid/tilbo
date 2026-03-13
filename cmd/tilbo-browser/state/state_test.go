@@ -9,7 +9,7 @@ import (
 func TestStateStoreVersionIncrementsOnMutate(t *testing.T) {
 	t.Parallel()
 
-	store := state.NewStateStore()
+	store := state.NewStore()
 	_, v0 := store.Snapshot()
 
 	v1 := store.Mutate(func(s *state.State) {
@@ -31,7 +31,7 @@ func TestStateStoreVersionIncrementsOnMutate(t *testing.T) {
 func TestStateStoreSnapshotIsDetached(t *testing.T) {
 	t.Parallel()
 
-	store := state.NewStateStore()
+	store := state.NewStore()
 	store.Mutate(func(s *state.State) {
 		s.SearchChips = []string{"a", "b"}
 	})

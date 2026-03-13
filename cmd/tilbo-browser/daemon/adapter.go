@@ -1,3 +1,4 @@
+// Package daemon provides browser-side adapters for daemon IPC requests.
 package daemon
 
 import (

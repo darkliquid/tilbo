@@ -47,6 +47,11 @@ description = "Lint the Go codebase"
 run = "golangci-lint run ./..."
 sources = ["**/*.go"]
 
+[tasks.format]
+description = "Format the Go codebase"
+run = "golangci-lint fmt ./..."
+sources = ["**/*.go"]
+
 [tasks.generate-proto]
 description = "Generate protobuf code using buf and vtprotobuf"
 run = "buf generate"

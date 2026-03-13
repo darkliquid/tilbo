@@ -10,5 +10,5 @@ type Command struct {
 	Show bool
 }
 
-func (c Command) Type() core.Type { return core.ToggleHidden }
-func (c Command) OperationID() string    { return c.CommandBase.OperationID() }
+func (c Command) Type() core.Type     { return core.ToggleHidden }
+func (c Command) OperationID() string { return c.CommandBase.OperationID() }

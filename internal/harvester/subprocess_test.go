@@ -33,28 +33,28 @@ func TestSubprocessHarvester_ValidJSONOutput(t *testing.T) {
 }
 
 func TestSubprocessHarvester_EmptyOutput(t *testing.T) {
-	// A process that produces no output should return nil, nil.
+	// A process that produces no output should return empty metadata and no error.
 	h := makeSubprocess("empty", []string{"sh", "-c", "true"}, 0)
 
 	meta, err := h.Run(context.Background(), Input{Path: "/tmp/x.txt"})
 	if err != nil {
 		t.Fatalf("Run: %v", err)
 	}
-	if meta != nil {
-		t.Errorf("expected nil meta for empty output, got %v", meta)
+	if len(meta) != 0 {
+		t.Errorf("expected empty metadata for empty output, got %v", meta)
 	}
 }
 
 func TestSubprocessHarvester_NonZeroExit(t *testing.T) {
-	// Non-zero exit should return nil, nil (not an error).
+	// Non-zero exit should return empty metadata and no error.
 	h := makeSubprocess("fail", []string{"sh", "-c", "exit 1"}, 0)
 
 	meta, err := h.Run(context.Background(), Input{Path: "/tmp/x.txt"})
 	if err != nil {
 		t.Fatalf("expected nil error for non-zero exit, got: %v", err)
 	}
-	if meta != nil {
-		t.Errorf("expected nil meta for non-zero exit, got %v", meta)
+	if len(meta) != 0 {
+		t.Errorf("expected empty metadata for non-zero exit, got %v", meta)
 	}
 }
 
@@ -70,12 +70,12 @@ func TestSubprocessHarvester_Timeout(t *testing.T) {
 	if elapsed > 2*time.Second {
 		t.Errorf("timeout not enforced: took %v", elapsed)
 	}
-	// A killed process should return nil,nil (treated as non-zero exit).
+	// A killed process should return empty metadata (treated as non-zero exit).
 	if err != nil {
 		t.Logf("Run returned error (acceptable for killed process): %v", err)
 	}
-	if meta != nil {
-		t.Errorf("expected nil meta for timed-out process, got %v", meta)
+	if len(meta) != 0 {
+		t.Errorf("expected empty metadata for timed-out process, got %v", meta)
 	}
 }
 

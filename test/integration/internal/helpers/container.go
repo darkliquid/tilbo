@@ -139,7 +139,11 @@ func (s *Suite) CLI(ctx context.Context, sockPath string, args ...string) (strin
 //   - logPath: container-side path where daemon stdout+stderr is written
 //   - extraArgs: additional flags forwarded verbatim to tilbo-daemon
 //     (e.g. "-watcher", "inotify")
-func (s *Suite) StartDaemon(ctx context.Context, sockPath, dbPath, watchPath, fuseMount, logPath string, extraArgs ...string) error {
+func (s *Suite) StartDaemon(
+	ctx context.Context,
+	sockPath, dbPath, watchPath, fuseMount, logPath string,
+	extraArgs ...string,
+) error {
 	cmd := fmt.Sprintf(
 		"tilbo-daemon -socket '%s' -db '%s' -watch '%s' -fuse-mount '%s' -log-format json",
 		sockPath, dbPath, watchPath, fuseMount,

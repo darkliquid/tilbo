@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sync"
 	"syscall"
+	"time"
 
 	"github.com/hanwen/go-fuse/v2/fs"
 	"github.com/hanwen/go-fuse/v2/fuse"
@@ -20,8 +21,20 @@ import (
 const (
 	rootSpecialDirCount = 4
 
-	attrTimeoutLongSec = 30
-	attrTimeoutFastSec = 2
+	// attrTimeoutLong is the kernel attribute/entry cache TTL for stable
+	// virtual directory nodes (root, tag dirs, file symlinks). A long timeout
+	// avoids repeated kernel LOOKUPs for the same path.
+	attrTimeoutLong = 30 * time.Second
+
+	// attrTimeoutFast is the entry TTL for ephemeral browse nodes (BrowseDir,
+	// BrowseFilesDir). Shorter than attrTimeoutLong so newly added tags appear
+	// promptly when navigating the @browse tree.
+	attrTimeoutFast = 2 * time.Second
+
+	// attrTimeoutEntry is the entry TTL for individual file symlinks within
+	// virtual directories. One second allows quick re-validation without
+	// hammering the daemon with constant LOOKUPs during directory traversal.
+	attrTimeoutEntry = 1 * time.Second
 
 	browseRelatedHops  = 3
 	browseRelatedLimit = 100
@@ -31,6 +44,11 @@ const (
 
 	dirReadOnlyMode = 0o555
 	symlinkMode     = 0o777
+
+	// queryCacheTTL is how long Readdir/Lookup cache their database results.
+	// Repeated kernel LOOKUP calls (e.g. from enrichMetadata's concurrent
+	// Lstat workers) share a single query result instead of each re-querying.
+	queryCacheTTL = 30 * time.Second
 )
 
 // stableInode returns a stable inode number for a real file path using FNV-64a.
@@ -43,6 +61,64 @@ func stableInode(realPath string) uint64 {
 		ino = 1
 	}
 	return ino
+}
+
+// ─── tagCache ─────────────────────────────────────────────────────────────────
+
+// tagCacheEntry is one cached result from a virtual directory query.
+type tagCacheEntry struct {
+	name     string // virtual entry name (deduplicated)
+	realPath string // absolute path to the real file
+	ino      uint64 // stable inode number
+}
+
+// tagCache caches directory query results so that concurrent Lookup calls
+// (triggered by enrichMetadata's Lstat workers) share a single DB query
+// instead of issuing one per entry.
+type tagCache struct {
+	mu      sync.RWMutex
+	entries []tagCacheEntry
+	byName  map[string]int // entry name → index in entries (O(1) Lookup)
+	expiry  time.Time
+}
+
+// valid reports whether the cache holds fresh data.
+// Must be called with mu held (at least read-locked).
+func (c *tagCache) valid() bool {
+	return c.byName != nil && time.Now().Before(c.expiry)
+}
+
+// fill populates the cache from raw query results.
+// Must be called with mu write-locked.
+func (c *tagCache) fill(results []index.SearchResult, allocIno func(string) uint64) {
+	nameCounts := make(map[string]int, len(results))
+	for _, r := range results {
+		nameCounts[filepath.Base(r.Path)]++
+	}
+	seenCount := make(map[string]int, len(results))
+
+	entries := make([]tagCacheEntry, 0, len(results))
+	byName := make(map[string]int, len(results))
+	for _, r := range results {
+		n := entryName(r.Path, nameCounts, seenCount)
+		idx := len(entries)
+		entries = append(entries, tagCacheEntry{
+			name:     n,
+			realPath: r.Path,
+			ino:      allocIno(r.Path),
+		})
+		byName[n] = idx
+	}
+	c.entries = entries
+	c.byName = byName
+	c.expiry = time.Now().Add(queryCacheTTL)
+}
+
+// invalidate clears the cache (e.g. after a mutation such as Rename).
+func (c *tagCache) invalidate() {
+	c.mu.Lock()
+	c.byName = nil
+	c.mu.Unlock()
 }
 
 // ─── Root ────────────────────────────────────────────────────────────────────
@@ -109,9 +185,11 @@ var _ fs.NodeRmdirer = (*Root)(nil)
 // Tag names containing +, comma, !, or % are percent-encoded so the kernel
 // does not confuse them with path-grammar operators on lookup.
 func (r *Root) Readdir(ctx context.Context) (fs.DirStream, syscall.Errno) {
+	slog.DebugContext(ctx, "fuse: root.readdir: start")
+	t0 := time.Now()
 	tags, err := r.idx.ListAllTags(ctx)
 	if err != nil {
-		slog.WarnContext(ctx, "fuse: readdir root: list tags failed", "err", err)
+		slog.WarnContext(ctx, "fuse: root.readdir: list tags failed", "err", err, "dur", time.Since(t0))
 		return nil, syscall.EIO
 	}
 	entries := make([]fuse.DirEntry, 0, len(tags)+rootSpecialDirCount)
@@ -125,6 +203,7 @@ func (r *Root) Readdir(ctx context.Context) (fs.DirStream, syscall.Errno) {
 	for _, name := range []string{"@recent", "@untagged", "@browse"} {
 		entries = append(entries, fuse.DirEntry{Name: name, Mode: syscall.S_IFDIR})
 	}
+	slog.DebugContext(ctx, "fuse: root.readdir: done", "tags", len(tags), "dur", time.Since(t0))
 	return fs.NewListDirStream(entries), 0
 }
 
@@ -137,23 +216,25 @@ func (r *Root) Rmdir(_ context.Context, _ string) syscall.Errno { return syscall
 // Lookup resolves a name to a node. "@browse" returns the incremental tag
 // browser; everything else is parsed as a tag expression and returns a TagDir.
 func (r *Root) Lookup(ctx context.Context, name string, out *fuse.EntryOut) (*fs.Inode, syscall.Errno) {
+	slog.DebugContext(ctx, "fuse: root.lookup: start", "name", name)
 	if name == "@browse" {
-		out.SetAttrTimeout(attrTimeoutLongSec)
-		out.SetEntryTimeout(attrTimeoutFastSec)
+		out.SetAttrTimeout(attrTimeoutLong)
+		out.SetEntryTimeout(attrTimeoutFast)
 		out.Mode = syscall.S_IFDIR | dirReadOnlyMode
 		child := r.NewPersistentInode(ctx, &BrowseDir{root: r},
 			fs.StableAttr{Mode: syscall.S_IFDIR})
+		slog.DebugContext(ctx, "fuse: root.lookup: done (browse)", "name", name)
 		return child, 0
 	}
 
 	expr, err := ParseExpr(name)
 	if err != nil {
-		slog.DebugContext(ctx, "fuse: lookup: invalid expr", "name", name, "err", err)
+		slog.DebugContext(ctx, "fuse: root.lookup: invalid expr", "name", name, "err", err)
 		return nil, syscall.ENOENT
 	}
 
-	out.SetAttrTimeout(attrTimeoutLongSec)
-	out.SetEntryTimeout(attrTimeoutFastSec)
+	out.SetAttrTimeout(attrTimeoutLong)
+	out.SetEntryTimeout(attrTimeoutFast)
 	out.Mode = syscall.S_IFDIR | dirReadOnlyMode
 
 	child := r.NewPersistentInode(ctx, &TagDir{
@@ -161,13 +242,14 @@ func (r *Root) Lookup(ctx context.Context, name string, out *fuse.EntryOut) (*fs
 		expr: expr,
 		name: name,
 	}, fs.StableAttr{Mode: syscall.S_IFDIR})
+	slog.DebugContext(ctx, "fuse: root.lookup: done", "name", name)
 	return child, 0
 }
 
 // Getattr returns attributes for the root directory.
 func (r *Root) Getattr(_ context.Context, _ fs.FileHandle, out *fuse.AttrOut) syscall.Errno {
 	out.Mode = syscall.S_IFDIR | dirReadOnlyMode
-	out.SetTimeout(attrTimeoutLongSec)
+	out.SetTimeout(attrTimeoutLong)
 	return 0
 }
 
@@ -178,9 +260,10 @@ func (r *Root) Getattr(_ context.Context, _ fs.FileHandle, out *fuse.AttrOut) sy
 type TagDir struct {
 	fs.Inode
 
-	root *Root
-	expr *Expr
-	name string // original path component (for rename semantics)
+	root  *Root
+	expr  *Expr
+	name  string // original path component (for rename semantics)
+	cache tagCache
 }
 
 var _ fs.NodeReaddirer = (*TagDir)(nil)
@@ -206,78 +289,169 @@ func (d *TagDir) query(ctx context.Context) ([]index.SearchResult, error) {
 	return results, err
 }
 
-// Readdir returns the file entries for this virtual directory.
-func (d *TagDir) Readdir(ctx context.Context) (fs.DirStream, syscall.Errno) {
+// warmCache ensures the query result cache is populated.
+// It runs the database query at most once per queryCacheTTL window, regardless
+// of how many concurrent Lookup calls arrive simultaneously.
+func (d *TagDir) warmCache(ctx context.Context) error {
+	d.cache.mu.RLock()
+	valid := d.cache.valid()
+	d.cache.mu.RUnlock()
+	if valid {
+		slog.DebugContext(ctx, "fuse: tagdir.warmCache: cache hit", "expr", d.name)
+		return nil
+	}
+
+	slog.DebugContext(ctx, "fuse: tagdir.warmCache: cache miss, acquiring write lock", "expr", d.name)
+	d.cache.mu.Lock()
+	defer d.cache.mu.Unlock()
+	if d.cache.valid() { // another goroutine won the race
+		slog.DebugContext(ctx, "fuse: tagdir.warmCache: cache filled by other goroutine", "expr", d.name)
+		return nil
+	}
+
+	slog.DebugContext(ctx, "fuse: tagdir.warmCache: querying db", "expr", d.name)
+	t0 := time.Now()
 	results, err := d.query(ctx)
 	if err != nil {
-		slog.WarnContext(ctx, "fuse: readdir tagdir failed", "expr", d.name, "err", err)
+		slog.WarnContext(ctx, "fuse: tagdir.warmCache: query failed", "expr", d.name, "err", err, "dur", time.Since(t0))
+		return err
+	}
+	slog.DebugContext(
+		ctx,
+		"fuse: tagdir.warmCache: query done",
+		"expr",
+		d.name,
+		"n",
+		len(results),
+		"dur",
+		time.Since(t0),
+	)
+	d.cache.fill(results, d.root.allocInode)
+	return nil
+}
+
+// Readdir returns the file entries for this virtual directory.
+func (d *TagDir) Readdir(ctx context.Context) (fs.DirStream, syscall.Errno) {
+	slog.DebugContext(ctx, "fuse: tagdir.readdir: start", "expr", d.name)
+	t0 := time.Now()
+	if err := d.warmCache(ctx); err != nil {
+		slog.WarnContext(
+			ctx,
+			"fuse: tagdir.readdir: warmCache failed",
+			"expr",
+			d.name,
+			"err",
+			err,
+			"dur",
+			time.Since(t0),
+		)
 		return nil, syscall.EIO
 	}
 
-	// Deduplicate by basename; when two files share a name, append an index.
-	nameCounts := make(map[string]int, len(results))
-	for _, r := range results {
-		base := filepath.Base(r.Path)
-		nameCounts[base]++
-	}
-	seenCount := make(map[string]int, len(results))
-
-	entries := make([]fuse.DirEntry, 0, len(results))
-	for _, r := range results {
-		entryName := entryName(r.Path, nameCounts, seenCount)
+	d.cache.mu.RLock()
+	defer d.cache.mu.RUnlock()
+	entries := make([]fuse.DirEntry, 0, len(d.cache.entries))
+	for _, e := range d.cache.entries {
 		entries = append(entries, fuse.DirEntry{
-			Name: entryName,
+			Name: e.name,
 			Mode: syscall.S_IFLNK,
-			Ino:  d.root.allocInode(r.Path),
+			Ino:  e.ino,
 		})
 	}
+	slog.DebugContext(ctx, "fuse: tagdir.readdir: done", "expr", d.name, "n", len(entries), "dur", time.Since(t0))
 	return fs.NewListDirStream(entries), 0
 }
 
 // Lookup finds a file by name within this virtual directory.
+// Results are served from the shared cache to avoid a full DB query per call.
 func (d *TagDir) Lookup(ctx context.Context, name string, out *fuse.EntryOut) (*fs.Inode, syscall.Errno) {
-	results, err := d.query(ctx)
-	if err != nil {
+	slog.DebugContext(ctx, "fuse: tagdir.lookup: start", "expr", d.name, "name", name)
+	t0 := time.Now()
+	if err := d.warmCache(ctx); err != nil {
+		slog.WarnContext(
+			ctx,
+			"fuse: tagdir.lookup: warmCache failed",
+			"expr",
+			d.name,
+			"name",
+			name,
+			"err",
+			err,
+			"dur",
+			time.Since(t0),
+		)
 		return nil, syscall.EIO
 	}
 
-	nameCounts := make(map[string]int, len(results))
-	for _, r := range results {
-		nameCounts[filepath.Base(r.Path)]++
+	d.cache.mu.RLock()
+	idx, ok := d.cache.byName[name]
+	var entry tagCacheEntry
+	if ok {
+		entry = d.cache.entries[idx]
 	}
-	seenCount := make(map[string]int, len(results))
+	d.cache.mu.RUnlock()
 
-	for _, r := range results {
-		ename := entryName(r.Path, nameCounts, seenCount)
-		if ename != name {
-			continue
-		}
-		// Verify real file still exists.
-		if _, err := os.Lstat(r.Path); err != nil {
-			return nil, syscall.ENOENT
-		}
-
-		ino := d.root.allocInode(r.Path)
-		out.Ino = ino
-		out.SetAttrTimeout(attrTimeoutLongSec)
-		out.SetEntryTimeout(1)
-		out.Mode = syscall.S_IFLNK | symlinkMode
-
-		child := d.NewPersistentInode(ctx, &FileLink{
-			realPath: r.Path,
-		}, fs.StableAttr{
-			Mode: syscall.S_IFLNK,
-			Ino:  ino,
-		})
-		return child, 0
+	if !ok {
+		slog.DebugContext(
+			ctx,
+			"fuse: tagdir.lookup: not found in cache",
+			"expr",
+			d.name,
+			"name",
+			name,
+			"dur",
+			time.Since(t0),
+		)
+		return nil, syscall.ENOENT
 	}
-	return nil, syscall.ENOENT
+
+	// Verify real file still exists.
+	if _, err := os.Lstat(entry.realPath); err != nil {
+		slog.DebugContext(
+			ctx,
+			"fuse: tagdir.lookup: real file missing",
+			"expr",
+			d.name,
+			"name",
+			name,
+			"realPath",
+			entry.realPath,
+			"err",
+			err,
+		)
+		return nil, syscall.ENOENT
+	}
+
+	out.Ino = entry.ino
+	out.SetAttrTimeout(attrTimeoutLong)
+	out.SetEntryTimeout(attrTimeoutEntry)
+	out.Mode = syscall.S_IFLNK | symlinkMode
+
+	child := d.NewPersistentInode(ctx, &FileLink{
+		realPath: entry.realPath,
+	}, fs.StableAttr{
+		Mode: syscall.S_IFLNK,
+		Ino:  entry.ino,
+	})
+	slog.DebugContext(
+		ctx,
+		"fuse: tagdir.lookup: done",
+		"expr",
+		d.name,
+		"name",
+		name,
+		"realPath",
+		entry.realPath,
+		"dur",
+		time.Since(t0),
+	)
+	return child, 0
 }
 
 // Getattr returns directory attributes.
 func (d *TagDir) Getattr(_ context.Context, _ fs.FileHandle, out *fuse.AttrOut) syscall.Errno {
 	out.Mode = syscall.S_IFDIR | dirReadOnlyMode
-	out.SetTimeout(attrTimeoutFastSec)
+	out.SetTimeout(attrTimeoutFast)
 	return 0
 }
 
@@ -296,24 +470,19 @@ func (d *TagDir) Rename(
 		return syscall.EXDEV
 	}
 
-	// Find the real path for the source entry.
-	results, err := d.query(ctx)
-	if err != nil {
+	// Find the real path for the source entry via the cache or a fresh query.
+	if err := d.warmCache(ctx); err != nil {
 		return syscall.EIO
 	}
-	nameCounts := make(map[string]int, len(results))
-	for _, r := range results {
-		nameCounts[filepath.Base(r.Path)]++
-	}
-	seenCount := make(map[string]int, len(results))
 
+	d.cache.mu.RLock()
+	idx, ok := d.cache.byName[name]
 	var realPath string
-	for _, r := range results {
-		if entryName(r.Path, nameCounts, seenCount) == name {
-			realPath = r.Path
-			break
-		}
+	if ok {
+		realPath = d.cache.entries[idx].realPath
 	}
+	d.cache.mu.RUnlock()
+
 	if realPath == "" {
 		return syscall.ENOENT
 	}
@@ -332,17 +501,22 @@ func (d *TagDir) Rename(
 		return syscall.EPERM
 	}
 
-	idx := d.root.idx
+	idxDB := d.root.idx
 	for _, t := range srcTags {
-		if err := idx.ModifyFileTags(ctx, realPath, []string{t}, "remove"); err != nil {
+		if err := idxDB.ModifyFileTags(ctx, realPath, []string{t}, "remove"); err != nil {
 			slog.WarnContext(ctx, "fuse: rename: remove tag failed", "path", realPath, "tag", t, "err", err)
 		}
 	}
 	for _, t := range dstTags {
-		if err := idx.ModifyFileTags(ctx, realPath, []string{t}, "add"); err != nil {
+		if err := idxDB.ModifyFileTags(ctx, realPath, []string{t}, "add"); err != nil {
 			slog.WarnContext(ctx, "fuse: rename: add tag failed", "path", realPath, "tag", t, "err", err)
 		}
 	}
+
+	// Invalidate both caches so Readdir reflects the retag immediately.
+	d.cache.invalidate()
+	dest.cache.invalidate()
+
 	return 0
 }
 
@@ -384,20 +558,48 @@ func (l *FileLink) Readlink(_ context.Context) ([]byte, syscall.Errno) {
 	return []byte(l.realPath), 0
 }
 
-// Getattr returns symlink attributes, stat-ing the real file for size/mtime.
-func (l *FileLink) Getattr(_ context.Context, _ fs.FileHandle, out *fuse.AttrOut) syscall.Errno {
+// Getattr returns symlink attributes, stat-ing the real file for size and mtime.
+func (l *FileLink) Getattr(ctx context.Context, _ fs.FileHandle, out *fuse.AttrOut) syscall.Errno {
+	slog.DebugContext(ctx, "fuse: filelink.getattr: start", "realPath", l.realPath)
+	t0 := time.Now()
 	st, err := os.Lstat(l.realPath)
 	if err != nil {
+		slog.DebugContext(
+			ctx,
+			"fuse: filelink.getattr: lstat failed",
+			"realPath",
+			l.realPath,
+			"err",
+			err,
+			"dur",
+			time.Since(t0),
+		)
 		return syscall.ENOENT
 	}
 	out.Mode = syscall.S_IFLNK | symlinkMode
 	if st.Size() > 0 {
 		// #nosec G115 -- negative values are rejected by the guard above.
 		out.Size = uint64(st.Size())
-	} else {
-		out.Size = 0
 	}
-	out.SetTimeout(attrTimeoutLongSec)
+	mt := st.ModTime()
+	// #nosec G115 -- Unix() is non-negative for any real file; Nanosecond() is 0–999999999.
+	out.Mtime = uint64(mt.Unix())
+	ns := mt.Nanosecond()
+	ns = max(ns, 0)
+	ns = min(ns, int(time.Second/time.Nanosecond)-1)
+	// #nosec G115 -- mt.Nanosecond() is clamped to the valid 0..999999999 range.
+	out.Mtimensec = uint32(ns)
+	out.SetTimeout(attrTimeoutLong)
+	slog.DebugContext(
+		ctx,
+		"fuse: filelink.getattr: done",
+		"realPath",
+		l.realPath,
+		"size",
+		out.Size,
+		"dur",
+		time.Since(t0),
+	)
 	return 0
 }
 
@@ -435,9 +637,11 @@ var _ fs.NodeRmdirer = (*BrowseDir)(nil)
 
 // Readdir lists co-occurring tags as subdirectories and "@files" as a fixed entry.
 func (d *BrowseDir) Readdir(ctx context.Context) (fs.DirStream, syscall.Errno) {
+	slog.DebugContext(ctx, "fuse: browsedir.readdir: start", "include", d.includeTags, "exclude", d.excludeTags)
+	t0 := time.Now()
 	tags, err := d.root.idx.ListCooccurringTags(ctx, d.includeTags, d.excludeTags)
 	if err != nil {
-		slog.WarnContext(ctx, "fuse: browse readdir failed", "err", err)
+		slog.WarnContext(ctx, "fuse: browsedir.readdir: failed", "err", err, "dur", time.Since(t0))
 		return nil, syscall.EIO
 	}
 
@@ -449,6 +653,18 @@ func (d *BrowseDir) Readdir(ctx context.Context) (fs.DirStream, syscall.Errno) {
 			Mode: syscall.S_IFDIR,
 		})
 	}
+	slog.DebugContext(
+		ctx,
+		"fuse: browsedir.readdir: done",
+		"include",
+		d.includeTags,
+		"exclude",
+		d.excludeTags,
+		"tags",
+		len(tags),
+		"dur",
+		time.Since(t0),
+	)
 	return fs.NewListDirStream(entries), 0
 }
 
@@ -457,8 +673,18 @@ func (d *BrowseDir) Readdir(ctx context.Context) (fs.DirStream, syscall.Errno) {
 //   - "!<tag>"  → new BrowseDir with <tag> added to excludeTags
 //   - "<tag>"   → new BrowseDir with <tag> added to includeTags
 func (d *BrowseDir) Lookup(ctx context.Context, name string, out *fuse.EntryOut) (*fs.Inode, syscall.Errno) {
-	out.SetAttrTimeout(attrTimeoutFastSec)
-	out.SetEntryTimeout(attrTimeoutFastSec)
+	slog.DebugContext(
+		ctx,
+		"fuse: browsedir.lookup: start",
+		"name",
+		name,
+		"include",
+		d.includeTags,
+		"exclude",
+		d.excludeTags,
+	)
+	out.SetAttrTimeout(attrTimeoutFast)
+	out.SetEntryTimeout(attrTimeoutFast)
 	out.Mode = syscall.S_IFDIR | dirReadOnlyMode
 
 	if name == "@files" {
@@ -467,6 +693,7 @@ func (d *BrowseDir) Lookup(ctx context.Context, name string, out *fuse.EntryOut)
 			includeTags: d.includeTags,
 			excludeTags: d.excludeTags,
 		}, fs.StableAttr{Mode: syscall.S_IFDIR})
+		slog.DebugContext(ctx, "fuse: browsedir.lookup: done (@files)", "include", d.includeTags)
 		return child, 0
 	}
 
@@ -495,13 +722,14 @@ func (d *BrowseDir) Lookup(ctx context.Context, name string, out *fuse.EntryOut)
 		}
 	}
 	child := d.NewPersistentInode(ctx, next, fs.StableAttr{Mode: syscall.S_IFDIR})
+	slog.DebugContext(ctx, "fuse: browsedir.lookup: done", "name", name, "isNot", isNot, "decoded", decoded)
 	return child, 0
 }
 
 // Getattr returns directory attributes.
 func (d *BrowseDir) Getattr(_ context.Context, _ fs.FileHandle, out *fuse.AttrOut) syscall.Errno {
 	out.Mode = syscall.S_IFDIR | dirReadOnlyMode
-	out.SetTimeout(attrTimeoutFastSec)
+	out.SetTimeout(attrTimeoutFast)
 	return 0
 }
 
@@ -518,6 +746,7 @@ type BrowseFilesDir struct {
 	root        *Root
 	includeTags []string
 	excludeTags []string
+	cache       tagCache
 }
 
 var _ fs.NodeReaddirer = (*BrowseFilesDir)(nil)
@@ -535,65 +764,172 @@ func (f *BrowseFilesDir) browseQuery(ctx context.Context) ([]index.SearchResult,
 	return results, err
 }
 
-// Readdir returns matching files as symlink entries.
-func (f *BrowseFilesDir) Readdir(ctx context.Context) (fs.DirStream, syscall.Errno) {
+// warmCache ensures the query result cache is populated.
+func (f *BrowseFilesDir) warmCache(ctx context.Context) error {
+	f.cache.mu.RLock()
+	valid := f.cache.valid()
+	f.cache.mu.RUnlock()
+	if valid {
+		slog.DebugContext(
+			ctx,
+			"fuse: browsefilesdir.warmCache: cache hit",
+			"include",
+			f.includeTags,
+			"exclude",
+			f.excludeTags,
+		)
+		return nil
+	}
+
+	slog.DebugContext(
+		ctx,
+		"fuse: browsefilesdir.warmCache: cache miss, acquiring write lock",
+		"include",
+		f.includeTags,
+		"exclude",
+		f.excludeTags,
+	)
+	f.cache.mu.Lock()
+	defer f.cache.mu.Unlock()
+	if f.cache.valid() {
+		slog.DebugContext(
+			ctx,
+			"fuse: browsefilesdir.warmCache: cache filled by other goroutine",
+			"include",
+			f.includeTags,
+		)
+		return nil
+	}
+
+	slog.DebugContext(
+		ctx,
+		"fuse: browsefilesdir.warmCache: querying db",
+		"include",
+		f.includeTags,
+		"exclude",
+		f.excludeTags,
+	)
+	t0 := time.Now()
 	results, err := f.browseQuery(ctx)
 	if err != nil {
-		slog.WarnContext(ctx, "fuse: browse files readdir failed", "err", err)
+		slog.WarnContext(ctx, "fuse: browsefilesdir.warmCache: query failed", "err", err, "dur", time.Since(t0))
+		return err
+	}
+	slog.DebugContext(
+		ctx,
+		"fuse: browsefilesdir.warmCache: query done",
+		"include",
+		f.includeTags,
+		"n",
+		len(results),
+		"dur",
+		time.Since(t0),
+	)
+	f.cache.fill(results, f.root.allocInode)
+	return nil
+}
+
+// Readdir returns matching files as symlink entries.
+func (f *BrowseFilesDir) Readdir(ctx context.Context) (fs.DirStream, syscall.Errno) {
+	slog.DebugContext(ctx, "fuse: browsefilesdir.readdir: start", "include", f.includeTags, "exclude", f.excludeTags)
+	t0 := time.Now()
+	if err := f.warmCache(ctx); err != nil {
+		slog.WarnContext(ctx, "fuse: browsefilesdir.readdir: warmCache failed", "err", err, "dur", time.Since(t0))
 		return nil, syscall.EIO
 	}
-	nameCounts := make(map[string]int, len(results))
-	for _, r := range results {
-		nameCounts[filepath.Base(r.Path)]++
-	}
-	seenCount := make(map[string]int, len(results))
 
-	entries := make([]fuse.DirEntry, 0, len(results))
-	for _, r := range results {
+	f.cache.mu.RLock()
+	defer f.cache.mu.RUnlock()
+	entries := make([]fuse.DirEntry, 0, len(f.cache.entries))
+	for _, e := range f.cache.entries {
 		entries = append(entries, fuse.DirEntry{
-			Name: entryName(r.Path, nameCounts, seenCount),
+			Name: e.name,
 			Mode: syscall.S_IFLNK,
-			Ino:  f.root.allocInode(r.Path),
+			Ino:  e.ino,
 		})
 	}
+	slog.DebugContext(
+		ctx,
+		"fuse: browsefilesdir.readdir: done",
+		"include",
+		f.includeTags,
+		"n",
+		len(entries),
+		"dur",
+		time.Since(t0),
+	)
 	return fs.NewListDirStream(entries), 0
 }
 
 // Lookup finds a file by its virtual name within this directory.
+// Results are served from the shared cache to avoid a full DB query per call.
 func (f *BrowseFilesDir) Lookup(ctx context.Context, name string, out *fuse.EntryOut) (*fs.Inode, syscall.Errno) {
-	results, err := f.browseQuery(ctx)
-	if err != nil {
+	slog.DebugContext(ctx, "fuse: browsefilesdir.lookup: start", "name", name, "include", f.includeTags)
+	t0 := time.Now()
+	if err := f.warmCache(ctx); err != nil {
+		slog.WarnContext(
+			ctx,
+			"fuse: browsefilesdir.lookup: warmCache failed",
+			"name",
+			name,
+			"err",
+			err,
+			"dur",
+			time.Since(t0),
+		)
 		return nil, syscall.EIO
 	}
-	nameCounts := make(map[string]int, len(results))
-	for _, r := range results {
-		nameCounts[filepath.Base(r.Path)]++
-	}
-	seenCount := make(map[string]int, len(results))
 
-	for _, r := range results {
-		if entryName(r.Path, nameCounts, seenCount) != name {
-			continue
-		}
-		if _, err := os.Lstat(r.Path); err != nil {
-			return nil, syscall.ENOENT
-		}
-		ino := f.root.allocInode(r.Path)
-		out.Ino = ino
-		out.SetAttrTimeout(attrTimeoutLongSec)
-		out.SetEntryTimeout(1)
-		out.Mode = syscall.S_IFLNK | symlinkMode
-		child := f.NewPersistentInode(ctx, &FileLink{realPath: r.Path},
-			fs.StableAttr{Mode: syscall.S_IFLNK, Ino: ino})
-		return child, 0
+	f.cache.mu.RLock()
+	idx, ok := f.cache.byName[name]
+	var entry tagCacheEntry
+	if ok {
+		entry = f.cache.entries[idx]
 	}
-	return nil, syscall.ENOENT
+	f.cache.mu.RUnlock()
+
+	if !ok {
+		slog.DebugContext(ctx, "fuse: browsefilesdir.lookup: not found in cache", "name", name, "dur", time.Since(t0))
+		return nil, syscall.ENOENT
+	}
+
+	if _, err := os.Lstat(entry.realPath); err != nil {
+		slog.DebugContext(
+			ctx,
+			"fuse: browsefilesdir.lookup: real file missing",
+			"name",
+			name,
+			"realPath",
+			entry.realPath,
+			"err",
+			err,
+		)
+		return nil, syscall.ENOENT
+	}
+
+	out.Ino = entry.ino
+	out.SetAttrTimeout(attrTimeoutLong)
+	out.SetEntryTimeout(attrTimeoutEntry)
+	out.Mode = syscall.S_IFLNK | symlinkMode
+	child := f.NewPersistentInode(ctx, &FileLink{realPath: entry.realPath},
+		fs.StableAttr{Mode: syscall.S_IFLNK, Ino: entry.ino})
+	slog.DebugContext(
+		ctx,
+		"fuse: browsefilesdir.lookup: done",
+		"name",
+		name,
+		"realPath",
+		entry.realPath,
+		"dur",
+		time.Since(t0),
+	)
+	return child, 0
 }
 
 // Getattr returns directory attributes.
 func (f *BrowseFilesDir) Getattr(_ context.Context, _ fs.FileHandle, out *fuse.AttrOut) syscall.Errno {
 	out.Mode = syscall.S_IFDIR | dirReadOnlyMode
-	out.SetTimeout(attrTimeoutFastSec)
+	out.SetTimeout(attrTimeoutFast)
 	return 0
 }
 

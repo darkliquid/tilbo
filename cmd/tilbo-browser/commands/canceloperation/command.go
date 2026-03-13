@@ -10,5 +10,5 @@ type Command struct {
 	TargetOpID string
 }
 
-func (c Command) Type() core.Type { return core.CancelOperation }
-func (c Command) OperationID() string    { return c.CommandBase.OperationID() }
+func (c Command) Type() core.Type     { return core.CancelOperation }
+func (c Command) OperationID() string { return c.CommandBase.OperationID() }

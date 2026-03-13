@@ -52,7 +52,11 @@ const mainThreadQueueSize = 100
 
 const browserWindowMode = "browser"
 
-// placesRefreshTickThreshold at 8ms/tick ≈ 2 seconds
+// mainThreadPollIntervalMs is the Qt timer interval in milliseconds (~120 Hz).
+// Sub-frame polling reduces main-thread lock churn without blocking the UI.
+const mainThreadPollIntervalMs = 8
+
+// placesRefreshTickThreshold at 8ms/tick ≈ 2 seconds.
 const placesRefreshTickThreshold = 250
 
 func NewBrowser(ctx context.Context) *Browser {
@@ -428,7 +432,7 @@ func main() {
 	b.timer.OnTimeout(func() {
 		b.drainMainThreadChannel()
 	})
-	b.timer.Start(8) // Every 8ms (~120hz); sub-frame polling with reduced main-thread lock churn
+	b.timer.Start(mainThreadPollIntervalMs)
 
 	// Create tmp path for QML
 	dumbTmpPath := os.TempDir() + "/tilbo-qml"

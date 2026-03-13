@@ -13,9 +13,9 @@ import (
 // fsMatrix lists the four filesystem types and the corresponding loop mounts
 // that are set up in TestMain.
 var fsMatrix = []struct {
-	mount   **helpers.Mount
-	fsType  helpers.FSType
-	label   string
+	mount  **helpers.Mount
+	fsType helpers.FSType
+	label  string
 }{
 	{&ext4Mount, helpers.FSExt4, "ext4"},
 	{&btrfsMount, helpers.FSBtrfs, "btrfs"},

@@ -10,5 +10,5 @@ type Command struct {
 	Path string
 }
 
-func (c Command) Type() core.Type { return core.OpenFile }
-func (c Command) OperationID() string    { return c.CommandBase.OperationID() }
+func (c Command) Type() core.Type     { return core.OpenFile }
+func (c Command) OperationID() string { return c.CommandBase.OperationID() }

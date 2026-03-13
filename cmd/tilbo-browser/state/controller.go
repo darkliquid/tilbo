@@ -32,7 +32,7 @@ type Controller struct {
 
 	commands *commands.CommandBus
 	events   *commands.EventBus
-	state    *StateStore
+	state    *Store
 	ops      *operations.Registry
 	fsOps    *operations.FileSystem
 	daemon   *daemon.Adapter
@@ -50,7 +50,7 @@ func NewController(parent context.Context) *Controller {
 		cancel:   cancel,
 		commands: commands.NewCommandBus(),
 		events:   commands.NewEventBus(),
-		state:    NewStateStore(),
+		state:    NewStore(),
 		ops:      operations.NewRegistry(),
 		fsOps:    operations.NewFileSystem(),
 	}
@@ -67,7 +67,7 @@ func (c *Controller) CommandBus() *commands.CommandBus { return c.commands }
 func (c *Controller) EventBus() *commands.EventBus { return c.events }
 
 // StateStore exposes the state store for projection models.
-func (c *Controller) StateStore() *StateStore { return c.state }
+func (c *Controller) StateStore() *Store { return c.state }
 
 // SetDaemonAdapter sets or replaces the daemon adapter used by controller handlers.
 func (c *Controller) SetDaemonAdapter(adapter *daemon.Adapter) { c.daemon = adapter }

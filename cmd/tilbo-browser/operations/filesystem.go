@@ -1,3 +1,4 @@
+// Package operations contains side-effectful helpers used by browser handlers.
 package operations
 
 import (

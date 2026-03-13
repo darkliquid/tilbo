@@ -11,5 +11,5 @@ type Command struct {
 	Mode uint32
 }
 
-func (c Command) Type() core.Type { return core.ChmodFile }
-func (c Command) OperationID() string    { return c.CommandBase.OperationID() }
+func (c Command) Type() core.Type     { return core.ChmodFile }
+func (c Command) OperationID() string { return c.CommandBase.OperationID() }

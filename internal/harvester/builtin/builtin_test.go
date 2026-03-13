@@ -76,14 +76,14 @@ func TestMIMEHarvester_FallsBackToExtension(t *testing.T) {
 	}
 }
 
-func TestMIMEHarvester_MissingFileReturnsNil(t *testing.T) {
+func TestMIMEHarvester_MissingFileReturnsEmpty(t *testing.T) {
 	h := NewMIMEHarvester()
 	meta, err := h.Run(context.Background(), harvester.Input{Path: "/does/not/exist.jpg"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if meta != nil {
-		t.Errorf("expected nil for missing file, got %v", meta)
+	if len(meta) != 0 {
+		t.Errorf("expected empty metadata for missing file, got %v", meta)
 	}
 }
 
@@ -145,14 +145,14 @@ func TestStatHarvester_SizeTiers(t *testing.T) {
 	}
 }
 
-func TestStatHarvester_MissingFileReturnsNil(t *testing.T) {
+func TestStatHarvester_MissingFileReturnsEmpty(t *testing.T) {
 	h := NewStatHarvester()
 	meta, err := h.Run(context.Background(), harvester.Input{Path: "/no/such/file"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if meta != nil {
-		t.Errorf("expected nil for missing file, got %v", meta)
+	if len(meta) != 0 {
+		t.Errorf("expected empty metadata for missing file, got %v", meta)
 	}
 }
 
@@ -203,14 +203,14 @@ func TestEXIFHarvester_Interface(t *testing.T) {
 	}
 }
 
-func TestEXIFHarvester_MissingFileReturnsNil(t *testing.T) {
+func TestEXIFHarvester_MissingFileReturnsEmpty(t *testing.T) {
 	h := NewEXIFHarvester()
 	meta, err := h.Run(context.Background(), harvester.Input{Path: "/no/such/file.jpg", MIME: "image/jpeg"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if meta != nil {
-		t.Errorf("expected nil for missing file, got %v", meta)
+	if len(meta) != 0 {
+		t.Errorf("expected empty metadata for missing file, got %v", meta)
 	}
 }
 
@@ -227,14 +227,14 @@ func TestPDFHarvester_Interface(t *testing.T) {
 	}
 }
 
-func TestPDFHarvester_MissingFileReturnsNil(t *testing.T) {
+func TestPDFHarvester_MissingFileReturnsEmpty(t *testing.T) {
 	h := NewPDFHarvester()
 	meta, err := h.Run(context.Background(), harvester.Input{Path: "/no/such/file.pdf", MIME: "application/pdf"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if meta != nil {
-		t.Errorf("expected nil for missing file, got %v", meta)
+	if len(meta) != 0 {
+		t.Errorf("expected empty metadata for missing file, got %v", meta)
 	}
 }
 
@@ -364,14 +364,14 @@ func TestEPUBHarvester_ExtractsMetadata(t *testing.T) {
 	}
 }
 
-func TestEPUBHarvester_MissingFileReturnsNil(t *testing.T) {
+func TestEPUBHarvester_MissingFileReturnsEmpty(t *testing.T) {
 	h := NewEPUBHarvester()
 	meta, err := h.Run(context.Background(), harvester.Input{Path: "/no/such/file.epub", MIME: "application/epub+zip"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if meta != nil {
-		t.Errorf("expected nil for missing file, got %v", meta)
+	if len(meta) != 0 {
+		t.Errorf("expected empty metadata for missing file, got %v", meta)
 	}
 }
 

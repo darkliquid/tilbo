@@ -11,5 +11,5 @@ type Command struct {
 	Limit uint32
 }
 
-func (c Command) Type() core.Type { return core.Search }
-func (c Command) OperationID() string    { return c.CommandBase.OperationID() }
+func (c Command) Type() core.Type     { return core.Search }
+func (c Command) OperationID() string { return c.CommandBase.OperationID() }

@@ -10,5 +10,5 @@ type Command struct {
 	Mode string
 }
 
-func (c Command) Type() core.Type { return core.OpenPortal }
-func (c Command) OperationID() string    { return c.CommandBase.OperationID() }
+func (c Command) Type() core.Type     { return core.OpenPortal }
+func (c Command) OperationID() string { return c.CommandBase.OperationID() }

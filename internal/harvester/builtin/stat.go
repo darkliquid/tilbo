@@ -2,6 +2,7 @@ package builtin
 
 import (
 	"context"
+	"errors"
 	"os"
 	"syscall"
 	"time"
@@ -62,6 +63,9 @@ func sizeTier(n int64) string {
 func (*StatHarvester) Run(_ context.Context, input harvester.Input) (harvester.MetaMap, error) {
 	fi, err := os.Lstat(input.Path)
 	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return harvester.MetaMap{}, nil
+		}
 		return nil, err
 	}
 

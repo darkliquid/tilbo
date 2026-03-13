@@ -13,16 +13,16 @@ type State = core.State
 // OperationMeta tracks metadata for one in-flight operation.
 type OperationMeta = core.OperationMeta
 
-// StateStore owns browser state and mutation/version tracking.
-type StateStore struct {
+// Store owns browser state and mutation/version tracking.
+type Store struct {
 	mu      sync.RWMutex
 	state   State
 	version uint64
 }
 
-// NewStateStore constructs a store with defaults.
-func NewStateStore() *StateStore {
-	return &StateStore{
+// NewStore constructs a store with defaults.
+func NewStore() *Store {
+	return &Store{
 		state: State{
 			CurrentPath:      "/",
 			SearchChips:      []string{},
@@ -39,7 +39,7 @@ func NewStateStore() *StateStore {
 }
 
 // Snapshot returns a detached copy of state and current version.
-func (s *StateStore) Snapshot() (State, uint64) {
+func (s *Store) Snapshot() (State, uint64) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -58,7 +58,7 @@ func (s *StateStore) Snapshot() (State, uint64) {
 }
 
 // Mutate applies a mutation atomically and bumps the store version.
-func (s *StateStore) Mutate(fn func(*State)) uint64 {
+func (s *Store) Mutate(fn func(*State)) uint64 {
 	if fn == nil {
 		s.mu.RLock()
 		defer s.mu.RUnlock()
