@@ -201,6 +201,36 @@ func TestGetFileTags_Missing(t *testing.T) {
 	}
 }
 
+func TestGetFileTagsBatch(t *testing.T) {
+	ctx := context.Background()
+	db := testDB(t)
+
+	id1 := addFile(t, db, "/a.txt", 1000, 100)
+	id2 := addFile(t, db, "/b.txt", 1000, 100)
+	tagFile(t, db, id1, "z", "a")
+	tagFile(t, db, id2, "x")
+
+	tagMap, err := db.GetFileTagsBatch(ctx, []string{"/a.txt", "/b.txt", "/missing.txt", "/a.txt"})
+	if err != nil {
+		t.Fatalf("GetFileTagsBatch: %v", err)
+	}
+
+	a := tagMap["/a.txt"]
+	if len(a) != 2 || a[0] != "a" || a[1] != "z" {
+		t.Fatalf("unexpected tags for /a.txt: %#v", a)
+	}
+
+	b := tagMap["/b.txt"]
+	if len(b) != 1 || b[0] != "x" {
+		t.Fatalf("unexpected tags for /b.txt: %#v", b)
+	}
+
+	missing := tagMap["/missing.txt"]
+	if len(missing) != 0 {
+		t.Fatalf("expected empty tags for missing path, got %#v", missing)
+	}
+}
+
 func TestModifyFileTags_Add(t *testing.T) {
 	ctx := context.Background()
 	db := testDB(t)

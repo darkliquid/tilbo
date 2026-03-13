@@ -22,6 +22,7 @@ message Request {
     StatusRequest status = 6;
     ReloadRulesRequest reload_rules = 7;
     ListTagsRequest list_tags = 8;
+    HydrateTagsRequest hydrate_tags = 9;
   }
 }
 
@@ -35,6 +36,7 @@ message Response {
     StatusResponse status = 6;
     ReloadRulesResponse reload_rules = 7;
     ListTagsResponse list_tags = 8;
+    HydrateTagsResponse hydrate_tags = 9;
   }
 }
 
@@ -154,4 +156,17 @@ message ListTagsRequest {
 
 message ListTagsResponse {
   repeated string tags = 1;
+}
+
+message HydrateTagsRequest {
+  repeated string paths = 1;
+}
+
+message HydratedPathTags {
+  string path = 1;
+  repeated string tags = 2;
+}
+
+message HydrateTagsResponse {
+  repeated HydratedPathTags entries = 1;
 }

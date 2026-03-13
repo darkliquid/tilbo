@@ -58,26 +58,21 @@ func (a *DaemonAdapter) HydrateTags(ctx context.Context, paths []string) (map[st
 		return map[string][]string{}, nil
 	}
 
+	resp, err := a.caller.Call(ctx, &ipcv1.Request{
+		Kind: &ipcv1.Request_HydrateTags{HydrateTags: &ipcv1.HydrateTagsRequest{Paths: paths}},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	hydrateResp, ok := resp.GetKind().(*ipcv1.Response_HydrateTags)
+	if !ok || hydrateResp.HydrateTags == nil {
+		return nil, errors.New("unexpected daemon hydration response")
+	}
+
 	tagMap := make(map[string][]string, len(paths))
-	for _, p := range paths {
-		req := &ipcv1.SearchRequest{
-			Limit:       1,
-			Tags:        []string{"path:" + p},
-			MetaFilters: make(map[string]string),
-		}
-
-		resp, err := a.caller.Call(ctx, &ipcv1.Request{Kind: &ipcv1.Request_Search{Search: req}})
-		if err != nil {
-			return nil, err
-		}
-
-		searchResp, ok := resp.GetKind().(*ipcv1.Response_Search)
-		if !ok || searchResp.Search == nil {
-			return nil, errors.New("unexpected daemon hydration response")
-		}
-		for _, f := range searchResp.Search.GetFiles() {
-			tagMap[f.GetPath()] = append([]string(nil), f.GetTags()...)
-		}
+	for _, entry := range hydrateResp.HydrateTags.GetEntries() {
+		tagMap[entry.GetPath()] = append([]string(nil), entry.GetTags()...)
 	}
 
 	return tagMap, nil

@@ -220,6 +220,13 @@ func TestServer_AllRequestTypes(t *testing.T) {
 			return &ipcv1.Response{Kind: &ipcv1.Response_ListTags{
 				ListTags: &ipcv1.ListTagsResponse{Tags: []string{"alpha", "beta"}},
 			}}, nil
+		case *ipcv1.Request_HydrateTags:
+			return &ipcv1.Response{Kind: &ipcv1.Response_HydrateTags{
+				HydrateTags: &ipcv1.HydrateTagsResponse{Entries: []*ipcv1.HydratedPathTags{{
+					Path: "/tmp/a",
+					Tags: []string{"one"},
+				}}},
+			}}, nil
 		default:
 			return &ipcv1.Response{Kind: &ipcv1.Response_Error{
 				Error: &ipcv1.ErrorResponse{Code: 3, Message: "unhandled"},

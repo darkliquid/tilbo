@@ -10,6 +10,7 @@ import (
 	"os/signal"
 	"runtime"
 	"syscall"
+	"time"
 
 	"github.com/godbus/dbus/v5"
 	"github.com/mappu/miqt/qt6"
@@ -46,7 +47,8 @@ const mainThreadQueueSize = 100
 
 const browserWindowMode = "browser"
 
-const placesRefreshTickThreshold = 2000
+// placesRefreshTickThreshold at 8ms/tick ≈ 2 seconds
+const placesRefreshTickThreshold = 250
 
 func NewBrowser(ctx context.Context) *Browser {
 	// #nosec G118 -- the cancel func is stored on Browser and invoked on Quit and shutdown.
@@ -165,7 +167,8 @@ func (b *Browser) Quit() *dbus.Error {
 }
 
 func (b *Browser) drainMainThreadChannel() {
-	// Periodically request places refresh from the controller (~every 2 seconds at 1ms tick rate).
+	t0 := time.Now()
+	// Periodically request places refresh from the controller (~every 2 seconds at timer tick rate).
 	b.placesRefreshTick++
 	if b.placesRefreshTick >= placesRefreshTickThreshold {
 		b.placesRefreshTick = 0
@@ -184,6 +187,9 @@ func (b *Browser) drainMainThreadChannel() {
 			b.applySearchProjection()
 			b.applyDirectoryProjection()
 			b.applyPlacesProjection()
+			if d := time.Since(t0); d > 5*time.Millisecond {
+				slog.Debug("drainMainThread slow", "dur", d.Round(time.Millisecond))
+			}
 			return
 		}
 	}
@@ -395,6 +401,7 @@ func main() {
 
 	b.engine.RootContext().SetContextProperty2("daemonConnected", qt6.NewQVariant8(daemonClient != nil))
 	b.engine.RootContext().SetContextProperty2("portalSelectedFiles", qt6.NewQVariant15([]string{}))
+	b.engine.RootContext().SetContextProperty2("browserInitialPath", qt6.NewQVariant14(startPath))
 
 	// Export model role IDs so QML command actions do not rely on hardcoded numbers.
 	b.engine.RootContext().SetContextProperty2("fsRoleOpen", qt6.NewQVariant4(models.ActionOpenRole))
@@ -410,7 +417,7 @@ func main() {
 	b.timer.OnTimeout(func() {
 		b.drainMainThreadChannel()
 	})
-	b.timer.Start(1) // Every 1ms
+	b.timer.Start(8) // Every 8ms (~120hz); sub-frame polling with reduced main-thread lock churn
 
 	// Create tmp path for QML
 	dumbTmpPath := os.TempDir() + "/tilbo-qml"

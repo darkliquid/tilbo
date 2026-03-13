@@ -315,6 +315,64 @@ func (d *DB) GetFileTags(ctx context.Context, path string) ([]string, error) {
 	return tags, nil
 }
 
+// GetFileTagsBatch returns tag names for each requested path in one query.
+// Missing files are returned with empty tag slices.
+func (d *DB) GetFileTagsBatch(ctx context.Context, paths []string) (map[string][]string, error) {
+	if len(paths) == 0 {
+		return map[string][]string{}, nil
+	}
+
+	// Keep output deterministic and preserve missing-file behavior.
+	result := make(map[string][]string, len(paths))
+	unique := make([]string, 0, len(paths))
+	seen := make(map[string]struct{}, len(paths))
+	for _, p := range paths {
+		if _, ok := seen[p]; ok {
+			continue
+		}
+		seen[p] = struct{}{}
+		unique = append(unique, p)
+		result[p] = []string{}
+	}
+
+	placeholders := strings.Repeat("?,", len(unique))
+	placeholders = placeholders[:len(placeholders)-1]
+	query := `
+		SELECT f.path, t.name
+		FROM files f
+		LEFT JOIN file_tags ft ON ft.file_id = f.id
+		LEFT JOIN tags t ON t.id = ft.tag_id
+		WHERE f.path IN (` + placeholders + `)
+		ORDER BY f.path, t.name`
+
+	args := make([]any, 0, len(unique))
+	for _, p := range unique {
+		args = append(args, p)
+	}
+
+	rows, err := d.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("index: batch get tags: %w", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var path string
+		var tag sql.NullString
+		if err := rows.Scan(&path, &tag); err != nil {
+			return nil, fmt.Errorf("index: batch get tags scan: %w", err)
+		}
+		if tag.Valid && tag.String != "" {
+			result[path] = append(result[path], tag.String)
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("index: batch get tags rows: %w", err)
+	}
+
+	return result, nil
+}
+
 // ModifyFileTags adds or removes tags for a file identified by path.
 // For TAG_OPERATION_ADD/REMOVE the file must already be in the index.
 // For TAG_OPERATION_SET the existing tags are fully replaced.

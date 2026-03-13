@@ -183,17 +183,19 @@ func TestControllerNavigateHydratesTagsFromDaemon(t *testing.T) {
 	c := browser.NewController(context.Background())
 	c.SetDaemonAdapter(browser.NewDaemonAdapter(&controllerFakeCaller{
 		callFn: func(_ context.Context, req *ipcv1.Request) (*ipcv1.Response, error) {
-			if req.GetSearch() == nil {
-				t.Fatal("expected search request")
+			hydrateReq := req.GetHydrateTags()
+			if hydrateReq == nil {
+				t.Fatal("expected hydrate_tags request")
+			}
+			if len(hydrateReq.GetPaths()) != 1 || hydrateReq.GetPaths()[0] != filePath {
+				t.Fatalf("unexpected hydrate paths: %#v", hydrateReq.GetPaths())
 			}
 			return &ipcv1.Response{
-				Kind: &ipcv1.Response_Search{
-					Search: &ipcv1.SearchResponse{
-						Files: []*ipcv1.FileResult{{
+				Kind: &ipcv1.Response_HydrateTags{
+					HydrateTags: &ipcv1.HydrateTagsResponse{Entries: []*ipcv1.HydratedPathTags{{
 							Path: filePath,
 							Tags: []string{"tagged"},
-						}},
-					},
+						}}},
 				},
 			}, nil
 		},

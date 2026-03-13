@@ -71,13 +71,11 @@ func TestDaemonAdapterHydrateTags(t *testing.T) {
 
 	caller := &fakeCaller{
 		resp: &ipcv1.Response{
-			Kind: &ipcv1.Response_Search{
-				Search: &ipcv1.SearchResponse{
-					Files: []*ipcv1.FileResult{{
-						Path: "/tmp/a",
-						Tags: []string{"one", "two"},
-					}},
-				},
+			Kind: &ipcv1.Response_HydrateTags{
+				HydrateTags: &ipcv1.HydrateTagsResponse{Entries: []*ipcv1.HydratedPathTags{{
+					Path: "/tmp/a",
+					Tags: []string{"one", "two"},
+				}}},
 			},
 		},
 	}
@@ -94,15 +92,12 @@ func TestDaemonAdapterHydrateTags(t *testing.T) {
 		t.Fatalf("unexpected tags: %#v", tagMap["/tmp/a"])
 	}
 
-	req := caller.req.GetSearch()
+	req := caller.req.GetHydrateTags()
 	if req == nil {
-		t.Fatal("expected hydration search request")
+		t.Fatal("expected hydrate_tags request")
 	}
-	if req.GetLimit() != 1 {
-		t.Fatalf("expected hydration limit=1, got %d", req.GetLimit())
-	}
-	if len(req.GetTags()) != 1 || req.GetTags()[0] != "path:/tmp/a" {
-		t.Fatalf("unexpected hydration tags: %#v", req.GetTags())
+	if len(req.GetPaths()) != 1 || req.GetPaths()[0] != "/tmp/a" {
+		t.Fatalf("unexpected hydration paths: %#v", req.GetPaths())
 	}
 }
 

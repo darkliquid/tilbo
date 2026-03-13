@@ -237,6 +237,33 @@ func handleListTags(ctx context.Context, req *ipcv1.ListTagsRequest, idx *index.
 	}}, nil
 }
 
+// handleHydrateTags returns tag lists for each requested filesystem path.
+func handleHydrateTags(ctx context.Context, req *ipcv1.HydrateTagsRequest, idx *index.DB) (*ipcv1.Response, error) {
+	paths := req.GetPaths()
+	if len(paths) == 0 {
+		return &ipcv1.Response{Kind: &ipcv1.Response_HydrateTags{
+			HydrateTags: &ipcv1.HydrateTagsResponse{Entries: []*ipcv1.HydratedPathTags{}},
+		}}, nil
+	}
+
+	tagMap, err := idx.GetFileTagsBatch(ctx, paths)
+	if err != nil {
+		return errResponse(daemonInternalErrCode, fmt.Sprintf("hydrate tags failed: %v", err)), nil
+	}
+
+	entries := make([]*ipcv1.HydratedPathTags, 0, len(paths))
+	for _, path := range paths {
+		entries = append(entries, &ipcv1.HydratedPathTags{
+			Path: path,
+			Tags: append([]string(nil), tagMap[path]...),
+		})
+	}
+
+	return &ipcv1.Response{Kind: &ipcv1.Response_HydrateTags{
+		HydrateTags: &ipcv1.HydrateTagsResponse{Entries: entries},
+	}}, nil
+}
+
 // applyTagsXattr applies tag modifications to the file's xattrs.
 func applyTagsXattr(ctx context.Context, path string, tagNames []string, op string, store *xattr.Service) error {
 	existing, err := store.ReadTags(ctx, path)

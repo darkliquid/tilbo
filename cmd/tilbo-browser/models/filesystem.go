@@ -4,9 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
+	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/mappu/miqt/qt6"
 
@@ -31,6 +34,9 @@ type FileSystemModel struct {
 	entries      []folderEntry
 	loadVersion  uint64
 	controller   *browserruntime.Controller
+	metadataMu   sync.Mutex
+	metadataOut  map[string]string
+	metadataWork map[string]struct{}
 }
 
 const (
@@ -52,6 +58,8 @@ func NewFileSystemModel(ctx context.Context, parent *qt6.QObject) *FileSystemMod
 		ctx:                ctx,
 		currentPath:        "/",
 		entries:            make([]folderEntry, 0),
+		metadataOut:        make(map[string]string),
+		metadataWork:       make(map[string]struct{}),
 		roleNamesMap: map[int][]byte{
 			NameRole:               []byte("fileName"),
 			PathRole:               []byte("filePath"),
@@ -83,6 +91,7 @@ func NewFileSystemModel(ctx context.Context, parent *qt6.QObject) *FileSystemMod
 }
 
 func (m *FileSystemModel) SetPath(path string) {
+	slog.Debug("fs.setPath", "path", path)
 	m.isSearchMode = false
 	m.currentPath = path
 	m.Refresh()
@@ -219,7 +228,10 @@ func stringSlicesEqual(a, b []string) bool {
 }
 
 func (m *FileSystemModel) renderEntries(entries []folderEntry) {
+	t0 := time.Now()
 	m.Clear()
+	slog.Debug("renderEntries.clear", "dur", time.Since(t0).Round(time.Millisecond))
+
 	m.SetItemRoleNames(m.roleNamesMap)
 
 	items := make([]*qt6.QStandardItem, 0, len(entries))
@@ -237,8 +249,11 @@ func (m *FileSystemModel) renderEntries(entries []folderEntry) {
 	// Bulk append emits a single rowsInserted signal for all rows instead of
 	// N individual signals, which avoids repeated QML delegate re-evaluation.
 	if len(items) > 0 {
+		t1 := time.Now()
 		m.InvisibleRootItem().AppendRows(items)
+		slog.Debug("renderEntries.appendRows", "n", len(items), "dur", time.Since(t1).Round(time.Millisecond))
 	}
+	slog.Debug("renderEntries.total", "n", len(entries), "dur", time.Since(t0).Round(time.Millisecond))
 }
 
 //nolint:funlen,gocognit,gocyclo,cyclop // action dispatch is intentionally centralized for QML role handling
@@ -322,6 +337,7 @@ func (m *FileSystemModel) setData(
 	case ActionCDRole:
 		path := value.ToString()
 		if path != "" {
+			slog.Debug("fs.actionCD", "path", path)
 			m.SetPath(path)
 			return true
 		}
@@ -389,4 +405,120 @@ func (m *FileSystemModel) executeSearch(chips []string) {
 		Chips:       append([]string(nil), chips...),
 		Limit:       defaultSearchLimit,
 	})
+}
+
+// LoadMetadata returns JSON metadata for one path so QML can enrich the
+// properties sidebar lazily when an item is selected.
+func (m *FileSystemModel) LoadMetadata(path string, knownModified int64) string {
+	if path == "" {
+		return "{}"
+	}
+
+	// First, consume any async-enriched metadata result.
+	m.metadataMu.Lock()
+	if data, ok := m.metadataOut[path]; ok && data != "" {
+		delete(m.metadataOut, path)
+		m.metadataMu.Unlock()
+		return data
+	}
+	m.metadataMu.Unlock()
+
+	entry, ok := m.findEntry(path)
+	if !ok {
+		return "{}"
+	}
+
+	if knownModified > 0 && entry.Modified > 0 && entry.Modified != knownModified {
+		// Entry changed since selection snapshot; let next projection refresh it.
+		return "{}"
+	}
+
+	payload := map[string]any{
+		"path":     entry.Path,
+		"name":     entry.Name,
+		"isDir":    entry.IsDir,
+		"size":     entry.Size,
+		"modified": entry.Modified,
+		"tags":     append([]string(nil), entry.Tags...),
+	}
+	data, err := json.Marshal(payload)
+	if err != nil {
+		return "{}"
+	}
+
+	return string(data)
+}
+
+func (m *FileSystemModel) findEntry(path string) (folderEntry, bool) {
+	for _, e := range m.entries {
+		if e.Path == path {
+			return e, true
+		}
+	}
+
+	return folderEntry{}, false
+}
+
+// RequestMetadata starts async metadata loading for one path.
+func (m *FileSystemModel) RequestMetadata(path string) {
+	if path == "" {
+		return
+	}
+
+	entry, ok := m.findEntry(path)
+	knownTags := []string{}
+	if ok {
+		knownTags = append(knownTags, entry.Tags...)
+	}
+
+	m.metadataMu.Lock()
+	if _, busy := m.metadataWork[path]; busy {
+		m.metadataMu.Unlock()
+		return
+	}
+	m.metadataWork[path] = struct{}{}
+	m.metadataMu.Unlock()
+
+	go func(target string, tags []string) {
+		defer func() {
+			m.metadataMu.Lock()
+			delete(m.metadataWork, target)
+			m.metadataMu.Unlock()
+		}()
+
+		info, err := os.Lstat(target)
+		if err != nil {
+			return
+		}
+
+		payload := map[string]any{
+			"path":     target,
+			"name":     info.Name(),
+			"isDir":    info.IsDir(),
+			"size":     info.Size(),
+			"modified": info.ModTime().Unix(),
+			"tags":     tags,
+		}
+		data, err := json.Marshal(payload)
+		if err != nil {
+			return
+		}
+
+		m.metadataMu.Lock()
+		m.metadataOut[target] = string(data)
+		m.metadataMu.Unlock()
+	}(path, knownTags)
+}
+
+// TakeMetadata returns one async metadata result for a path if available.
+func (m *FileSystemModel) TakeMetadata(path string) string {
+	m.metadataMu.Lock()
+	defer m.metadataMu.Unlock()
+
+	data := m.metadataOut[path]
+	if data != "" {
+		delete(m.metadataOut, path)
+	}
+
+	return data
 }

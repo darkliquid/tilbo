@@ -230,6 +230,7 @@ type Request struct {
 	//	*Request_Status
 	//	*Request_ReloadRules
 	//	*Request_ListTags
+	//	*Request_HydrateTags
 	Kind          isRequest_Kind `protobuf_oneof:"kind"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -344,6 +345,15 @@ func (x *Request) GetListTags() *ListTagsRequest {
 	return nil
 }
 
+func (x *Request) GetHydrateTags() *HydrateTagsRequest {
+	if x != nil {
+		if x, ok := x.Kind.(*Request_HydrateTags); ok {
+			return x.HydrateTags
+		}
+	}
+	return nil
+}
+
 type isRequest_Kind interface {
 	isRequest_Kind()
 }
@@ -380,6 +390,10 @@ type Request_ListTags struct {
 	ListTags *ListTagsRequest `protobuf:"bytes,8,opt,name=list_tags,json=listTags,proto3,oneof"`
 }
 
+type Request_HydrateTags struct {
+	HydrateTags *HydrateTagsRequest `protobuf:"bytes,9,opt,name=hydrate_tags,json=hydrateTags,proto3,oneof"`
+}
+
 func (*Request_Search) isRequest_Kind() {}
 
 func (*Request_Tag) isRequest_Kind() {}
@@ -396,6 +410,8 @@ func (*Request_ReloadRules) isRequest_Kind() {}
 
 func (*Request_ListTags) isRequest_Kind() {}
 
+func (*Request_HydrateTags) isRequest_Kind() {}
+
 type Response struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Types that are valid to be assigned to Kind:
@@ -408,6 +424,7 @@ type Response struct {
 	//	*Response_Status
 	//	*Response_ReloadRules
 	//	*Response_ListTags
+	//	*Response_HydrateTags
 	Kind          isResponse_Kind `protobuf_oneof:"kind"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -522,6 +539,15 @@ func (x *Response) GetListTags() *ListTagsResponse {
 	return nil
 }
 
+func (x *Response) GetHydrateTags() *HydrateTagsResponse {
+	if x != nil {
+		if x, ok := x.Kind.(*Response_HydrateTags); ok {
+			return x.HydrateTags
+		}
+	}
+	return nil
+}
+
 type isResponse_Kind interface {
 	isResponse_Kind()
 }
@@ -558,6 +584,10 @@ type Response_ListTags struct {
 	ListTags *ListTagsResponse `protobuf:"bytes,8,opt,name=list_tags,json=listTags,proto3,oneof"`
 }
 
+type Response_HydrateTags struct {
+	HydrateTags *HydrateTagsResponse `protobuf:"bytes,9,opt,name=hydrate_tags,json=hydrateTags,proto3,oneof"`
+}
+
 func (*Response_Error) isResponse_Kind() {}
 
 func (*Response_Search) isResponse_Kind() {}
@@ -573,6 +603,8 @@ func (*Response_Status) isResponse_Kind() {}
 func (*Response_ReloadRules) isResponse_Kind() {}
 
 func (*Response_ListTags) isResponse_Kind() {}
+
+func (*Response_HydrateTags) isResponse_Kind() {}
 
 type ErrorResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -1630,6 +1662,146 @@ func (x *ListTagsResponse) GetTags() []string {
 	return nil
 }
 
+type HydrateTagsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Paths         []string               `protobuf:"bytes,1,rep,name=paths,proto3" json:"paths,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *HydrateTagsRequest) Reset() {
+	*x = HydrateTagsRequest{}
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[21]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *HydrateTagsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*HydrateTagsRequest) ProtoMessage() {}
+
+func (x *HydrateTagsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[21]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use HydrateTagsRequest.ProtoReflect.Descriptor instead.
+func (*HydrateTagsRequest) Descriptor() ([]byte, []int) {
+	return file_tilbo_ipc_v1_ipc_proto_rawDescGZIP(), []int{21}
+}
+
+func (x *HydrateTagsRequest) GetPaths() []string {
+	if x != nil {
+		return x.Paths
+	}
+	return nil
+}
+
+type HydratedPathTags struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Path          string                 `protobuf:"bytes,1,opt,name=path,proto3" json:"path,omitempty"`
+	Tags          []string               `protobuf:"bytes,2,rep,name=tags,proto3" json:"tags,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *HydratedPathTags) Reset() {
+	*x = HydratedPathTags{}
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[22]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *HydratedPathTags) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*HydratedPathTags) ProtoMessage() {}
+
+func (x *HydratedPathTags) ProtoReflect() protoreflect.Message {
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[22]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use HydratedPathTags.ProtoReflect.Descriptor instead.
+func (*HydratedPathTags) Descriptor() ([]byte, []int) {
+	return file_tilbo_ipc_v1_ipc_proto_rawDescGZIP(), []int{22}
+}
+
+func (x *HydratedPathTags) GetPath() string {
+	if x != nil {
+		return x.Path
+	}
+	return ""
+}
+
+func (x *HydratedPathTags) GetTags() []string {
+	if x != nil {
+		return x.Tags
+	}
+	return nil
+}
+
+type HydrateTagsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Entries       []*HydratedPathTags    `protobuf:"bytes,1,rep,name=entries,proto3" json:"entries,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *HydrateTagsResponse) Reset() {
+	*x = HydrateTagsResponse{}
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[23]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *HydrateTagsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*HydrateTagsResponse) ProtoMessage() {}
+
+func (x *HydrateTagsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[23]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use HydrateTagsResponse.ProtoReflect.Descriptor instead.
+func (*HydrateTagsResponse) Descriptor() ([]byte, []int) {
+	return file_tilbo_ipc_v1_ipc_proto_rawDescGZIP(), []int{23}
+}
+
+func (x *HydrateTagsResponse) GetEntries() []*HydratedPathTags {
+	if x != nil {
+		return x.Entries
+	}
+	return nil
+}
+
 var File_tilbo_ipc_v1_ipc_proto protoreflect.FileDescriptor
 
 const file_tilbo_ipc_v1_ipc_proto_rawDesc = "" +
@@ -1640,7 +1812,7 @@ const file_tilbo_ipc_v1_ipc_proto_rawDesc = "" +
 	"request_id\x18\x01 \x01(\x04R\trequestId\x121\n" +
 	"\arequest\x18\x02 \x01(\v2\x15.tilbo.ipc.v1.RequestH\x00R\arequest\x124\n" +
 	"\bresponse\x18\x03 \x01(\v2\x16.tilbo.ipc.v1.ResponseH\x00R\bresponseB\t\n" +
-	"\apayload\"\xf0\x03\n" +
+	"\apayload\"\xb7\x04\n" +
 	"\aRequest\x125\n" +
 	"\x06search\x18\x01 \x01(\v2\x1b.tilbo.ipc.v1.SearchRequestH\x00R\x06search\x12,\n" +
 	"\x03tag\x18\x02 \x01(\v2\x18.tilbo.ipc.v1.TagRequestH\x00R\x03tag\x12;\n" +
@@ -1649,8 +1821,9 @@ const file_tilbo_ipc_v1_ipc_proto_rawDesc = "" +
 	"\arelated\x18\x05 \x01(\v2\x1c.tilbo.ipc.v1.RelatedRequestH\x00R\arelated\x125\n" +
 	"\x06status\x18\x06 \x01(\v2\x1b.tilbo.ipc.v1.StatusRequestH\x00R\x06status\x12E\n" +
 	"\freload_rules\x18\a \x01(\v2 .tilbo.ipc.v1.ReloadRulesRequestH\x00R\vreloadRules\x12<\n" +
-	"\tlist_tags\x18\b \x01(\v2\x1d.tilbo.ipc.v1.ListTagsRequestH\x00R\blistTagsB\x06\n" +
-	"\x04kind\"\xe6\x03\n" +
+	"\tlist_tags\x18\b \x01(\v2\x1d.tilbo.ipc.v1.ListTagsRequestH\x00R\blistTags\x12E\n" +
+	"\fhydrate_tags\x18\t \x01(\v2 .tilbo.ipc.v1.HydrateTagsRequestH\x00R\vhydrateTagsB\x06\n" +
+	"\x04kind\"\xae\x04\n" +
 	"\bResponse\x123\n" +
 	"\x05error\x18\x01 \x01(\v2\x1b.tilbo.ipc.v1.ErrorResponseH\x00R\x05error\x126\n" +
 	"\x06search\x18\x02 \x01(\v2\x1c.tilbo.ipc.v1.SearchResponseH\x00R\x06search\x12-\n" +
@@ -1659,7 +1832,8 @@ const file_tilbo_ipc_v1_ipc_proto_rawDesc = "" +
 	"\arelated\x18\x05 \x01(\v2\x1d.tilbo.ipc.v1.RelatedResponseH\x00R\arelated\x126\n" +
 	"\x06status\x18\x06 \x01(\v2\x1c.tilbo.ipc.v1.StatusResponseH\x00R\x06status\x12F\n" +
 	"\freload_rules\x18\a \x01(\v2!.tilbo.ipc.v1.ReloadRulesResponseH\x00R\vreloadRules\x12=\n" +
-	"\tlist_tags\x18\b \x01(\v2\x1e.tilbo.ipc.v1.ListTagsResponseH\x00R\blistTagsB\x06\n" +
+	"\tlist_tags\x18\b \x01(\v2\x1e.tilbo.ipc.v1.ListTagsResponseH\x00R\blistTags\x12F\n" +
+	"\fhydrate_tags\x18\t \x01(\v2!.tilbo.ipc.v1.HydrateTagsResponseH\x00R\vhydrateTagsB\x06\n" +
 	"\x04kind\"=\n" +
 	"\rErrorResponse\x12\x12\n" +
 	"\x04code\x18\x01 \x01(\rR\x04code\x12\x18\n" +
@@ -1754,7 +1928,14 @@ const file_tilbo_ipc_v1_ipc_proto_rawDesc = "" +
 	"\x0fListTagsRequest\x12\x16\n" +
 	"\x06prefix\x18\x01 \x01(\tR\x06prefix\"&\n" +
 	"\x10ListTagsResponse\x12\x12\n" +
-	"\x04tags\x18\x01 \x03(\tR\x04tags*u\n" +
+	"\x04tags\x18\x01 \x03(\tR\x04tags\"*\n" +
+	"\x12HydrateTagsRequest\x12\x14\n" +
+	"\x05paths\x18\x01 \x03(\tR\x05paths\":\n" +
+	"\x10HydratedPathTags\x12\x12\n" +
+	"\x04path\x18\x01 \x01(\tR\x04path\x12\x12\n" +
+	"\x04tags\x18\x02 \x03(\tR\x04tags\"O\n" +
+	"\x13HydrateTagsResponse\x128\n" +
+	"\aentries\x18\x01 \x03(\v2\x1e.tilbo.ipc.v1.HydratedPathTagsR\aentries*u\n" +
 	"\fTagOperation\x12\x1d\n" +
 	"\x19TAG_OPERATION_UNSPECIFIED\x10\x00\x12\x15\n" +
 	"\x11TAG_OPERATION_ADD\x10\x01\x12\x18\n" +
@@ -1781,7 +1962,7 @@ func file_tilbo_ipc_v1_ipc_proto_rawDescGZIP() []byte {
 }
 
 var file_tilbo_ipc_v1_ipc_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_tilbo_ipc_v1_ipc_proto_msgTypes = make([]protoimpl.MessageInfo, 26)
+var file_tilbo_ipc_v1_ipc_proto_msgTypes = make([]protoimpl.MessageInfo, 29)
 var file_tilbo_ipc_v1_ipc_proto_goTypes = []any{
 	(TagOperation)(0),           // 0: tilbo.ipc.v1.TagOperation
 	(DaemonState)(0),            // 1: tilbo.ipc.v1.DaemonState
@@ -1806,11 +1987,14 @@ var file_tilbo_ipc_v1_ipc_proto_goTypes = []any{
 	(*ReloadRulesResponse)(nil), // 20: tilbo.ipc.v1.ReloadRulesResponse
 	(*ListTagsRequest)(nil),     // 21: tilbo.ipc.v1.ListTagsRequest
 	(*ListTagsResponse)(nil),    // 22: tilbo.ipc.v1.ListTagsResponse
-	nil,                         // 23: tilbo.ipc.v1.SearchRequest.MetaFiltersEntry
-	nil,                         // 24: tilbo.ipc.v1.FileResult.MetadataEntry
-	nil,                         // 25: tilbo.ipc.v1.TagResponse.ErrorsEntry
-	nil,                         // 26: tilbo.ipc.v1.MetadataResponse.MetadataEntry
-	nil,                         // 27: tilbo.ipc.v1.MetadataResponse.SourcesEntry
+	(*HydrateTagsRequest)(nil),  // 23: tilbo.ipc.v1.HydrateTagsRequest
+	(*HydratedPathTags)(nil),    // 24: tilbo.ipc.v1.HydratedPathTags
+	(*HydrateTagsResponse)(nil), // 25: tilbo.ipc.v1.HydrateTagsResponse
+	nil,                         // 26: tilbo.ipc.v1.SearchRequest.MetaFiltersEntry
+	nil,                         // 27: tilbo.ipc.v1.FileResult.MetadataEntry
+	nil,                         // 28: tilbo.ipc.v1.TagResponse.ErrorsEntry
+	nil,                         // 29: tilbo.ipc.v1.MetadataResponse.MetadataEntry
+	nil,                         // 30: tilbo.ipc.v1.MetadataResponse.SourcesEntry
 }
 var file_tilbo_ipc_v1_ipc_proto_depIdxs = []int32{
 	3,  // 0: tilbo.ipc.v1.Envelope.request:type_name -> tilbo.ipc.v1.Request
@@ -1823,29 +2007,32 @@ var file_tilbo_ipc_v1_ipc_proto_depIdxs = []int32{
 	17, // 7: tilbo.ipc.v1.Request.status:type_name -> tilbo.ipc.v1.StatusRequest
 	19, // 8: tilbo.ipc.v1.Request.reload_rules:type_name -> tilbo.ipc.v1.ReloadRulesRequest
 	21, // 9: tilbo.ipc.v1.Request.list_tags:type_name -> tilbo.ipc.v1.ListTagsRequest
-	5,  // 10: tilbo.ipc.v1.Response.error:type_name -> tilbo.ipc.v1.ErrorResponse
-	8,  // 11: tilbo.ipc.v1.Response.search:type_name -> tilbo.ipc.v1.SearchResponse
-	10, // 12: tilbo.ipc.v1.Response.tag:type_name -> tilbo.ipc.v1.TagResponse
-	12, // 13: tilbo.ipc.v1.Response.metadata:type_name -> tilbo.ipc.v1.MetadataResponse
-	16, // 14: tilbo.ipc.v1.Response.related:type_name -> tilbo.ipc.v1.RelatedResponse
-	18, // 15: tilbo.ipc.v1.Response.status:type_name -> tilbo.ipc.v1.StatusResponse
-	20, // 16: tilbo.ipc.v1.Response.reload_rules:type_name -> tilbo.ipc.v1.ReloadRulesResponse
-	22, // 17: tilbo.ipc.v1.Response.list_tags:type_name -> tilbo.ipc.v1.ListTagsResponse
-	23, // 18: tilbo.ipc.v1.SearchRequest.meta_filters:type_name -> tilbo.ipc.v1.SearchRequest.MetaFiltersEntry
-	24, // 19: tilbo.ipc.v1.FileResult.metadata:type_name -> tilbo.ipc.v1.FileResult.MetadataEntry
-	7,  // 20: tilbo.ipc.v1.SearchResponse.files:type_name -> tilbo.ipc.v1.FileResult
-	0,  // 21: tilbo.ipc.v1.TagRequest.operation:type_name -> tilbo.ipc.v1.TagOperation
-	25, // 22: tilbo.ipc.v1.TagResponse.errors:type_name -> tilbo.ipc.v1.TagResponse.ErrorsEntry
-	26, // 23: tilbo.ipc.v1.MetadataResponse.metadata:type_name -> tilbo.ipc.v1.MetadataResponse.MetadataEntry
-	27, // 24: tilbo.ipc.v1.MetadataResponse.sources:type_name -> tilbo.ipc.v1.MetadataResponse.SourcesEntry
-	7,  // 25: tilbo.ipc.v1.ScoredFile.file:type_name -> tilbo.ipc.v1.FileResult
-	15, // 26: tilbo.ipc.v1.RelatedResponse.files:type_name -> tilbo.ipc.v1.ScoredFile
-	1,  // 27: tilbo.ipc.v1.StatusResponse.state:type_name -> tilbo.ipc.v1.DaemonState
-	28, // [28:28] is the sub-list for method output_type
-	28, // [28:28] is the sub-list for method input_type
-	28, // [28:28] is the sub-list for extension type_name
-	28, // [28:28] is the sub-list for extension extendee
-	0,  // [0:28] is the sub-list for field type_name
+	23, // 10: tilbo.ipc.v1.Request.hydrate_tags:type_name -> tilbo.ipc.v1.HydrateTagsRequest
+	5,  // 11: tilbo.ipc.v1.Response.error:type_name -> tilbo.ipc.v1.ErrorResponse
+	8,  // 12: tilbo.ipc.v1.Response.search:type_name -> tilbo.ipc.v1.SearchResponse
+	10, // 13: tilbo.ipc.v1.Response.tag:type_name -> tilbo.ipc.v1.TagResponse
+	12, // 14: tilbo.ipc.v1.Response.metadata:type_name -> tilbo.ipc.v1.MetadataResponse
+	16, // 15: tilbo.ipc.v1.Response.related:type_name -> tilbo.ipc.v1.RelatedResponse
+	18, // 16: tilbo.ipc.v1.Response.status:type_name -> tilbo.ipc.v1.StatusResponse
+	20, // 17: tilbo.ipc.v1.Response.reload_rules:type_name -> tilbo.ipc.v1.ReloadRulesResponse
+	22, // 18: tilbo.ipc.v1.Response.list_tags:type_name -> tilbo.ipc.v1.ListTagsResponse
+	25, // 19: tilbo.ipc.v1.Response.hydrate_tags:type_name -> tilbo.ipc.v1.HydrateTagsResponse
+	26, // 20: tilbo.ipc.v1.SearchRequest.meta_filters:type_name -> tilbo.ipc.v1.SearchRequest.MetaFiltersEntry
+	27, // 21: tilbo.ipc.v1.FileResult.metadata:type_name -> tilbo.ipc.v1.FileResult.MetadataEntry
+	7,  // 22: tilbo.ipc.v1.SearchResponse.files:type_name -> tilbo.ipc.v1.FileResult
+	0,  // 23: tilbo.ipc.v1.TagRequest.operation:type_name -> tilbo.ipc.v1.TagOperation
+	28, // 24: tilbo.ipc.v1.TagResponse.errors:type_name -> tilbo.ipc.v1.TagResponse.ErrorsEntry
+	29, // 25: tilbo.ipc.v1.MetadataResponse.metadata:type_name -> tilbo.ipc.v1.MetadataResponse.MetadataEntry
+	30, // 26: tilbo.ipc.v1.MetadataResponse.sources:type_name -> tilbo.ipc.v1.MetadataResponse.SourcesEntry
+	7,  // 27: tilbo.ipc.v1.ScoredFile.file:type_name -> tilbo.ipc.v1.FileResult
+	15, // 28: tilbo.ipc.v1.RelatedResponse.files:type_name -> tilbo.ipc.v1.ScoredFile
+	1,  // 29: tilbo.ipc.v1.StatusResponse.state:type_name -> tilbo.ipc.v1.DaemonState
+	24, // 30: tilbo.ipc.v1.HydrateTagsResponse.entries:type_name -> tilbo.ipc.v1.HydratedPathTags
+	31, // [31:31] is the sub-list for method output_type
+	31, // [31:31] is the sub-list for method input_type
+	31, // [31:31] is the sub-list for extension type_name
+	31, // [31:31] is the sub-list for extension extendee
+	0,  // [0:31] is the sub-list for field type_name
 }
 
 func init() { file_tilbo_ipc_v1_ipc_proto_init() }
@@ -1866,6 +2053,7 @@ func file_tilbo_ipc_v1_ipc_proto_init() {
 		(*Request_Status)(nil),
 		(*Request_ReloadRules)(nil),
 		(*Request_ListTags)(nil),
+		(*Request_HydrateTags)(nil),
 	}
 	file_tilbo_ipc_v1_ipc_proto_msgTypes[2].OneofWrappers = []any{
 		(*Response_Error)(nil),
@@ -1876,6 +2064,7 @@ func file_tilbo_ipc_v1_ipc_proto_init() {
 		(*Response_Status)(nil),
 		(*Response_ReloadRules)(nil),
 		(*Response_ListTags)(nil),
+		(*Response_HydrateTags)(nil),
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -1883,7 +2072,7 @@ func file_tilbo_ipc_v1_ipc_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_tilbo_ipc_v1_ipc_proto_rawDesc), len(file_tilbo_ipc_v1_ipc_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   26,
+			NumMessages:   29,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
