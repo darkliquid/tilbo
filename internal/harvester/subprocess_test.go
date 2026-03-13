@@ -59,8 +59,9 @@ func TestSubprocessHarvester_NonZeroExit(t *testing.T) {
 }
 
 func TestSubprocessHarvester_Timeout(t *testing.T) {
-	// Process that sleeps longer than the timeout.
-	h := makeSubprocess("slow", []string{"sh", "-c", "sleep 10"}, 50) // 50ms timeout
+	// Keep a child process alive under a shell so timeout handling must tear down
+	// the whole subprocess tree rather than only the shell process.
+	h := makeSubprocess("slow", []string{"sh", "-c", "sleep 10 & wait"}, 50) // 50ms timeout
 
 	start := time.Now()
 	meta, err := h.Run(context.Background(), Input{Path: "/tmp/x.txt"})

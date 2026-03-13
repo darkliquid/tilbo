@@ -101,6 +101,9 @@ func (c *Client) Call(ctx context.Context, req *ipcv1.Request) (*ipcv1.Response,
 	if c.closed.Load() {
 		return nil, errors.New("ipc client closed")
 	}
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 
 	c.mu.Lock()
 	id := c.nextID
@@ -108,6 +111,13 @@ func (c *Client) Call(ctx context.Context, req *ipcv1.Request) (*ipcv1.Response,
 	ch := make(chan *ipcv1.Response, 1)
 	c.reqs[id] = ch
 	c.mu.Unlock()
+
+	if err := ctx.Err(); err != nil {
+		c.mu.Lock()
+		delete(c.reqs, id)
+		c.mu.Unlock()
+		return nil, err
+	}
 
 	env := &ipcv1.Envelope{
 		RequestId: id,

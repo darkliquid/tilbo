@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os/exec"
+	"syscall"
 	"time"
 )
 
@@ -39,19 +40,47 @@ func (h *SubprocessHarvester) Run(ctx context.Context, input Input) (MetaMap, er
 		args[i] = ExpandPath(a)
 	}
 
-	//nolint:gosec // command is from a user-managed trusted config file
-	cmd := exec.CommandContext(ctx, args[0], args[1:]...)
-
 	inJSON, err := json.Marshal(input)
 	if err != nil {
 		return nil, fmt.Errorf("harvester %q: marshal input: %w", h.Name(), err)
 	}
+
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
+	//nolint:gosec // command is from a user-managed trusted config file
+	cmd := exec.Command(args[0], args[1:]...)
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	cmd.Stdin = bytes.NewReader(inJSON)
 
+	var stdout bytes.Buffer
 	var stderr bytes.Buffer
+	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 
-	out, err := cmd.Output()
+	if err := cmd.Start(); err != nil {
+		return nil, fmt.Errorf("harvester %q: start: %w", h.Name(), err)
+	}
+
+	waitCh := make(chan error, 1)
+	go func() {
+		waitCh <- cmd.Wait()
+	}()
+
+	select {
+	case err = <-waitCh:
+	case <-ctx.Done():
+		if killErr := killProcessGroup(cmd.Process.Pid); killErr != nil {
+			slog.DebugContext(ctx, "subprocess harvester kill group",
+				"harvester", h.Name(),
+				"pid", cmd.Process.Pid,
+				"err", killErr,
+			)
+		}
+		err = <-waitCh
+	}
+
 	if err != nil {
 		var exitErr *exec.ExitError
 		if errors.As(err, &exitErr) {
@@ -65,6 +94,7 @@ func (h *SubprocessHarvester) Run(ctx context.Context, input Input) (MetaMap, er
 		return nil, fmt.Errorf("harvester %q: run: %w", h.Name(), err)
 	}
 
+	out := stdout.Bytes()
 	if len(out) == 0 {
 		return MetaMap{}, nil
 	}
@@ -74,4 +104,14 @@ func (h *SubprocessHarvester) Run(ctx context.Context, input Input) (MetaMap, er
 		return nil, fmt.Errorf("harvester %q: parse output: %w", h.Name(), err)
 	}
 	return meta, nil
+}
+
+func killProcessGroup(pid int) error {
+	if pid <= 0 {
+		return nil
+	}
+	if err := syscall.Kill(-pid, syscall.SIGKILL); err != nil && !errors.Is(err, syscall.ESRCH) {
+		return err
+	}
+	return nil
 }
