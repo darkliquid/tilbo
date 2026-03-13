@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=Tilbo Browser (Resident)
+Comment=Starts the Tilbo file browser hidden in the background for portal access
+Exec=tilbo-browser --hidden
+Icon=system-file-manager
+Terminal=false
+Type=Application
+NoDisplay=true
+X-GNOME-Autostart-Phase=Applications

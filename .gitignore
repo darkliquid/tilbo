@@ -17,12 +17,16 @@
 !*.json
 !*.mdx
 !*.txt
+!*.wasm
 
 # Specific project files
 !.gitignore
 !.gitattributes
 !LICENSE
 !Makefile
+
+# SystemD, XDG, etc files
+!packaging/*
 
 # Explicitly exclude build output and caches
 /tilbo-cli

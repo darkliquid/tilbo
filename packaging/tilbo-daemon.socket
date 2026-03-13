@@ -1,0 +1,9 @@
+[Unit]
+Description=Tilbo IPC Socket
+
+[Socket]
+ListenStream=%t/tilbo.sock
+SocketMode=0600
+
+[Install]
+WantedBy=sockets.target

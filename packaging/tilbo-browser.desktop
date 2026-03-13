@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=Tilbo Browser
+Comment=Tag-first file management browser
+Exec=tilbo-browser
+Icon=system-file-manager
+Terminal=false
+Type=Application
+Categories=Utility;Filesystem;
+StartupNotify=true
+MimeType=inode/directory;

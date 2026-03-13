@@ -1,0 +1,24 @@
+[Unit]
+Description=Tilbo Tag-First File Supervisor
+Documentation=https://github.com/darkliquid/tilbo
+Requires=tilbo-daemon.socket
+
+[Service]
+Type=notify
+ExecStart=/usr/local/bin/tilbo-daemon
+Restart=on-failure
+RestartSec=5
+
+# fanotify and some FUSE setups require CAP_SYS_ADMIN.
+# This allows systemd to pass CAP_SYS_ADMIN through when available.
+CapabilityBoundingSet=CAP_SYS_ADMIN
+AmbientCapabilities=CAP_SYS_ADMIN
+
+# Allow acquiring ambient/file capabilities (needed for CAP_SYS_ADMIN usage).
+NoNewPrivileges=no
+
+# Allow FUSE device access if device filtering is enabled by policy.
+DeviceAllow=/dev/fuse rw
+
+[Install]
+WantedBy=default.target
