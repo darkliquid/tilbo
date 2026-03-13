@@ -7,7 +7,6 @@ import (
 	"log/slog"
 	"os"
 	"os/exec"
-	"strings"
 	"syscall"
 	"time"
 
@@ -103,50 +102,6 @@ func (c *DaemonClient) Status(ctx context.Context) (*ipcv1.StatusResponse, error
 		return nil, errors.New("unexpected response type")
 	}
 	return status.Status, nil
-}
-
-func permissionPromptFromWarnings(warnings []string) string {
-	var relevant []string
-	needsCaps := false
-	needsFuseGroup := false
-
-	for _, w := range warnings {
-		l := strings.ToLower(w)
-		if strings.Contains(l, "fanotify") || strings.Contains(l, "fuse") || strings.Contains(l, "permission") ||
-			strings.Contains(l, "cap_sys_admin") {
-			relevant = append(relevant, w)
-		}
-		if strings.Contains(l, "cap_sys_admin") || strings.Contains(l, "operation not permitted") ||
-			strings.Contains(l, "permission") {
-			needsCaps = true
-		}
-		if strings.Contains(l, "/dev/fuse") || strings.Contains(l, "fuse") {
-			needsFuseGroup = true
-		}
-	}
-
-	if len(relevant) == 0 {
-		return ""
-	}
-
-	var b strings.Builder
-	b.WriteString("Tilbo needs additional permissions for full filesystem features.\n\n")
-	b.WriteString("Detected issues:\n")
-	for _, w := range relevant {
-		b.WriteString("- ")
-		b.WriteString(w)
-		b.WriteString("\n")
-	}
-	b.WriteString("\nSuggested fix:\n")
-	if needsCaps {
-		b.WriteString("- sudo setcap cap_sys_admin+ep $(command -v tilbo-daemon)\n")
-	}
-	if needsFuseGroup {
-		b.WriteString("- sudo usermod -aG fuse $USER\n")
-	}
-	b.WriteString("- Restart tilbo-daemon (or restart tilbo-browser to auto-spawn it again)\n")
-
-	return b.String()
 }
 
 // SearchAsync issues an IPC search request and pushes the response back to the main thread channel.

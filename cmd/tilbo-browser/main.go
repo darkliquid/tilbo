@@ -15,6 +15,7 @@ import (
 	"github.com/mappu/miqt/qt6"
 	miqtqml "github.com/mappu/miqt/qt6/qml"
 
+	"github.com/darkliquid/tilbo/cmd/tilbo-browser/models"
 	"github.com/darkliquid/tilbo/cmd/tilbo-browser/pkg/browser"
 	"github.com/darkliquid/tilbo/cmd/tilbo-browser/qml"
 )
@@ -22,9 +23,9 @@ import (
 type Browser struct {
 	app               *qt6.QGuiApplication
 	engine            *miqtqml.QQmlApplicationEngine
-	fsModel           *FileSystemModel
-	acModel           *AutocompleteModel
-	placesModel       *PlacesModel
+	fsModel           *models.FileSystemModel
+	acModel           *models.AutocompleteModel
+	placesModel       *models.PlacesModel
 	placesRefreshTick int
 	dbusConn          *dbus.Conn
 	mainThreadCh      chan func()
@@ -192,6 +193,9 @@ func (b *Browser) applyPortalProjection() {
 	if b.projections.Portal == nil {
 		return
 	}
+	if v := b.projections.Portal.Version(); v == 0 || v == b.portalProjectionV {
+		return
+	}
 
 	state, version := b.projections.Portal.Snapshot()
 	if version == 0 || version == b.portalProjectionV {
@@ -205,6 +209,9 @@ func (b *Browser) applyPortalProjection() {
 
 func (b *Browser) applyAutocompleteProjection() {
 	if b.acModel == nil || b.projections.Auto == nil {
+		return
+	}
+	if v := b.projections.Auto.Version(); v == 0 || v == b.autoProjectionV {
 		return
 	}
 
@@ -221,6 +228,9 @@ func (b *Browser) applySearchProjection() {
 	if b.fsModel == nil || b.projections.Search == nil {
 		return
 	}
+	if v := b.projections.Search.Version(); v == 0 || v == b.searchProjectionV {
+		return
+	}
 
 	state, version := b.projections.Search.Snapshot()
 	if version == 0 || version == b.searchProjectionV {
@@ -235,6 +245,9 @@ func (b *Browser) applyDirectoryProjection() {
 	if b.fsModel == nil || b.projections.Directory == nil {
 		return
 	}
+	if v := b.projections.Directory.Version(); v == 0 || v == b.dirProjectionV {
+		return
+	}
 
 	state, version := b.projections.Directory.Snapshot()
 	if version == 0 || version == b.dirProjectionV {
@@ -247,6 +260,9 @@ func (b *Browser) applyDirectoryProjection() {
 
 func (b *Browser) applyPlacesProjection() {
 	if b.placesModel == nil || b.projections.Places == nil {
+		return
+	}
+	if v := b.projections.Places.Version(); v == 0 || v == b.placesProjectionV {
 		return
 	}
 
@@ -268,10 +284,11 @@ func main() {
 
 	go func() {
 		<-signalCtx.Done()
-		b.postToMainThread(func() {
-			b.cancel()
-			qt6.QCoreApplication_Quit()
-		})
+		// b.ctx is derived from signalCtx, so it's already done when this fires.
+		// postToMainThread guards on b.ctx.Done() and would return early without
+		// posting the quit function.  QCoreApplication_Quit is thread-safe per Qt docs.
+		b.cancel()
+		qt6.QCoreApplication_Quit()
 	}()
 
 	// Initialize D-Bus and check for existing instance BEFORE starting Qt
@@ -322,25 +339,15 @@ func main() {
 		// but tag fetching will fail gracefully.
 	}
 
-	daemonPermissionMessage := ""
-	if daemonClient != nil {
-		status, statusErr := daemonClient.Status(b.ctx)
-		if statusErr != nil {
-			slog.Warn("Failed to query daemon status", "err", statusErr)
-		} else {
-			daemonPermissionMessage = permissionPromptFromWarnings(status.GetWarnings())
-		}
-	}
-
 	// Initialize Traditional Tagged Filesystem Model
-	b.fsModel = NewFileSystemModel(b.ctx, b.app.QObject)
+	b.fsModel = models.NewFileSystemModel(b.ctx, b.app.QObject)
 	// Access the underlying QObject pointer correctly in miqt.
 	b.engine.RootContext().SetContextProperty("fsModel", b.fsModel.QObject)
 
-	b.acModel = NewAutocompleteModel(b.app.QObject)
+	b.acModel = models.NewAutocompleteModel(b.app.QObject)
 	b.engine.RootContext().SetContextProperty("acModel", b.acModel.QObject)
 
-	b.placesModel = NewPlacesModel(b.app.QObject)
+	b.placesModel = models.NewPlacesModel(b.app.QObject)
 	b.engine.RootContext().SetContextProperty("placesModel", b.placesModel.QObject)
 
 	b.controller = browser.NewController(b.ctx)
@@ -364,7 +371,7 @@ func main() {
 
 		b.postToMainThread(func() {
 			if b.fsModel != nil {
-				b.fsModel.refresh()
+				b.fsModel.Refresh()
 			}
 		})
 	})
@@ -377,15 +384,26 @@ func main() {
 		CommandBase: browser.CommandBase{OpID: "startup-open"},
 		Mode:        browserWindowMode,
 	})
-	b.fsModel.SetPath("/")
+	startPath := "/"
+	if cwd, cwdErr := os.Getwd(); cwdErr == nil && cwd != "" {
+		startPath = cwd
+	}
+	b.fsModel.SetPath(startPath)
 	_ = b.controller.Dispatch(browser.RefreshPlacesCommand{
 		CommandBase: browser.CommandBase{OpID: "places-initial"},
 	})
 
 	b.engine.RootContext().SetContextProperty2("daemonConnected", qt6.NewQVariant8(daemonClient != nil))
-	b.engine.RootContext().SetContextProperty2("daemonNeedsPermission", qt6.NewQVariant8(daemonPermissionMessage != ""))
-	b.engine.RootContext().SetContextProperty2("daemonPermissionMessage", qt6.NewQVariant14(daemonPermissionMessage))
 	b.engine.RootContext().SetContextProperty2("portalSelectedFiles", qt6.NewQVariant15([]string{}))
+
+	// Export model role IDs so QML command actions do not rely on hardcoded numbers.
+	b.engine.RootContext().SetContextProperty2("fsRoleOpen", qt6.NewQVariant4(models.ActionOpenRole))
+	b.engine.RootContext().SetContextProperty2("fsRoleRename", qt6.NewQVariant4(models.ActionRenameRole))
+	b.engine.RootContext().SetContextProperty2("fsRoleDelete", qt6.NewQVariant4(models.ActionDeleteRole))
+	b.engine.RootContext().SetContextProperty2("fsRoleCD", qt6.NewQVariant4(models.ActionCDRole))
+	b.engine.RootContext().SetContextProperty2("fsRoleToggleHidden", qt6.NewQVariant4(models.ActionToggleHiddenRole))
+	b.engine.RootContext().SetContextProperty2("fsRoleSearch", qt6.NewQVariant4(models.ActionSearchRole))
+	b.engine.RootContext().SetContextProperty2("acRoleTrigger", qt6.NewQVariant4(models.AcTriggerRole))
 
 	// Setup thread-safety bridge
 	b.timer = qt6.NewQTimer()

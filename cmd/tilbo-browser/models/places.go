@@ -1,4 +1,4 @@
-package main
+package models
 
 import (
 	"time"
@@ -24,6 +24,7 @@ type PlacesModel struct {
 
 	roleNamesMap map[int][]byte
 	lastRefresh  time.Time
+	entries      []placeEntry
 }
 
 func NewPlacesModel(parent *qt6.QObject) *PlacesModel {
@@ -33,6 +34,7 @@ func NewPlacesModel(parent *qt6.QObject) *PlacesModel {
 			PlaceNameRole: []byte("placeName"),
 			PlacePathRole: []byte("placePath"),
 		},
+		entries: make([]placeEntry, 0),
 	}
 	m.SetItemRoleNames(m.roleNamesMap)
 	return m
@@ -43,6 +45,7 @@ func (m *PlacesModel) Refresh() {
 	m.lastRefresh = time.Now()
 	entries, err := browser.BuildPlaces()
 	if err != nil {
+		m.entries = m.entries[:0]
 		m.Clear()
 		m.SetItemRoleNames(m.roleNamesMap)
 		return
@@ -55,6 +58,7 @@ func (m *PlacesModel) Refresh() {
 
 	m.Clear()
 	m.SetItemRoleNames(m.roleNamesMap)
+	m.entries = append(m.entries[:0], places...)
 	applyPlaceEntries(m, places)
 }
 
@@ -65,10 +69,30 @@ func (m *PlacesModel) ApplyProjectionPlaces(entries []browser.PlaceEntry) {
 		places = append(places, placeEntry{Name: e.Name, Path: e.Path})
 	}
 
+	if placeEntriesEqual(m.entries, places) {
+		m.lastRefresh = time.Now()
+		return
+	}
+
 	m.lastRefresh = time.Now()
+	m.entries = append(m.entries[:0], places...)
 	m.Clear()
 	m.SetItemRoleNames(m.roleNamesMap)
 	applyPlaceEntries(m, places)
+}
+
+func placeEntriesEqual(a, b []placeEntry) bool {
+	if len(a) != len(b) {
+		return false
+	}
+
+	for i := range a {
+		if a[i].Name != b[i].Name || a[i].Path != b[i].Path {
+			return false
+		}
+	}
+
+	return true
 }
 
 func applyPlaceEntries(m *PlacesModel, places []placeEntry) {

@@ -1,4 +1,4 @@
-package main
+package models
 
 import (
 	"context"
@@ -53,16 +53,20 @@ func NewFileSystemModel(ctx context.Context, parent *qt6.QObject) *FileSystemMod
 		currentPath:        "/",
 		entries:            make([]folderEntry, 0),
 		roleNamesMap: map[int][]byte{
-			NameRole:         []byte("fileName"),
-			PathRole:         []byte("filePath"),
-			IsDirRole:        []byte("isDir"),
-			SizeRole:         []byte("fileSize"),
-			ModifiedRole:     []byte("fileModified"),
-			TagsRole:         []byte("fileTags"),
-			ActionOpenRole:   []byte("actionOpen"),
-			ActionRenameRole: []byte("actionRename"),
-			ActionDeleteRole: []byte("actionDelete"),
-			ActionChmodRole:  []byte("actionChmod"),
+			NameRole:               []byte("fileName"),
+			PathRole:               []byte("filePath"),
+			IsDirRole:              []byte("isDir"),
+			SizeRole:               []byte("fileSize"),
+			ModifiedRole:           []byte("fileModified"),
+			TagsRole:               []byte("fileTags"),
+			ActionOpenRole:         []byte("actionOpen"),
+			ActionRenameRole:       []byte("actionRename"),
+			ActionDeleteRole:       []byte("actionDelete"),
+			ActionChmodRole:        []byte("actionChmod"),
+			ActionCDRole:           []byte("actionCD"),
+			ActionToggleHiddenRole: []byte("actionToggleHidden"),
+			ActionSearchRole:       []byte("actionSearch"),
+			ActionPortalSubmitRole: []byte("actionPortalSubmit"),
 		},
 	}
 
@@ -81,7 +85,7 @@ func NewFileSystemModel(ctx context.Context, parent *qt6.QObject) *FileSystemMod
 func (m *FileSystemModel) SetPath(path string) {
 	m.isSearchMode = false
 	m.currentPath = path
-	m.refresh()
+	m.Refresh()
 }
 
 func (m *FileSystemModel) ShowHidden(show bool) {
@@ -94,7 +98,7 @@ func (m *FileSystemModel) ShowHidden(show bool) {
 		CommandBase: browserruntime.CommandBase{OpID: m.nextOpID("toggle-hidden")},
 		Show:        show,
 	})
-	m.refresh()
+	m.Refresh()
 }
 
 // BindController enables controller/projection-driven navigation for this model.
@@ -102,7 +106,7 @@ func (m *FileSystemModel) BindController(controller *browserruntime.Controller) 
 	m.controller = controller
 }
 
-func (m *FileSystemModel) refresh() {
+func (m *FileSystemModel) Refresh() {
 	if m.isSearchMode {
 		return // Do not refresh search automatically, wait for search request
 	}
@@ -123,8 +127,8 @@ func (m *FileSystemModel) nextOpID(prefix string) string {
 
 // ApplyProjectionDirectory updates the model using controller projection output.
 func (m *FileSystemModel) ApplyProjectionDirectory(path string, entries []browserruntime.DirectoryEntry) {
-	m.isSearchMode = false
-	m.currentPath = path
+	wasSearchMode := m.isSearchMode
+	prevPath := m.currentPath
 
 	converted := make([]folderEntry, 0, len(entries))
 	for _, e := range entries {
@@ -138,13 +142,20 @@ func (m *FileSystemModel) ApplyProjectionDirectory(path string, entries []browse
 		})
 	}
 
+	if prevPath == path && !wasSearchMode && folderEntriesEqual(m.entries, converted) {
+		return
+	}
+
+	m.isSearchMode = false
+	m.currentPath = path
+
 	m.entries = append(m.entries[:0], converted...)
 	m.renderEntries(converted)
 }
 
 // ApplyProjectionSearch updates the model using controller search projection output.
 func (m *FileSystemModel) ApplyProjectionSearch(files []browserruntime.SearchFile) {
-	m.isSearchMode = true
+	wasSearchMode := m.isSearchMode
 
 	converted := make([]folderEntry, 0, len(files))
 	for _, f := range files {
@@ -164,8 +175,47 @@ func (m *FileSystemModel) ApplyProjectionSearch(files []browserruntime.SearchFil
 		})
 	}
 
+	if wasSearchMode && folderEntriesEqual(m.entries, converted) {
+		return
+	}
+
+	m.isSearchMode = true
+
 	m.entries = append(m.entries[:0], converted...)
 	m.renderEntries(converted)
+}
+
+func folderEntriesEqual(a, b []folderEntry) bool {
+	if len(a) != len(b) {
+		return false
+	}
+
+	for i := range a {
+		if a[i].Name != b[i].Name ||
+			a[i].Path != b[i].Path ||
+			a[i].IsDir != b[i].IsDir ||
+			a[i].Size != b[i].Size ||
+			a[i].Modified != b[i].Modified ||
+			!stringSlicesEqual(a[i].Tags, b[i].Tags) {
+			return false
+		}
+	}
+
+	return true
+}
+
+func stringSlicesEqual(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+
+	return true
 }
 
 func (m *FileSystemModel) renderEntries(entries []folderEntry) {
@@ -184,30 +234,12 @@ func (m *FileSystemModel) renderEntries(entries []folderEntry) {
 		items = append(items, item)
 	}
 
-	for _, item := range items {
-		m.AppendRow([]*qt6.QStandardItem{item})
+	// Bulk append emits a single rowsInserted signal for all rows instead of
+	// N individual signals, which avoids repeated QML delegate re-evaluation.
+	if len(items) > 0 {
+		m.InvisibleRootItem().AppendRows(items)
 	}
 }
-
-// RoleName mapping to QML context properties.
-const (
-	NameRole = int(qt6.UserRole) + iota
-	PathRole
-	IsDirRole
-	SizeRole
-	ModifiedRole
-	TagsRole
-	ActionOpenRole
-	ActionRenameRole
-	ActionDeleteRole
-	ActionChmodRole
-	ActionCDRole
-	ActionToggleHiddenRole
-	ActionSearchRole
-	ActionPortalSubmitRole
-	PlaceNameRole
-	PlacePathRole
-)
 
 //nolint:funlen,gocognit,gocyclo,cyclop // action dispatch is intentionally centralized for QML role handling
 func (m *FileSystemModel) setData(
@@ -313,7 +345,7 @@ func (m *FileSystemModel) setData(
 
 		if len(chips) == 0 {
 			m.isSearchMode = false
-			m.refresh()
+			m.Refresh()
 			return true
 		}
 

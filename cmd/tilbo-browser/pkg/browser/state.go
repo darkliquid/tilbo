@@ -3,43 +3,15 @@ package browser
 import (
 	"maps"
 	"sync"
-	"time"
+
+	"github.com/darkliquid/tilbo/cmd/tilbo-browser/pkg/browser/commandcore"
 )
 
 // State is the authoritative controller state snapshot.
-type State struct {
-	CurrentPath string
-	Hidden      bool
-
-	IsSearchMode bool
-	SearchChips  []string
-
-	DirectoryEntries []DirectoryEntry
-	SearchResults    []SearchFile
-	Autocomplete     []string
-	Places           []PlaceEntry
-
-	SelectedIndices []int
-	WindowMode      string
-	PortalSelection []string
-
-	DaemonConnected bool
-	LastError       string
-
-	InFlightOps map[string]OperationMeta
-
-	LastDirectoryLoad time.Time
-	LastSearch        time.Time
-	LastPlacesRefresh time.Time
-}
+type State = commandcore.State
 
 // OperationMeta tracks metadata for one in-flight operation.
-type OperationMeta struct {
-	ID      string
-	Command CommandType
-	Started time.Time
-	Timeout time.Duration
-}
+type OperationMeta = commandcore.OperationMeta
 
 // StateStore owns browser state and mutation/version tracking.
 type StateStore struct {

@@ -9,6 +9,8 @@ import (
 
 const minSignedInt32 = 1<<31 - 1
 
+const defaultSearchLimit uint32 = 1000
+
 // LocalSearch executes a fallback search strategy using glob chips.
 func LocalSearch(chips []string, limit uint32, allowHidden bool) ([]SearchFile, error) {
 	if limit == 0 {

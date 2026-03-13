@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"errors"
-	"strings"
 	"testing"
 	"time"
 
@@ -148,29 +147,5 @@ func TestConnectDaemon_RetryTimeoutReturnsError(t *testing.T) {
 	}
 	if connectAttempts != 2 {
 		t.Fatalf("expected two connect attempts (initial + one retry), got %d", connectAttempts)
-	}
-}
-
-func TestPermissionPromptFromWarnings_EmptyWhenNoPermissionIssues(t *testing.T) {
-	msg := permissionPromptFromWarnings([]string{"index warmup complete"})
-	if msg != "" {
-		t.Fatalf("expected empty permission prompt, got: %q", msg)
-	}
-}
-
-func TestPermissionPromptFromWarnings_IncludesActionableCommands(t *testing.T) {
-	msg := permissionPromptFromWarnings([]string{
-		"fanotify permission/capability unavailable (operation not permitted); using inotify fallback. grant CAP_SYS_ADMIN for full fanotify support",
-		"fuse mount at \"/home/user/tags\" failed due to missing permissions. grant access to /dev/fuse and CAP_SYS_ADMIN, then restart tilbo-daemon",
-	})
-
-	for _, want := range []string{
-		"sudo setcap cap_sys_admin+ep $(command -v tilbo-daemon)",
-		"sudo usermod -aG fuse $USER",
-		"restart tilbo-daemon",
-	} {
-		if !strings.Contains(msg, want) {
-			t.Fatalf("expected prompt to contain %q, got: %q", want, msg)
-		}
 	}
 }

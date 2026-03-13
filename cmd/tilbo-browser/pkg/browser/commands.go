@@ -1,152 +1,57 @@
 package browser
 
+import (
+	"github.com/darkliquid/tilbo/cmd/tilbo-browser/pkg/browser/commandcore"
+	"github.com/darkliquid/tilbo/cmd/tilbo-browser/pkg/browser/commands/autocomplete"
+	"github.com/darkliquid/tilbo/cmd/tilbo-browser/pkg/browser/commands/canceloperation"
+	"github.com/darkliquid/tilbo/cmd/tilbo-browser/pkg/browser/commands/chmodfile"
+	"github.com/darkliquid/tilbo/cmd/tilbo-browser/pkg/browser/commands/deletefile"
+	"github.com/darkliquid/tilbo/cmd/tilbo-browser/pkg/browser/commands/navigate"
+	"github.com/darkliquid/tilbo/cmd/tilbo-browser/pkg/browser/commands/openfile"
+	"github.com/darkliquid/tilbo/cmd/tilbo-browser/pkg/browser/commands/openportal"
+	"github.com/darkliquid/tilbo/cmd/tilbo-browser/pkg/browser/commands/refreshplaces"
+	"github.com/darkliquid/tilbo/cmd/tilbo-browser/pkg/browser/commands/renamefile"
+	"github.com/darkliquid/tilbo/cmd/tilbo-browser/pkg/browser/commands/search"
+	"github.com/darkliquid/tilbo/cmd/tilbo-browser/pkg/browser/commands/shutdown"
+	"github.com/darkliquid/tilbo/cmd/tilbo-browser/pkg/browser/commands/submitportal"
+	"github.com/darkliquid/tilbo/cmd/tilbo-browser/pkg/browser/commands/togglehidden"
+)
+
 // CommandType identifies a browser command kind.
-type CommandType string
+type CommandType = commandcore.Type
 
 const (
-	CommandNavigate        CommandType = "navigate"
-	CommandSearch          CommandType = "search"
-	CommandOpenFile        CommandType = "open_file"
-	CommandRenameFile      CommandType = "rename_file"
-	CommandDeleteFile      CommandType = "delete_file"
-	CommandChmodFile       CommandType = "chmod_file"
-	CommandToggleHidden    CommandType = "toggle_hidden"
-	CommandAutocomplete    CommandType = "autocomplete"
-	CommandRefreshPlaces   CommandType = "refresh_places"
-	CommandOpenPortal      CommandType = "open_portal"
-	CommandSubmitPortal    CommandType = "submit_portal"
-	CommandCancelOperation CommandType = "cancel_operation"
-	CommandShutdown        CommandType = "shutdown"
+	CommandNavigate        = commandcore.Navigate
+	CommandSearch          = commandcore.Search
+	CommandOpenFile        = commandcore.OpenFile
+	CommandRenameFile      = commandcore.RenameFile
+	CommandDeleteFile      = commandcore.DeleteFile
+	CommandChmodFile       = commandcore.ChmodFile
+	CommandToggleHidden    = commandcore.ToggleHidden
+	CommandAutocomplete    = commandcore.Autocomplete
+	CommandRefreshPlaces   = commandcore.RefreshPlaces
+	CommandOpenPortal      = commandcore.OpenPortal
+	CommandSubmitPortal    = commandcore.SubmitPortal
+	CommandCancelOperation = commandcore.CancelOperation
+	CommandShutdown        = commandcore.Shutdown
 )
 
 // Command is the common interface for all controller commands.
-type Command interface {
-	Type() CommandType
-	OperationID() string
-}
+type Command = commandcore.Command
 
 // CommandBase provides shared operation identity fields.
-type CommandBase struct {
-	OpID string
-}
+type CommandBase = commandcore.Base
 
-// OperationID returns the request/operation identifier.
-func (b CommandBase) OperationID() string { return b.OpID }
-
-// NavigateCommand requests loading a directory path.
-type NavigateCommand struct {
-	CommandBase
-
-	Path string
-}
-
-func (c NavigateCommand) Type() CommandType { return CommandNavigate }
-
-// SearchCommand requests a tag/path metadata search.
-type SearchCommand struct {
-	CommandBase
-
-	Chips []string
-	Limit uint32
-}
-
-func (c SearchCommand) Type() CommandType { return CommandSearch }
-
-// OpenFileCommand requests opening a file with a local handler.
-type OpenFileCommand struct {
-	CommandBase
-
-	Path string
-}
-
-func (c OpenFileCommand) Type() CommandType { return CommandOpenFile }
-
-// RenameFileCommand requests renaming a file.
-type RenameFileCommand struct {
-	CommandBase
-
-	OldPath string
-	NewName string
-}
-
-func (c RenameFileCommand) Type() CommandType { return CommandRenameFile }
-
-// DeleteFileCommand requests deleting a file tree.
-type DeleteFileCommand struct {
-	CommandBase
-
-	Path string
-}
-
-func (c DeleteFileCommand) Type() CommandType { return CommandDeleteFile }
-
-// ChmodFileCommand requests changing file mode bits.
-type ChmodFileCommand struct {
-	CommandBase
-
-	Path string
-	Mode uint32
-}
-
-func (c ChmodFileCommand) Type() CommandType { return CommandChmodFile }
-
-// ToggleHiddenCommand requests hidden file visibility change.
-type ToggleHiddenCommand struct {
-	CommandBase
-
-	Show bool
-}
-
-func (c ToggleHiddenCommand) Type() CommandType { return CommandToggleHidden }
-
-// AutocompleteCommand requests autocomplete item refresh for a prefix.
-type AutocompleteCommand struct {
-	CommandBase
-
-	Prefix string
-}
-
-func (c AutocompleteCommand) Type() CommandType { return CommandAutocomplete }
-
-// RefreshPlacesCommand requests refreshing sidebar places.
-type RefreshPlacesCommand struct {
-	CommandBase
-}
-
-func (c RefreshPlacesCommand) Type() CommandType { return CommandRefreshPlaces }
-
-// OpenPortalCommand requests opening portal mode.
-type OpenPortalCommand struct {
-	CommandBase
-
-	Mode string
-}
-
-func (c OpenPortalCommand) Type() CommandType { return CommandOpenPortal }
-
-// SubmitPortalCommand requests closing portal mode with selected URIs.
-type SubmitPortalCommand struct {
-	CommandBase
-
-	SelectedFiles []string
-}
-
-func (c SubmitPortalCommand) Type() CommandType { return CommandSubmitPortal }
-
-// CancelOperationCommand requests cancellation of another operation.
-type CancelOperationCommand struct {
-	CommandBase
-
-	TargetOpID string
-}
-
-func (c CancelOperationCommand) Type() CommandType { return CommandCancelOperation }
-
-// ShutdownCommand requests application shutdown.
-type ShutdownCommand struct {
-	CommandBase
-
-	Reason string
-}
-
-func (c ShutdownCommand) Type() CommandType { return CommandShutdown }
+type NavigateCommand = navigate.Command
+type SearchCommand = search.Command
+type OpenFileCommand = openfile.Command
+type RenameFileCommand = renamefile.Command
+type DeleteFileCommand = deletefile.Command
+type ChmodFileCommand = chmodfile.Command
+type ToggleHiddenCommand = togglehidden.Command
+type AutocompleteCommand = autocomplete.Command
+type RefreshPlacesCommand = refreshplaces.Command
+type OpenPortalCommand = openportal.Command
+type SubmitPortalCommand = submitportal.Command
+type CancelOperationCommand = canceloperation.Command
+type ShutdownCommand = shutdown.Command

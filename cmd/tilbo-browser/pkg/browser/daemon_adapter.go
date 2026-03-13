@@ -3,10 +3,9 @@ package browser
 import (
 	"context"
 	"errors"
-	"fmt"
-	"slices"
 	"strings"
 
+	"github.com/darkliquid/tilbo/cmd/tilbo-browser/pkg/browser/commandcore"
 	ipcv1 "github.com/darkliquid/tilbo/internal/ipc/gen/tilbo/ipc/v1"
 )
 
@@ -156,59 +155,11 @@ func SearchFilesFromIPC(files []*ipcv1.FileResult) []SearchFile {
 	return out
 }
 
-func mergeEntryTags(entries []DirectoryEntry, tagMap map[string][]string) []DirectoryEntry {
-	if len(entries) == 0 || len(tagMap) == 0 {
-		return entries
-	}
-
-	merged := make([]DirectoryEntry, len(entries))
-	copy(merged, entries)
-	for i := range merged {
-		if tags, ok := tagMap[merged[i].Path]; ok {
-			merged[i].Tags = append([]string(nil), tags...)
-		}
-	}
-
-	return merged
-}
-
-func hasGlobChip(chips []string) bool {
-	for _, chip := range chips {
-		if strings.HasPrefix(chip, "glob:") {
-			return true
-		}
-	}
-
-	return false
-}
-
-// SearchAllowHidden reports whether hidden files should be considered for search.
-func SearchAllowHidden(chips []string, current bool) bool {
-	return current || slices.Contains(chips, "hidden:any")
-}
-
-func ensureSearchSource(files []SearchFile, chips []string, local []SearchFile) []SearchFile {
-	if len(files) > 0 {
-		return files
-	}
-	if !hasGlobChip(chips) {
-		return files
-	}
-
-	return local
-}
-
-func buildSearchError(daemonErr, localErr error) error {
-	if daemonErr == nil {
-		return localErr
-	}
-	if localErr == nil {
-		return daemonErr
-	}
-
-	return fmt.Errorf("daemon search: %w (local fallback: %w)", daemonErr, localErr)
-}
-
 const (
 	splitPartsLimit = 2
 )
+
+// SearchAllowHidden reports whether hidden files should be included in search.
+func SearchAllowHidden(chips []string, current bool) bool {
+	return commandcore.SearchAllowHidden(chips, current)
+}

@@ -18,6 +18,14 @@ func NewProjectionState(initial State) *ProjectionState {
 	return &ProjectionState{state: cloneState(initial)}
 }
 
+// Version returns the current version without cloning state.
+// Use this for a cheap version-change check before calling Snapshot.
+func (p *ProjectionState) Version() uint64 {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+	return p.version
+}
+
 // Snapshot returns a detached state copy and its version.
 func (p *ProjectionState) Snapshot() (State, uint64) {
 	p.mu.RLock()
