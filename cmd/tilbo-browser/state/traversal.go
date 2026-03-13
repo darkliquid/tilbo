@@ -27,15 +27,19 @@ func LoadDirectory(path string, hidden bool) ([]core.DirectoryEntry, []string, e
 		fullPath := filepath.Join(path, name)
 		pathsToHydrate = append(pathsToHydrate, fullPath)
 
-		// Keep listing fast and non-blocking. Metadata for selected items is
-		// enriched on demand via the sidebar path.
+		var size int64
+		var mtime int64
+		if info, err := de.Info(); err == nil {
+			size = info.Size()
+			mtime = info.ModTime().Unix()
+		}
 
 		entries = append(entries, core.DirectoryEntry{
 			Name:   name,
 			Path:   fullPath,
 			IsDir:  de.IsDir(),
-			Size:   0,
-			MTime:  0,
+			Size:   size,
+			MTime:  mtime,
 			Tags:   []string{},
 			Hidden: name != "" && name[0] == '.',
 		})

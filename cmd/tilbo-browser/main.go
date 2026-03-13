@@ -352,6 +352,7 @@ func main() {
 
 	// Initialize Traditional Tagged Filesystem Model
 	b.fsModel = models.NewFileSystemModel(b.ctx, b.app.QObject)
+	b.fsModel.BindMainThread(b.postToMainThread)
 	// Access the underlying QObject pointer correctly in miqt.
 	b.engine.RootContext().SetContextProperty("fsModel", b.fsModel.QObject)
 
@@ -417,6 +418,9 @@ func main() {
 	b.engine.RootContext().SetContextProperty2("fsRoleCD", qt6.NewQVariant4(models.ActionCDRole))
 	b.engine.RootContext().SetContextProperty2("fsRoleToggleHidden", qt6.NewQVariant4(models.ActionToggleHiddenRole))
 	b.engine.RootContext().SetContextProperty2("fsRoleSearch", qt6.NewQVariant4(models.ActionSearchRole))
+	b.engine.RootContext().SetContextProperty2("fsRoleStatFile", qt6.NewQVariant4(models.ActionStatFileRole))
+	b.engine.RootContext().SetContextProperty2("fsRoleSize", qt6.NewQVariant4(models.SizeRole))
+	b.engine.RootContext().SetContextProperty2("fsRoleModified", qt6.NewQVariant4(models.ModifiedRole))
 	b.engine.RootContext().SetContextProperty2("acRoleTrigger", qt6.NewQVariant4(models.AcTriggerRole))
 
 	// Setup thread-safety bridge

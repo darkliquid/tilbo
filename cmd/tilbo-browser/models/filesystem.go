@@ -37,15 +37,16 @@ type FileSystemModel struct {
 	roleNamesMap map[int][]byte
 
 	// Internal state
-	currentPath  string
-	hidden       bool
-	isSearchMode bool
-	entries      []folderEntry
-	loadVersion  uint64
-	controller   *browserruntime.Controller
-	metadataMu   sync.Mutex
-	metadataOut  map[string]string
-	metadataWork map[string]struct{}
+	currentPath    string
+	hidden         bool
+	isSearchMode   bool
+	entries        []folderEntry
+	loadVersion    uint64
+	controller     *browserruntime.Controller
+	mainThreadFn   func(func())
+	metadataMu     sync.Mutex
+	metadataOut    map[string]string
+	metadataWork   map[string]struct{}
 }
 
 const (
@@ -279,7 +280,7 @@ func (m *FileSystemModel) setData(
 
 	// For per-item actions, validate the row index
 	isItemAction := role == ActionOpenRole || role == ActionRenameRole || role == ActionDeleteRole ||
-		role == ActionChmodRole
+		role == ActionChmodRole || role == ActionStatFileRole
 
 	if isItemAction {
 		if row < 0 || row >= len(m.entries) {
@@ -342,6 +343,34 @@ func (m *FileSystemModel) setData(
 			Mode:        uint32(mode),
 		})
 		return err == nil
+
+	case ActionStatFileRole:
+		if m.mainThreadFn == nil {
+			return false
+		}
+		entry := m.entries[row]
+		go func(path string, itemRow int) {
+			info, err := os.Lstat(path)
+			if err != nil {
+				return
+			}
+			size := info.Size()
+			mtime := info.ModTime().Unix()
+			m.mainThreadFn(func() {
+				if itemRow >= len(m.entries) || m.entries[itemRow].Path != path {
+					return
+				}
+				m.entries[itemRow].Size = size
+				m.entries[itemRow].Modified = mtime
+				item := m.InvisibleRootItem().Child(itemRow)
+				if item == nil {
+					return
+				}
+				item.SetData(qt6.NewQVariant4(int(size)), SizeRole)
+				item.SetData(qt6.NewQVariant4(int(mtime)), ModifiedRole)
+			})
+		}(entry.Path, row)
+		return true
 
 	case ActionCDRole:
 		path := value.ToString()
@@ -414,6 +443,12 @@ func (m *FileSystemModel) executeSearch(chips []string) {
 		Chips:       append([]string(nil), chips...),
 		Limit:       defaultSearchLimit,
 	})
+}
+
+// BindMainThread sets a function that posts work onto the Qt main thread.
+// Must be called before any file selection can trigger stat enrichment.
+func (m *FileSystemModel) BindMainThread(fn func(func())) {
+	m.mainThreadFn = fn
 }
 
 // LoadMetadata returns JSON metadata for one path so QML can enrich the

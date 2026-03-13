@@ -20,4 +20,5 @@ const (
 	ActionPortalSubmitRole
 	PlaceNameRole
 	PlacePathRole
+	ActionStatFileRole
 )
