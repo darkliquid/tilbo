@@ -9,6 +9,8 @@ import (
 
 // LoadDirectory lists a filesystem path and returns normalized directory entries
 // with an additional slice of absolute paths intended for follow-up tag hydration.
+// Size and MTime are intentionally left zero here; they are populated
+// asynchronously by the navigate handler after the initial UI render.
 func LoadDirectory(path string, hidden bool) ([]core.DirectoryEntry, []string, error) {
 	dirEntries, err := os.ReadDir(path)
 	if err != nil {
@@ -27,19 +29,12 @@ func LoadDirectory(path string, hidden bool) ([]core.DirectoryEntry, []string, e
 		fullPath := filepath.Join(path, name)
 		pathsToHydrate = append(pathsToHydrate, fullPath)
 
-		var size int64
-		var mtime int64
-		if info, err := de.Info(); err == nil {
-			size = info.Size()
-			mtime = info.ModTime().Unix()
-		}
-
 		entries = append(entries, core.DirectoryEntry{
 			Name:   name,
 			Path:   fullPath,
 			IsDir:  de.IsDir(),
-			Size:   size,
-			MTime:  mtime,
+			Size:   0,
+			MTime:  0,
 			Tags:   []string{},
 			Hidden: name != "" && name[0] == '.',
 		})
