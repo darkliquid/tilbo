@@ -263,6 +263,8 @@ func TestMoveXattrToNonXattr(t *testing.T) {
 // TestDaemonWatchesLoopMount verifies that the daemon correctly indexes files
 // on a loop-mounted filesystem via fanotify, which marks at the mount level.
 func TestDaemonWatchesLoopMount(t *testing.T) {
+	suite.Caps.RequireFanotify(t)
+
 	for _, tc := range fsMatrix {
 		tc := tc
 		t.Run(tc.label, func(t *testing.T) {

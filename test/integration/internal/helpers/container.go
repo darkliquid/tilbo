@@ -167,6 +167,19 @@ func (s *Suite) StartDaemon(
 	sockPath, dbPath, watchPath, fuseMount, logPath string,
 	extraArgs ...string,
 ) error {
+	if backend := strings.TrimSpace(os.Getenv("TILBO_TEST_WATCHER")); backend != "" {
+		hasWatcherArg := false
+		for i := 0; i < len(extraArgs); i++ {
+			if extraArgs[i] == "--watcher" {
+				hasWatcherArg = true
+				break
+			}
+		}
+		if !hasWatcherArg {
+			extraArgs = append(extraArgs, "--watcher", backend)
+		}
+	}
+
 	cmd := fmt.Sprintf(
 		"tilbo-daemon --socket '%s' --db '%s' --watch '%s' --fuse-mount '%s' --log-format json",
 		sockPath, dbPath, watchPath, fuseMount,

@@ -41,6 +41,8 @@ jobs:
           DOCKER_HOST: unix:///var/run/docker.sock
           # Keep the Ryuk reaper enabled; it ensures cleanup even on failure.
           TESTCONTAINERS_RYUK_DISABLED: "false"
+          # Force inotify backend for deterministic CI behavior on hosted runners.
+          TILBO_TEST_WATCHER: inotify
         run: |
           mkdir -p test-results
           gotestsum \

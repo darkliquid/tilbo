@@ -30,8 +30,10 @@ type Caps struct {
 //     probed for user.* xattr support.
 func Probe(ctx context.Context, s *Suite, daemonLog string, watchMount *Mount) Caps {
 	log := s.DaemonLog(ctx, daemonLog)
-	// The watcher package logs this message when fanotify is unavailable.
-	fanotify := !strings.Contains(log, "falling back to inotify")
+	// Detect explicit inotify selection and runtime fallback messages.
+	fanotify := !strings.Contains(log, "using inotify backend (forced)") &&
+		!strings.Contains(log, "fanotify unavailable; using inotify fallback") &&
+		!strings.Contains(log, "inotify fallback active")
 	// The daemon logs "fuse: mounted" on success; absence means failure/timeout.
 	fuse := strings.Contains(log, "fuse: mounted")
 
