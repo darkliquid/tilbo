@@ -200,11 +200,38 @@ func (s *Suite) StartDaemon(
 // to 5 seconds for it to exit. The daemon's PID is read from <sockPath>.pid.
 func (s *Suite) StopDaemon(ctx context.Context, sockPath string) error {
 	pidFile := sockPath + ".pid"
-	_, err := s.Shell(ctx, fmt.Sprintf(
+	if _, err := s.Shell(ctx, fmt.Sprintf(
 		`pid=$(cat '%s' 2>/dev/null) && [ -n "$pid" ] && kill "$pid" && timeout 5 sh -c 'while kill -0 "$pid" 2>/dev/null; do sleep 0.1; done'`,
 		pidFile,
-	))
-	return err
+	)); err != nil {
+		return err
+	}
+
+	if err := s.waitForSocketGone(ctx, sockPath, 5*time.Second); err != nil {
+		return err
+	}
+
+	_, _, _ = s.Exec(ctx, "rm", "-f", pidFile)
+	return nil
+}
+
+func (s *Suite) waitForSocketGone(ctx context.Context, sockPath string, timeout time.Duration) error {
+	deadline := time.Now().Add(timeout)
+	for time.Now().Before(deadline) {
+		_, code, err := s.Exec(ctx, "test", "-S", sockPath)
+		if err != nil {
+			return fmt.Errorf("wait for socket removal: %w", err)
+		}
+		if code != 0 {
+			return nil
+		}
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(100 * time.Millisecond):
+		}
+	}
+	return fmt.Errorf("timed out waiting for socket %s to be removed", sockPath)
 }
 
 // WaitForSocket polls for the existence of sockPath inside the container until
