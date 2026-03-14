@@ -18,7 +18,7 @@ jobs:
       packages: write   # push container images if added later
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           # Full history is required for goreleaser changelog generation.
           fetch-depth: 0
@@ -46,7 +46,7 @@ jobs:
       - name: Run goreleaser
         uses: goreleaser/goreleaser-action@v7
         with:
-          version: latest
+          version: v2.14.3
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

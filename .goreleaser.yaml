@@ -44,11 +44,12 @@ builds:
 
 archives:
   - id: tilbo-archive
-    builds:
+    ids:
       - tilbo-daemon
       - tilbo-cli
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
-    format: tar.gz
+    formats:
+      - tar.gz
     files:
       - LICENSE*
       - README*
@@ -59,7 +60,7 @@ archives:
 nfpms:
   - id: tilbo-packages
     package_name: tilbo
-    builds:
+    ids:
       - tilbo-daemon
       - tilbo-cli
     vendor: darkliquid
