@@ -73,7 +73,7 @@ func TestSyncerRun(t *testing.T) {
 	defer idx.Close()
 
 	// 3. Run Syncer
-	s := New(idx, svc, tmpDir, true)
+	s := New(idx, svc, tmpDir, true, nil)
 
 	if s.State().State != ipcv1.DaemonState_DAEMON_STATE_IDLE {
 		t.Errorf("Expected IDLE state initially")
@@ -116,7 +116,7 @@ func TestSyncFile(t *testing.T) {
 	}
 	defer idx.Close()
 
-	s := New(idx, svc, tmpDir, true)
+	s := New(idx, svc, tmpDir, true, nil)
 
 	info, err := os.Stat(file1)
 	if err != nil {
@@ -183,7 +183,7 @@ func TestSyncerRunSkipsHiddenDescendantsWhenDisabled(t *testing.T) {
 	}
 	defer idx.Close()
 
-	s := New(idx, xattr.New(nil), watchDir, false)
+	s := New(idx, xattr.New(nil), watchDir, false, nil)
 	if err := s.Run(ctx); err != nil {
 		t.Fatalf("Syncer.Run failed: %v", err)
 	}
@@ -235,7 +235,7 @@ func TestSyncerRunAllowsExplicitHiddenRootWhenDisabled(t *testing.T) {
 	}
 	defer idx.Close()
 
-	s := New(idx, xattr.New(nil), watchDir, false)
+	s := New(idx, xattr.New(nil), watchDir, false, nil)
 	if err := s.Run(ctx); err != nil {
 		t.Fatalf("Syncer.Run failed: %v", err)
 	}

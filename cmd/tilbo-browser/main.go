@@ -24,6 +24,7 @@ import (
 	"github.com/darkliquid/tilbo/cmd/tilbo-browser/models"
 	"github.com/darkliquid/tilbo/cmd/tilbo-browser/qml"
 	"github.com/darkliquid/tilbo/cmd/tilbo-browser/state"
+	"github.com/darkliquid/tilbo/internal/config"
 )
 
 type Browser struct {
@@ -293,6 +294,12 @@ func (b *Browser) applyPlacesProjection() {
 //nolint:funlen,gocognit // process bootstrap includes Qt, D-Bus, and singleton activation wiring
 func main() {
 	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelDebug})))
+
+	if cfg, err := config.Load(config.Path()); err != nil {
+		slog.Warn("tilbo-browser: config load error; using defaults", "err", err)
+	} else if cfg.Browser.Socket != "" {
+		daemonSockPath = cfg.Browser.Socket
+	}
 
 	signalCtx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	b := NewBrowser(signalCtx)

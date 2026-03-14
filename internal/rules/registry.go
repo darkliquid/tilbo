@@ -14,13 +14,13 @@ import (
 
 // rawRuleFile is the top-level structure of a TOML rule file.
 type rawRuleFile struct {
-	Rules []rawRuleDef `toml:"rule"`
+	Rules []RuleDef `toml:"rule"`
 }
 
-// rawRuleDef is a single rule entry in a TOML rule file.
+// RuleDef is a single rule entry in a TOML rule file or the shared config.
 // Match values are decoded as interface{} to handle both bare strings (glob
 // shorthand) and structured condition tables.
-type rawRuleDef struct {
+type RuleDef struct {
 	Name     string         `toml:"name"`
 	Tags     []string       `toml:"tags"`
 	Priority int            `toml:"priority"`
@@ -105,18 +105,28 @@ func (r *Registry) Close(ctx context.Context) {
 	r.closers = nil
 }
 
+// LoadInline registers rules defined inline (e.g. from the shared config file).
+// It is additive: rules from dirs loaded via Load are not affected.
+func (r *Registry) LoadInline(ctx context.Context, defs []RuleDef, e *Engine) error {
+	return r.registerDefs(ctx, defs, "<config>", e)
+}
+
 func (r *Registry) loadTOML(ctx context.Context, path string, e *Engine) error {
 	var raw rawRuleFile
 	if _, err := toml.DecodeFile(path, &raw); err != nil {
 		return fmt.Errorf("parse %q: %w", path, err)
 	}
-	for i, def := range raw.Rules {
+	return r.registerDefs(ctx, raw.Rules, path, e)
+}
+
+func (r *Registry) registerDefs(ctx context.Context, defs []RuleDef, source string, e *Engine) error {
+	for i, def := range defs {
 		if def.Name == "" {
-			return fmt.Errorf("rule #%d in %q: missing name", i+1, path)
+			return fmt.Errorf("rule #%d in %q: missing name", i+1, source)
 		}
 		if len(def.Tags) == 0 {
 			slog.WarnContext(ctx, "rules registry: rule has no tags; skipping",
-				"rule", def.Name, "file", path)
+				"rule", def.Name, "source", source)
 			continue
 		}
 		match := make(map[string]matchCond, len(def.Match))
@@ -136,7 +146,7 @@ func (r *Registry) loadTOML(ctx context.Context, path string, e *Engine) error {
 		}
 		e.Register(rule)
 		slog.InfoContext(ctx, "rules registry: registered toml rule",
-			"name", def.Name, "priority", def.Priority)
+			"name", def.Name, "priority", def.Priority, "source", source)
 	}
 	return nil
 }

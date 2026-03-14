@@ -29,10 +29,11 @@ type DaemonState struct {
 
 // Syncer handles the background synchronisation between filesystem xattrs and the SQLite index.
 type Syncer struct {
-	idx         *index.DB
-	tags        *xattr.Service
-	watchPath   string
-	watchHidden bool
+	idx          *index.DB
+	tags         *xattr.Service
+	watchPath    string
+	watchHidden  bool
+	excludePaths []string
 
 	state        atomic.Value // holds ipcv1.DaemonState
 	filesIndexed atomic.Uint64
@@ -45,12 +46,17 @@ type Syncer struct {
 }
 
 // New creates a new Syncer.
-func New(idx *index.DB, tags *xattr.Service, watchPath string, watchHidden bool) *Syncer {
+func New(idx *index.DB, tags *xattr.Service, watchPath string, watchHidden bool, excludePaths []string) *Syncer {
+	clean := make([]string, len(excludePaths))
+	for i, p := range excludePaths {
+		clean[i] = filepath.Clean(p)
+	}
 	s := &Syncer{
-		idx:         idx,
-		tags:        tags,
-		watchPath:   filepath.Clean(watchPath),
-		watchHidden: watchHidden,
+		idx:          idx,
+		tags:         tags,
+		watchPath:    filepath.Clean(watchPath),
+		watchHidden:  watchHidden,
+		excludePaths: clean,
 	}
 	s.setState(ipcv1.DaemonState_DAEMON_STATE_IDLE)
 	return s
@@ -148,6 +154,15 @@ func (s *Syncer) walkEntry(ctx context.Context, path string, d fs.DirEntry, walk
 
 	if ctx.Err() != nil {
 		return ctx.Err()
+	}
+
+	if d.IsDir() {
+		cleanPath := filepath.Clean(path)
+		for _, ex := range s.excludePaths {
+			if cleanPath == ex {
+				return filepath.SkipDir
+			}
+		}
 	}
 
 	if !s.watchHidden && fsutil.HasHiddenComponentBelowRoot(s.watchPath, path) {

@@ -152,9 +152,10 @@ func (d *DB) UpsertFile(ctx context.Context, path string, inode, device, mtime, 
 	if err != nil {
 		return 0, fmt.Errorf("index: upsert file %q: %w", path, err)
 	}
-	// Last insert ID works for upserts in SQLite.
+	// Last insert ID works for upserts in SQLite, but may return 0 without
+	// error when the ON CONFLICT DO UPDATE clause fires on some driver versions.
 	id, err := res.LastInsertId()
-	if err != nil {
+	if err != nil || id == 0 {
 		// Fall back to SELECT for conflict-updated rows.
 		if err2 := d.db.QueryRowContext(ctx, "SELECT id FROM files WHERE path = ?", path).Scan(&id); err2 != nil {
 			return 0, fmt.Errorf("index: resolve file id for %q: %w", path, err2)

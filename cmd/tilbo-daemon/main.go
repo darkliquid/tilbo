@@ -21,6 +21,7 @@ import (
 	"github.com/tetratelabs/wazero"
 
 	"github.com/darkliquid/tilbo/internal/bookmarks"
+	"github.com/darkliquid/tilbo/internal/config"
 	"github.com/darkliquid/tilbo/internal/dbus"
 	tilbofuse "github.com/darkliquid/tilbo/internal/fuse"
 	"github.com/darkliquid/tilbo/internal/graph"
@@ -50,20 +51,32 @@ const (
 )
 
 func main() {
+	// Load shared config file before flags so config values serve as defaults.
+	// CLI flags always win over config values.
+	cfgPath := config.Path()
+	cfg, cfgErr := config.Load(cfgPath) // logged after logging is configured
+
+	orDefault := func(cfgVal, fallback string) string {
+		if cfgVal != "" {
+			return cfgVal
+		}
+		return fallback
+	}
+
 	var (
-		watchPath = flag.String("watch", defaultWatchPath(), "filesystem path to watch")
-		dbPath    = flag.String("db", defaultDBPath(), "path to the SQLite index database")
+		watchPath = flag.String("watch", orDefault(cfg.Daemon.Watch, defaultWatchPath()), "filesystem path to watch")
+		dbPath    = flag.String("db", orDefault(cfg.Daemon.DB, defaultDBPath()), "path to the SQLite index database")
 		fuseMount = flag.String(
 			"fuse-mount",
-			defaultFuseMountPath(),
+			orDefault(cfg.Daemon.FuseMount, defaultFuseMountPath()),
 			"FUSE virtual filesystem mount point (empty to disable)",
 		)
-		sockOverride   = flag.String("socket", "", "override default Unix socket path")
-		logFormat      = flag.String("log-format", "text", "log format: text or json")
-		logLevel       = flag.String("log-level", "info", "log level: debug, info, warn, error")
-		watcherBackend = flag.String("watcher", "auto", "filesystem watcher backend: auto, fanotify, inotify")
-		watchHidden    = flag.Bool("watch-hidden", false, "watch hidden files and directories")
-		embedModel     = flag.String("embed-model", "", "path to ONNX tokenizer/model directory for embeddings")
+		sockOverride   = flag.String("socket", cfg.Daemon.Socket, "override default Unix socket path")
+		logFormat      = flag.String("log-format", orDefault(cfg.Daemon.LogFormat, "text"), "log format: text or json")
+		logLevel       = flag.String("log-level", orDefault(cfg.Daemon.LogLevel, "info"), "log level: debug, info, warn, error")
+		watcherBackend = flag.String("watcher", orDefault(cfg.Daemon.Watcher, "auto"), "filesystem watcher backend: auto, fanotify, inotify")
+		watchHidden    = flag.Bool("watch-hidden", cfg.Daemon.WatchHidden, "watch hidden files and directories")
+		embedModel     = flag.String("embed-model", cfg.Daemon.EmbedModel, "path to ONNX tokenizer/model directory for embeddings")
 		printVersion   = flag.Bool("version", false, "print version information and exit")
 	)
 	flag.Parse()
@@ -81,6 +94,10 @@ func main() {
 	if err := setupLogging(*logFormat, *logLevel); err != nil {
 		fmt.Fprintf(os.Stderr, "tilbo-daemon: bad log flags: %v\n", err)
 		os.Exit(1)
+	}
+
+	if cfgErr != nil {
+		slog.Warn("tilbo-daemon: config load error; using defaults", "path", cfgPath, "err", cfgErr)
 	}
 
 	slog.Info("tilbo-daemon starting",
@@ -107,6 +124,7 @@ func main() {
 		*dbPath,
 		*fuseMount,
 		sockPath,
+		cfgPath,
 		watcher.Backend(*watcherBackend),
 		*watchHidden,
 		*embedModel,
@@ -128,7 +146,7 @@ func main() {
 func run(
 	ctx context.Context,
 	hupCh <-chan os.Signal,
-	watchPath, dbPath, fuseMount, sockPath string,
+	watchPath, dbPath, fuseMount, sockPath, cfgPath string,
 	watcherBackend watcher.Backend,
 	watchHidden bool,
 	embedModelPath string,
@@ -181,7 +199,11 @@ func run(
 	tags := xattr.New(nil)
 
 	// Initialize the background syncer.
-	syncer := isync.New(idx, tags, watchPath, watchHidden)
+	var syncerExcludePaths []string
+	if fuseMount != "" {
+		syncerExcludePaths = []string{fuseMount}
+	}
+	syncer := isync.New(idx, tags, watchPath, watchHidden, syncerExcludePaths)
 
 	// Start D-Bus so we can report daemon state changes.
 	dbusConn, dbusErr := dbus.NewDaemonBus()
@@ -247,6 +269,11 @@ func run(
 		slog.WarnContext(ctx, "rule registry load error", "err", loadErr)
 	}
 	defer ruleReg.Close(ctx)
+	if inlineCfg, loadErr := config.Load(cfgPath); loadErr != nil {
+		slog.WarnContext(ctx, "config inline rules: load error", "err", loadErr)
+	} else if loadErr := ruleReg.LoadInline(ctx, inlineCfg.Rules, engine); loadErr != nil {
+		slog.WarnContext(ctx, "config inline rules: register error", "err", loadErr)
+	}
 
 	// --- M4: in-memory bipartite file-tag graph ---
 
@@ -338,6 +365,11 @@ func run(
 			if loadErr := newReg.Load(ctx, engine); loadErr != nil {
 				reloadErrs = append(reloadErrs, loadErr.Error())
 			}
+			if inlineCfg, loadErr := config.Load(cfgPath); loadErr != nil {
+				reloadErrs = append(reloadErrs, loadErr.Error())
+			} else if loadErr := newReg.LoadInline(ctx, inlineCfg.Rules, engine); loadErr != nil {
+				reloadErrs = append(reloadErrs, loadErr.Error())
+			}
 			go func() {
 				if sweepErr := sweeper.Sweep(ctx); sweepErr != nil && !errors.Is(sweepErr, context.Canceled) {
 					slog.WarnContext(ctx, "post-reload sweep error", "err", sweepErr)
@@ -376,7 +408,7 @@ func run(
 
 		case <-hupCh:
 			slog.InfoContext(ctx, "SIGHUP: reloading harvester and rule configuration")
-			reloadConfig(ctx, engine, ruleReg, sweeper, wasmCache)
+			reloadConfig(ctx, engine, ruleReg, sweeper, wasmCache, cfgPath)
 
 		case <-ctx.Done():
 			slog.InfoContext(ctx, "shutdown signal received; waiting for watcher")
@@ -501,6 +533,7 @@ func reloadConfig(
 	oldRuleReg *rules.Registry,
 	sweeper *rules.Sweeper,
 	cache wazero.CompilationCache,
+	cfgPath string,
 ) {
 	oldRuleReg.Close(ctx)
 	engine.Reset()
@@ -508,6 +541,11 @@ func reloadConfig(
 	newRuleReg := rules.NewRegistry(rules.DefaultDirs(), cache)
 	if err := newRuleReg.Load(ctx, engine); err != nil {
 		slog.ErrorContext(ctx, "rule registry reload error", "err", err)
+	}
+	if inlineCfg, err := config.Load(cfgPath); err != nil {
+		slog.WarnContext(ctx, "config inline rules reload: load error", "err", err)
+	} else if err := newRuleReg.LoadInline(ctx, inlineCfg.Rules, engine); err != nil {
+		slog.WarnContext(ctx, "config inline rules reload: register error", "err", err)
 	}
 	// Replace the old registry pointer so the next SIGHUP closes the new one.
 	// Note: oldRuleReg pointer not updated here; caller must handle if needed.
@@ -696,10 +734,10 @@ func socketPath() string {
 
 // defaultFuseMountPath returns the default FUSE mount point for the current user.
 func defaultFuseMountPath() string {
-	if h, err := os.UserHomeDir(); err == nil {
-		return filepath.Join(h, "tags")
+	if dir := os.Getenv("XDG_RUNTIME_DIR"); dir != "" {
+		return filepath.Join(dir, "tilbo", "tags")
 	}
-	return ""
+	return fmt.Sprintf("/run/user/%d/tilbo/tags", os.Getuid())
 }
 
 // defaultWatchPath returns the path to watch when none is specified.
@@ -713,11 +751,11 @@ func defaultWatchPath() string {
 
 // defaultDBPath returns the default SQLite database path for the current user.
 func defaultDBPath() string {
-	if dir, err := os.UserCacheDir(); err == nil {
+	if dir := os.Getenv("XDG_STATE_HOME"); dir != "" {
 		return filepath.Join(dir, "tilbo", "index.db")
 	}
 	if h, err := os.UserHomeDir(); err == nil {
-		return filepath.Join(h, ".local", "share", "tilbo", "index.db")
+		return filepath.Join(h, ".local", "state", "tilbo", "index.db")
 	}
 	return "tilbo-index.db"
 }

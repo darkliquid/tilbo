@@ -24,6 +24,11 @@ var (
 	spawnDaemonProcess = spawnDaemon
 	nowFn              = time.Now
 	sleepFn            = time.Sleep
+
+	// daemonSockPath is the Unix socket used to connect to tilbo-daemon.
+	// It is initialised to the XDG runtime default and may be overridden
+	// at startup from the shared config file.
+	daemonSockPath = fmt.Sprintf("/run/user/%d/tilbo.sock", os.Getuid())
 )
 
 const (
@@ -33,8 +38,7 @@ const (
 )
 
 func ConnectDaemon(ctx context.Context) (*DaemonClient, error) {
-	userID := os.Getuid()
-	sockPath := fmt.Sprintf("/run/user/%d/tilbo.sock", userID)
+	sockPath := daemonSockPath
 
 	c, err := newIPCClient(ctx, sockPath)
 	if err == nil {

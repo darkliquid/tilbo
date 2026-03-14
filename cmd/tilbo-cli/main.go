@@ -11,6 +11,7 @@ import (
 	"github.com/charmbracelet/fang"
 	"github.com/spf13/cobra"
 
+	"github.com/darkliquid/tilbo/internal/config"
 	"github.com/darkliquid/tilbo/internal/ipc"
 	ipcv1 "github.com/darkliquid/tilbo/internal/ipc/gen/tilbo/ipc/v1"
 )
@@ -43,7 +44,12 @@ func init() {
 	rootCmd.Version = version
 	rootCmd.SetVersionTemplate(fmt.Sprintf("tilbo %s (commit %s, built %s)\n", version, commit, buildDate))
 
-	rootCmd.PersistentFlags().StringVar(&sockFlag, "socket", defaultSocketPath(), "path to the tilbo daemon socket")
+	cfg, _ := config.Load(config.Path())
+	sockDefault := cfg.CLI.Socket
+	if sockDefault == "" {
+		sockDefault = defaultSocketPath()
+	}
+	rootCmd.PersistentFlags().StringVar(&sockFlag, "socket", sockDefault, "path to the tilbo daemon socket")
 
 	rootCmd.AddCommand(tagCmd)
 	rootCmd.AddCommand(searchCmd)
