@@ -3,7 +3,7 @@ name: CI
 on:
   push:
     branches: ["**"]
-    tags-ignore: ["v*"]   # releases are handled by release.yml
+    tags-ignore: ["v*"] # releases are handled by release.yml
   pull_request:
 
 # Cancel in-progress runs on the same branch when a new push arrives.
@@ -171,7 +171,7 @@ jobs:
 
       - name: Report test results
         if: always()
-        uses: dorny/test-reporter@v1
+        uses: dorny/test-reporter@v2
         with:
           name: Unit test results
           path: test-results/junit.xml
