@@ -113,10 +113,10 @@ func runDaemon(ctx context.Context, cfgPath string, cfgErr error, opts *daemonOp
 	}
 
 	if cfgErr != nil {
-		slog.Warn("tilbo-daemon: config load error; using defaults", "path", cfgPath, "err", cfgErr)
+		slog.WarnContext(ctx, "tilbo-daemon: config load error; using defaults", "path", cfgPath, "err", cfgErr)
 	}
 
-	slog.Info("tilbo-daemon starting",
+	slog.InfoContext(ctx, "tilbo-daemon starting",
 		"version", version,
 		"commit", commit,
 		"built", buildDate,
@@ -145,11 +145,11 @@ func runDaemon(ctx context.Context, cfgPath string, cfgErr error, opts *daemonOp
 		opts.watchHidden,
 		opts.embedModel,
 	); err != nil {
-		slog.Error("daemon error", "err", err)
+		slog.ErrorContext(runCtx, "daemon error", "err", err)
 		return err
 	}
 
-	slog.Info("tilbo-daemon stopped")
+	slog.InfoContext(ctx, "tilbo-daemon stopped")
 	return nil
 }
 
@@ -246,61 +246,82 @@ func newSystemdCmd() *cobra.Command {
 		Use:   "install",
 		Short: "Install user-mode systemd service and socket for tilbo-daemon",
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			if targetDir == "" {
-				d, err := userSystemdDir()
-				if err != nil {
-					return err
-				}
-				targetDir = d
-			}
-			if err := os.MkdirAll(targetDir, 0o755); err != nil {
-				return fmt.Errorf("create systemd dir %s: %w", targetDir, err)
-			}
-
-			exePath, err := os.Executable()
-			if err != nil {
-				return fmt.Errorf("resolve executable path: %w", err)
-			}
-			exePath, err = filepath.EvalSymlinks(exePath)
-			if err != nil {
-				exePath = strings.TrimSpace(exePath)
-			}
-
-			servicePath := filepath.Join(targetDir, "tilbo-daemon.service")
-			socketPath := filepath.Join(targetDir, "tilbo-daemon.socket")
-
-			if err := os.WriteFile(servicePath, []byte(systemdServiceUnit(exePath)), 0o644); err != nil {
-				return fmt.Errorf("write service unit %s: %w", servicePath, err)
-			}
-			if err := os.WriteFile(socketPath, []byte(systemdSocketUnit()), 0o644); err != nil {
-				return fmt.Errorf("write socket unit %s: %w", socketPath, err)
-			}
-
-			if err := runSystemctl(cmd.Context(), "--user", "daemon-reload"); err != nil {
-				return err
-			}
-			if enable {
-				if err := runSystemctl(cmd.Context(), "--user", "enable", "tilbo-daemon.socket", "tilbo-daemon.service"); err != nil {
-					return err
-				}
-			}
-			if now {
-				if err := runSystemctl(cmd.Context(), "--user", "start", "tilbo-daemon.socket", "tilbo-daemon.service"); err != nil {
-					return err
-				}
-			}
-
-			fmt.Printf("installed systemd units in %s\n", targetDir)
-			return nil
+			return installSystemdUnits(cmd.Context(), targetDir, enable, now)
 		},
 	}
 
-	installCmd.Flags().StringVar(&targetDir, "dir", "", "target systemd user unit directory (defaults to $XDG_CONFIG_HOME/systemd/user)")
+	installCmd.Flags().StringVar(
+		&targetDir,
+		"dir",
+		"",
+		"target systemd user unit directory (defaults to $XDG_CONFIG_HOME/systemd/user)",
+	)
 	installCmd.Flags().BoolVar(&enable, "enable", true, "enable units after install")
 	installCmd.Flags().BoolVar(&now, "now", true, "start units after install")
 
 	cmd.AddCommand(installCmd)
 	return cmd
+}
+
+func installSystemdUnits(ctx context.Context, targetDir string, enable, now bool) error {
+	if targetDir == "" {
+		d, err := userSystemdDir()
+		if err != nil {
+			return err
+		}
+		targetDir = d
+	}
+	if err := os.MkdirAll(targetDir, 0o750); err != nil {
+		return fmt.Errorf("create systemd dir %s: %w", targetDir, err)
+	}
+
+	exePath, err := os.Executable()
+	if err != nil {
+		return fmt.Errorf("resolve executable path: %w", err)
+	}
+	exePath, err = filepath.EvalSymlinks(exePath)
+	if err != nil {
+		exePath = strings.TrimSpace(exePath)
+	}
+
+	servicePath := filepath.Join(targetDir, "tilbo-daemon.service")
+	socketPath := filepath.Join(targetDir, "tilbo-daemon.socket")
+
+	if err := os.WriteFile(servicePath, []byte(systemdServiceUnit(exePath)), 0o600); err != nil {
+		return fmt.Errorf("write service unit %s: %w", servicePath, err)
+	}
+	if err := os.WriteFile(socketPath, []byte(systemdSocketUnit()), 0o600); err != nil {
+		return fmt.Errorf("write socket unit %s: %w", socketPath, err)
+	}
+
+	if err := runSystemctl(ctx, "--user", "daemon-reload"); err != nil {
+		return err
+	}
+	if enable {
+		if err := runSystemctl(
+			ctx,
+			"--user",
+			"enable",
+			"tilbo-daemon.socket",
+			"tilbo-daemon.service",
+		); err != nil {
+			return err
+		}
+	}
+	if now {
+		if err := runSystemctl(
+			ctx,
+			"--user",
+			"start",
+			"tilbo-daemon.socket",
+			"tilbo-daemon.service",
+		); err != nil {
+			return err
+		}
+	}
+
+	fmt.Printf("installed systemd units in %s\n", targetDir)
+	return nil
 }
 
 func runSystemctl(ctx context.Context, args ...string) error {
