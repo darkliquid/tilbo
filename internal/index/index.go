@@ -233,24 +233,8 @@ func (d *DB) SetFileTags(ctx context.Context, fileID int64, tagNames []string) e
 	}
 	defer tx.Rollback() //nolint:errcheck // best-effort rollback; commit path handles success
 
-	// Remove existing tags.
-	if _, err := tx.ExecContext(ctx, "DELETE FROM file_tags WHERE file_id = ?", fileID); err != nil {
-		return fmt.Errorf("index: SetFileTags clear tags: %w", err)
-	}
-
-	for _, name := range tagNames {
-		if _, err := tx.ExecContext(ctx,
-			"INSERT OR IGNORE INTO tags(name) VALUES (?)", name); err != nil {
-			return fmt.Errorf("index: SetFileTags upsert tag %q: %w", name, err)
-		}
-		var tagID int64
-		if err := tx.QueryRowContext(ctx, "SELECT id FROM tags WHERE name = ?", name).Scan(&tagID); err != nil {
-			return fmt.Errorf("index: SetFileTags resolve tag %q: %w", name, err)
-		}
-		if _, err := tx.ExecContext(ctx,
-			"INSERT OR IGNORE INTO file_tags(file_id, tag_id) VALUES (?, ?)", fileID, tagID); err != nil {
-			return fmt.Errorf("index: SetFileTags add tag %q: %w", name, err)
-		}
+	if err := d.replaceFileTagsTx(ctx, tx, fileID, tagNames, "SetFileTags"); err != nil {
+		return err
 	}
 
 	return tx.Commit()
@@ -275,6 +259,40 @@ func (d *DB) SyncFileApply(
 	}
 	defer tx.Rollback() //nolint:errcheck // best-effort rollback; commit path handles success
 
+	fileID, err := d.upsertFileTx(ctx, tx, path, inode, device, mtime, size, now)
+	if err != nil {
+		return 0, err
+	}
+
+	if err := d.replaceFileTagsTx(ctx, tx, fileID, tagNames, "SyncFileApply"); err != nil {
+		return 0, err
+	}
+
+	if err := d.upsertMetadataTx(ctx, tx, fileID, meta); err != nil {
+		return 0, err
+	}
+
+	if err := d.upsertTagProvenanceTx(ctx, tx, fileID, sourceMap, now); err != nil {
+		return 0, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return 0, fmt.Errorf("index: SyncFileApply commit: %w", err)
+	}
+
+	return fileID, nil
+}
+
+func (d *DB) upsertFileTx(
+	ctx context.Context,
+	tx *sql.Tx,
+	path string,
+	inode int64,
+	device int64,
+	mtime int64,
+	size int64,
+	now int64,
+) (int64, error) {
 	var fileID int64
 	if err := tx.QueryRowContext(ctx, `
 		INSERT INTO files(path, inode, device, mtime, size_bytes, indexed_at)
@@ -290,27 +308,44 @@ func (d *DB) SyncFileApply(
 	).Scan(&fileID); err != nil {
 		return 0, fmt.Errorf("index: SyncFileApply upsert file %q: %w", path, err)
 	}
+	return fileID, nil
+}
 
+func (d *DB) replaceFileTagsTx(
+	ctx context.Context,
+	tx *sql.Tx,
+	fileID int64,
+	tagNames []string,
+	op string,
+) error {
 	if _, err := tx.ExecContext(ctx, "DELETE FROM file_tags WHERE file_id = ?", fileID); err != nil {
-		return 0, fmt.Errorf("index: SyncFileApply clear tags file=%d: %w", fileID, err)
+		return fmt.Errorf("index: %s clear tags file=%d: %w", op, fileID, err)
 	}
 
 	for _, name := range tagNames {
-		if _, err := tx.ExecContext(ctx, "INSERT OR IGNORE INTO tags(name) VALUES (?)", name); err != nil {
-			return 0, fmt.Errorf("index: SyncFileApply upsert tag %q: %w", name, err)
+		tagID, err := resolveTagIDTx(ctx, tx, name, op, "tag")
+		if err != nil {
+			return err
 		}
-
-		var tagID int64
-		if err := tx.QueryRowContext(ctx, "SELECT id FROM tags WHERE name = ?", name).Scan(&tagID); err != nil {
-			return 0, fmt.Errorf("index: SyncFileApply resolve tag %q: %w", name, err)
-		}
-
-		if _, err := tx.ExecContext(ctx,
-			"INSERT OR IGNORE INTO file_tags(file_id, tag_id) VALUES (?, ?)", fileID, tagID); err != nil {
-			return 0, fmt.Errorf("index: SyncFileApply add tag %q: %w", name, err)
+		if _, err := tx.ExecContext(
+			ctx,
+			"INSERT OR IGNORE INTO file_tags(file_id, tag_id) VALUES (?, ?)",
+			fileID,
+			tagID,
+		); err != nil {
+			return fmt.Errorf("index: %s add tag %q: %w", op, name, err)
 		}
 	}
 
+	return nil
+}
+
+func (d *DB) upsertMetadataTx(
+	ctx context.Context,
+	tx *sql.Tx,
+	fileID int64,
+	meta map[string]string,
+) error {
 	for k, v := range meta {
 		if _, err := tx.ExecContext(ctx, `
 			INSERT INTO metadata(file_id, key, value, source)
@@ -320,20 +355,24 @@ func (d *DB) SyncFileApply(
 				source = excluded.source`,
 			fileID, k, v, "manual",
 		); err != nil {
-			return 0, fmt.Errorf("index: SyncFileApply upsert meta file=%d key=%q: %w", fileID, k, err)
+			return fmt.Errorf("index: SyncFileApply upsert meta file=%d key=%q: %w", fileID, k, err)
 		}
 	}
+	return nil
+}
 
+func (d *DB) upsertTagProvenanceTx(
+	ctx context.Context,
+	tx *sql.Tx,
+	fileID int64,
+	sourceMap map[string]string,
+	now int64,
+) error {
 	for tagName, sourceName := range sourceMap {
-		if _, err := tx.ExecContext(ctx, "INSERT OR IGNORE INTO tags(name) VALUES (?)", tagName); err != nil {
-			return 0, fmt.Errorf("index: SyncFileApply upsert source tag %q: %w", tagName, err)
+		tagID, err := resolveTagIDTx(ctx, tx, tagName, "SyncFileApply", "source tag")
+		if err != nil {
+			return err
 		}
-
-		var tagID int64
-		if err := tx.QueryRowContext(ctx, "SELECT id FROM tags WHERE name = ?", tagName).Scan(&tagID); err != nil {
-			return 0, fmt.Errorf("index: SyncFileApply resolve source tag %q: %w", tagName, err)
-		}
-
 		if _, err := tx.ExecContext(ctx, `
 			INSERT INTO tag_provenance(file_id, tag_id, source, set_at)
 			VALUES (?, ?, ?, ?)
@@ -342,15 +381,29 @@ func (d *DB) SyncFileApply(
 				set_at = excluded.set_at`,
 			fileID, tagID, sourceName, now,
 		); err != nil {
-			return 0, fmt.Errorf("index: SyncFileApply set tag provenance file=%d tag=%d: %w", fileID, tagID, err)
+			return fmt.Errorf("index: SyncFileApply set tag provenance file=%d tag=%d: %w", fileID, tagID, err)
 		}
 	}
+	return nil
+}
 
-	if err := tx.Commit(); err != nil {
-		return 0, fmt.Errorf("index: SyncFileApply commit: %w", err)
+func resolveTagIDTx(
+	ctx context.Context,
+	tx *sql.Tx,
+	name string,
+	op string,
+	label string,
+) (int64, error) {
+	if _, err := tx.ExecContext(ctx, "INSERT OR IGNORE INTO tags(name) VALUES (?)", name); err != nil {
+		return 0, fmt.Errorf("index: %s upsert %s %q: %w", op, label, name, err)
 	}
 
-	return fileID, nil
+	var tagID int64
+	if err := tx.QueryRowContext(ctx, "SELECT id FROM tags WHERE name = ?", name).Scan(&tagID); err != nil {
+		return 0, fmt.Errorf("index: %s resolve %s %q: %w", op, label, name, err)
+	}
+
+	return tagID, nil
 }
 
 // UpsertMeta inserts or replaces a metadata key-value pair for fileID.

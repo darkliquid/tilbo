@@ -50,12 +50,12 @@ func newProcessor(
 	embedder *vectorize.ONNXEmbedder,
 ) *Processor {
 	return &Processor{
-		idx:      idx,
-		tags:     tags,
-		pipeline: pipeline,
-		engine:   engine,
-		g:        g,
-		embedder: embedder,
+		idx:               idx,
+		tags:              tags,
+		pipeline:          pipeline,
+		engine:            engine,
+		g:                 g,
+		embedder:          embedder,
 		nonRetryablePaths: make(map[string]struct{}),
 	}
 }
@@ -63,13 +63,7 @@ func newProcessor(
 // ProcessFile runs the full M2 pipeline for path. Any error is logged rather
 // than returned because a pipeline failure should not stop the daemon.
 func (p *Processor) ProcessFile(ctx context.Context, path string) {
-	if p.shouldSkipPath(path) {
-		if !isRetryEligiblePath(path) {
-			return
-		}
-		p.clearPathNonRetryable(path)
-	}
-	if ctx.Err() != nil {
+	if !p.preparePath(ctx, path) {
 		return
 	}
 	if err := p.processFile(ctx, path); err != nil {
@@ -81,20 +75,161 @@ func (p *Processor) ProcessFile(ctx context.Context, path string) {
 	}
 }
 
-func (p *Processor) processFile(ctx context.Context, path string) error {
+func (p *Processor) preparePath(ctx context.Context, path string) bool {
+	if p.shouldSkipPath(path) {
+		if !isRetryEligiblePath(path) {
+			return false
+		}
+		p.clearPathNonRetryable(path)
+	}
+	return ctx.Err() == nil
+}
+
+func (p *Processor) readProcessingState(ctx context.Context, path string) ([]string, harvester.MetaMap, error) {
 	existingTags, err := p.tags.ReadTags(ctx, path)
 	if err != nil {
-		return fmt.Errorf("read tags: %w", err)
+		return nil, nil, fmt.Errorf("read tags: %w", err)
 	}
 	existingMeta, err := p.tags.ReadAllMeta(ctx, path)
 	if err != nil {
-		return fmt.Errorf("read meta: %w", err)
+		return nil, nil, fmt.Errorf("read meta: %w", err)
 	}
+	return existingTags, parseStoredMeta(existingMeta), nil
+}
 
-	// Convert string xattr values to typed MetaMap values for rule evaluation.
+func (p *Processor) readAsyncState(ctx context.Context, path string) ([]string, harvester.MetaMap) {
+	existingTags, _ := p.tags.ReadTags(ctx, path)
+	existingMeta, _ := p.tags.ReadAllMeta(ctx, path)
+	return existingTags, parseStoredMeta(existingMeta)
+}
+
+func parseStoredMeta(existingMeta map[string]string) harvester.MetaMap {
 	meta := make(harvester.MetaMap, len(existingMeta))
 	for k, v := range existingMeta {
 		meta[k] = harvester.ParseMetaValue(v)
+	}
+	return meta
+}
+
+func (p *Processor) runPipelinePhase(
+	ctx context.Context,
+	path string,
+	input harvester.Input,
+	logMsg string,
+) (harvester.MetaMap, bool) {
+	additional, err := p.pipeline.Run(ctx, input)
+	if additional == nil {
+		additional = make(harvester.MetaMap)
+	}
+	if err == nil {
+		return additional, false
+	}
+	if isNonRetryableProcessingErr(err) {
+		return nil, true
+	}
+	slog.DebugContext(ctx, logMsg, "path", path, "err", err)
+	return additional, false
+}
+
+func (p *Processor) maybeRunSecondPipelinePhase(
+	ctx context.Context,
+	path string,
+	input *harvester.Input,
+	meta harvester.MetaMap,
+	additional harvester.MetaMap,
+) bool {
+	newMIME, _ := additional["mime"].(string)
+	if input.MIME != "" || newMIME == "" {
+		return false
+	}
+
+	maps.Copy(meta, additional)
+	input.MIME = newMIME
+	input.Existing = meta
+
+	phase2, stop := p.runPipelinePhase(ctx, path, *input, "processor: pipeline phase2 error")
+	if stop {
+		return true
+	}
+	maps.Copy(additional, phase2)
+	return false
+}
+
+func (p *Processor) mergeAndPersistMeta(
+	ctx context.Context,
+	path string,
+	fileID int64,
+	persistToIndex bool,
+	source string,
+	base harvester.MetaMap,
+	updates harvester.MetaMap,
+	xattrLogMsg string,
+	indexLogMsg string,
+) error {
+	for k, v := range updates {
+		base[k] = v
+		if strings.HasPrefix(k, "_") {
+			continue
+		}
+		strVal := harvester.ValueToString(v)
+		if err := p.persistMetaValue(
+			ctx,
+			path,
+			fileID,
+			persistToIndex,
+			source,
+			k,
+			strVal,
+			xattrLogMsg,
+			indexLogMsg,
+		); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (p *Processor) persistMetaValue(
+	ctx context.Context,
+	path string,
+	fileID int64,
+	persistToIndex bool,
+	source string,
+	key string,
+	value string,
+	xattrLogMsg string,
+	indexLogMsg string,
+) error {
+	if err := p.tags.WriteMeta(ctx, path, key, value); err != nil {
+		if isNonRetryableProcessingErr(err) {
+			return err
+		}
+		slog.DebugContext(ctx, xattrLogMsg, "path", path, "key", key, "err", err)
+	}
+	if !persistToIndex {
+		return nil
+	}
+	if err := p.idx.UpsertMeta(ctx, fileID, key, value, source); err != nil {
+		if isNonRetryableProcessingErr(err) {
+			return err
+		}
+		slog.DebugContext(ctx, indexLogMsg, "path", path, "key", key, "err", err)
+	}
+	return nil
+}
+
+func (p *Processor) consumeNonRetryablePathErr(path string, err error) bool {
+	if !isNonRetryableProcessingErr(err) {
+		return false
+	}
+	p.markPathNonRetryable(path)
+	return true
+}
+
+func (p *Processor) processFile(ctx context.Context, path string) error {
+	existingTags, meta, err := p.readProcessingState(ctx, path)
+	if err != nil {
+		return err
 	}
 
 	mime, _ := meta["mime"].(string)
@@ -102,57 +237,35 @@ func (p *Processor) processFile(ctx context.Context, path string) error {
 
 	// Phase 1: Run synchronous harvesters. On first-ever processing, MIME is
 	// unknown so only unconditional harvesters (stat, mime) will run.
-	additional, err := p.pipeline.Run(ctx, input)
-	if err != nil {
-		if isNonRetryableProcessingErr(err) {
-			return nil
-		}
-		slog.DebugContext(ctx, "processor: pipeline error", "path", path, "err", err)
+	additional, stop := p.runPipelinePhase(ctx, path, input, "processor: pipeline error")
+	if stop {
+		return nil
 	}
 
 	// Phase 2: If MIME was just discovered this run, re-run with the new MIME
 	// so that MIME-dependent harvesters (EXIF, ffprobe, media, …) get a chance
 	// to execute without waiting for a second file-change event.
-	if newMIME, _ := additional["mime"].(string); input.MIME == "" && newMIME != "" {
-		maps.Copy(meta, additional)
-		input.MIME = newMIME
-		input.Existing = meta
-		phase2, err2 := p.pipeline.Run(ctx, input)
-		if err2 != nil {
-			if isNonRetryableProcessingErr(err2) {
-				return nil
-			}
-			slog.DebugContext(ctx, "processor: pipeline phase2 error", "path", path, "err", err2)
-		}
-		maps.Copy(additional, phase2)
+	if p.maybeRunSecondPipelinePhase(ctx, path, &input, meta, additional) {
+		return nil
 	}
 
 	// Persist new metadata and merge into working map.
 	fileID, idErr := p.idx.GetFileIDByPath(ctx, path)
-	for k, v := range additional {
-		meta[k] = v
-		if strings.HasPrefix(k, "_") {
-			continue
+	if err := p.mergeAndPersistMeta(
+		ctx,
+		path,
+		fileID,
+		idErr == nil,
+		"harvester",
+		meta,
+		additional,
+		"processor: write meta xattr error",
+		"processor: upsert meta index error",
+	); err != nil {
+		if p.consumeNonRetryablePathErr(path, err) {
+			return nil
 		}
-		strVal := harvester.ValueToString(v)
-		if writeErr := p.tags.WriteMeta(ctx, path, k, strVal); writeErr != nil {
-			if isNonRetryableProcessingErr(writeErr) {
-				p.markPathNonRetryable(path)
-				return nil
-			}
-			slog.DebugContext(ctx, "processor: write meta xattr error",
-				"path", path, "key", k, "err", writeErr)
-		}
-		if idErr == nil {
-			if upsertErr := p.idx.UpsertMeta(ctx, fileID, k, strVal, "harvester"); upsertErr != nil {
-				if isNonRetryableProcessingErr(upsertErr) {
-					p.markPathNonRetryable(path)
-					return nil
-				}
-				slog.DebugContext(ctx, "processor: upsert meta index error",
-					"path", path, "key", k, "err", upsertErr)
-			}
-		}
+		return err
 	}
 
 	// Start async harvesters in the background; their results trigger a separate update.
@@ -161,8 +274,7 @@ func (p *Processor) processFile(ctx context.Context, path string) error {
 	})
 
 	if idErr != nil {
-		if isNonRetryableProcessingErr(idErr) {
-			p.markPathNonRetryable(path)
+		if p.consumeNonRetryablePathErr(path, idErr) {
 			return nil
 		}
 		if errors.Is(idErr, sql.ErrNoRows) {
@@ -174,8 +286,7 @@ func (p *Processor) processFile(ctx context.Context, path string) error {
 
 	overrides, err := p.idx.GetTagOverrides(ctx, fileID)
 	if err != nil {
-		if isNonRetryableProcessingErr(err) {
-			p.markPathNonRetryable(path)
+		if p.consumeNonRetryablePathErr(path, err) {
 			return nil
 		}
 		return fmt.Errorf("get tag overrides: %w", err)
@@ -235,13 +346,7 @@ func (p *Processor) updateEmbedding(
 // handleAsyncResult is called on a goroutine when an async harvester completes.
 // It persists the new metadata and re-runs rule evaluation.
 func (p *Processor) handleAsyncResult(ctx context.Context, path, harvesterName string, asyncMeta harvester.MetaMap) {
-	if p.shouldSkipPath(path) {
-		if !isRetryEligiblePath(path) {
-			return
-		}
-		p.clearPathNonRetryable(path)
-	}
-	if ctx.Err() != nil {
+	if !p.preparePath(ctx, path) {
 		return
 	}
 	slog.DebugContext(ctx, "processor: async harvester complete",
@@ -249,45 +354,29 @@ func (p *Processor) handleAsyncResult(ctx context.Context, path, harvesterName s
 
 	fileID, err := p.idx.GetFileIDByPath(ctx, path)
 	if err != nil {
-		if isNonRetryableProcessingErr(err) {
-			p.markPathNonRetryable(path)
-		}
+		p.consumeNonRetryablePathErr(path, err)
 		return
 	}
 
-	existingTags, _ := p.tags.ReadTags(ctx, path)
-	existingMeta, _ := p.tags.ReadAllMeta(ctx, path)
-	meta := make(harvester.MetaMap, len(existingMeta)+len(asyncMeta))
-	for k, v := range existingMeta {
-		meta[k] = harvester.ParseMetaValue(v)
-	}
-	for k, v := range asyncMeta {
-		meta[k] = v
-		if strings.HasPrefix(k, "_") {
-			continue
-		}
-		strVal := harvester.ValueToString(v)
-		if writeErr := p.tags.WriteMeta(ctx, path, k, strVal); writeErr != nil {
-			if isNonRetryableProcessingErr(writeErr) {
-				p.markPathNonRetryable(path)
-				return
-			}
-			slog.DebugContext(ctx, "processor: write async meta xattr error", "path", path, "key", k, "err", writeErr)
-		}
-		if upsertErr := p.idx.UpsertMeta(ctx, fileID, k, strVal, harvesterName); upsertErr != nil {
-			if isNonRetryableProcessingErr(upsertErr) {
-				p.markPathNonRetryable(path)
-				return
-			}
-			slog.DebugContext(ctx, "processor: upsert async meta index error", "path", path, "key", k, "err", upsertErr)
-		}
+	existingTags, meta := p.readAsyncState(ctx, path)
+	if err := p.mergeAndPersistMeta(
+		ctx,
+		path,
+		fileID,
+		true,
+		harvesterName,
+		meta,
+		asyncMeta,
+		"processor: write async meta xattr error",
+		"processor: upsert async meta index error",
+	); err != nil {
+		p.consumeNonRetryablePathErr(path, err)
+		return
 	}
 
-	overrides, overridesErr := p.idx.GetTagOverrides(ctx, fileID)
-	if overridesErr != nil {
-		if isNonRetryableProcessingErr(overridesErr) {
-			p.markPathNonRetryable(path)
-		}
+	overrides, err := p.idx.GetTagOverrides(ctx, fileID)
+	if err != nil {
+		p.consumeNonRetryablePathErr(path, err)
 		return
 	}
 	diff, err := p.engine.Eval(ctx, meta, existingTags, overrides)
@@ -297,8 +386,7 @@ func (p *Processor) handleAsyncResult(ctx context.Context, path, harvesterName s
 
 	p.updateEmbedding(ctx, path, fileID, existingTags, meta)
 	if applyErr := p.applyDiff(ctx, path, fileID, existingTags, diff); applyErr != nil {
-		if isNonRetryableProcessingErr(applyErr) {
-			p.markPathNonRetryable(path)
+		if p.consumeNonRetryablePathErr(path, applyErr) {
 			return
 		}
 		slog.DebugContext(ctx, "processor: apply async diff error", "path", path, "err", applyErr)

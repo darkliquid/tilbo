@@ -4,6 +4,7 @@ package daemon
 import (
 	"context"
 	"errors"
+	"maps"
 	"strings"
 
 	"github.com/darkliquid/tilbo/cmd/tilbo-browser/core"
@@ -98,12 +99,7 @@ func (a *Adapter) GetMeta(ctx context.Context, path string) (map[string]string, 
 		return nil, errors.New("unexpected daemon metadata response")
 	}
 
-	src := metaResp.Metadata.GetMetadata()
-	result := make(map[string]string, len(src))
-	for k, v := range src {
-		result[k] = v
-	}
-	return result, nil
+	return maps.Clone(metaResp.Metadata.GetMetadata()), nil
 }
 
 // Autocomplete fetches daemon tag suggestions for a prefix.

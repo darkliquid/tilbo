@@ -9,6 +9,7 @@ import (
 	"math"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"sync/atomic"
 	"syscall"
 	"time"
@@ -54,10 +55,11 @@ type Syncer struct {
 	onFileSyncedSem chan struct{}
 }
 
-// onFileSyncedWorkers is the max number of concurrent OnFileSynced goroutines.
-// Each worker can itself spawn additional async harvester goroutines (e.g. ffprobe),
-// so keeping this modest avoids overwhelming the system on large libraries.
-var onFileSyncedWorkers = runtime.NumCPU() * 2
+const onFileSyncedWorkerMultiplier = 2
+
+func onFileSyncedWorkerCount() int {
+	return max(1, runtime.NumCPU()*onFileSyncedWorkerMultiplier)
+}
 
 // New creates a new Syncer.
 func New(idx *index.DB, tags *xattr.Service, watchPath string, watchHidden bool, excludePaths []string) *Syncer {
@@ -71,7 +73,7 @@ func New(idx *index.DB, tags *xattr.Service, watchPath string, watchHidden bool,
 		watchPath:       filepath.Clean(watchPath),
 		watchHidden:     watchHidden,
 		excludePaths:    clean,
-		onFileSyncedSem: make(chan struct{}, onFileSyncedWorkers),
+		onFileSyncedSem: make(chan struct{}, onFileSyncedWorkerCount()),
 	}
 	s.setState(ipcv1.DaemonState_DAEMON_STATE_IDLE)
 	return s
@@ -173,10 +175,8 @@ func (s *Syncer) walkEntry(ctx context.Context, path string, d fs.DirEntry, walk
 
 	if d.IsDir() {
 		cleanPath := filepath.Clean(path)
-		for _, ex := range s.excludePaths {
-			if cleanPath == ex {
-				return filepath.SkipDir
-			}
+		if slices.Contains(s.excludePaths, cleanPath) {
+			return filepath.SkipDir
 		}
 	}
 
@@ -226,7 +226,7 @@ func (s *Syncer) walkEntry(ctx context.Context, path string, d fs.DirEntry, walk
 // SyncFile processes a single file, reading its xattrs and updating the index.
 // It returns needsHarvest=true when the file has no existing mime metadata,
 // indicating it should be run through the harvester pipeline.
-func (s *Syncer) SyncFile(ctx context.Context, path string, stat *syscall.Stat_t) (needsHarvest bool, err error) {
+func (s *Syncer) SyncFile(ctx context.Context, path string, stat *syscall.Stat_t) (bool, error) {
 	// 1. Read all xattrs. If none exist, we still want to ensure the file is in the index
 	// so the harvester pipeline (M2) can process it if rules apply.
 	tags, err := s.tags.ReadTags(ctx, path)
@@ -246,7 +246,7 @@ func (s *Syncer) SyncFile(ctx context.Context, path string, stat *syscall.Stat_t
 
 	// File needs harvesting if it has no mime metadata yet.
 	_, hasMIME := meta["mime"]
-	needsHarvest = !hasMIME
+	needsHarvest := !hasMIME
 
 	// 2. Upsert the file record
 	inode := saturatingInt64FromUint64(stat.Ino)

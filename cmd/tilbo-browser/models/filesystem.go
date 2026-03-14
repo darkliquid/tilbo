@@ -53,7 +53,8 @@ type FileSystemModel struct {
 }
 
 const (
-	defaultSearchLimit = 1000
+	defaultSearchLimit   = 1000
+	metadataFetchTimeout = 5 * time.Second
 )
 
 type folderEntry struct {
@@ -382,7 +383,14 @@ func (m *FileSystemModel) setData(
 				item.SetData(qt6.NewQVariant4(int(size)), SizeRole)
 				item.SetData(qt6.NewQVariant4(int(mtime)), ModifiedRole)
 				item.SetData(qt6.NewQVariant14(metadataPayload), MetadataRole)
-				slog.DebugContext(m.ctx, "browser: ActionStatFileRole updated metadata role", "path", path, "bytes", len(metadataPayload))
+				slog.DebugContext(
+					m.ctx,
+					"browser: ActionStatFileRole updated metadata role",
+					"path",
+					path,
+					"bytes",
+					len(metadataPayload),
+				)
 			})
 		}(entry.Path, row)
 		return true
@@ -558,19 +566,37 @@ func (m *FileSystemModel) collectUserMeta(path string) map[string]string {
 			slog.DebugContext(m.ctx, "browser: local xattr metadata read failed", "path", path, "err", localErr)
 		} else {
 			maps.Copy(meta, localMeta)
-			slog.DebugContext(m.ctx, "browser: local xattr metadata collected", "path", path, "keys", len(localMeta), "meta", localMeta)
+			slog.DebugContext(
+				m.ctx,
+				"browser: local xattr metadata collected",
+				"path",
+				path,
+				"keys",
+				len(localMeta),
+				"meta",
+				localMeta,
+			)
 		}
 	}
 
 	if m.controller != nil {
-		ctx, cancel := context.WithTimeout(m.ctx, 5*time.Second)
+		ctx, cancel := context.WithTimeout(m.ctx, metadataFetchTimeout)
 		defer cancel()
 		daemonMeta, daemonErr := m.controller.GetFileMeta(ctx, path)
 		if daemonErr != nil {
 			slog.DebugContext(ctx, "browser: daemon metadata fetch failed", "path", path, "err", daemonErr)
 		} else {
 			maps.Copy(meta, daemonMeta)
-			slog.DebugContext(ctx, "browser: daemon metadata collected", "path", path, "keys", len(daemonMeta), "meta", daemonMeta)
+			slog.DebugContext(
+				ctx,
+				"browser: daemon metadata collected",
+				"path",
+				path,
+				"keys",
+				len(daemonMeta),
+				"meta",
+				daemonMeta,
+			)
 		}
 	}
 
@@ -617,7 +643,16 @@ func (m *FileSystemModel) RequestMetadata(path string) {
 		}
 
 		userMeta := m.collectUserMeta(target)
-		slog.DebugContext(m.ctx, "browser: RequestMetadata collected meta", "path", target, "keys", len(userMeta), "meta", userMeta)
+		slog.DebugContext(
+			m.ctx,
+			"browser: RequestMetadata collected meta",
+			"path",
+			target,
+			"keys",
+			len(userMeta),
+			"meta",
+			userMeta,
+		)
 
 		payload := map[string]any{
 			"path":     target,

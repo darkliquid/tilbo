@@ -37,6 +37,65 @@ func (s *safeBuffer) String() string {
 	return s.b.String()
 }
 
+func runCreateRenameModifyBurst(
+	ctx context.Context,
+	loops int,
+	pathA string,
+	pathB string,
+	syncer *isync.Syncer,
+	idx *index.DB,
+	proc *Processor,
+) {
+	for range loops {
+		if err := os.WriteFile(pathA, []byte("data-a"), 0o644); err == nil {
+			handleFSEvent(ctx, watcher.Event{Kind: watcher.EventCreate, Path: pathA}, syncer, idx, proc)
+		}
+
+		if err := os.Rename(pathA, pathB); err == nil {
+			handleFSEvent(
+				ctx,
+				watcher.Event{Kind: watcher.EventRename, OldPath: pathA, Path: pathB},
+				syncer,
+				idx,
+				proc,
+			)
+		}
+
+		if err := os.WriteFile(pathB, []byte("data-b"), 0o644); err == nil {
+			handleFSEvent(ctx, watcher.Event{Kind: watcher.EventModify, Path: pathB}, syncer, idx, proc)
+		}
+
+		if err := os.Rename(pathB, pathA); err == nil {
+			handleFSEvent(
+				ctx,
+				watcher.Event{Kind: watcher.EventRename, OldPath: pathB, Path: pathA},
+				syncer,
+				idx,
+				proc,
+			)
+		}
+	}
+}
+
+func runDeleteBurst(
+	ctx context.Context,
+	loops int,
+	pathA string,
+	pathB string,
+	syncer *isync.Syncer,
+	idx *index.DB,
+	proc *Processor,
+) {
+	for range loops * 2 {
+		if err := os.Remove(pathA); err == nil {
+			handleFSEvent(ctx, watcher.Event{Kind: watcher.EventDelete, Path: pathA}, syncer, idx, proc)
+		}
+		if err := os.Remove(pathB); err == nil {
+			handleFSEvent(ctx, watcher.Event{Kind: watcher.EventDelete, Path: pathB}, syncer, idx, proc)
+		}
+	}
+}
+
 func TestHandleFSEvent_CreateRenameDeleteBurst_NoForeignKeyErrors(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
@@ -68,40 +127,13 @@ func TestHandleFSEvent_CreateRenameDeleteBurst_NoForeignKeyErrors(t *testing.T) 
 	const loops = 120
 	var wg sync.WaitGroup
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		for i := 0; i < loops; i++ {
-			if err := os.WriteFile(pathA, []byte("data-a"), 0o644); err == nil {
-				handleFSEvent(ctx, watcher.Event{Kind: watcher.EventCreate, Path: pathA}, syncer, idx, proc)
-			}
+	wg.Go(func() {
+		runCreateRenameModifyBurst(ctx, loops, pathA, pathB, syncer, idx, proc)
+	})
 
-			if err := os.Rename(pathA, pathB); err == nil {
-				handleFSEvent(ctx, watcher.Event{Kind: watcher.EventRename, OldPath: pathA, Path: pathB}, syncer, idx, proc)
-			}
-
-			if err := os.WriteFile(pathB, []byte("data-b"), 0o644); err == nil {
-				handleFSEvent(ctx, watcher.Event{Kind: watcher.EventModify, Path: pathB}, syncer, idx, proc)
-			}
-
-			if err := os.Rename(pathB, pathA); err == nil {
-				handleFSEvent(ctx, watcher.Event{Kind: watcher.EventRename, OldPath: pathB, Path: pathA}, syncer, idx, proc)
-			}
-		}
-	}()
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		for i := 0; i < loops*2; i++ {
-			if err := os.Remove(pathA); err == nil {
-				handleFSEvent(ctx, watcher.Event{Kind: watcher.EventDelete, Path: pathA}, syncer, idx, proc)
-			}
-			if err := os.Remove(pathB); err == nil {
-				handleFSEvent(ctx, watcher.Event{Kind: watcher.EventDelete, Path: pathB}, syncer, idx, proc)
-			}
-		}
-	}()
+	wg.Go(func() {
+		runDeleteBurst(ctx, loops, pathA, pathB, syncer, idx, proc)
+	})
 
 	wg.Wait()
 

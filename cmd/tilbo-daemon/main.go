@@ -71,13 +71,25 @@ func main() {
 			orDefault(cfg.Daemon.FuseMount, defaultFuseMountPath()),
 			"FUSE virtual filesystem mount point (empty to disable)",
 		)
-		sockOverride   = flag.String("socket", cfg.Daemon.Socket, "override default Unix socket path")
-		logFormat      = flag.String("log-format", orDefault(cfg.Daemon.LogFormat, "text"), "log format: text or json")
-		logLevel       = flag.String("log-level", orDefault(cfg.Daemon.LogLevel, "info"), "log level: debug, info, warn, error")
-		watcherBackend = flag.String("watcher", orDefault(cfg.Daemon.Watcher, "auto"), "filesystem watcher backend: auto, fanotify, inotify")
-		watchHidden    = flag.Bool("watch-hidden", cfg.Daemon.WatchHidden, "watch hidden files and directories")
-		embedModel     = flag.String("embed-model", cfg.Daemon.EmbedModel, "path to ONNX tokenizer/model directory for embeddings")
-		printVersion   = flag.Bool("version", false, "print version information and exit")
+		sockOverride = flag.String("socket", cfg.Daemon.Socket, "override default Unix socket path")
+		logFormat    = flag.String("log-format", orDefault(cfg.Daemon.LogFormat, "text"), "log format: text or json")
+		logLevel     = flag.String(
+			"log-level",
+			orDefault(cfg.Daemon.LogLevel, "info"),
+			"log level: debug, info, warn, error",
+		)
+		watcherBackend = flag.String(
+			"watcher",
+			orDefault(cfg.Daemon.Watcher, "auto"),
+			"filesystem watcher backend: auto, fanotify, inotify",
+		)
+		watchHidden = flag.Bool("watch-hidden", cfg.Daemon.WatchHidden, "watch hidden files and directories")
+		embedModel  = flag.String(
+			"embed-model",
+			cfg.Daemon.EmbedModel,
+			"path to ONNX tokenizer/model directory for embeddings",
+		)
+		printVersion = flag.Bool("version", false, "print version information and exit")
 	)
 	flag.Parse()
 
