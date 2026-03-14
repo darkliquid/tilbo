@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -44,6 +45,15 @@ func NewSuite(ctx context.Context, binDir, stateDir string) (*Suite, error) {
 	}
 	contextDir = filepath.Join(root, "test", "integration")
 
+	// Pre-create the socks subdirectory inside stateDir before the container
+	// starts so that it exists as a valid bind-mount target. We then shadow it
+	// with an in-container tmpfs (after start) so Unix domain sockets can be
+	// created even when the bind-mount source is on a filesystem that forbids
+	// AF_UNIX (e.g. virtiofs used by Colima/Lima on Linux).
+	if err := os.MkdirAll(filepath.Join(stateDir, "socks"), 0o755); err != nil {
+		return nil, fmt.Errorf("create socks dir: %w", err)
+	}
+
 	req := tc.ContainerRequest{
 		FromDockerfile: tc.FromDockerfile{
 			Context:    contextDir,
@@ -68,6 +78,19 @@ func NewSuite(ctx context.Context, binDir, stateDir string) (*Suite, error) {
 	})
 	if err != nil {
 		return nil, fmt.Errorf("start container: %w", err)
+	}
+
+	// Shadow /tilbo/socks with a container-local tmpfs so that Unix domain
+	// sockets can be created regardless of the underlying bind-mount filesystem.
+	// The host never needs to read the socket files directly; all socket
+	// monitoring is done via container.Exec, so losing host visibility here is
+	// not a problem.
+	if code, _, err := ctr.Exec(ctx, []string{"mount", "-t", "tmpfs", "tmpfs", "/tilbo/socks"}); err != nil || code != 0 {
+		_ = ctr.Terminate(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("mount socks tmpfs: %w", err)
+		}
+		return nil, fmt.Errorf("mount socks tmpfs: exit code %d", code)
 	}
 
 	return &Suite{
@@ -138,14 +161,14 @@ func (s *Suite) CLI(ctx context.Context, sockPath string, args ...string) (strin
 //   - fuseMount: container-side FUSE mount point (empty to disable FUSE)
 //   - logPath: container-side path where daemon stdout+stderr is written
 //   - extraArgs: additional flags forwarded verbatim to tilbo-daemon
-//     (e.g. "-watcher", "inotify")
+//     (e.g. "--watcher", "inotify")
 func (s *Suite) StartDaemon(
 	ctx context.Context,
 	sockPath, dbPath, watchPath, fuseMount, logPath string,
 	extraArgs ...string,
 ) error {
 	cmd := fmt.Sprintf(
-		"tilbo-daemon -socket '%s' -db '%s' -watch '%s' -fuse-mount '%s' -log-format json",
+		"tilbo-daemon --socket '%s' --db '%s' --watch '%s' --fuse-mount '%s' --log-format json",
 		sockPath, dbPath, watchPath, fuseMount,
 	)
 	if len(extraArgs) > 0 {

@@ -29,7 +29,7 @@ func startInotifyDaemon(t *testing.T, ctx context.Context) (sockPath, watchDir s
 		t.Fatalf("inotify daemon setup mkdir: %v", err)
 	}
 
-	if err := suite.StartDaemon(ctx, sock, db, watchDir, fuse, log, "-watcher", "inotify"); err != nil {
+	if err := suite.StartDaemon(ctx, sock, db, watchDir, fuse, log, "--watcher", "inotify"); err != nil {
 		t.Fatalf("start inotify daemon: %v\nlog:\n%s", err, suite.DaemonLog(ctx, log))
 	}
 	t.Cleanup(func() { suite.StopDaemon(context.Background(), sock) }) //nolint:errcheck

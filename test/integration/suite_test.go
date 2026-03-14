@@ -68,7 +68,7 @@ func runSuite(ctx context.Context, m *testing.M) (int, error) {
 	defer os.RemoveAll(binDir)
 
 	// Step 2: shared state directory (socket, db, logs, FUSE mounts, images).
-	stateDir, err := os.MkdirTemp("", "tilbo-integration-state-*")
+	stateDir, err := os.MkdirTemp(helpers.TempBase(), "tilbo-integration-state-*")
 	if err != nil {
 		return 1, fmt.Errorf("create state dir: %w", err)
 	}

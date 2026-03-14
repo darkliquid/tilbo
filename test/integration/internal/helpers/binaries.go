@@ -28,6 +28,18 @@ func RepoRoot() (string, error) {
 	return dir, nil
 }
 
+// TempBase returns the base directory to use for integration-test temp dirs.
+// It respects the TILBO_TEST_TMPDIR environment variable so that users whose
+// Docker daemon runs inside a VM (e.g. Colima/Lima on Linux) can point it at a
+// path that is shared into the VM (typically $HOME or /tmp/lima).
+// When the variable is unset the standard os.TempDir() is used.
+func TempBase() string {
+	if v := os.Getenv("TILBO_TEST_TMPDIR"); v != "" {
+		return v
+	}
+	return os.TempDir()
+}
+
 // Build compiles tilbo-daemon and tilbo-cli into a temporary directory and
 // returns the directory path. The caller must remove the directory when done.
 //
@@ -39,7 +51,7 @@ func Build() (binDir string, err error) {
 		return "", fmt.Errorf("find repo root: %w", err)
 	}
 
-	binDir, err = os.MkdirTemp("", "tilbo-integration-bins-*")
+	binDir, err = os.MkdirTemp(TempBase(), "tilbo-integration-bins-*")
 	if err != nil {
 		return "", fmt.Errorf("create bin tmpdir: %w", err)
 	}
