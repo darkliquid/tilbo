@@ -15,6 +15,7 @@ import (
 
 	"golang.org/x/sys/unix"
 
+	"github.com/darkliquid/tilbo/internal/fsutil"
 	"github.com/darkliquid/tilbo/internal/index"
 	ipcv1 "github.com/darkliquid/tilbo/internal/ipc/gen/tilbo/ipc/v1"
 	"github.com/darkliquid/tilbo/internal/xattr"
@@ -28,9 +29,10 @@ type DaemonState struct {
 
 // Syncer handles the background synchronisation between filesystem xattrs and the SQLite index.
 type Syncer struct {
-	idx       *index.DB
-	tags      *xattr.Service
-	watchPath string
+	idx         *index.DB
+	tags        *xattr.Service
+	watchPath   string
+	watchHidden bool
 
 	state        atomic.Value // holds ipcv1.DaemonState
 	filesIndexed atomic.Uint64
@@ -43,11 +45,12 @@ type Syncer struct {
 }
 
 // New creates a new Syncer.
-func New(idx *index.DB, tags *xattr.Service, watchPath string) *Syncer {
+func New(idx *index.DB, tags *xattr.Service, watchPath string, watchHidden bool) *Syncer {
 	s := &Syncer{
-		idx:       idx,
-		tags:      tags,
-		watchPath: watchPath,
+		idx:         idx,
+		tags:        tags,
+		watchPath:   filepath.Clean(watchPath),
+		watchHidden: watchHidden,
 	}
 	s.setState(ipcv1.DaemonState_DAEMON_STATE_IDLE)
 	return s
@@ -112,34 +115,7 @@ func (s *Syncer) Run(ctx context.Context) error {
 	defer runtime.UnlockOSThread()
 
 	err := filepath.WalkDir(s.watchPath, func(path string, d fs.DirEntry, walkErr error) error {
-		if walkErr != nil {
-			slog.DebugContext(ctx, "syncer: walk error", "path", path, "err", walkErr)
-			return nil // ignore per-file walk errors and continue background scan
-		}
-
-		if ctx.Err() != nil {
-			return ctx.Err()
-		}
-
-		if d.IsDir() {
-			return nil
-		}
-
-		info, err := d.Info()
-		if err != nil {
-			return nil //nolint:nilerr // ignore file-specific stat/read errors and continue scan
-		}
-
-		sysStat, ok := info.Sys().(*syscall.Stat_t)
-		if !ok {
-			return nil
-		}
-
-		if err := s.SyncFile(ctx, path, sysStat); err != nil {
-			slog.DebugContext(ctx, "syncer: sync file error", "path", path, "err", err)
-		}
-
-		return nil
+		return s.walkEntry(ctx, path, d, walkErr)
 	})
 
 	if err != nil && !errors.Is(err, context.Canceled) && !errors.Is(err, context.DeadlineExceeded) {
@@ -161,6 +137,44 @@ func (s *Syncer) Run(ctx context.Context) error {
 	}
 
 	slog.InfoContext(ctx, "syncer: completed full scan", "indexed", s.filesIndexed.Load())
+	return nil
+}
+
+func (s *Syncer) walkEntry(ctx context.Context, path string, d fs.DirEntry, walkErr error) error {
+	if walkErr != nil {
+		slog.DebugContext(ctx, "syncer: walk error", "path", path, "err", walkErr)
+		return nil // ignore per-file walk errors and continue background scan
+	}
+
+	if ctx.Err() != nil {
+		return ctx.Err()
+	}
+
+	if !s.watchHidden && fsutil.HasHiddenComponentBelowRoot(s.watchPath, path) {
+		if d.IsDir() {
+			return filepath.SkipDir
+		}
+		return nil
+	}
+
+	if d.IsDir() {
+		return nil
+	}
+
+	info, err := d.Info()
+	if err != nil {
+		return nil //nolint:nilerr // ignore file-specific stat/read errors and continue scan
+	}
+
+	sysStat, ok := info.Sys().(*syscall.Stat_t)
+	if !ok {
+		return nil
+	}
+
+	if err := s.SyncFile(ctx, path, sysStat); err != nil {
+		slog.DebugContext(ctx, "syncer: sync file error", "path", path, "err", err)
+	}
+
 	return nil
 }
 

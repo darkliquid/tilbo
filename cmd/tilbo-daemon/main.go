@@ -181,7 +181,7 @@ func run(
 	tags := xattr.New(nil)
 
 	// Initialize the background syncer.
-	syncer := isync.New(idx, tags, watchPath)
+	syncer := isync.New(idx, tags, watchPath, watchHidden)
 
 	// Start D-Bus so we can report daemon state changes.
 	dbusConn, dbusErr := dbus.NewDaemonBus()

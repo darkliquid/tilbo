@@ -49,8 +49,11 @@ func (h *SubprocessHarvester) Run(ctx context.Context, input Input) (MetaMap, er
 		return nil, err
 	}
 
+	// We explicitly use context.Background() here because we want to
+	// manage the process lifecycle manually, including killing the process
+	// group if needed.
 	//nolint:gosec // command is from a user-managed trusted config file
-	cmd := exec.Command(args[0], args[1:]...)
+	cmd := exec.CommandContext(context.Background(), args[0], args[1:]...)
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	cmd.Stdin = bytes.NewReader(inJSON)
 

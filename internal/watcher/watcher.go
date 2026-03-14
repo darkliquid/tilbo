@@ -18,6 +18,8 @@ import (
 	"unsafe"
 
 	"golang.org/x/sys/unix"
+
+	"github.com/darkliquid/tilbo/internal/fsutil"
 )
 
 // Backend selects the filesystem-event notification mechanism.
@@ -519,7 +521,7 @@ func (w *Watcher) handleMetaFID(ctx context.Context, event []byte) {
 		return
 	}
 
-	if !w.watchHidden && strings.Contains(path, "/.") {
+	if !w.watchHidden && fsutil.HasHiddenComponentBelowRoot(w.mountPath, path) {
 		return
 	}
 

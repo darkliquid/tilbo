@@ -16,6 +16,8 @@ import (
 	"unsafe"
 
 	"golang.org/x/sys/unix"
+
+	"github.com/darkliquid/tilbo/internal/fsutil"
 )
 
 // inotifyEventBaseSize is the fixed-header size of a single inotify event
@@ -37,6 +39,7 @@ type inotifyImpl struct {
 
 	pendMu       sync.Mutex
 	pending      map[string]*debounceEntry
+	rootPath     string
 	watchHidden  bool
 	excludePaths []string // absolute paths to skip entirely (e.g. FUSE mount)
 }
@@ -65,6 +68,7 @@ func newInotifyWithMask(
 		wdToDir:      make(map[int32]string),
 		out:          make(chan Event, outChanBuf),
 		pending:      make(map[string]*debounceEntry),
+		rootPath:     filepath.Clean(mountPath),
 		watchHidden:  watchHidden,
 		excludePaths: excludePaths,
 	}
@@ -122,7 +126,7 @@ func (i *inotifyImpl) addWatchRecursive(ctx context.Context, root string) error 
 			slog.DebugContext(ctx, "inotify: skipping excluded path", "path", path)
 			return filepath.SkipDir
 		}
-		if !i.watchHidden && strings.HasPrefix(d.Name(), ".") && path != root {
+		if !i.watchHidden && fsutil.HasHiddenComponentBelowRoot(i.rootPath, path) {
 			if d.IsDir() {
 				return filepath.SkipDir
 			}
@@ -250,8 +254,7 @@ func (i *inotifyImpl) processEvents(ctx context.Context, buf []byte) {
 			continue
 		}
 
-		// Ignore hidden files/directories during event processing implicitly
-		if !i.watchHidden && strings.Contains(path, "/.") {
+		if !i.watchHidden && fsutil.HasHiddenComponentBelowRoot(i.rootPath, path) {
 			continue
 		}
 
