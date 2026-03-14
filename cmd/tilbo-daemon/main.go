@@ -6,18 +6,17 @@ package main
 import (
 	"context"
 	"errors"
-	"flag"
 	"fmt"
 	"log/slog"
 	"os"
 	"os/exec"
-	"os/signal"
 	"path/filepath"
 	"strings"
 	"sync"
 	"syscall"
 	"time"
 
+	"github.com/charmbracelet/fang"
 	"github.com/tetratelabs/wazero"
 
 	"github.com/darkliquid/tilbo/internal/bookmarks"
@@ -51,104 +50,9 @@ const (
 )
 
 func main() {
-	// Load shared config file before flags so config values serve as defaults.
-	// CLI flags always win over config values.
-	cfgPath := config.Path()
-	cfg, cfgErr := config.Load(cfgPath) // logged after logging is configured
-
-	orDefault := func(cfgVal, fallback string) string {
-		if cfgVal != "" {
-			return cfgVal
-		}
-		return fallback
-	}
-
-	var (
-		watchPath = flag.String("watch", orDefault(cfg.Daemon.Watch, defaultWatchPath()), "filesystem path to watch")
-		dbPath    = flag.String("db", orDefault(cfg.Daemon.DB, defaultDBPath()), "path to the SQLite index database")
-		fuseMount = flag.String(
-			"fuse-mount",
-			orDefault(cfg.Daemon.FuseMount, defaultFuseMountPath()),
-			"FUSE virtual filesystem mount point (empty to disable)",
-		)
-		sockOverride = flag.String("socket", cfg.Daemon.Socket, "override default Unix socket path")
-		logFormat    = flag.String("log-format", orDefault(cfg.Daemon.LogFormat, "text"), "log format: text or json")
-		logLevel     = flag.String(
-			"log-level",
-			orDefault(cfg.Daemon.LogLevel, "info"),
-			"log level: debug, info, warn, error",
-		)
-		watcherBackend = flag.String(
-			"watcher",
-			orDefault(cfg.Daemon.Watcher, "auto"),
-			"filesystem watcher backend: auto, fanotify, inotify",
-		)
-		watchHidden = flag.Bool("watch-hidden", cfg.Daemon.WatchHidden, "watch hidden files and directories")
-		embedModel  = flag.String(
-			"embed-model",
-			cfg.Daemon.EmbedModel,
-			"path to ONNX tokenizer/model directory for embeddings",
-		)
-		printVersion = flag.Bool("version", false, "print version information and exit")
-	)
-	flag.Parse()
-
-	if *printVersion {
-		fmt.Printf("tilbo-daemon %s (commit %s, built %s)\n", version, commit, buildDate)
-		return
-	}
-
-	sockPath := *sockOverride
-	if sockPath == "" {
-		sockPath = socketPath()
-	}
-
-	if err := setupLogging(*logFormat, *logLevel); err != nil {
-		fmt.Fprintf(os.Stderr, "tilbo-daemon: bad log flags: %v\n", err)
+	if err := fang.Execute(context.Background(), newRootCmd()); err != nil {
 		os.Exit(1)
 	}
-
-	if cfgErr != nil {
-		slog.Warn("tilbo-daemon: config load error; using defaults", "path", cfgPath, "err", cfgErr)
-	}
-
-	slog.Info("tilbo-daemon starting",
-		"version", version,
-		"commit", commit,
-		"built", buildDate,
-		"watch", *watchPath,
-		"db", *dbPath,
-		"fuse", *fuseMount,
-		"pid", os.Getpid(),
-	)
-
-	// signal.NotifyContext cancels on SIGTERM or SIGINT.
-	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
-
-	// Separate channel for SIGHUP (config reload).
-	hupCh := make(chan os.Signal, 1)
-	signal.Notify(hupCh, syscall.SIGHUP)
-
-	if err := run(
-		ctx,
-		hupCh,
-		*watchPath,
-		*dbPath,
-		*fuseMount,
-		sockPath,
-		cfgPath,
-		watcher.Backend(*watcherBackend),
-		*watchHidden,
-		*embedModel,
-	); err != nil {
-		slog.Error("daemon error", "err", err)
-		signal.Stop(hupCh)
-		stop()
-		os.Exit(1)
-	}
-	signal.Stop(hupCh)
-	stop()
-	slog.Info("tilbo-daemon stopped")
 }
 
 // run is the main daemon loop. It returns nil on clean shutdown and a non-nil

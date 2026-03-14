@@ -49,6 +49,14 @@ go build -o tilbo-cli    ./cmd/tilbo-cli
 
 # Install to ~/bin (or /usr/local/bin)
 cp tilbo-daemon tilbo-cli ~/bin/
+
+# Generate shell completions
+tilbo completion bash > ~/.local/share/bash-completion/completions/tilbo
+tilbo-daemon completion bash > ~/.local/share/bash-completion/completions/tilbo-daemon
+
+# Write baseline config files from current flags
+tilbo --socket /run/user/$UID/tilbo.sock config init
+tilbo-daemon --watch "$HOME" --log-level info config init
 ```
 
 A systemd user service unit is recommended for the daemon:
@@ -68,6 +76,10 @@ WantedBy=default.target
 ```
 
 ```sh
+# Install user-mode units via CLI using standard systemd tooling
+tilbo-daemon systemd install
+
+# Or manually, if preferred
 systemctl --user enable --now tilbo-daemon
 ```
 
@@ -122,6 +134,19 @@ FUSE virtual filesystem, and exposes a Unix socket IPC endpoint.
 | `--fuse-mount <path>` | `~/tags` | FUSE virtual filesystem mount point (empty to disable) |
 | `--log-format <fmt>` | `text` | Log format: `text` or `json` |
 | `--log-level <lvl>` | `info` | Log level: `debug`, `info`, `warn`, `error` |
+
+### Config and Shell Setup
+
+```sh
+# Write a baseline daemon config using current flags
+tilbo-daemon --watch "$HOME" --db "$HOME/.local/state/tilbo/index.db" config init
+
+# Install user-mode systemd service and socket
+tilbo-daemon systemd install
+
+# Generate shell completions
+tilbo-daemon completion zsh > ~/.zfunc/_tilbo-daemon
+```
 
 ### Watcher Permissions and Fallback Modes
 
@@ -277,6 +302,16 @@ tilbo daemon status
 
 # Reload harvester and rule configuration (equivalent to SIGHUP)
 tilbo daemon reload-rules
+```
+
+### Config and shell completions
+
+```sh
+# Write a baseline CLI config using current flags
+tilbo --socket /run/user/$UID/tilbo.sock config init
+
+# Generate shell completions
+tilbo completion fish > ~/.config/fish/completions/tilbo.fish
 ```
 
 ---
@@ -619,6 +654,5 @@ Delete the cache directory to force recompilation.
   use graph traversal only.
 - **`tilbo rule list/validate/test`** and **`tilbo harvester list/test`** CLI
   subcommands are planned but not yet implemented.
-- **Shell completions** are not yet generated.
 - **D-Bus signals** (`FileTagged`, `IndexUpdated`, `DaemonStateChanged`) are
   defined in the architecture but not yet implemented in the daemon.

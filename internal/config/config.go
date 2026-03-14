@@ -75,3 +75,21 @@ func Load(path string) (Config, error) {
 	}
 	return cfg, nil
 }
+
+// Save writes cfg to path as TOML, creating parent directories as needed.
+func Save(path string, cfg Config) error {
+	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+		return fmt.Errorf("config: create dir for %q: %w", path, err)
+	}
+
+	f, err := os.OpenFile(path, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o600)
+	if err != nil {
+		return fmt.Errorf("config: open %q for write: %w", path, err)
+	}
+	defer f.Close()
+
+	if err := toml.NewEncoder(f).Encode(cfg); err != nil {
+		return fmt.Errorf("config: encode %q: %w", path, err)
+	}
+	return nil
+}

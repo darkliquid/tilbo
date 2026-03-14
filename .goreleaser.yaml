@@ -53,6 +53,8 @@ archives:
       - LICENSE*
       - README*
       - CHANGELOG*
+      - packaging/**
+      - contrib/scripts/**
 
 nfpms:
   - id: tilbo-packages
@@ -72,10 +74,20 @@ nfpms:
       - deb
       - rpm
       - apk
+      - archlinux
     contents:
-      - src: contrib/systemd/tilbo-daemon.service
+      - src: packaging/tilbo-daemon.service
         dst: /usr/lib/systemd/user/tilbo-daemon.service
         type: config
+      - src: packaging/tilbo-daemon.socket
+        dst: /usr/lib/systemd/user/tilbo-daemon.socket
+        type: config
+      - src: packaging/tilbo-browser.desktop
+        dst: /usr/share/applications/tilbo-browser.desktop
+      - src: packaging/tilbo-browser-autostart.desktop
+        dst: /etc/xdg/autostart/tilbo-browser-autostart.desktop
+      - src: packaging/tilbo.portal
+        dst: /usr/share/xdg-desktop-portal/portals/tilbo.portal
     scripts:
       postinstall: contrib/scripts/postinstall.sh
       preremove: contrib/scripts/preremove.sh
