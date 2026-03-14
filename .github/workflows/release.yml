@@ -9,6 +9,9 @@ on:
 concurrency:
   group: release-${{ github.ref }}
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   release:
     name: goreleaser
