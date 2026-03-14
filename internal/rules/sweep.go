@@ -91,6 +91,18 @@ func (s *Sweeper) sweepFile(ctx context.Context, path string) (bool, error) {
 		slog.DebugContext(ctx, "sweep: pipeline error", "path", path, "err", err)
 	}
 
+	// Phase 2: if MIME was just discovered, re-run for MIME-dependent harvesters.
+	if newMIME, _ := additional["mime"].(string); input.MIME == "" && newMIME != "" {
+		maps.Copy(meta, additional)
+		input.MIME = newMIME
+		input.Existing = meta
+		phase2, err2 := s.pipeline.Run(ctx, input)
+		if err2 != nil {
+			slog.DebugContext(ctx, "sweep: pipeline phase2 error", "path", path, "err", err2)
+		}
+		maps.Copy(additional, phase2)
+	}
+
 	// Merge harvester output into meta and persist new metadata to xattr + index.
 	fileID, idErr := s.idx.GetFileIDByPath(ctx, path)
 	for k, v := range additional {

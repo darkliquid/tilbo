@@ -28,14 +28,70 @@ ApplicationWindow {
     property int statFileRole: typeof fsRoleStatFile !== "undefined" ? fsRoleStatFile : -1
     property int sizeRole: typeof fsRoleSize !== "undefined" ? fsRoleSize : 259
     property int modifiedRole: typeof fsRoleModified !== "undefined" ? fsRoleModified : 260
+    property int metadataRole: typeof fsRoleMetadata !== "undefined" ? fsRoleMetadata : -1
 
     property bool showLeftSidebar: true
     property bool showRightSidebar: !!selectedFile
+    property var selectedFileMeta: null   // map of user metadata key→value
+    property string selectedMetaPath: ""
+    property bool metaExpanded: true      // collapsible state
 
     // Automatically show right sidebar when a file is selected
     onSelectedFileChanged: {
         if (selectedFile) {
             showRightSidebar = true
+            var nextPath = selectedFile.path ? selectedFile.path.toString() : ""
+            var pathChanged = nextPath !== selectedMetaPath
+            if (pathChanged) {
+                selectedFileMeta = null
+            }
+            selectedMetaPath = nextPath
+            console.debug("properties: selectedFileChanged", selectedFile.path, "modified", selectedFile.modified, "row", selectedFile.row)
+            if (pathChanged && typeof fsModel.loadMetadata === "function") {
+                var immediateRaw = fsModel.loadMetadata(selectedFile.path, selectedFile.modified || 0)
+                console.debug("properties: loadMetadata raw", immediateRaw)
+                if (immediateRaw && immediateRaw !== "") {
+                    try {
+                        var immediateObj = JSON.parse(immediateRaw)
+                        window.selectedFileMeta = immediateObj.userMeta || {}
+                        console.debug("properties: immediate metadata keys", Object.keys(window.selectedFileMeta || {}).length, JSON.stringify(window.selectedFileMeta || {}))
+                    } catch(e) {}
+                }
+            }
+            if (pathChanged && typeof fsModel.requestMetadata === "function") {
+                console.debug("properties: requestMetadata", selectedFile.path)
+                fsModel.requestMetadata(selectedFile.path)
+                metaPollTimer.restart()
+            } else if (pathChanged) {
+                metaPollTimer.stop()
+            }
+        } else {
+            selectedFileMeta = null
+            selectedMetaPath = ""
+            metaPollTimer.stop()
+        }
+    }
+
+    // Poll for async metadata result after file selection.
+    Timer {
+        id: metaPollTimer
+        interval: 100
+        repeat: true
+        running: false
+        onTriggered: {
+            if (!window.selectedFile) { stop(); return }
+            var raw = (typeof fsModel.takeMetadata === "function")
+                ? fsModel.takeMetadata(window.selectedFile.path)
+                : ""
+            console.debug("properties: takeMetadata raw", raw)
+            if (raw && raw !== "") {
+                try {
+                    var obj = JSON.parse(raw)
+                    window.selectedFileMeta = obj.userMeta || null
+                    console.debug("properties: async metadata keys", Object.keys(window.selectedFileMeta || {}).length, JSON.stringify(window.selectedFileMeta || {}))
+                } catch(e) {}
+                stop()
+            }
         }
     }
 
@@ -71,6 +127,8 @@ ApplicationWindow {
             return
         }
 
+        console.debug("properties: selectFile", fileData.path, "modified", fileData.modified, "row", fileData.row)
+
         window.selectedFile = fileData
         window.selectedFileRow = fileData.row !== undefined ? fileData.row : -1
 
@@ -91,6 +149,19 @@ ApplicationWindow {
             var idx = fsModel.index(window.selectedFileRow, 0)
             var freshSize = fsModel.data(idx, window.sizeRole)
             var freshModified = fsModel.data(idx, window.modifiedRole)
+            var freshMetadataRaw = window.metadataRole >= 0 ? fsModel.data(idx, window.metadataRole) : ""
+            console.debug("properties: onDataChanged metadata role raw", freshMetadataRaw)
+            var freshMetadata = window.selectedFileMeta || {}
+            if (freshMetadataRaw && freshMetadataRaw !== "") {
+                try {
+                    var freshMetadataObj = JSON.parse(freshMetadataRaw)
+                    freshMetadata = freshMetadataObj.userMeta || {}
+                    window.selectedFileMeta = freshMetadata
+                    console.debug("properties: metadata role keys", Object.keys(freshMetadata).length, JSON.stringify(freshMetadata))
+                } catch(e) {
+                    console.debug("properties: metadata role parse failed", e)
+                }
+            }
             window.selectedFile = Object.assign({}, window.selectedFile, {
                 size: freshSize,
                 modified: freshModified
@@ -315,107 +386,186 @@ ApplicationWindow {
                 }
 
                 // If something is selected
-                ColumnLayout {
+                ScrollView {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
-                    Layout.alignment: Qt.AlignTop
                     visible: !!window.selectedFile
-                    spacing: 12
+                    clip: true
+                    ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
 
-                    // Icon
-                    Rectangle {
-                        Layout.alignment: Qt.AlignHCenter
-                        Layout.preferredWidth: 64
-                        Layout.preferredHeight: 64
-                        radius: 8
-                        color: window.selectedFile && window.selectedFile.isDir ? "#4A90E2" : "#555A64"
+                    contentWidth: availableWidth
+
+                    ColumnLayout {
+                        width: parent.width
+                        spacing: 12
+
+                        // Icon
+                        Rectangle {
+                            Layout.alignment: Qt.AlignHCenter
+                            Layout.preferredWidth: 64
+                            Layout.preferredHeight: 64
+                            radius: 8
+                            color: window.selectedFile && window.selectedFile.isDir ? "#4A90E2" : "#555A64"
+                            Text {
+                                anchors.centerIn: parent
+                                text: window.selectedFile && window.selectedFile.isDir ? "📁" : "📄"
+                                font.pixelSize: 32
+                            }
+                        }
+
+                        // Name
                         Text {
-                            anchors.centerIn: parent
-                            text: window.selectedFile && window.selectedFile.isDir ? "📁" : "📄"
-                            font.pixelSize: 32
-                        }
-                    }
-
-                    // Name
-                    Text {
-                        Layout.fillWidth: true
-                        text: window.selectedFile ? window.selectedFile.name : ""
-                        color: "#ECEFF4"
-                        font.pixelSize: 16
-                        font.bold: true
-                        wrapMode: Text.WrapAnywhere
-                        horizontalAlignment: Text.AlignHCenter
-                    }
-
-                    // Details
-                    GridLayout {
-                        Layout.fillWidth: true
-                        columns: 2
-                        rowSpacing: 8
-                        columnSpacing: 8
-
-                        Text { text: "Path:"; color: "#88C0D0"; font.pixelSize: 13 }
-                        Text { 
-                            text: window.selectedFile ? window.selectedFile.path : ""
-                            color: "#D8DEE9"
-                            font.pixelSize: 12
                             Layout.fillWidth: true
-                            elide: Text.ElideMiddle
+                            text: window.selectedFile ? window.selectedFile.name : ""
+                            color: "#ECEFF4"
+                            font.pixelSize: 16
+                            font.bold: true
+                            wrapMode: Text.WrapAnywhere
+                            horizontalAlignment: Text.AlignHCenter
                         }
 
-                        Text { text: "Size:"; color: "#88C0D0"; font.pixelSize: 13 }
-                        Text { 
-                            text: window.selectedFile ? (window.selectedFile.isDir ? "--" : (window.selectedFile.size / 1024).toFixed(1) + " KB") : ""
-                            color: "#D8DEE9"
-                            font.pixelSize: 13
+                        // Details
+                        GridLayout {
                             Layout.fillWidth: true
-                            elide: Text.ElideRight
+                            columns: 2
+                            rowSpacing: 8
+                            columnSpacing: 8
+
+                            Text { text: "Path:"; color: "#88C0D0"; font.pixelSize: 13 }
+                            Text { 
+                                text: window.selectedFile ? window.selectedFile.path : ""
+                                color: "#D8DEE9"
+                                font.pixelSize: 12
+                                Layout.fillWidth: true
+                                elide: Text.ElideMiddle
+                            }
+
+                            Text { text: "Size:"; color: "#88C0D0"; font.pixelSize: 13 }
+                            Text { 
+                                text: window.selectedFile ? (window.selectedFile.isDir ? "--" : (window.selectedFile.size / 1024).toFixed(1) + " KB") : ""
+                                color: "#D8DEE9"
+                                font.pixelSize: 13
+                                Layout.fillWidth: true
+                                elide: Text.ElideRight
+                            }
+
+                            Text { text: "Modified:"; color: "#88C0D0"; font.pixelSize: 13 }
+                            Text { 
+                                // The unix modified timestamp from Go
+                                text: window.selectedFile && window.selectedFile.modified ? new Date(window.selectedFile.modified * 1000).toLocaleString(Qt.locale(), Locale.ShortFormat) : ""
+                                color: "#D8DEE9"
+                                font.pixelSize: 13
+                                Layout.fillWidth: true
+                                elide: Text.ElideRight
+                            }
                         }
 
-                        Text { text: "Modified:"; color: "#88C0D0"; font.pixelSize: 13 }
-                        Text { 
-                            // The unix modified timestamp from Go
-                            text: window.selectedFile && window.selectedFile.modified ? new Date(window.selectedFile.modified * 1000).toLocaleString(Qt.locale(), Locale.ShortFormat) : ""
-                            color: "#D8DEE9"
-                            font.pixelSize: 13
+                        Rectangle {
                             Layout.fillWidth: true
-                            elide: Text.ElideRight
+                            Layout.preferredHeight: 1
+                            Layout.topMargin: 8
+                            color: "#3B4252"
+                            visible: window.selectedFileMeta !== null &&
+                                     Object.keys(window.selectedFileMeta || {}).length > 0
                         }
-                    }
 
-                    Label {
-                        text: "Tags"
-                        color: "#88C0D0"
-                        font.pixelSize: 13
-                        Layout.topMargin: 8
-                        visible: window.selectedFile && window.selectedFile.tags && window.selectedFile.tags.length > 0
-                    }
+                        // User metadata section in properties sidebar, directly after file details.
+                        Rectangle {
+                            Layout.fillWidth: true
+                            Layout.preferredHeight: 220
+                            visible: window.selectedFileMeta !== null &&
+                                     Object.keys(window.selectedFileMeta || {}).length > 0
+                            color: "#252A35"
+                            border.color: "#3B4252"
+                            border.width: 1
+                            radius: 6
 
-                    Flow {
-                        Layout.fillWidth: true
-                        spacing: 4
-                        visible: window.selectedFile && window.selectedFile.tags && window.selectedFile.tags.length > 0
-                        Repeater {
-                            model: window.selectedFile && window.selectedFile.tags ? window.selectedFile.tags : []
-                            Rectangle {
-                                height: 22
-                                width: propTagTxt.width + 16
-                                radius: 4
-                                color: "#3B4252"
-                                border.color: "#4C566A"
-                                border.width: 1
+                            Column {
+                                anchors.fill: parent
+                                anchors.margins: 8
+                                spacing: 6
+
                                 Text {
-                                    id: propTagTxt
-                                    anchors.centerIn: parent
-                                    text: modelData
-                                    color: "#A3BE8C"
-                                    font.pixelSize: 12
+                                    text: "Metadata (" + Object.keys(window.selectedFileMeta || {}).length + ")"
+                                    color: "#88C0D0"
+                                    font.pixelSize: 13
+                                    font.bold: true
+                                }
+
+                                ListView {
+                                    id: metadataList
+                                    width: parent.width
+                                    height: parent.height - 28
+                                    clip: true
+
+                                    model: {
+                                        var m = window.selectedFileMeta
+                                        if (!m) return []
+                                        var keys = Object.keys(m).sort()
+                                        console.debug("properties: rendering metadata list", keys.length, JSON.stringify(m))
+                                        return keys
+                                    }
+
+                                    delegate: Row {
+                                        width: metadataList.width
+                                        spacing: 6
+
+                                        Text {
+                                            text: modelData
+                                            width: 90
+                                            color: "#88C0D0"
+                                            font.pixelSize: 11
+                                            elide: Text.ElideRight
+                                        }
+
+                                        Text {
+                                            text: (window.selectedFileMeta && window.selectedFileMeta[modelData]) ? window.selectedFileMeta[modelData] : ""
+                                            width: metadataList.width - 96
+                                            color: "#D8DEE9"
+                                            font.pixelSize: 11
+                                            wrapMode: Text.WrapAnywhere
+                                        }
+                                    }
+
+                                    ScrollBar.vertical: ScrollBar {
+                                        policy: ScrollBar.AsNeeded
+                                    }
+                                }
+                            }
+                        }
+
+                        Label {
+                            text: "Tags"
+                            color: "#88C0D0"
+                            font.pixelSize: 13
+                            Layout.topMargin: 8
+                            visible: window.selectedFile && window.selectedFile.tags && window.selectedFile.tags.length > 0
+                        }
+
+                        Flow {
+                            Layout.fillWidth: true
+                            spacing: 4
+                            visible: window.selectedFile && window.selectedFile.tags && window.selectedFile.tags.length > 0
+                            Repeater {
+                                model: window.selectedFile && window.selectedFile.tags ? window.selectedFile.tags : []
+                                Rectangle {
+                                    height: 22
+                                    width: propTagTxt.width + 16
+                                    radius: 4
+                                    color: "#3B4252"
+                                    border.color: "#4C566A"
+                                    border.width: 1
+                                    Text {
+                                        id: propTagTxt
+                                        anchors.centerIn: parent
+                                        text: modelData
+                                        color: "#A3BE8C"
+                                        font.pixelSize: 12
+                                    }
                                 }
                             }
                         }
                     }
-                    
-                    Item { Layout.fillHeight: true } // Spacer
                 }
             }
         }

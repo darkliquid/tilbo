@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"maps"
 	"os"
 	"path/filepath"
 	"sync"
@@ -23,6 +24,7 @@ import (
 	"github.com/darkliquid/tilbo/cmd/tilbo-browser/commands/togglehidden"
 	"github.com/darkliquid/tilbo/cmd/tilbo-browser/core"
 	browserruntime "github.com/darkliquid/tilbo/cmd/tilbo-browser/state"
+	"github.com/darkliquid/tilbo/internal/xattr"
 )
 
 // FileSystemModel provides a QML-compatible data bridge for traditional folder
@@ -47,6 +49,7 @@ type FileSystemModel struct {
 	metadataMu   sync.Mutex
 	metadataOut  map[string]string
 	metadataWork map[string]struct{}
+	xattrs       *xattr.Service
 }
 
 const (
@@ -70,12 +73,14 @@ func NewFileSystemModel(ctx context.Context, parent *qt6.QObject) *FileSystemMod
 		entries:            make([]folderEntry, 0),
 		metadataOut:        make(map[string]string),
 		metadataWork:       make(map[string]struct{}),
+		xattrs:             xattr.New(nil),
 		roleNamesMap: map[int][]byte{
 			NameRole:               []byte("fileName"),
 			PathRole:               []byte("filePath"),
 			IsDirRole:              []byte("isDir"),
 			SizeRole:               []byte("fileSize"),
 			ModifiedRole:           []byte("fileModified"),
+			MetadataRole:           []byte("fileMetadata"),
 			TagsRole:               []byte("fileTags"),
 			ActionOpenRole:         []byte("actionOpen"),
 			ActionRenameRole:       []byte("actionRename"),
@@ -252,6 +257,7 @@ func (m *FileSystemModel) renderEntries(entries []folderEntry) {
 		item.SetData(qt6.NewQVariant8(entry.IsDir), IsDirRole)
 		item.SetData(qt6.NewQVariant4(int(entry.Size)), SizeRole)
 		item.SetData(qt6.NewQVariant4(int(entry.Modified)), ModifiedRole)
+		item.SetData(qt6.NewQVariant14("{}"), MetadataRole)
 		item.SetData(qt6.NewQVariant15(entry.Tags), TagsRole)
 		items = append(items, item)
 	}
@@ -356,6 +362,13 @@ func (m *FileSystemModel) setData(
 			}
 			size := info.Size()
 			mtime := info.ModTime().Unix()
+			metadataPayload := "{}"
+			payload := map[string]any{
+				"userMeta": m.collectUserMeta(path),
+			}
+			if data, err := json.Marshal(payload); err == nil {
+				metadataPayload = string(data)
+			}
 			m.mainThreadFn(func() {
 				if itemRow >= len(m.entries) || m.entries[itemRow].Path != path {
 					return
@@ -368,6 +381,8 @@ func (m *FileSystemModel) setData(
 				}
 				item.SetData(qt6.NewQVariant4(int(size)), SizeRole)
 				item.SetData(qt6.NewQVariant4(int(mtime)), ModifiedRole)
+				item.SetData(qt6.NewQVariant14(metadataPayload), MetadataRole)
+				slog.DebugContext(m.ctx, "browser: ActionStatFileRole updated metadata role", "path", path, "bytes", len(metadataPayload))
 			})
 		}(entry.Path, row)
 		return true
@@ -458,23 +473,44 @@ func (m *FileSystemModel) LoadMetadata(path string, knownModified int64) string 
 		return "{}"
 	}
 
+	slog.DebugContext(m.ctx, "browser: loadMetadata start", "path", path, "knownModified", knownModified)
+
 	// First, consume any async-enriched metadata result.
 	m.metadataMu.Lock()
 	if data, ok := m.metadataOut[path]; ok && data != "" {
 		delete(m.metadataOut, path)
 		m.metadataMu.Unlock()
+		slog.DebugContext(m.ctx, "browser: loadMetadata using async payload", "path", path, "bytes", len(data))
 		return data
 	}
 	m.metadataMu.Unlock()
 
 	entry, ok := m.findEntry(path)
-	if !ok {
-		return "{}"
+	if knownModified > 0 && ok && entry.Modified > 0 && entry.Modified != knownModified {
+		// Keep rendering with the freshest known entry rather than returning an
+		// empty payload, so metadata remains visible during projection churn.
+		slog.DebugContext(m.ctx,
+			"browser: metadata modified mismatch",
+			"path", path,
+			"known", knownModified,
+			"entry", entry.Modified,
+		)
 	}
 
-	if knownModified > 0 && entry.Modified > 0 && entry.Modified != knownModified {
-		// Entry changed since selection snapshot; let next projection refresh it.
-		return "{}"
+	if !ok {
+		info, err := os.Lstat(path)
+		if err != nil {
+			slog.DebugContext(m.ctx, "browser: loadMetadata lstat failed", "path", path, "err", err)
+			return "{}"
+		}
+		entry = folderEntry{
+			Name:     info.Name(),
+			Path:     path,
+			IsDir:    info.IsDir(),
+			Size:     info.Size(),
+			Modified: info.ModTime().Unix(),
+			Tags:     []string{},
+		}
 	}
 
 	payload := map[string]any{
@@ -484,9 +520,18 @@ func (m *FileSystemModel) LoadMetadata(path string, knownModified int64) string 
 		"size":     entry.Size,
 		"modified": entry.Modified,
 		"tags":     append([]string(nil), entry.Tags...),
+		"userMeta": m.collectUserMeta(path),
+	}
+	if userMeta, ok := payload["userMeta"].(map[string]string); ok {
+		slog.DebugContext(m.ctx, "browser: loadMetadata payload ready",
+			"path", path,
+			"tagCount", len(entry.Tags),
+			"metaKeys", len(userMeta),
+		)
 	}
 	data, err := json.Marshal(payload)
 	if err != nil {
+		slog.DebugContext(m.ctx, "browser: loadMetadata marshal failed", "path", path, "err", err)
 		return "{}"
 	}
 
@@ -503,11 +548,44 @@ func (m *FileSystemModel) findEntry(path string) (folderEntry, bool) {
 	return folderEntry{}, false
 }
 
+func (m *FileSystemModel) collectUserMeta(path string) map[string]string {
+	meta := make(map[string]string)
+	slog.DebugContext(m.ctx, "browser: collectUserMeta start", "path", path)
+
+	if m.xattrs != nil {
+		localMeta, localErr := m.xattrs.ReadAllMeta(m.ctx, path)
+		if localErr != nil {
+			slog.DebugContext(m.ctx, "browser: local xattr metadata read failed", "path", path, "err", localErr)
+		} else {
+			maps.Copy(meta, localMeta)
+			slog.DebugContext(m.ctx, "browser: local xattr metadata collected", "path", path, "keys", len(localMeta), "meta", localMeta)
+		}
+	}
+
+	if m.controller != nil {
+		ctx, cancel := context.WithTimeout(m.ctx, 5*time.Second)
+		defer cancel()
+		daemonMeta, daemonErr := m.controller.GetFileMeta(ctx, path)
+		if daemonErr != nil {
+			slog.DebugContext(ctx, "browser: daemon metadata fetch failed", "path", path, "err", daemonErr)
+		} else {
+			maps.Copy(meta, daemonMeta)
+			slog.DebugContext(ctx, "browser: daemon metadata collected", "path", path, "keys", len(daemonMeta), "meta", daemonMeta)
+		}
+	}
+
+	slog.DebugContext(m.ctx, "browser: collectUserMeta done", "path", path, "keys", len(meta), "meta", meta)
+
+	return meta
+}
+
 // RequestMetadata starts async metadata loading for one path.
 func (m *FileSystemModel) RequestMetadata(path string) {
 	if path == "" {
 		return
 	}
+
+	slog.DebugContext(m.ctx, "browser: RequestMetadata queued", "path", path)
 
 	entry, ok := m.findEntry(path)
 	knownTags := []string{}
@@ -530,10 +608,16 @@ func (m *FileSystemModel) RequestMetadata(path string) {
 			m.metadataMu.Unlock()
 		}()
 
+		slog.DebugContext(m.ctx, "browser: RequestMetadata start", "path", target)
+
 		info, err := os.Lstat(target)
 		if err != nil {
+			slog.DebugContext(m.ctx, "browser: RequestMetadata lstat failed", "path", target, "err", err)
 			return
 		}
+
+		userMeta := m.collectUserMeta(target)
+		slog.DebugContext(m.ctx, "browser: RequestMetadata collected meta", "path", target, "keys", len(userMeta), "meta", userMeta)
 
 		payload := map[string]any{
 			"path":     target,
@@ -542,15 +626,18 @@ func (m *FileSystemModel) RequestMetadata(path string) {
 			"size":     info.Size(),
 			"modified": info.ModTime().Unix(),
 			"tags":     tags,
+			"userMeta": userMeta,
 		}
 		data, err := json.Marshal(payload)
 		if err != nil {
+			slog.DebugContext(m.ctx, "browser: RequestMetadata marshal failed", "path", target, "err", err)
 			return
 		}
 
 		m.metadataMu.Lock()
 		m.metadataOut[target] = string(data)
 		m.metadataMu.Unlock()
+		slog.DebugContext(m.ctx, "browser: RequestMetadata stored payload", "path", target, "bytes", len(data))
 	}(path, knownTags)
 }
 
@@ -563,6 +650,8 @@ func (m *FileSystemModel) TakeMetadata(path string) string {
 	if data != "" {
 		delete(m.metadataOut, path)
 	}
+
+	slog.DebugContext(m.ctx, "browser: TakeMetadata", "path", path, "bytes", len(data))
 
 	return data
 }

@@ -79,6 +79,33 @@ func (a *Adapter) HydrateTags(ctx context.Context, paths []string) (map[string][
 	return tagMap, nil
 }
 
+// GetMeta fetches user metadata key-value pairs for a single file path.
+// Returns an empty map (not an error) when no daemon is connected.
+func (a *Adapter) GetMeta(ctx context.Context, path string) (map[string]string, error) {
+	if a == nil || a.caller == nil {
+		return nil, errors.New("daemon adapter not configured")
+	}
+
+	resp, err := a.caller.Call(ctx, &ipcv1.Request{
+		Kind: &ipcv1.Request_Metadata{Metadata: &ipcv1.MetadataRequest{Path: path}},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	metaResp, ok := resp.GetKind().(*ipcv1.Response_Metadata)
+	if !ok || metaResp.Metadata == nil {
+		return nil, errors.New("unexpected daemon metadata response")
+	}
+
+	src := metaResp.Metadata.GetMetadata()
+	result := make(map[string]string, len(src))
+	for k, v := range src {
+		result[k] = v
+	}
+	return result, nil
+}
+
 // Autocomplete fetches daemon tag suggestions for a prefix.
 func (a *Adapter) Autocomplete(ctx context.Context, prefix string) ([]string, error) {
 	if a == nil || a.caller == nil {

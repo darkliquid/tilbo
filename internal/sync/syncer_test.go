@@ -124,7 +124,7 @@ func TestSyncFile(t *testing.T) {
 	}
 	sysStat := info.Sys().(*syscall.Stat_t)
 
-	if err := s.SyncFile(ctx, file1, sysStat); err != nil {
+	if _, err := s.SyncFile(ctx, file1, sysStat); err != nil {
 		t.Fatalf("SyncFile failed: %v", err)
 	}
 

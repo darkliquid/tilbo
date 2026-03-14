@@ -231,16 +231,6 @@ func run(
 		}
 	}
 
-	syncErrCh := make(chan error, 1)
-	go func() {
-		syncErrCh <- syncer.Run(ctx)
-	}()
-	defer func() {
-		if syncErr := waitForSyncerShutdown(syncErrCh); syncErr != nil && !errors.Is(syncErr, context.Canceled) {
-			slog.Warn("syncer shutdown timed out or failed", "err", syncErr)
-		}
-	}()
-
 	// --- M2: harvester pipeline and rule engine ---
 
 	// Shared WASM compilation cache stored in the OS temp directory.
@@ -314,6 +304,20 @@ func run(
 
 	// Sweeper (re-evaluates all files after rule reload).
 	sweeper := rules.NewSweeper(idx, tags, pipeline, engine)
+
+	// Launch the background syncer now that the processor is ready.
+	// OnFileSynced fires the harvester pipeline for every pre-existing file
+	// so they get MIME detection, ffprobe, rule evaluation, etc. on startup.
+	syncer.OnFileSynced = proc.ProcessFile
+	syncErrCh := make(chan error, 1)
+	go func() {
+		syncErrCh <- syncer.Run(ctx)
+	}()
+	defer func() {
+		if syncErr := waitForSyncerShutdown(syncErrCh); syncErr != nil && !errors.Is(syncErr, context.Canceled) {
+			slog.Warn("syncer shutdown timed out or failed", "err", syncErr)
+		}
+	}()
 
 	// Start the IPC server.
 	if mkErr := os.MkdirAll(filepath.Dir(sockPath), 0o700); mkErr != nil {
@@ -408,6 +412,7 @@ func run(
 
 		case <-hupCh:
 			slog.InfoContext(ctx, "SIGHUP: reloading harvester and rule configuration")
+			proc.clearAllNonRetryablePaths()
 			reloadConfig(ctx, engine, ruleReg, sweeper, wasmCache, cfgPath)
 
 		case <-ctx.Done():
@@ -639,12 +644,14 @@ func handleFSEvent(
 
 	switch ev.Kind {
 	case watcher.EventCreate, watcher.EventModify:
+		// A fresh write/modify event is a signal that the file may now be writable.
+		proc.clearPathNonRetryable(ev.Path)
 		var stat syscall.Stat_t
 		if err := syscall.Stat(ev.Path, &stat); err != nil {
 			slog.DebugContext(ctx, "fs event stat failed", "path", ev.Path, "err", err)
 			return
 		}
-		if err := syncer.SyncFile(ctx, ev.Path, &stat); err != nil {
+		if _, err := syncer.SyncFile(ctx, ev.Path, &stat); err != nil {
 			slog.DebugContext(ctx, "fs event sync file failed", "path", ev.Path, "err", err)
 		}
 		// M2: run harvester pipeline + rule engine after the index is updated.
@@ -664,7 +671,7 @@ func handleFSEvent(
 			slog.DebugContext(ctx, "fs event stat new file failed", "path", ev.Path, "err", err)
 			return
 		}
-		if err := syncer.SyncFile(ctx, ev.Path, &stat); err != nil {
+		if _, err := syncer.SyncFile(ctx, ev.Path, &stat); err != nil {
 			slog.DebugContext(ctx, "fs event sync new file failed", "path", ev.Path, "err", err)
 		}
 		proc.ProcessFile(ctx, ev.Path)

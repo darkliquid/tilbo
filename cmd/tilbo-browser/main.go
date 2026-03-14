@@ -432,6 +432,7 @@ func main() {
 	b.engine.RootContext().SetContextProperty2("fsRoleStatFile", qt6.NewQVariant4(models.ActionStatFileRole))
 	b.engine.RootContext().SetContextProperty2("fsRoleSize", qt6.NewQVariant4(models.SizeRole))
 	b.engine.RootContext().SetContextProperty2("fsRoleModified", qt6.NewQVariant4(models.ModifiedRole))
+	b.engine.RootContext().SetContextProperty2("fsRoleMetadata", qt6.NewQVariant4(models.MetadataRole))
 	b.engine.RootContext().SetContextProperty2("acRoleTrigger", qt6.NewQVariant4(models.AcTriggerRole))
 
 	// Setup thread-safety bridge

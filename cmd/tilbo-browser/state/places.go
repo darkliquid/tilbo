@@ -2,10 +2,12 @@ package state
 
 import (
 	"bufio"
+	"fmt"
 	"os"
 	"strings"
 
 	"github.com/darkliquid/tilbo/cmd/tilbo-browser/core"
+	"github.com/darkliquid/tilbo/internal/config"
 )
 
 const mountsMinFields = 3
@@ -45,12 +47,14 @@ func BuildPlaces() ([]core.PlaceEntry, error) {
 }
 
 func fuseMountPath() string {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return ""
+	cfg, _ := config.Load(config.Path())
+	if cfg.Daemon.FuseMount != "" {
+		return cfg.Daemon.FuseMount
 	}
-
-	return home + "/tags"
+	if dir := os.Getenv("XDG_RUNTIME_DIR"); dir != "" {
+		return dir + "/tilbo/tags"
+	}
+	return fmt.Sprintf("/run/user/%d/tilbo/tags", os.Getuid())
 }
 
 func isFUSEMounted(mountPoint string) bool {

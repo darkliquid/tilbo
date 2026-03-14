@@ -3,6 +3,7 @@ package index
 import (
 	"context"
 	"path/filepath"
+	"sync"
 	"testing"
 )
 
@@ -176,5 +177,68 @@ func TestUpsertMeta(t *testing.T) {
 	}
 	if val != "bob" || src != "harvester" {
 		t.Fatalf("expected bob/harvester, got %q/%q", val, src)
+	}
+}
+
+func TestSyncFileApply_ConcurrentDelete_NoForeignKeyErrors(t *testing.T) {
+	ctx := context.Background()
+	dir := t.TempDir()
+	db, err := Open(ctx, filepath.Join(dir, "test.db"))
+	if err != nil {
+		t.Fatalf("Open: %v", err)
+	}
+	t.Cleanup(func() { db.Close() })
+
+	const (
+		workers    = 4
+		iterations = 80
+	)
+
+	path := "/tmp/race-file.jpg"
+	meta := map[string]string{
+		"mime":      "image/jpeg",
+		"size_tier": "small",
+	}
+	provenance := map[string]string{"photo": "manual"}
+	tags := []string{"photo"}
+
+	errCh := make(chan error, workers*iterations)
+	var wg sync.WaitGroup
+
+	for w := range workers {
+		wg.Add(1)
+		go func(worker int) {
+			defer wg.Done()
+			for i := range iterations {
+				if (i+worker)%2 == 0 {
+					_ = db.DeleteFile(ctx, path)
+				}
+
+				if _, err := db.SyncFileApply(
+					ctx,
+					path,
+					int64(i+1),
+					1,
+					1700000000+int64(i),
+					1024,
+					tags,
+					meta,
+					provenance,
+				); err != nil {
+					errCh <- err
+				}
+
+				if (i+worker)%3 == 0 {
+					_ = db.DeleteFile(ctx, path)
+				}
+			}
+		}(w)
+	}
+
+	wg.Wait()
+	close(errCh)
+
+	for err := range errCh {
+		t.Fatalf("SyncFileApply should not fail under concurrent delete, got: %v", err)
 	}
 }

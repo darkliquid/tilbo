@@ -59,6 +59,15 @@ func (c *Controller) HydrateTags(ctx context.Context, paths []string) (map[strin
 	return c.daemon.HydrateTags(ctx, paths)
 }
 
+// GetFileMeta returns user metadata key-value pairs for one file path.
+// Returns empty map, nil if no daemon is connected.
+func (c *Controller) GetFileMeta(ctx context.Context, path string) (map[string]string, error) {
+	if c.daemon == nil {
+		return map[string]string{}, nil
+	}
+	return c.daemon.GetMeta(ctx, path)
+}
+
 // LocalSearch performs a local glob-based file search.
 func (c *Controller) LocalSearch(chips []string, limit uint32, allowHidden bool) ([]core.SearchFile, error) {
 	return LocalSearch(chips, limit, allowHidden)

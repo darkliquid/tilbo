@@ -43,7 +43,21 @@ type Syncer struct {
 
 	// OnIndexUpdated is called when a full sync scan completes.
 	OnIndexUpdated func(filesTotal, tagsTotal uint64)
+
+	// OnFileSynced is called for files that have no harvested metadata yet
+	// (no mime xattr) so the harvester pipeline runs on them. Calls are
+	// dispatched to a bounded goroutine pool to prevent goroutine explosion
+	// on large libraries.
+	OnFileSynced func(ctx context.Context, path string)
+
+	// onFileSyncedSem is a semaphore limiting concurrent OnFileSynced goroutines.
+	onFileSyncedSem chan struct{}
 }
+
+// onFileSyncedWorkers is the max number of concurrent OnFileSynced goroutines.
+// Each worker can itself spawn additional async harvester goroutines (e.g. ffprobe),
+// so keeping this modest avoids overwhelming the system on large libraries.
+var onFileSyncedWorkers = runtime.NumCPU() * 2
 
 // New creates a new Syncer.
 func New(idx *index.DB, tags *xattr.Service, watchPath string, watchHidden bool, excludePaths []string) *Syncer {
@@ -52,11 +66,12 @@ func New(idx *index.DB, tags *xattr.Service, watchPath string, watchHidden bool,
 		clean[i] = filepath.Clean(p)
 	}
 	s := &Syncer{
-		idx:          idx,
-		tags:         tags,
-		watchPath:    filepath.Clean(watchPath),
-		watchHidden:  watchHidden,
-		excludePaths: clean,
+		idx:             idx,
+		tags:            tags,
+		watchPath:       filepath.Clean(watchPath),
+		watchHidden:     watchHidden,
+		excludePaths:    clean,
+		onFileSyncedSem: make(chan struct{}, onFileSyncedWorkers),
 	}
 	s.setState(ipcv1.DaemonState_DAEMON_STATE_IDLE)
 	return s
@@ -186,63 +201,63 @@ func (s *Syncer) walkEntry(ctx context.Context, path string, d fs.DirEntry, walk
 		return nil
 	}
 
-	if err := s.SyncFile(ctx, path, sysStat); err != nil {
+	needsHarvest, err := s.SyncFile(ctx, path, sysStat)
+	if err != nil {
 		slog.DebugContext(ctx, "syncer: sync file error", "path", path, "err", err)
+		return nil
+	}
+
+	// Only trigger harvesting for files with no existing metadata (mime xattr
+	// absent). Already-harvested files don't need reprocessing on restart.
+	if needsHarvest && s.OnFileSynced != nil {
+		// Acquire a slot in the bounded worker pool, blocking the walk if full.
+		// This caps concurrent goroutines and prevents resource exhaustion on
+		// large libraries.
+		s.onFileSyncedSem <- struct{}{}
+		go func(p string) {
+			defer func() { <-s.onFileSyncedSem }()
+			s.OnFileSynced(ctx, p)
+		}(path)
 	}
 
 	return nil
 }
 
 // SyncFile processes a single file, reading its xattrs and updating the index.
-func (s *Syncer) SyncFile(ctx context.Context, path string, stat *syscall.Stat_t) error {
+// It returns needsHarvest=true when the file has no existing mime metadata,
+// indicating it should be run through the harvester pipeline.
+func (s *Syncer) SyncFile(ctx context.Context, path string, stat *syscall.Stat_t) (needsHarvest bool, err error) {
 	// 1. Read all xattrs. If none exist, we still want to ensure the file is in the index
 	// so the harvester pipeline (M2) can process it if rules apply.
 	tags, err := s.tags.ReadTags(ctx, path)
 	if err != nil {
-		return fmt.Errorf("read tags: %w", err)
+		return false, fmt.Errorf("read tags: %w", err)
 	}
 
 	meta, err := s.tags.ReadAllMeta(ctx, path)
 	if err != nil {
-		return fmt.Errorf("read meta: %w", err)
+		return false, fmt.Errorf("read meta: %w", err)
 	}
 
 	sourceMap, err := s.tags.ReadSource(ctx, path)
 	if err != nil {
-		return fmt.Errorf("read source: %w", err)
+		return false, fmt.Errorf("read source: %w", err)
 	}
+
+	// File needs harvesting if it has no mime metadata yet.
+	_, hasMIME := meta["mime"]
+	needsHarvest = !hasMIME
 
 	// 2. Upsert the file record
 	inode := saturatingInt64FromUint64(stat.Ino)
 	device := saturatingInt64FromUint64(stat.Dev)
-	fileID, err := s.idx.UpsertFile(ctx, path, inode, device, stat.Mtim.Sec, stat.Size)
+	_, err = s.idx.SyncFileApply(ctx, path, inode, device, stat.Mtim.Sec, stat.Size, tags, meta, sourceMap)
 	if err != nil {
-		return fmt.Errorf("upsert file: %w", err)
-	}
-
-	// 3. Set file tags
-	if err := s.idx.SetFileTags(ctx, fileID, tags); err != nil {
-		return fmt.Errorf("set tags: %w", err)
-	}
-
-	// 4. Upsert metadata and tag provenance
-	for k, v := range meta {
-		// If source isn't explicitly provided, default to "manual" or "unknown"
-		src := "manual"
-		if err := s.idx.UpsertMeta(ctx, fileID, k, v, src); err != nil {
-			slog.DebugContext(ctx, "syncer: upsert meta", "file", path, "key", k, "err", err)
-		}
-	}
-
-	for tagName, sourceName := range sourceMap {
-		tagID, err := s.idx.UpsertTag(ctx, tagName)
-		if err == nil {
-			_ = s.idx.SetTagProvenance(ctx, fileID, tagID, sourceName)
-		}
+		return false, fmt.Errorf("apply file sync: %w", err)
 	}
 
 	s.filesIndexed.Add(1)
-	return nil
+	return needsHarvest, nil
 }
 
 func saturatingUint64FromInt64(v int64) uint64 {

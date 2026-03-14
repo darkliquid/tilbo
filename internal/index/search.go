@@ -88,18 +88,26 @@ func (d *DB) Search(ctx context.Context, p SearchParams) ([]SearchResult, int, e
 	}
 
 	// Tag include.
+	// Both branches use an upfront IN-subquery so SQLite can drive the join
+	// from file_tags(tag_id) rather than running a correlated subquery for
+	// every row in the files table.
 	if len(p.Tags) > 0 {
 		placeholders := strings.Repeat("?,", len(p.Tags))
 		placeholders = placeholders[:len(placeholders)-1]
 		if p.TagsAny {
-			fmt.Fprintf(&sb, ` AND EXISTS (
-				SELECT 1 FROM file_tags ft JOIN tags t ON t.id = ft.tag_id
-				WHERE ft.file_id = f.id AND t.name IN (%s))`, placeholders)
-		} else {
-			fmt.Fprintf(&sb, ` AND (
-				SELECT COUNT(DISTINCT t.name) FROM file_tags ft
+			// OR: file must have at least one of the tags.
+			fmt.Fprintf(&sb, ` AND f.id IN (
+				SELECT DISTINCT ft.file_id FROM file_tags ft
 				JOIN tags t ON t.id = ft.tag_id
-				WHERE ft.file_id = f.id AND t.name IN (%s)) = %d`, placeholders, len(p.Tags))
+				WHERE t.name IN (%s))`, placeholders)
+		} else {
+			// AND: file must have every one of the tags.
+			fmt.Fprintf(&sb, ` AND f.id IN (
+				SELECT ft.file_id FROM file_tags ft
+				JOIN tags t ON t.id = ft.tag_id
+				WHERE t.name IN (%s)
+				GROUP BY ft.file_id
+				HAVING COUNT(DISTINCT t.name) = %d)`, placeholders, len(p.Tags))
 		}
 		for _, t := range p.Tags {
 			args = append(args, t)

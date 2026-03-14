@@ -31,6 +31,9 @@ type HandlerContext interface {
 	// HydrateTags enriches paths with daemon tag data.
 	// Returns nil, nil if no daemon is connected or paths is empty.
 	HydrateTags(ctx context.Context, paths []string) (map[string][]string, error)
+	// GetFileMeta returns user metadata key-value pairs for one file path.
+	// Returns empty map, nil if no daemon is connected.
+	GetFileMeta(ctx context.Context, path string) (map[string]string, error)
 	// LocalSearch performs a local glob-based file search.
 	LocalSearch(chips []string, limit uint32, allowHidden bool) ([]SearchFile, error)
 	// SearchDaemon runs a daemon-backed search.

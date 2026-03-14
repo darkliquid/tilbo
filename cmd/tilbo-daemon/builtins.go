@@ -2,10 +2,19 @@ package main
 
 import (
 	"log/slog"
+	"reflect"
 
 	"github.com/darkliquid/tilbo/internal/harvester"
 	"github.com/darkliquid/tilbo/internal/harvester/builtin"
 )
+
+func isNilHarvester(h harvester.Harvester) bool {
+	if h == nil {
+		return true
+	}
+	v := reflect.ValueOf(h)
+	return v.Kind() == reflect.Ptr && v.IsNil()
+}
 
 // registerBuiltins adds all built-in harvesters to the pipeline.
 // Optional harvesters that depend on external binaries (ffprobe, exiv2, pdfinfo,
@@ -32,7 +41,7 @@ func registerBuiltins(p *harvester.Pipeline) {
 		builtin.NewFFProbeHarvester(),
 		builtin.NewCalibreHarvester(),
 	} {
-		if h == nil {
+		if isNilHarvester(h) {
 			continue
 		}
 		p.Register(h)

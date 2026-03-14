@@ -55,6 +55,16 @@ func Open(ctx context.Context, path string) (*DB, error) {
 		_ = db.Close()
 		return nil, fmt.Errorf("index: enable foreign keys: %w", err)
 	}
+	// 128 MiB memory-mapped I/O: avoids kernel↔userspace copies on read paths.
+	if _, err := db.ExecContext(ctx, "PRAGMA mmap_size=134217728"); err != nil {
+		_ = db.Close()
+		return nil, fmt.Errorf("index: set mmap_size: %w", err)
+	}
+	// 32 MiB page cache (negative value = KiB).
+	if _, err := db.ExecContext(ctx, "PRAGMA cache_size=-32768"); err != nil {
+		_ = db.Close()
+		return nil, fmt.Errorf("index: set cache_size: %w", err)
+	}
 
 	idx := &DB{
 		db: db,
@@ -246,6 +256,103 @@ func (d *DB) SetFileTags(ctx context.Context, fileID int64, tagNames []string) e
 	return tx.Commit()
 }
 
+// SyncFileApply atomically applies file row, tags, metadata, and tag provenance.
+// Keeping this in a single transaction prevents concurrent delete/rename events
+// from interleaving between per-step writes and violating foreign keys.
+func (d *DB) SyncFileApply(
+	ctx context.Context,
+	path string,
+	inode, device, mtime, size int64,
+	tagNames []string,
+	meta map[string]string,
+	sourceMap map[string]string,
+) (int64, error) {
+	now := time.Now().Unix()
+
+	tx, err := d.db.BeginTx(ctx, nil)
+	if err != nil {
+		return 0, fmt.Errorf("index: SyncFileApply begin tx: %w", err)
+	}
+	defer tx.Rollback() //nolint:errcheck // best-effort rollback; commit path handles success
+
+	var fileID int64
+	if err := tx.QueryRowContext(ctx, `
+		INSERT INTO files(path, inode, device, mtime, size_bytes, indexed_at)
+		VALUES (?, ?, ?, ?, ?, ?)
+		ON CONFLICT(path) DO UPDATE SET
+			inode      = excluded.inode,
+			device     = excluded.device,
+			mtime      = excluded.mtime,
+			size_bytes = excluded.size_bytes,
+			indexed_at = excluded.indexed_at
+		RETURNING id`,
+		path, inode, device, mtime, size, now,
+	).Scan(&fileID); err != nil {
+		return 0, fmt.Errorf("index: SyncFileApply upsert file %q: %w", path, err)
+	}
+
+	if _, err := tx.ExecContext(ctx, "DELETE FROM file_tags WHERE file_id = ?", fileID); err != nil {
+		return 0, fmt.Errorf("index: SyncFileApply clear tags file=%d: %w", fileID, err)
+	}
+
+	for _, name := range tagNames {
+		if _, err := tx.ExecContext(ctx, "INSERT OR IGNORE INTO tags(name) VALUES (?)", name); err != nil {
+			return 0, fmt.Errorf("index: SyncFileApply upsert tag %q: %w", name, err)
+		}
+
+		var tagID int64
+		if err := tx.QueryRowContext(ctx, "SELECT id FROM tags WHERE name = ?", name).Scan(&tagID); err != nil {
+			return 0, fmt.Errorf("index: SyncFileApply resolve tag %q: %w", name, err)
+		}
+
+		if _, err := tx.ExecContext(ctx,
+			"INSERT OR IGNORE INTO file_tags(file_id, tag_id) VALUES (?, ?)", fileID, tagID); err != nil {
+			return 0, fmt.Errorf("index: SyncFileApply add tag %q: %w", name, err)
+		}
+	}
+
+	for k, v := range meta {
+		if _, err := tx.ExecContext(ctx, `
+			INSERT INTO metadata(file_id, key, value, source)
+			VALUES (?, ?, ?, ?)
+			ON CONFLICT(file_id, key) DO UPDATE SET
+				value  = excluded.value,
+				source = excluded.source`,
+			fileID, k, v, "manual",
+		); err != nil {
+			return 0, fmt.Errorf("index: SyncFileApply upsert meta file=%d key=%q: %w", fileID, k, err)
+		}
+	}
+
+	for tagName, sourceName := range sourceMap {
+		if _, err := tx.ExecContext(ctx, "INSERT OR IGNORE INTO tags(name) VALUES (?)", tagName); err != nil {
+			return 0, fmt.Errorf("index: SyncFileApply upsert source tag %q: %w", tagName, err)
+		}
+
+		var tagID int64
+		if err := tx.QueryRowContext(ctx, "SELECT id FROM tags WHERE name = ?", tagName).Scan(&tagID); err != nil {
+			return 0, fmt.Errorf("index: SyncFileApply resolve source tag %q: %w", tagName, err)
+		}
+
+		if _, err := tx.ExecContext(ctx, `
+			INSERT INTO tag_provenance(file_id, tag_id, source, set_at)
+			VALUES (?, ?, ?, ?)
+			ON CONFLICT(file_id, tag_id) DO UPDATE SET
+				source = excluded.source,
+				set_at = excluded.set_at`,
+			fileID, tagID, sourceName, now,
+		); err != nil {
+			return 0, fmt.Errorf("index: SyncFileApply set tag provenance file=%d tag=%d: %w", fileID, tagID, err)
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return 0, fmt.Errorf("index: SyncFileApply commit: %w", err)
+	}
+
+	return fileID, nil
+}
+
 // UpsertMeta inserts or replaces a metadata key-value pair for fileID.
 func (d *DB) UpsertMeta(ctx context.Context, fileID int64, key, value, source string) error {
 	if err := d.q.UpsertMeta(ctx, dbgen.UpsertMetaParams{
@@ -370,20 +477,23 @@ func (d *DB) ListCooccurringTags(ctx context.Context, includeTags, excludeTags [
 	var sb strings.Builder
 	args := make([]any, 0, (len(includeTags)+len(excludeTags))*tagArgMultiplier)
 
+	// Build the set of qualifying file IDs upfront so the outer query can
+	// drive from file_tags(tag_id) without a correlated subquery per row.
 	sb.WriteString(`SELECT DISTINCT t.name
 		FROM tags t
 		JOIN file_tags ft ON ft.tag_id = t.id
-		JOIN files f ON ft.file_id = f.id
-		WHERE 1=1`)
+		WHERE ft.file_id IN (SELECT f.id FROM files f WHERE 1=1`)
 
-	// File must have ALL include tags.
+	// File must have ALL include tags: intersect via GROUP BY / HAVING.
 	if len(includeTags) > 0 {
 		ph := strings.Repeat("?,", len(includeTags))
 		ph = ph[:len(ph)-1]
-		fmt.Fprintf(&sb, ` AND (
-			SELECT COUNT(DISTINCT t2.name) FROM file_tags ft2
+		fmt.Fprintf(&sb, ` AND f.id IN (
+			SELECT ft2.file_id FROM file_tags ft2
 			JOIN tags t2 ON ft2.tag_id = t2.id
-			WHERE ft2.file_id = f.id AND t2.name IN (%s)) = %d`, ph, len(includeTags))
+			WHERE t2.name IN (%s)
+			GROUP BY ft2.file_id
+			HAVING COUNT(DISTINCT t2.name) = %d)`, ph, len(includeTags))
 		for _, t := range includeTags {
 			args = append(args, t)
 		}
@@ -393,13 +503,16 @@ func (d *DB) ListCooccurringTags(ctx context.Context, includeTags, excludeTags [
 	if len(excludeTags) > 0 {
 		ph := strings.Repeat("?,", len(excludeTags))
 		ph = ph[:len(ph)-1]
-		fmt.Fprintf(&sb, ` AND NOT EXISTS (
-			SELECT 1 FROM file_tags ft3 JOIN tags t3 ON ft3.tag_id = t3.id
-			WHERE ft3.file_id = f.id AND t3.name IN (%s))`, ph)
+		fmt.Fprintf(&sb, ` AND f.id NOT IN (
+			SELECT ft3.file_id FROM file_tags ft3
+			JOIN tags t3 ON ft3.tag_id = t3.id
+			WHERE t3.name IN (%s))`, ph)
 		for _, t := range excludeTags {
 			args = append(args, t)
 		}
 	}
+
+	sb.WriteString(")")
 
 	// Omit tags already in include or exclude from the result.
 	allUsed := append(append([]string(nil), includeTags...), excludeTags...)

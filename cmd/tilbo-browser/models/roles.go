@@ -10,6 +10,7 @@ const (
 	IsDirRole
 	SizeRole
 	ModifiedRole
+	MetadataRole
 	TagsRole
 	ActionOpenRole
 	ActionRenameRole

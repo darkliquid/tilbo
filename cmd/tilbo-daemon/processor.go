@@ -7,7 +7,12 @@ import (
 	"fmt"
 	"log/slog"
 	"maps"
+	"os"
 	"strings"
+	"sync"
+	"syscall"
+
+	"golang.org/x/sys/unix"
 
 	"github.com/darkliquid/tilbo/internal/graph"
 	"github.com/darkliquid/tilbo/internal/harvester"
@@ -27,6 +32,9 @@ type Processor struct {
 	engine   *rules.Engine
 	g        *graph.Graph
 	embedder *vectorize.ONNXEmbedder
+
+	nonRetryableMu    sync.RWMutex
+	nonRetryablePaths map[string]struct{}
 
 	// OnFileTagged is called when a file's tags have been modified.
 	OnFileTagged func(path string, added []string, removed []string)
@@ -48,13 +56,27 @@ func newProcessor(
 		engine:   engine,
 		g:        g,
 		embedder: embedder,
+		nonRetryablePaths: make(map[string]struct{}),
 	}
 }
 
 // ProcessFile runs the full M2 pipeline for path. Any error is logged rather
 // than returned because a pipeline failure should not stop the daemon.
 func (p *Processor) ProcessFile(ctx context.Context, path string) {
+	if p.shouldSkipPath(path) {
+		if !isRetryEligiblePath(path) {
+			return
+		}
+		p.clearPathNonRetryable(path)
+	}
+	if ctx.Err() != nil {
+		return
+	}
 	if err := p.processFile(ctx, path); err != nil {
+		if isNonRetryableProcessingErr(err) {
+			p.markPathNonRetryable(path)
+			return
+		}
 		slog.DebugContext(ctx, "processor: file error", "path", path, "err", err)
 	}
 }
@@ -78,10 +100,31 @@ func (p *Processor) processFile(ctx context.Context, path string) error {
 	mime, _ := meta["mime"].(string)
 	input := harvester.Input{Path: path, MIME: mime, Existing: meta}
 
-	// Run synchronous harvesters.
+	// Phase 1: Run synchronous harvesters. On first-ever processing, MIME is
+	// unknown so only unconditional harvesters (stat, mime) will run.
 	additional, err := p.pipeline.Run(ctx, input)
 	if err != nil {
+		if isNonRetryableProcessingErr(err) {
+			return nil
+		}
 		slog.DebugContext(ctx, "processor: pipeline error", "path", path, "err", err)
+	}
+
+	// Phase 2: If MIME was just discovered this run, re-run with the new MIME
+	// so that MIME-dependent harvesters (EXIF, ffprobe, media, …) get a chance
+	// to execute without waiting for a second file-change event.
+	if newMIME, _ := additional["mime"].(string); input.MIME == "" && newMIME != "" {
+		maps.Copy(meta, additional)
+		input.MIME = newMIME
+		input.Existing = meta
+		phase2, err2 := p.pipeline.Run(ctx, input)
+		if err2 != nil {
+			if isNonRetryableProcessingErr(err2) {
+				return nil
+			}
+			slog.DebugContext(ctx, "processor: pipeline phase2 error", "path", path, "err", err2)
+		}
+		maps.Copy(additional, phase2)
 	}
 
 	// Persist new metadata and merge into working map.
@@ -93,11 +136,19 @@ func (p *Processor) processFile(ctx context.Context, path string) error {
 		}
 		strVal := harvester.ValueToString(v)
 		if writeErr := p.tags.WriteMeta(ctx, path, k, strVal); writeErr != nil {
+			if isNonRetryableProcessingErr(writeErr) {
+				p.markPathNonRetryable(path)
+				return nil
+			}
 			slog.DebugContext(ctx, "processor: write meta xattr error",
 				"path", path, "key", k, "err", writeErr)
 		}
 		if idErr == nil {
 			if upsertErr := p.idx.UpsertMeta(ctx, fileID, k, strVal, "harvester"); upsertErr != nil {
+				if isNonRetryableProcessingErr(upsertErr) {
+					p.markPathNonRetryable(path)
+					return nil
+				}
 				slog.DebugContext(ctx, "processor: upsert meta index error",
 					"path", path, "key", k, "err", upsertErr)
 			}
@@ -110,6 +161,10 @@ func (p *Processor) processFile(ctx context.Context, path string) error {
 	})
 
 	if idErr != nil {
+		if isNonRetryableProcessingErr(idErr) {
+			p.markPathNonRetryable(path)
+			return nil
+		}
 		if errors.Is(idErr, sql.ErrNoRows) {
 			// File not yet in index (race between watcher and syncer); skip rule eval.
 			return nil
@@ -119,6 +174,10 @@ func (p *Processor) processFile(ctx context.Context, path string) error {
 
 	overrides, err := p.idx.GetTagOverrides(ctx, fileID)
 	if err != nil {
+		if isNonRetryableProcessingErr(err) {
+			p.markPathNonRetryable(path)
+			return nil
+		}
 		return fmt.Errorf("get tag overrides: %w", err)
 	}
 
@@ -176,11 +235,23 @@ func (p *Processor) updateEmbedding(
 // handleAsyncResult is called on a goroutine when an async harvester completes.
 // It persists the new metadata and re-runs rule evaluation.
 func (p *Processor) handleAsyncResult(ctx context.Context, path, harvesterName string, asyncMeta harvester.MetaMap) {
+	if p.shouldSkipPath(path) {
+		if !isRetryEligiblePath(path) {
+			return
+		}
+		p.clearPathNonRetryable(path)
+	}
+	if ctx.Err() != nil {
+		return
+	}
 	slog.DebugContext(ctx, "processor: async harvester complete",
 		"harvester", harvesterName, "path", path)
 
 	fileID, err := p.idx.GetFileIDByPath(ctx, path)
 	if err != nil {
+		if isNonRetryableProcessingErr(err) {
+			p.markPathNonRetryable(path)
+		}
 		return
 	}
 
@@ -197,14 +268,28 @@ func (p *Processor) handleAsyncResult(ctx context.Context, path, harvesterName s
 		}
 		strVal := harvester.ValueToString(v)
 		if writeErr := p.tags.WriteMeta(ctx, path, k, strVal); writeErr != nil {
+			if isNonRetryableProcessingErr(writeErr) {
+				p.markPathNonRetryable(path)
+				return
+			}
 			slog.DebugContext(ctx, "processor: write async meta xattr error", "path", path, "key", k, "err", writeErr)
 		}
 		if upsertErr := p.idx.UpsertMeta(ctx, fileID, k, strVal, harvesterName); upsertErr != nil {
+			if isNonRetryableProcessingErr(upsertErr) {
+				p.markPathNonRetryable(path)
+				return
+			}
 			slog.DebugContext(ctx, "processor: upsert async meta index error", "path", path, "key", k, "err", upsertErr)
 		}
 	}
 
-	overrides, _ := p.idx.GetTagOverrides(ctx, fileID)
+	overrides, overridesErr := p.idx.GetTagOverrides(ctx, fileID)
+	if overridesErr != nil {
+		if isNonRetryableProcessingErr(overridesErr) {
+			p.markPathNonRetryable(path)
+		}
+		return
+	}
 	diff, err := p.engine.Eval(ctx, meta, existingTags, overrides)
 	if err != nil || len(diff.Added) == 0 {
 		return
@@ -212,8 +297,64 @@ func (p *Processor) handleAsyncResult(ctx context.Context, path, harvesterName s
 
 	p.updateEmbedding(ctx, path, fileID, existingTags, meta)
 	if applyErr := p.applyDiff(ctx, path, fileID, existingTags, diff); applyErr != nil {
+		if isNonRetryableProcessingErr(applyErr) {
+			p.markPathNonRetryable(path)
+			return
+		}
 		slog.DebugContext(ctx, "processor: apply async diff error", "path", path, "err", applyErr)
 	}
+}
+
+func (p *Processor) shouldSkipPath(path string) bool {
+	p.nonRetryableMu.RLock()
+	_, ok := p.nonRetryablePaths[path]
+	p.nonRetryableMu.RUnlock()
+	return ok
+}
+
+func (p *Processor) markPathNonRetryable(path string) {
+	if path == "" {
+		return
+	}
+	p.nonRetryableMu.Lock()
+	p.nonRetryablePaths[path] = struct{}{}
+	p.nonRetryableMu.Unlock()
+}
+
+func (p *Processor) clearPathNonRetryable(path string) {
+	if path == "" {
+		return
+	}
+	p.nonRetryableMu.Lock()
+	delete(p.nonRetryablePaths, path)
+	p.nonRetryableMu.Unlock()
+}
+
+func (p *Processor) clearAllNonRetryablePaths() {
+	p.nonRetryableMu.Lock()
+	clear(p.nonRetryablePaths)
+	p.nonRetryableMu.Unlock()
+}
+
+func isRetryEligiblePath(path string) bool {
+	if path == "" {
+		return false
+	}
+	return unix.Access(path, unix.W_OK) == nil
+}
+
+func isNonRetryableProcessingErr(err error) bool {
+	if err == nil {
+		return false
+	}
+	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+		return true
+	}
+	if errors.Is(err, os.ErrPermission) || errors.Is(err, syscall.EPERM) || errors.Is(err, syscall.EACCES) {
+		return true
+	}
+	msg := strings.ToLower(err.Error())
+	return strings.Contains(msg, "permission denied") || strings.Contains(msg, "operation not permitted")
 }
 
 // applyDiff writes new tags to xattr, updates provenance, and updates the index.
