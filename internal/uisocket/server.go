@@ -48,15 +48,29 @@ type request struct {
 
 // response is a server → client reply frame.
 type response struct {
-	ID     int64       `json:"id"`
-	Result interface{} `json:"result,omitempty"`
-	Error  string      `json:"error,omitempty"`
+	ID     int64  `json:"id"`
+	Result any    `json:"result,omitempty"`
+	Error  string `json:"error,omitempty"`
 }
 
 // pushEvent is a server → client push frame (no id; client never acks).
 type pushEvent struct {
-	Event string      `json:"event"`
-	Args  interface{} `json:"args"`
+	Event string `json:"event"`
+	Args  any    `json:"args"`
+}
+
+// connWriter wraps a net.Conn with a per-connection write mutex so that
+// concurrent dispatch goroutines and broadcast calls cannot interleave bytes.
+type connWriter struct {
+	conn net.Conn
+	mu   sync.Mutex
+}
+
+// write serialises the data to the connection under the per-conn mutex.
+func (cw *connWriter) write(data []byte) {
+	cw.mu.Lock()
+	defer cw.mu.Unlock()
+	_, _ = cw.conn.Write(data)
 }
 
 // Server listens on a Unix socket, dispatches JSON calls to BrowserMethods,
@@ -66,7 +80,7 @@ type Server struct {
 	methods browser.Methods
 
 	mu      sync.Mutex
-	clients map[net.Conn]struct{}
+	clients map[net.Conn]*connWriter
 }
 
 // New returns a Server that will bind to socketPath and delegate calls to m.
@@ -74,7 +88,7 @@ func New(socketPath string, m browser.Methods) *Server {
 	return &Server{
 		path:    socketPath,
 		methods: m,
-		clients: make(map[net.Conn]struct{}),
+		clients: make(map[net.Conn]*connWriter),
 	}
 }
 
@@ -89,6 +103,12 @@ func (s *Server) Listen(ctx context.Context) error {
 	ln, err := net.Listen("unix", s.path)
 	if err != nil {
 		return fmt.Errorf("uisocket: listen %s: %w", s.path, err)
+	}
+	// Restrict socket to the owner only so other users on the system cannot
+	// connect and invoke file operations as this daemon user.
+	if err := os.Chmod(s.path, 0o600); err != nil {
+		_ = ln.Close()
+		return fmt.Errorf("uisocket: chmod %s: %w", s.path, err)
 	}
 	defer ln.Close()
 
@@ -112,7 +132,7 @@ func (s *Server) Listen(ctx context.Context) error {
 
 // BroadcastFileTagged pushes a FileTagged event to all clients.
 func (s *Server) BroadcastFileTagged(path string, added, removed []string) {
-	s.broadcast("FileTagged", map[string]interface{}{
+	s.broadcast("FileTagged", map[string]any{
 		"path":    path,
 		"added":   added,
 		"removed": removed,
@@ -121,7 +141,7 @@ func (s *Server) BroadcastFileTagged(path string, added, removed []string) {
 
 // BroadcastIndexUpdated pushes an IndexUpdated event to all clients.
 func (s *Server) BroadcastIndexUpdated(filesTotal, tagsTotal uint64) {
-	s.broadcast("IndexUpdated", map[string]interface{}{
+	s.broadcast("IndexUpdated", map[string]any{
 		"filesTotal": filesTotal,
 		"tagsTotal":  tagsTotal,
 	})
@@ -129,12 +149,12 @@ func (s *Server) BroadcastIndexUpdated(filesTotal, tagsTotal uint64) {
 
 // BroadcastDaemonStateChanged pushes a DaemonStateChanged event to all clients.
 func (s *Server) BroadcastDaemonStateChanged(state string) {
-	s.broadcast("DaemonStateChanged", map[string]interface{}{
+	s.broadcast("DaemonStateChanged", map[string]any{
 		"state": state,
 	})
 }
 
-func (s *Server) broadcast(eventName string, args interface{}) {
+func (s *Server) broadcast(eventName string, args any) {
 	data, err := json.Marshal(pushEvent{Event: eventName, Args: args})
 	if err != nil {
 		slog.Debug("uisocket: broadcast marshal error", "event", eventName, "err", err)
@@ -142,16 +162,25 @@ func (s *Server) broadcast(eventName string, args interface{}) {
 	}
 	data = append(data, '\n')
 
+	// Snapshot clients under the lock, then release before writing so that a
+	// slow or stuck client cannot block other goroutines from adding/removing
+	// connections or from calling broadcast again.
 	s.mu.Lock()
-	defer s.mu.Unlock()
-	for conn := range s.clients {
-		_, _ = conn.Write(data)
+	writers := make([]*connWriter, 0, len(s.clients))
+	for _, cw := range s.clients {
+		writers = append(writers, cw)
+	}
+	s.mu.Unlock()
+
+	for _, cw := range writers {
+		cw.write(data)
 	}
 }
 
 func (s *Server) handleConn(ctx context.Context, conn net.Conn) {
+	cw := &connWriter{conn: conn}
 	s.mu.Lock()
-	s.clients[conn] = struct{}{}
+	s.clients[conn] = cw
 	s.mu.Unlock()
 
 	defer func() {
@@ -167,7 +196,11 @@ func (s *Server) handleConn(ctx context.Context, conn net.Conn) {
 		conn.Close()
 	}()
 
+	// Use a 4 MiB scan buffer to handle large directory listings / search
+	// responses that exceed the default 64 KiB token limit.
+	const maxTokenSize = 4 * 1024 * 1024
 	scanner := bufio.NewScanner(conn)
+	scanner.Buffer(make([]byte, maxTokenSize), maxTokenSize)
 	for scanner.Scan() {
 		line := scanner.Bytes()
 		if len(line) == 0 {
@@ -175,15 +208,18 @@ func (s *Server) handleConn(ctx context.Context, conn net.Conn) {
 		}
 		var req request
 		if err := json.Unmarshal(line, &req); err != nil {
-			slog.Debug("uisocket: bad request", "err", err)
+			slog.DebugContext(ctx, "uisocket: bad request", "err", err)
 			continue
 		}
 		// Dispatch in a goroutine so slow calls don't block the read loop.
-		go s.dispatch(ctx, conn, req)
+		go s.dispatch(ctx, cw, req)
+	}
+	if err := scanner.Err(); err != nil {
+		slog.DebugContext(ctx, "uisocket: scanner error", "err", err)
 	}
 }
 
-func (s *Server) dispatch(ctx context.Context, conn net.Conn, req request) {
+func (s *Server) dispatch(ctx context.Context, cw *connWriter, req request) {
 	result, callErr := s.call(ctx, req.Method, req.Args)
 
 	var resp response
@@ -196,15 +232,15 @@ func (s *Server) dispatch(ctx context.Context, conn net.Conn, req request) {
 
 	data, err := json.Marshal(resp)
 	if err != nil {
-		slog.Debug("uisocket: marshal response error", "method", req.Method, "err", err)
+		slog.DebugContext(ctx, "uisocket: marshal response error", "method", req.Method, "err", err)
 		return
 	}
 	data = append(data, '\n')
-	_, _ = conn.Write(data)
+	cw.write(data)
 }
 
 // unmarshal is a helper that unmarshals args[idx] into v.
-func unmarshal(args []json.RawMessage, idx int, v interface{}) error {
+func unmarshal(args []json.RawMessage, idx int, v any) error {
 	if idx >= len(args) {
 		return fmt.Errorf("missing arg at index %d", idx)
 	}
@@ -214,7 +250,7 @@ func unmarshal(args []json.RawMessage, idx int, v interface{}) error {
 // call dispatches req.Method with req.Args to BrowserMethods.
 //
 //nolint:cyclop,gocyclo // flat switch for RPC dispatch is intentional
-func (s *Server) call(ctx context.Context, method string, args []json.RawMessage) (interface{}, error) {
+func (s *Server) call(ctx context.Context, method string, args []json.RawMessage) (any, error) {
 	_ = ctx // reserved for future cancellation propagation
 
 	switch method {
@@ -247,7 +283,7 @@ func (s *Server) call(ctx context.Context, method string, args []json.RawMessage
 			offset      uint32
 			sortBy      []string
 		)
-		for i, dst := range []interface{}{
+		for i, dst := range []any{
 			&tags, &tagsAny, &tagExclude, &metaFilters,
 			&ftsQuery, &limit, &offset, &sortBy,
 		} {
@@ -259,7 +295,7 @@ func (s *Server) call(ctx context.Context, method string, args []json.RawMessage
 		if err != nil {
 			return nil, err
 		}
-		return map[string]interface{}{"files": files, "total": total}, nil
+		return map[string]any{"files": files, "total": total}, nil
 
 	case "GlobSearch":
 		var patterns []string
@@ -285,7 +321,7 @@ func (s *Server) call(ctx context.Context, method string, args []json.RawMessage
 		if err != nil {
 			return nil, err
 		}
-		return map[string]interface{}{"metadata": vals, "sources": sources}, nil
+		return map[string]any{"metadata": vals, "sources": sources}, nil
 
 	case "SetMetadata":
 		var path, key, value string

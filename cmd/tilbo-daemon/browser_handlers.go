@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"maps"
@@ -25,8 +26,9 @@ const (
 )
 
 // daemonBrowserMethods implements browser.Methods for the daemon process.
-// Its methods are exported on the session bus so the Quickshell frontend can
-// drive all file-manager operations through D-Bus without a browser runtime.
+// Its methods are exposed via the uisocket JSON RPC server so the Quickshell
+// frontend can drive all file-manager operations without a separate browser
+// runtime.
 type daemonBrowserMethods struct {
 	idx          *index.DB
 	tags         *xattr.Service
@@ -35,14 +37,14 @@ type daemonBrowserMethods struct {
 	onFileTagged func(path string, added, removed []string)
 }
 
-// validatePath cleans and validates a filesystem path for use in D-Bus handlers.
-// It returns the cleaned absolute path or an error.
+// validatePath cleans and validates a filesystem path for use in uisocket RPC
+// handlers.  It returns the cleaned absolute path or an error.
 func validatePath(path string) (string, error) {
 	if path == "" {
-		return "", fmt.Errorf("path must not be empty")
+		return "", errors.New("path must not be empty")
 	}
 	if strings.ContainsRune(path, 0) {
-		return "", fmt.Errorf("path must not contain null bytes")
+		return "", errors.New("path must not contain null bytes")
 	}
 	clean := filepath.Clean(path)
 	if !filepath.IsAbs(clean) {
@@ -54,13 +56,13 @@ func validatePath(path string) (string, error) {
 // validateNewName checks that a filename component is safe to use for rename.
 func validateNewName(name string) error {
 	if name == "" {
-		return fmt.Errorf("name must not be empty")
+		return errors.New("name must not be empty")
 	}
 	if strings.ContainsRune(name, 0) {
-		return fmt.Errorf("name must not contain null bytes")
+		return errors.New("name must not contain null bytes")
 	}
 	if strings.ContainsRune(name, '/') {
-		return fmt.Errorf("name must not contain path separator")
+		return errors.New("name must not contain path separator")
 	}
 	return nil
 }
@@ -258,7 +260,8 @@ func (h *daemonBrowserMethods) SetMetadata(path, key, value string) error {
 }
 
 // ModifyTags applies an add/remove/set tag operation to one or more paths.
-// Emits FileTagged D-Bus signals for each path that changes.
+// Emits FileTagged events via the uisocket broadcast callback for each path
+// that changes.
 func (h *daemonBrowserMethods) ModifyTags(paths, tags []string, operation string) (browser.TagResult, error) {
 	opEnum, ok := map[string]ipcv1.TagOperation{
 		"add":    ipcv1.TagOperation_TAG_OPERATION_ADD,

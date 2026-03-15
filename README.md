@@ -9,7 +9,7 @@ This data can then be used for file navigation using FUSE or a simple IPC system
 
 In addition to the daemon that maintains the tags and metadata, there is a CLI
 tool for tagging and a Quickshell GUI file browser that communicates with the
-daemon over D-Bus.
+daemon over a Unix socket (JSON RPC).
 
 Tags and metadata are stored via extended filesystem attributes by default, with
 a fallback to storing the data in an sqlite database for filesystems that do not
@@ -54,7 +54,7 @@ cp tilbo-daemon tilbo-cli ~/bin/
 
 # The GUI browser is a pure-QML app — no Go build step needed.
 # Install Quickshell (https://quickshell.outfoxxed.me/), then run directly:
-#   quickshell run cmd/tilbo-quickshell/shell.qml
+#   quickshell -p cmd/tilbo-quickshell/shell.qml
 
 # Generate shell completions
 tilbo completion bash > ~/.local/share/bash-completion/completions/tilbo
@@ -331,17 +331,18 @@ tilbo completion fish > ~/.config/fish/completions/tilbo.fish
 ## The GUI Browser
 
 The Quickshell frontend (`cmd/tilbo-quickshell`) is a pure-QML file browser
-that communicates with a running daemon over D-Bus. It requires
+that communicates with a running daemon over a newline-delimited JSON Unix
+socket (`$XDG_RUNTIME_DIR/tilbo-ui.sock`). It requires
 [Quickshell](https://quickshell.outfoxxed.me/) to be installed.
 
 ### Running
 
 ```sh
-# Start the daemon first (D-Bus service must be available on the session bus)
+# Start the daemon first
 tilbo-daemon --watch ~ --fuse-mount ~/tags
 
 # Then launch the browser in another terminal (or via autostart)
-quickshell run cmd/tilbo-quickshell/shell.qml
+quickshell -p cmd/tilbo-quickshell/shell.qml
 
 # Or with the mise task shorthand
 mise run run-quickshell
@@ -369,11 +370,12 @@ mise run run-quickshell
 Multiple chips are combined: tag chips use AND semantics; glob chips run a
 separate filesystem walk; results from both are merged.
 
-### D-Bus signals
+### Live events
 
-The browser reacts to live daemon signals without polling:
+The browser reacts to live daemon events pushed over the UI socket without
+polling:
 
-| Signal | Browser reaction |
+| Event | Browser reaction |
 | --- | --- |
 | `FileTagged` | Tag badges on the affected entry update in-place |
 | `IndexUpdated` | Active search re-executes with the latest index |

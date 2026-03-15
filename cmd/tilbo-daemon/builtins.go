@@ -13,7 +13,7 @@ func isNilHarvester(h harvester.Harvester) bool {
 		return true
 	}
 	v := reflect.ValueOf(h)
-	return v.Kind() == reflect.Ptr && v.IsNil()
+	return v.Kind() == reflect.Pointer && v.IsNil()
 }
 
 // registerBuiltins adds all built-in harvesters to the pipeline.
