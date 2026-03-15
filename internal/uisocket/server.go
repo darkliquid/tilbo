@@ -48,15 +48,15 @@ type request struct {
 
 // response is a server → client reply frame.
 type response struct {
-	ID     int64       `json:"id"`
-	Result interface{} `json:"result,omitempty"`
-	Error  string      `json:"error,omitempty"`
+	ID     int64  `json:"id"`
+	Result any    `json:"result,omitempty"`
+	Error  string `json:"error,omitempty"`
 }
 
 // pushEvent is a server → client push frame (no id; client never acks).
 type pushEvent struct {
-	Event string      `json:"event"`
-	Args  interface{} `json:"args"`
+	Event string `json:"event"`
+	Args  any    `json:"args"`
 }
 
 // connWriter wraps a net.Conn with a per-connection write mutex so that
@@ -132,7 +132,7 @@ func (s *Server) Listen(ctx context.Context) error {
 
 // BroadcastFileTagged pushes a FileTagged event to all clients.
 func (s *Server) BroadcastFileTagged(path string, added, removed []string) {
-	s.broadcast("FileTagged", map[string]interface{}{
+	s.broadcast("FileTagged", map[string]any{
 		"path":    path,
 		"added":   added,
 		"removed": removed,
@@ -141,7 +141,7 @@ func (s *Server) BroadcastFileTagged(path string, added, removed []string) {
 
 // BroadcastIndexUpdated pushes an IndexUpdated event to all clients.
 func (s *Server) BroadcastIndexUpdated(filesTotal, tagsTotal uint64) {
-	s.broadcast("IndexUpdated", map[string]interface{}{
+	s.broadcast("IndexUpdated", map[string]any{
 		"filesTotal": filesTotal,
 		"tagsTotal":  tagsTotal,
 	})
@@ -149,12 +149,12 @@ func (s *Server) BroadcastIndexUpdated(filesTotal, tagsTotal uint64) {
 
 // BroadcastDaemonStateChanged pushes a DaemonStateChanged event to all clients.
 func (s *Server) BroadcastDaemonStateChanged(state string) {
-	s.broadcast("DaemonStateChanged", map[string]interface{}{
+	s.broadcast("DaemonStateChanged", map[string]any{
 		"state": state,
 	})
 }
 
-func (s *Server) broadcast(eventName string, args interface{}) {
+func (s *Server) broadcast(eventName string, args any) {
 	data, err := json.Marshal(pushEvent{Event: eventName, Args: args})
 	if err != nil {
 		slog.Debug("uisocket: broadcast marshal error", "event", eventName, "err", err)
@@ -240,7 +240,7 @@ func (s *Server) dispatch(ctx context.Context, cw *connWriter, req request) {
 }
 
 // unmarshal is a helper that unmarshals args[idx] into v.
-func unmarshal(args []json.RawMessage, idx int, v interface{}) error {
+func unmarshal(args []json.RawMessage, idx int, v any) error {
 	if idx >= len(args) {
 		return fmt.Errorf("missing arg at index %d", idx)
 	}
@@ -250,7 +250,7 @@ func unmarshal(args []json.RawMessage, idx int, v interface{}) error {
 // call dispatches req.Method with req.Args to BrowserMethods.
 //
 //nolint:cyclop,gocyclo // flat switch for RPC dispatch is intentional
-func (s *Server) call(ctx context.Context, method string, args []json.RawMessage) (interface{}, error) {
+func (s *Server) call(ctx context.Context, method string, args []json.RawMessage) (any, error) {
 	_ = ctx // reserved for future cancellation propagation
 
 	switch method {
@@ -283,7 +283,7 @@ func (s *Server) call(ctx context.Context, method string, args []json.RawMessage
 			offset      uint32
 			sortBy      []string
 		)
-		for i, dst := range []interface{}{
+		for i, dst := range []any{
 			&tags, &tagsAny, &tagExclude, &metaFilters,
 			&ftsQuery, &limit, &offset, &sortBy,
 		} {
@@ -295,7 +295,7 @@ func (s *Server) call(ctx context.Context, method string, args []json.RawMessage
 		if err != nil {
 			return nil, err
 		}
-		return map[string]interface{}{"files": files, "total": total}, nil
+		return map[string]any{"files": files, "total": total}, nil
 
 	case "GlobSearch":
 		var patterns []string
@@ -321,7 +321,7 @@ func (s *Server) call(ctx context.Context, method string, args []json.RawMessage
 		if err != nil {
 			return nil, err
 		}
-		return map[string]interface{}{"metadata": vals, "sources": sources}, nil
+		return map[string]any{"metadata": vals, "sources": sources}, nil
 
 	case "SetMetadata":
 		var path, key, value string
