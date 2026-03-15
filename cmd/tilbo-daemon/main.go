@@ -188,8 +188,8 @@ func run(
 	// Processor (runs pipeline + rules on each file event).
 	proc := newProcessor(idx, tags, pipeline, engine, fileGraph, embedder)
 
-	// UI socket server — primary frontend IPC; always started, D-Bus-independent.
-	uiSockPath := strings.TrimSuffix(sockPath, ".sock") + "-ui.sock"
+	// UI socket server — primary frontend IPC; always started on the well-known
+	// path so the Quickshell client can connect without configuration.
 	uiBrowserMethods := &daemonBrowserMethods{
 		idx:       idx,
 		tags:      tags,
@@ -200,7 +200,7 @@ func run(
 			proc.OnFileTagged(path, added, removed)
 		},
 	}
-	uiSrv := uisocket.New(uiSockPath, uiBrowserMethods)
+	uiSrv := uisocket.New(uiSocketPath(), uiBrowserMethods)
 
 	// Wire event callbacks to broadcast to all UI socket clients.
 	proc.OnFileTagged = func(path string, added, removed []string) {
@@ -667,6 +667,16 @@ func setupLogging(format, level string) error {
 func socketPath() string {
 	uid := os.Getuid()
 	return fmt.Sprintf("/run/user/%d/tilbo.sock", uid)
+}
+
+// uiSocketPath returns the well-known Unix socket path for the Quickshell UI
+// frontend.  It always derives from XDG_RUNTIME_DIR (or /run/user/<uid>) so it
+// is stable and independent of any IPC socket path override.
+func uiSocketPath() string {
+	if dir := os.Getenv("XDG_RUNTIME_DIR"); dir != "" {
+		return filepath.Join(dir, "tilbo-ui.sock")
+	}
+	return fmt.Sprintf("/run/user/%d/tilbo-ui.sock", os.Getuid())
 }
 
 // defaultFuseMountPath returns the default FUSE mount point for the current user.

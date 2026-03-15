@@ -59,6 +59,20 @@ type pushEvent struct {
 	Args  interface{} `json:"args"`
 }
 
+// connWriter wraps a net.Conn with a per-connection write mutex so that
+// concurrent dispatch goroutines and broadcast calls cannot interleave bytes.
+type connWriter struct {
+	conn net.Conn
+	mu   sync.Mutex
+}
+
+// write serialises the data to the connection under the per-conn mutex.
+func (cw *connWriter) write(data []byte) {
+	cw.mu.Lock()
+	defer cw.mu.Unlock()
+	_, _ = cw.conn.Write(data)
+}
+
 // Server listens on a Unix socket, dispatches JSON calls to BrowserMethods,
 // and broadcasts push events to all connected clients.
 type Server struct {
@@ -66,7 +80,7 @@ type Server struct {
 	methods browser.Methods
 
 	mu      sync.Mutex
-	clients map[net.Conn]struct{}
+	clients map[net.Conn]*connWriter
 }
 
 // New returns a Server that will bind to socketPath and delegate calls to m.
@@ -74,7 +88,7 @@ func New(socketPath string, m browser.Methods) *Server {
 	return &Server{
 		path:    socketPath,
 		methods: m,
-		clients: make(map[net.Conn]struct{}),
+		clients: make(map[net.Conn]*connWriter),
 	}
 }
 
@@ -89,6 +103,12 @@ func (s *Server) Listen(ctx context.Context) error {
 	ln, err := net.Listen("unix", s.path)
 	if err != nil {
 		return fmt.Errorf("uisocket: listen %s: %w", s.path, err)
+	}
+	// Restrict socket to the owner only so other users on the system cannot
+	// connect and invoke file operations as this daemon user.
+	if err := os.Chmod(s.path, 0o600); err != nil {
+		_ = ln.Close()
+		return fmt.Errorf("uisocket: chmod %s: %w", s.path, err)
 	}
 	defer ln.Close()
 
@@ -142,16 +162,25 @@ func (s *Server) broadcast(eventName string, args interface{}) {
 	}
 	data = append(data, '\n')
 
+	// Snapshot clients under the lock, then release before writing so that a
+	// slow or stuck client cannot block other goroutines from adding/removing
+	// connections or from calling broadcast again.
 	s.mu.Lock()
-	defer s.mu.Unlock()
-	for conn := range s.clients {
-		_, _ = conn.Write(data)
+	writers := make([]*connWriter, 0, len(s.clients))
+	for _, cw := range s.clients {
+		writers = append(writers, cw)
+	}
+	s.mu.Unlock()
+
+	for _, cw := range writers {
+		cw.write(data)
 	}
 }
 
 func (s *Server) handleConn(ctx context.Context, conn net.Conn) {
+	cw := &connWriter{conn: conn}
 	s.mu.Lock()
-	s.clients[conn] = struct{}{}
+	s.clients[conn] = cw
 	s.mu.Unlock()
 
 	defer func() {
@@ -167,7 +196,11 @@ func (s *Server) handleConn(ctx context.Context, conn net.Conn) {
 		conn.Close()
 	}()
 
+	// Use a 4 MiB scan buffer to handle large directory listings / search
+	// responses that exceed the default 64 KiB token limit.
+	const maxTokenSize = 4 * 1024 * 1024
 	scanner := bufio.NewScanner(conn)
+	scanner.Buffer(make([]byte, maxTokenSize), maxTokenSize)
 	for scanner.Scan() {
 		line := scanner.Bytes()
 		if len(line) == 0 {
@@ -179,11 +212,14 @@ func (s *Server) handleConn(ctx context.Context, conn net.Conn) {
 			continue
 		}
 		// Dispatch in a goroutine so slow calls don't block the read loop.
-		go s.dispatch(ctx, conn, req)
+		go s.dispatch(ctx, cw, req)
+	}
+	if err := scanner.Err(); err != nil {
+		slog.Debug("uisocket: scanner error", "err", err)
 	}
 }
 
-func (s *Server) dispatch(ctx context.Context, conn net.Conn, req request) {
+func (s *Server) dispatch(ctx context.Context, cw *connWriter, req request) {
 	result, callErr := s.call(ctx, req.Method, req.Args)
 
 	var resp response
@@ -200,7 +236,7 @@ func (s *Server) dispatch(ctx context.Context, conn net.Conn, req request) {
 		return
 	}
 	data = append(data, '\n')
-	_, _ = conn.Write(data)
+	cw.write(data)
 }
 
 // unmarshal is a helper that unmarshals args[idx] into v.
