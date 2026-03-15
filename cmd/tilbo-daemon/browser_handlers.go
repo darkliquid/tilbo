@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"maps"
@@ -40,10 +41,10 @@ type daemonBrowserMethods struct {
 // handlers.  It returns the cleaned absolute path or an error.
 func validatePath(path string) (string, error) {
 	if path == "" {
-		return "", fmt.Errorf("path must not be empty")
+		return "", errors.New("path must not be empty")
 	}
 	if strings.ContainsRune(path, 0) {
-		return "", fmt.Errorf("path must not contain null bytes")
+		return "", errors.New("path must not contain null bytes")
 	}
 	clean := filepath.Clean(path)
 	if !filepath.IsAbs(clean) {
@@ -55,13 +56,13 @@ func validatePath(path string) (string, error) {
 // validateNewName checks that a filename component is safe to use for rename.
 func validateNewName(name string) error {
 	if name == "" {
-		return fmt.Errorf("name must not be empty")
+		return errors.New("name must not be empty")
 	}
 	if strings.ContainsRune(name, 0) {
-		return fmt.Errorf("name must not contain null bytes")
+		return errors.New("name must not contain null bytes")
 	}
 	if strings.ContainsRune(name, '/') {
-		return fmt.Errorf("name must not contain path separator")
+		return errors.New("name must not contain path separator")
 	}
 	return nil
 }

@@ -616,7 +616,7 @@ func TestModifyTags_EmitsFileTaggedSignal(t *testing.T) {
 
 	var sigPath string
 	var sigAdded []string
-	h.onFileTagged = func(p string, added, removed []string) {
+	h.onFileTagged = func(p string, added, _ []string) {
 		sigPath = p
 		sigAdded = append(sigAdded, added...)
 	}

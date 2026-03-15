@@ -208,14 +208,14 @@ func (s *Server) handleConn(ctx context.Context, conn net.Conn) {
 		}
 		var req request
 		if err := json.Unmarshal(line, &req); err != nil {
-			slog.Debug("uisocket: bad request", "err", err)
+			slog.DebugContext(ctx, "uisocket: bad request", "err", err)
 			continue
 		}
 		// Dispatch in a goroutine so slow calls don't block the read loop.
 		go s.dispatch(ctx, cw, req)
 	}
 	if err := scanner.Err(); err != nil {
-		slog.Debug("uisocket: scanner error", "err", err)
+		slog.DebugContext(ctx, "uisocket: scanner error", "err", err)
 	}
 }
 
@@ -232,7 +232,7 @@ func (s *Server) dispatch(ctx context.Context, cw *connWriter, req request) {
 
 	data, err := json.Marshal(resp)
 	if err != nil {
-		slog.Debug("uisocket: marshal response error", "method", req.Method, "err", err)
+		slog.DebugContext(ctx, "uisocket: marshal response error", "method", req.Method, "err", err)
 		return
 	}
 	data = append(data, '\n')
