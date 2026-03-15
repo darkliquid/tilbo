@@ -42,6 +42,7 @@ DOCKER_HOST=unix://$HOME/.config/colima/default/docker.sock \
 TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE=$HOME/.config/colima/default/docker.sock \
 TESTCONTAINERS_RYUK_DISABLED=true \
 TILBO_TEST_TMPDIR=$HOME/tmp/tilbo-test \
+TILBO_TEST_WATCHER=${TILBO_TEST_WATCHER:-inotify} \
 go test -v -count=1 -timeout=15m ./...
 """
 dir = "{{config_root}}/test/integration"

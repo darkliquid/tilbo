@@ -3,6 +3,7 @@ package integration_test
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"strings"
 	"testing"
 	"time"
@@ -227,8 +228,8 @@ func TestFUSENegationDir(t *testing.T) {
 	cliMust(t, ctx, "tag", "add", keep, "fuse-neg-base")
 	cliMust(t, ctx, "tag", "add", drop, "fuse-neg-base", "fuse-neg-excluded")
 
-	// Negation path: /<base>-<excluded>/
-	negDir := fmt.Sprintf("%s/fuse-neg-base-fuse-neg-excluded", mainFuse)
+	// Negation path: /<base>+!<excluded>/
+	negDir := fmt.Sprintf("%s/fuse-neg-base+!fuse-neg-excluded", mainFuse)
 	if err := waitForFUSEPath(ctx, suite, negDir, 5*time.Second); err != nil {
 		t.Fatalf("negation dir not found: %v", err)
 	}
@@ -277,9 +278,8 @@ func TestFUSESimilarDir(t *testing.T) {
 	cliMust(t, ctx, "tag", "add", seed, "fuse-sim-shared")
 	cliMust(t, ctx, "tag", "add", peer, "fuse-sim-shared")
 
-	// @similar:<encoded_path> — the daemon URL-encodes or otherwise derives
-	// the virtual dir name from the path. Check the daemon logs if this fails.
-	similarDir := fmt.Sprintf("%s/@similar:%s", mainFuse, seed)
+	// @similar:<encoded_path> must keep the seed path in a single path component.
+	similarDir := fmt.Sprintf("%s/@similar:%s", mainFuse, url.PathEscape(seed))
 	if err := waitForFUSEPath(ctx, suite, similarDir, 5*time.Second); err != nil {
 		t.Fatalf("@similar dir not found: %v\ndaemon log:\n%s", err, suite.DaemonLog(ctx, mainLog))
 	}

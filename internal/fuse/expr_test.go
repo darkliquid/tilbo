@@ -132,6 +132,16 @@ func TestParseExpr_Special(t *testing.T) {
 		}
 	})
 
+	t.Run("@similar:%2Fhome%2Fuser%2Ffile.txt", func(t *testing.T) {
+		e, err := ParseExpr("@similar:%2Fhome%2Fuser%2Ffile.txt")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if e.kind != exprSimilar || e.SeedPath != "/home/user/file.txt" {
+			t.Errorf("unexpected: %+v", e)
+		}
+	})
+
 	t.Run("@meta:iso:gte:1600", func(t *testing.T) {
 		e, err := ParseExpr("@meta:iso:gte:1600")
 		if err != nil {

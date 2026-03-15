@@ -171,6 +171,17 @@ func (s *Suite) StartDaemon(
 	sockPath, dbPath, watchPath, fuseMount, logPath string,
 	extraArgs ...string,
 ) error {
+	hasEmbedFlag := false
+	for i := 0; i < len(extraArgs); i++ {
+		switch extraArgs[i] {
+		case "--embed-disabled", "--embed-model", "--embed-model-name":
+			hasEmbedFlag = true
+		}
+	}
+	if !hasEmbedFlag {
+		extraArgs = append(extraArgs, "--embed-disabled")
+	}
+
 	if backend := strings.TrimSpace(os.Getenv("TILBO_TEST_WATCHER")); backend != "" {
 		hasWatcherArg := false
 		for i := 0; i < len(extraArgs); i++ {

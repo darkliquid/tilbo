@@ -107,7 +107,11 @@ func parseSpecial(name string) (*Expr, error) {
 		if p == "" {
 			return nil, errors.New("fuse: @similar requires a path")
 		}
-		return &Expr{kind: exprSimilar, SeedPath: p}, nil
+		decoded, err := percentDecode(p)
+		if err != nil {
+			return nil, fmt.Errorf("fuse: invalid @similar path: %w", err)
+		}
+		return &Expr{kind: exprSimilar, SeedPath: decoded}, nil
 
 	case strings.HasPrefix(name, "@meta:"):
 		return parseMetaExpr(name[len("@meta:"):])
