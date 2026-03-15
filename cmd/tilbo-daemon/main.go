@@ -29,7 +29,6 @@ import (
 	ipcv1 "github.com/darkliquid/tilbo/internal/ipc/gen/tilbo/ipc/v1"
 	"github.com/darkliquid/tilbo/internal/rules"
 	isync "github.com/darkliquid/tilbo/internal/sync"
-	"github.com/darkliquid/tilbo/internal/uisocket"
 	"github.com/darkliquid/tilbo/internal/vectorize"
 	"github.com/darkliquid/tilbo/internal/watcher"
 	"github.com/darkliquid/tilbo/internal/xattr"
@@ -57,6 +56,8 @@ func main() {
 
 // run is the main daemon loop. It returns nil on clean shutdown and a non-nil
 // error if any component fails unexpectedly.
+//
+//nolint:funlen // daemon initialization is inherently long
 func run(
 	ctx context.Context,
 	hupCh <-chan os.Signal,
@@ -104,8 +105,12 @@ func run(
 
 	proc := newProcessor(idx, tags, pipeline, engine, fileGraph, embedder)
 
-	uiSrv := initUIServerSocket(idx, tags, fileGraph, fuseMount, proc, syncer)
-	startUISocketListener(ctx, uiSrv)
+	uiBrowserMethods := &daemonBrowserMethods{
+		idx:       idx,
+		tags:      tags,
+		g:         fileGraph,
+		fuseMount: fuseMount,
+	}
 
 	sweeper := rules.NewSweeper(idx, tags, pipeline, engine)
 
@@ -130,6 +135,7 @@ func run(
 		cfgPath,
 		engine,
 		embedder,
+		uiBrowserMethods,
 	)
 
 	ipcServer, err := startIPCServer(ctx, sockPath, handleIPCRequest)
@@ -138,43 +144,34 @@ func run(
 	}
 	defer ipcServer.Stop()
 
+	proc.OnFileTagged = func(path string, added, removed []string) {
+		ipcServer.BroadcastEvent(&ipcv1.Event{
+			Kind: &ipcv1.Event_FileTagged{
+				FileTagged: &ipcv1.FileTaggedEvent{Path: path, Added: added, Removed: removed},
+			},
+		})
+	}
+	uiBrowserMethods.onFileTagged = proc.OnFileTagged
+
+	syncer.OnStateChanged = func(state ipcv1.DaemonState) {
+		ipcServer.BroadcastEvent(&ipcv1.Event{
+			Kind: &ipcv1.Event_DaemonStateChanged{
+				DaemonStateChanged: &ipcv1.DaemonStateChangedEvent{State: daemonStateLabel(state)},
+			},
+		})
+	}
+	syncer.OnIndexUpdated = func(filesTotal, tagsTotal uint64) {
+		ipcServer.BroadcastEvent(&ipcv1.Event{
+			Kind: &ipcv1.Event_IndexUpdated{
+				IndexUpdated: &ipcv1.IndexUpdatedEvent{FilesTotal: filesTotal, TagsTotal: tagsTotal},
+			},
+		})
+	}
+
 	slog.InfoContext(ctx, "tilbo-daemon ready", "socket", sockPath)
 	startFuseMount(ctx, fuseMount, idx, fileGraph, warningStore.Append)
 
 	return runEventLoop(ctx, events, watchErrCh, hupCh, syncer, idx, proc, engine, ruleReg, sweeper, wasmCache, cfgPath)
-}
-
-func initUIServerSocket(
-	idx *index.DB,
-	tags *xattr.Service,
-	fileGraph *graph.Graph,
-	fuseMount string,
-	proc *Processor,
-	syncer *isync.Syncer,
-) *uisocket.Server {
-	uiBrowserMethods := &daemonBrowserMethods{
-		idx:       idx,
-		tags:      tags,
-		g:         fileGraph,
-		fuseMount: fuseMount,
-		// onFileTagged is captured via closure; proc.OnFileTagged is set below.
-		onFileTagged: func(path string, added, removed []string) {
-			proc.OnFileTagged(path, added, removed)
-		},
-	}
-	uiSrv := uisocket.New(uiSocketPath(), uiBrowserMethods)
-
-	proc.OnFileTagged = func(path string, added, removed []string) {
-		uiSrv.BroadcastFileTagged(path, added, removed)
-	}
-	syncer.OnStateChanged = func(state ipcv1.DaemonState) {
-		uiSrv.BroadcastDaemonStateChanged(daemonStateLabel(state))
-	}
-	syncer.OnIndexUpdated = func(filesTotal, tagsTotal uint64) {
-		uiSrv.BroadcastIndexUpdated(filesTotal, tagsTotal)
-	}
-
-	return uiSrv
 }
 
 func ensureParentDir(path string, action string) error {
@@ -297,14 +294,6 @@ func initOptionalEmbedder(
 	return embedder
 }
 
-func startUISocketListener(ctx context.Context, uiSrv *uisocket.Server) {
-	go func() {
-		if err := uiSrv.Listen(ctx); err != nil {
-			slog.WarnContext(ctx, "uisocket: stopped", "err", err)
-		}
-	}()
-}
-
 func startSyncerLoop(ctx context.Context, syncer *isync.Syncer, proc *Processor) <-chan error {
 	syncer.OnFileSynced = proc.ProcessFile
 
@@ -407,6 +396,7 @@ func buildIPCRequestHandler(
 	cfgPath string,
 	engine *rules.Engine,
 	embedder *vectorize.ONNXEmbedder,
+	browser *daemonBrowserMethods,
 ) func(context.Context, *ipcv1.Request) (*ipcv1.Response, error) {
 	return func(ctx context.Context, req *ipcv1.Request) (*ipcv1.Response, error) {
 		switch r := req.GetKind().(type) {
@@ -442,6 +432,21 @@ func buildIPCRequestHandler(
 
 		case *ipcv1.Request_HydrateTags:
 			return handleHydrateTags(ctx, r.HydrateTags, idx)
+
+		case *ipcv1.Request_ListDirectory:
+			return handleListDirectory(r.ListDirectory, browser)
+		case *ipcv1.Request_StatFile:
+			return handleStatFile(r.StatFile, browser)
+		case *ipcv1.Request_GlobSearch:
+			return handleGlobSearch(r.GlobSearch, browser)
+		case *ipcv1.Request_RenameFile:
+			return handleRenameFile(r.RenameFile, browser)
+		case *ipcv1.Request_DeleteFile:
+			return handleDeleteFile(r.DeleteFile, browser)
+		case *ipcv1.Request_ChmodFile:
+			return handleChmodFile(r.ChmodFile, browser)
+		case *ipcv1.Request_ListPlaces:
+			return handleListPlaces(r.ListPlaces, browser)
 
 		case *ipcv1.Request_ReloadRules:
 			var reloadErrs []string
@@ -824,16 +829,6 @@ func setupLogging(format, level string) error {
 func socketPath() string {
 	uid := os.Getuid()
 	return fmt.Sprintf("/run/user/%d/tilbo.sock", uid)
-}
-
-// uiSocketPath returns the well-known Unix socket path for the Quickshell UI
-// frontend.  It always derives from XDG_RUNTIME_DIR (or /run/user/<uid>) so it
-// is stable and independent of any IPC socket path override.
-func uiSocketPath() string {
-	if dir := os.Getenv("XDG_RUNTIME_DIR"); dir != "" {
-		return filepath.Join(dir, "tilbo-ui.sock")
-	}
-	return fmt.Sprintf("/run/user/%d/tilbo-ui.sock", os.Getuid())
 }
 
 // defaultFuseMountPath returns the default FUSE mount point for the current user.

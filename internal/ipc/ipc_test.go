@@ -1,10 +1,13 @@
 package ipc
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"testing"
 	"time"
+
+	"google.golang.org/protobuf/encoding/protojson"
 
 	ipcv1 "github.com/darkliquid/tilbo/internal/ipc/gen/tilbo/ipc/v1"
 )
@@ -26,9 +29,14 @@ func TestFramingRoundTrip(t *testing.T) {
 		t.Fatalf("WriteEnvelope: %v", err)
 	}
 
-	got, err := ReadEnvelope(&buf)
-	if err != nil {
-		t.Fatalf("ReadEnvelope: %v", err)
+	scanner := bufio.NewScanner(&buf)
+	if !scanner.Scan() {
+		t.Fatal("expected one line")
+	}
+
+	got := &ipcv1.Envelope{}
+	if err := protojson.Unmarshal(scanner.Bytes(), got); err != nil {
+		t.Fatalf("Unmarshal: %v", err)
 	}
 
 	if got.GetRequestId() != 42 {

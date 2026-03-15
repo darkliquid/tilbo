@@ -5,13 +5,25 @@ golangci-lint = "2.11.3"
 "go:google.golang.org/protobuf/cmd/protoc-gen-go" = "latest"
 "go:github.com/planetscale/vtprotobuf/cmd/protoc-gen-go-vtproto" = "latest"
 sqlc = "latest"
+node = "20"
+"npm:esbuild" = "latest"
+"npm:protobufjs-cli" = "latest"
 
 [tasks.build-daemon]
 description = "Build tilbo daemon"
 run = "go build -v ./cmd/tilbo-daemon"
 depends = ["generate"]
-sources = ["**/*.go"]
-outputs = ["tilbo-daemon"]
+
+[tasks.generate-js]
+description = "Generate JS bindings from protobuf for QML"
+run = """
+mkdir -p internal/ipc/gen
+pbjs -t static-module -w es6 -o internal/ipc/gen/ipc_generated.js proto/tilbo/ipc/v1/ipc.proto
+pbts -o internal/ipc/gen/ipc_generated.d.ts internal/ipc/gen/ipc_generated.js
+esbuild internal/ipc/gen/ipc_generated.js --bundle --format=esm --outfile=cmd/tilbo-quickshell/services/qml_ipc.mjs
+"""
+sources = ["proto/**/*.proto"]
+outputs = ["cmd/tilbo-quickshell/services/qml_ipc.mjs"]
 
 [tasks.build-cli]
 description = "Build tilbo cli"

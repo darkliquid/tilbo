@@ -9,6 +9,7 @@ message Envelope {
   oneof payload {
     Request request = 2;
     Response response = 3;
+    Event event = 4;
   }
 }
 
@@ -23,6 +24,13 @@ message Request {
     ReloadRulesRequest reload_rules = 7;
     ListTagsRequest list_tags = 8;
     HydrateTagsRequest hydrate_tags = 9;
+    ListDirectoryRequest list_directory = 10;
+    StatFileRequest stat_file = 11;
+    GlobSearchRequest glob_search = 12;
+    RenameFileRequest rename_file = 13;
+    DeleteFileRequest delete_file = 14;
+    ChmodFileRequest chmod_file = 15;
+    ListPlacesRequest list_places = 16;
   }
 }
 
@@ -37,6 +45,21 @@ message Response {
     ReloadRulesResponse reload_rules = 7;
     ListTagsResponse list_tags = 8;
     HydrateTagsResponse hydrate_tags = 9;
+    ListDirectoryResponse list_directory = 10;
+    StatFileResponse stat_file = 11;
+    GlobSearchResponse glob_search = 12;
+    RenameFileResponse rename_file = 13;
+    DeleteFileResponse delete_file = 14;
+    ChmodFileResponse chmod_file = 15;
+    ListPlacesResponse list_places = 16;
+  }
+}
+
+message Event {
+  oneof kind {
+    FileTaggedEvent file_tagged = 1;
+    IndexUpdatedEvent index_updated = 2;
+    DaemonStateChangedEvent daemon_state_changed = 3;
   }
 }
 
@@ -170,4 +193,95 @@ message HydratedPathTags {
 
 message HydrateTagsResponse {
   repeated HydratedPathTags entries = 1;
+}
+
+message ListDirectoryRequest {
+  string path = 1;
+  bool hidden = 2;
+}
+
+message DirEntry {
+  string name = 1;
+  string path = 2;
+  bool is_dir = 3;
+  int64 size_bytes = 4;
+  int64 mtime = 5;
+  uint32 mode = 6;
+  bool hidden = 7;
+}
+
+message ListDirectoryResponse {
+  repeated DirEntry entries = 1;
+}
+
+message StatFileRequest {
+  string path = 1;
+}
+
+message FileStat {
+  int64 size_bytes = 1;
+  int64 mtime = 2;
+  uint32 mode = 3;
+}
+
+message StatFileResponse {
+  FileStat stat = 1;
+}
+
+message GlobSearchRequest {
+  repeated string patterns = 1;
+  uint32 limit = 2;
+  bool allow_hidden = 3;
+}
+
+message GlobSearchResponse {
+  repeated FileResult files = 1;
+}
+
+message RenameFileRequest {
+  string path = 1;
+  string new_name = 2;
+}
+
+message RenameFileResponse {
+  string new_path = 1;
+}
+
+message DeleteFileRequest {
+  string path = 1;
+}
+
+message DeleteFileResponse {}
+
+message ChmodFileRequest {
+  string path = 1;
+  uint32 mode = 2;
+}
+
+message ChmodFileResponse {}
+
+message ListPlacesRequest {}
+
+message PlaceEntry {
+  string name = 1;
+  string path = 2;
+}
+
+message ListPlacesResponse {
+  repeated PlaceEntry places = 1;
+}
+
+message FileTaggedEvent {
+  string path = 1;
+  repeated string added = 2;
+  repeated string removed = 3;
+}
+
+message IndexUpdatedEvent {
+  uint64 files_total = 1;
+  uint64 tags_total = 2;
+}
+
+message DaemonStateChangedEvent {
+  string state = 1;
 }

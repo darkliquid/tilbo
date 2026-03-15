@@ -1,14 +1,16 @@
 package ipc
 
 import (
+	"bufio"
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"net"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"google.golang.org/protobuf/encoding/protojson"
 
 	ipcv1 "github.com/darkliquid/tilbo/internal/ipc/gen/tilbo/ipc/v1"
 )
@@ -64,14 +66,23 @@ func (c *Client) readLoop() {
 	defer c.wg.Done()
 	defer c.conn.Close()
 
-	for {
+	const maxTokenSize = 4 * 1024 * 1024
+	scanner := bufio.NewScanner(c.conn)
+	scanner.Buffer(make([]byte, maxTokenSize), maxTokenSize)
+
+	for scanner.Scan() {
 		if c.closed.Load() {
 			return
 		}
 
-		env, err := ReadEnvelope(c.conn)
-		if err != nil {
-			if errors.Is(err, io.EOF) || errors.Is(err, io.ErrUnexpectedEOF) || c.closed.Load() {
+		line := scanner.Bytes()
+		if len(line) == 0 {
+			continue
+		}
+
+		env := &ipcv1.Envelope{}
+		if err := protojson.Unmarshal(line, env); err != nil {
+			if c.closed.Load() {
 				return
 			}
 			continue

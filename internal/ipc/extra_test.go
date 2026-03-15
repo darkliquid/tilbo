@@ -1,14 +1,16 @@
 package ipc
 
 import (
+	"bufio"
 	"bytes"
 	"context"
-	"encoding/binary"
 	"fmt"
 	"strings"
 	"sync"
 	"testing"
 	"time"
+
+	"google.golang.org/protobuf/encoding/protojson"
 
 	ipcv1 "github.com/darkliquid/tilbo/internal/ipc/gen/tilbo/ipc/v1"
 )
@@ -21,56 +23,36 @@ func TestFraming_EmptyPayload(t *testing.T) {
 	if err := WriteEnvelope(&buf, env); err != nil {
 		t.Fatalf("WriteEnvelope: %v", err)
 	}
-	got, err := ReadEnvelope(&buf)
-	if err != nil {
-		t.Fatalf("ReadEnvelope: %v", err)
+
+	scanner := bufio.NewScanner(&buf)
+	if !scanner.Scan() {
+		t.Fatal("expected one line")
+	}
+
+	got := &ipcv1.Envelope{}
+	if err := protojson.Unmarshal(scanner.Bytes(), got); err != nil {
+		t.Fatalf("Unmarshal: %v", err)
 	}
 	if got.GetRequestId() != 1 {
 		t.Errorf("RequestId: got %d, want 1", got.GetRequestId())
 	}
 }
 
-func TestFraming_OverSizeLimit_Write(t *testing.T) {
-	// Construct an envelope that, when serialized, exceeds 100MB by stuffing
-	// it with a very large byte slice. We fake this by manually encoding a
-	// length header > 100MB.
-	var buf bytes.Buffer
-	var lenBuf [4]byte
-	binary.LittleEndian.PutUint32(lenBuf[:], 101*1024*1024) // 101MB
-	buf.Write(lenBuf[:])
-
-	_, err := ReadEnvelope(&buf)
-	if err == nil {
-		t.Fatal("expected error for over-sized message")
-	}
-}
-
-func TestFraming_TruncatedPayload(t *testing.T) {
-	// Write a valid length header claiming 100 bytes, then only write 10 bytes.
-	var buf bytes.Buffer
-	var lenBuf [4]byte
-	binary.LittleEndian.PutUint32(lenBuf[:], 100)
-	buf.Write(lenBuf[:])
-	buf.Write(make([]byte, 10)) // only 10 of the promised 100
-
-	_, err := ReadEnvelope(&buf)
-	if err == nil {
-		t.Fatal("expected error for truncated frame")
-	}
-}
-
 func TestFraming_CorruptProtobuf(t *testing.T) {
-	// Write a valid length header then garbage bytes.
-	garbage := []byte("not valid protobuf data at all!!!")
+	// Write invalid JSON data
+	garbage := []byte("not valid json data at all!!!\n")
 	var buf bytes.Buffer
-	var lenBuf [4]byte
-	binary.LittleEndian.PutUint32(lenBuf[:], uint32(len(garbage)))
-	buf.Write(lenBuf[:])
 	buf.Write(garbage)
 
-	_, err := ReadEnvelope(&buf)
+	scanner := bufio.NewScanner(&buf)
+	if !scanner.Scan() {
+		t.Fatal("expected one line")
+	}
+
+	got := &ipcv1.Envelope{}
+	err := protojson.Unmarshal(scanner.Bytes(), got)
 	if err == nil {
-		t.Fatal("expected error for corrupt protobuf")
+		t.Fatal("expected error for corrupt json")
 	}
 }
 
@@ -82,10 +64,15 @@ func TestFraming_MultipleEnvelopes(t *testing.T) {
 			t.Fatalf("WriteEnvelope %d: %v", i, err)
 		}
 	}
+
+	scanner := bufio.NewScanner(&buf)
 	for i := uint64(1); i <= 5; i++ {
-		got, err := ReadEnvelope(&buf)
-		if err != nil {
-			t.Fatalf("ReadEnvelope %d: %v", i, err)
+		if !scanner.Scan() {
+			t.Fatalf("expected envelope %d", i)
+		}
+		got := &ipcv1.Envelope{}
+		if err := protojson.Unmarshal(scanner.Bytes(), got); err != nil {
+			t.Fatalf("Unmarshal %d: %v", i, err)
 		}
 		if got.GetRequestId() != i {
 			t.Errorf("envelope %d: got id %d", i, got.GetRequestId())
