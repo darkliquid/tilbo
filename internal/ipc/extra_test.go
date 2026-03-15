@@ -262,6 +262,22 @@ func TestBroadcastEvent_Delivery(t *testing.T) {
 	}
 	defer rawConn.Close()
 
+	// Wait until the server has tracked the connection before broadcasting,
+	// otherwise the event is sent to an empty set of connections.
+	for {
+		srv.mu.Lock()
+		tracked := len(srv.conns)
+		srv.mu.Unlock()
+		if tracked > 0 {
+			break
+		}
+		select {
+		case <-ctx.Done():
+			t.Fatal("timed out waiting for server to track connection")
+		case <-time.After(5 * time.Millisecond):
+		}
+	}
+
 	// Broadcast an event.
 	srv.BroadcastEvent(&ipcv1.Event{
 		Kind: &ipcv1.Event_IndexUpdated{IndexUpdated: &ipcv1.IndexUpdatedEvent{}},
