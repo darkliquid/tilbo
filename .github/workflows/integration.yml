@@ -34,7 +34,15 @@ jobs:
       - name: Verify Docker is accessible
         run: docker info
 
+      - name: Cache Go tools
+        id: cache-go-tools
+        uses: actions/cache@v4
+        with:
+          path: ~/go/bin
+          key: go-tools-${{ runner.os }}-gotestsum-v1.13.0
+
       - name: Install gotestsum
+        if: steps.cache-go-tools.outputs.cache-hit != 'true'
         run: go install gotest.tools/gotestsum@v1.13.0
 
       - name: Run integration tests

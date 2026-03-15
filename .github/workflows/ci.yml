@@ -33,7 +33,15 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Cache Go tools
+        id: cache-go-tools
+        uses: actions/cache@v4
+        with:
+          path: ~/go/bin
+          key: go-tools-${{ runner.os }}-protoc-gen-go-v1.36.11-vtproto-v0.6.0
+
       - name: Install protobuf plugins
+        if: steps.cache-go-tools.outputs.cache-hit != 'true'
         run: |
           go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.36.11
           go install github.com/planetscale/vtprotobuf/cmd/protoc-gen-go-vtproto@v0.6.0
@@ -90,7 +98,15 @@ jobs:
           go-version-file: go.mod
           cache: true
 
+      - name: Cache Go tools
+        id: cache-go-tools
+        uses: actions/cache@v4
+        with:
+          path: ~/go/bin
+          key: go-tools-${{ runner.os }}-govulncheck-v1.1.4
+
       - name: Install govulncheck
+        if: steps.cache-go-tools.outputs.cache-hit != 'true'
         run: go install golang.org/x/vuln/cmd/govulncheck@v1.1.4
 
       - name: Run govulncheck
@@ -111,7 +127,15 @@ jobs:
           go-version-file: go.mod
           cache: true
 
+      - name: Cache Go tools
+        id: cache-go-tools
+        uses: actions/cache@v4
+        with:
+          path: ~/go/bin
+          key: go-tools-${{ runner.os }}-gotestsum-v1.13.0
+
       - name: Install gotestsum
+        if: steps.cache-go-tools.outputs.cache-hit != 'true'
         run: go install gotest.tools/gotestsum@v1.13.0
 
       - name: Run tests
