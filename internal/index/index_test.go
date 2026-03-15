@@ -242,3 +242,162 @@ func TestSyncFileApply_ConcurrentDelete_NoForeignKeyErrors(t *testing.T) {
 		t.Fatalf("SyncFileApply should not fail under concurrent delete, got: %v", err)
 	}
 }
+
+func TestStats(t *testing.T) {
+	ctx := context.Background()
+	dir := t.TempDir()
+	db, err := Open(ctx, filepath.Join(dir, "test.db"))
+	if err != nil {
+		t.Fatalf("Open: %v", err)
+	}
+	t.Cleanup(func() { db.Close() })
+
+	_, _ = db.UpsertFile(ctx, "/tmp/a.txt", 1, 1, 100, 10)
+	_, _ = db.UpsertTag(ctx, "tag1")
+
+	stats, err := db.GetStats(ctx)
+	if err != nil {
+		t.Fatalf("GetStats: %v", err)
+	}
+	if stats.FilesCount != 1 || stats.TagsCount != 1 {
+		t.Errorf("expected 1 file, 1 tag; got %+v", stats)
+	}
+}
+
+func TestSidecar(t *testing.T) {
+	ctx := context.Background()
+	dir := t.TempDir()
+	db, err := Open(ctx, filepath.Join(dir, "test.db"))
+	if err != nil {
+		t.Fatalf("Open: %v", err)
+	}
+	t.Cleanup(func() { db.Close() })
+
+	ino, dev := uint64(1234), uint64(5678)
+	data := []byte(`{"tags":"foo"}`)
+
+	if err := db.WriteSidecar(ctx, ino, dev, data); err != nil {
+		t.Fatalf("WriteSidecar: %v", err)
+	}
+
+	got, err := db.ReadSidecar(ctx, ino, dev)
+	if err != nil {
+		t.Fatalf("ReadSidecar: %v", err)
+	}
+	if string(got) != string(data) {
+		t.Errorf("expected %s, got %s", data, got)
+	}
+
+	if err := db.DeleteSidecar(ctx, ino, dev); err != nil {
+		t.Fatalf("DeleteSidecar: %v", err)
+	}
+
+	got2, _ := db.ReadSidecar(ctx, ino, dev)
+	if got2 != nil {
+		t.Errorf("expected nil after delete, got %s", got2)
+	}
+}
+
+func TestListFilePaths(t *testing.T) {
+	ctx := context.Background()
+	dir := t.TempDir()
+	db, err := Open(ctx, filepath.Join(dir, "test.db"))
+	if err != nil {
+		t.Fatalf("Open: %v", err)
+	}
+	t.Cleanup(func() { db.Close() })
+
+	paths := []string{"/tmp/a.txt", "/tmp/b.txt"}
+	for _, p := range paths {
+		_, _ = db.UpsertFile(ctx, p, 1, 1, 100, 10)
+	}
+
+	got, err := db.ListFilePaths(ctx)
+	if err != nil {
+		t.Fatalf("ListFilePaths: %v", err)
+	}
+	if len(got) != 2 {
+		t.Errorf("expected 2 paths, got %v", got)
+	}
+}
+
+func TestGetFileSummary(t *testing.T) {
+	ctx := context.Background()
+	dir := t.TempDir()
+	db, err := Open(ctx, filepath.Join(dir, "test.db"))
+	if err != nil {
+		t.Fatalf("Open: %v", err)
+	}
+	t.Cleanup(func() { db.Close() })
+
+	path := "/tmp/summary.txt"
+	fileID, _ := db.UpsertFile(ctx, path, 1, 1, 1700000000, 1024)
+	_ = db.SetFileTags(ctx, fileID, []string{"tag1", "tag2"})
+
+	sum, err := db.GetFileSummary(ctx, path)
+	if err != nil {
+		t.Fatalf("GetFileSummary: %v", err)
+	}
+	if sum.Path != path || sum.Mtime != 1700000000 || sum.SizeBytes != 1024 {
+		t.Errorf("unexpected summary: %+v", sum)
+	}
+	if len(sum.Tags) != 2 {
+		t.Errorf("expected 2 tags, got %v", sum.Tags)
+	}
+}
+
+func TestGetTagOverrides(t *testing.T) {
+	ctx := context.Background()
+	dir := t.TempDir()
+	db, err := Open(ctx, filepath.Join(dir, "test.db"))
+	if err != nil {
+		t.Fatalf("Open: %v", err)
+	}
+	t.Cleanup(func() { db.Close() })
+
+	fileID, _ := db.UpsertFile(ctx, "/tmp/over.txt", 1, 1, 100, 10)
+	tagID, _ := db.UpsertTag(ctx, "tag1")
+
+	// Manually insert override for test.
+	// tag_overrides(file_id, tag_id, rule_name, suppressed_at)
+	if _, err := db.db.ExecContext(ctx,
+		"INSERT INTO tag_overrides(file_id, tag_id, rule_name, suppressed_at) VALUES (?, ?, ?, ?)",
+		fileID, tagID, "rule1", 12345); err != nil {
+		t.Fatalf("insert override: %v", err)
+	}
+
+	over, err := db.GetTagOverrides(ctx, fileID)
+	if err != nil {
+		t.Fatalf("GetTagOverrides: %v", err)
+	}
+	if len(over) != 1 || over["tag1"][0] != "rule1" {
+		t.Errorf("expected tag1 override from rule1, got %v", over)
+	}
+}
+
+func TestSetTagProvenance(t *testing.T) {
+	ctx := context.Background()
+	dir := t.TempDir()
+	db, err := Open(ctx, filepath.Join(dir, "test.db"))
+	if err != nil {
+		t.Fatalf("Open: %v", err)
+	}
+	t.Cleanup(func() { db.Close() })
+
+	fileID, _ := db.UpsertFile(ctx, "/tmp/prov.txt", 1, 1, 100, 10)
+	tagID, _ := db.UpsertTag(ctx, "tag1")
+
+	if err := db.SetTagProvenance(ctx, fileID, tagID, "manual"); err != nil {
+		t.Fatalf("SetTagProvenance: %v", err)
+	}
+
+	// Verify in DB.
+	var src string
+	if err := db.db.QueryRowContext(ctx, "SELECT source FROM tag_provenance WHERE file_id = ? AND tag_id = ?",
+		fileID, tagID).Scan(&src); err != nil {
+		t.Fatalf("query provenance: %v", err)
+	}
+	if src != "manual" {
+		t.Errorf("expected manual, got %s", src)
+	}
+}

@@ -24,7 +24,17 @@ import (
 // stubMethods is a minimal browser.Methods implementation for testing.
 type stubMethods struct {
 	listDirectoryFn func(path string, hidden bool) ([]browser.DirEntry, error)
+	statFileFn      func(path string) (browser.FileStat, error)
+	searchFn        func(tags []string, isAny bool, exclude []string, meta map[string]string, query string, limit, offset uint32, sort []string) ([]browser.FileResult, uint32, error)
+	globSearchFn    func(globs []string, limit uint32, hidden bool) ([]browser.FileResult, error)
+	getMetadataFn   func(path string) (map[string]string, map[string]string, error)
+	setMetadataFn   func(path, key, value string) error
+	modifyTagsFn    func(paths, tags []string, op string) (browser.TagResult, error)
+	hydrateTagsFn   func(paths []string) ([]browser.PathTags, error)
 	listTagsFn      func(prefix string) ([]string, error)
+	renameFileFn    func(oldPath, newPath string) (string, error)
+	deleteFileFn    func(path string) error
+	chmodFileFn     func(path string, mode uint32) error
 	listPlacesFn    func() ([]browser.PlaceEntry, error)
 }
 
@@ -36,27 +46,54 @@ func (s *stubMethods) ListDirectory(path string, hidden bool) ([]browser.DirEntr
 	}
 	return nil, errNotImplemented
 }
-func (s *stubMethods) StatFile(string) (browser.FileStat, error) {
+func (s *stubMethods) StatFile(path string) (browser.FileStat, error) {
+	if s.statFileFn != nil {
+		return s.statFileFn(path)
+	}
 	return browser.FileStat{}, errNotImplemented
 }
 func (s *stubMethods) Search(
-	[]string, bool, []string, map[string]string, string, uint32, uint32, []string,
+	tags []string,
+	isAny bool,
+	exclude []string,
+	meta map[string]string,
+	query string,
+	limit, offset uint32,
+	sort []string,
 ) ([]browser.FileResult, uint32, error) {
+	if s.searchFn != nil {
+		return s.searchFn(tags, isAny, exclude, meta, query, limit, offset, sort)
+	}
 	return nil, 0, errNotImplemented
 }
-func (s *stubMethods) GlobSearch([]string, uint32, bool) ([]browser.FileResult, error) {
+func (s *stubMethods) GlobSearch(globs []string, limit uint32, hidden bool) ([]browser.FileResult, error) {
+	if s.globSearchFn != nil {
+		return s.globSearchFn(globs, limit, hidden)
+	}
 	return nil, errNotImplemented
 }
-func (s *stubMethods) GetMetadata(string) (map[string]string, map[string]string, error) {
+func (s *stubMethods) GetMetadata(path string) (map[string]string, map[string]string, error) {
+	if s.getMetadataFn != nil {
+		return s.getMetadataFn(path)
+	}
 	return nil, nil, errNotImplemented
 }
-func (s *stubMethods) SetMetadata(string, string, string) error {
+func (s *stubMethods) SetMetadata(path, key, value string) error {
+	if s.setMetadataFn != nil {
+		return s.setMetadataFn(path, key, value)
+	}
 	return errNotImplemented
 }
-func (s *stubMethods) ModifyTags([]string, []string, string) (browser.TagResult, error) {
+func (s *stubMethods) ModifyTags(paths, tags []string, op string) (browser.TagResult, error) {
+	if s.modifyTagsFn != nil {
+		return s.modifyTagsFn(paths, tags, op)
+	}
 	return browser.TagResult{}, errNotImplemented
 }
-func (s *stubMethods) HydrateTags([]string) ([]browser.PathTags, error) {
+func (s *stubMethods) HydrateTags(paths []string) ([]browser.PathTags, error) {
+	if s.hydrateTagsFn != nil {
+		return s.hydrateTagsFn(paths)
+	}
 	return nil, errNotImplemented
 }
 func (s *stubMethods) ListTags(prefix string) ([]string, error) {
@@ -65,13 +102,22 @@ func (s *stubMethods) ListTags(prefix string) ([]string, error) {
 	}
 	return nil, errNotImplemented
 }
-func (s *stubMethods) RenameFile(string, string) (string, error) {
+func (s *stubMethods) RenameFile(oldPath, newPath string) (string, error) {
+	if s.renameFileFn != nil {
+		return s.renameFileFn(oldPath, newPath)
+	}
 	return "", errNotImplemented
 }
-func (s *stubMethods) DeleteFile(string) error {
+func (s *stubMethods) DeleteFile(path string) error {
+	if s.deleteFileFn != nil {
+		return s.deleteFileFn(path)
+	}
 	return errNotImplemented
 }
-func (s *stubMethods) ChmodFile(string, uint32) error {
+func (s *stubMethods) ChmodFile(path string, mode uint32) error {
+	if s.chmodFileFn != nil {
+		return s.chmodFileFn(path, mode)
+	}
 	return errNotImplemented
 }
 func (s *stubMethods) ListPlaces() ([]browser.PlaceEntry, error) {
