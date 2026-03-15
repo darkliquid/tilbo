@@ -1,8 +1,8 @@
 // Package config loads the shared tilbo configuration file.
 //
-// All three binaries (tilbo-daemon, tilbo-cli, tilbo-browser) read the same
-// file at $XDG_CONFIG_HOME/tilbo/config.toml. App-specific settings live
-// under [daemon], [cli], and [browser] keys; inline tag rules use [[rule]].
+// Both binaries (tilbo-daemon, tilbo-cli) read the same file at
+// $XDG_CONFIG_HOME/tilbo/config.toml. App-specific settings live under
+// [daemon] and [cli] keys; inline tag rules use [[rule]].
 //
 // CLI flags always override values from the config file.
 package config
@@ -35,16 +35,10 @@ type CLIConfig struct {
 	Socket string `toml:"socket"`
 }
 
-// BrowserConfig holds tilbo-browser settings.
-type BrowserConfig struct {
-	Socket string `toml:"socket"`
-}
-
 // Config is the top-level structure of the shared config file.
 type Config struct {
-	Daemon  DaemonConfig  `toml:"daemon"`
-	CLI     CLIConfig     `toml:"cli"`
-	Browser BrowserConfig `toml:"browser"`
+	Daemon DaemonConfig `toml:"daemon"`
+	CLI    CLIConfig    `toml:"cli"`
 
 	// Rules holds inline tag rules equivalent to per-file rules in the rules
 	// directory. TOML rule files in the rules directory continue to work; these

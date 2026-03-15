@@ -20,16 +20,9 @@ depends = ["generate"]
 sources = ["**/*.go"]
 outputs = ["tilbo-cli"]
 
-[tasks.build-browser]
-description = "Build tilbo browser"
-depends = ["generate"]
-run = "go build -v ./cmd/tilbo-browser"
-sources = ["**/*.go", "**/*.qml"]
-outputs = ["tilbo-browser"]
-
 [tasks.build]
 description = "Build all tilbo binaries"
-depends = ["build-daemon", "build-cli", "build-browser"]
+depends = ["build-daemon", "build-cli"]
 
 [tasks.test]
 description = "Run tests"
@@ -89,6 +82,11 @@ run = """
 rm -rf tilbo-cli tilbo-daemon
 rm -rf internal/ipc/gen/
 """
+
+[tasks.run-quickshell]
+description = "Run the tilbo Quickshell frontend (daemon must be running first)"
+run = "quickshell -p cmd/tilbo-quickshell/shell.qml"
+sources = ["cmd/tilbo-quickshell/**/*.qml"]
 
 [tasks.build-sqlite-vec]
 description = "Rebuild sqlite-vec.wasm for the index package"

@@ -2,13 +2,13 @@ name: CI
 
 on:
   push:
-    branches: ["**"]
+    branches: [main]
     tags-ignore: ["v*"] # releases are handled by release.yml
   pull_request:
 
-# Cancel in-progress runs on the same branch when a new push arrives.
+# Cancel in-progress runs when a new push arrives.
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 env:
@@ -58,16 +58,6 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - name: Install Qt6 development dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            qt6-base-dev \
-            qt6-base-dev-tools \
-            qt6-declarative-dev \
-            qt6-declarative-dev-tools \
-            qt6-tools-dev-tools
-
       - uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
@@ -94,16 +84,6 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v6
-
-      - name: Install Qt6 development dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            qt6-base-dev \
-            qt6-base-dev-tools \
-            qt6-declarative-dev \
-            qt6-declarative-dev-tools \
-            qt6-tools-dev-tools
 
       - uses: actions/setup-go@v6
         with:

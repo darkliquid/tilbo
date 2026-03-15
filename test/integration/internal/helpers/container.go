@@ -85,7 +85,11 @@ func NewSuite(ctx context.Context, binDir, stateDir string) (*Suite, error) {
 	// The host never needs to read the socket files directly; all socket
 	// monitoring is done via container.Exec, so losing host visibility here is
 	// not a problem.
-	if code, _, err := ctr.Exec(ctx, []string{"mount", "-t", "tmpfs", "tmpfs", "/tilbo/socks"}); err != nil || code != 0 {
+	if code, _, err := ctr.Exec(
+		ctx,
+		[]string{"mount", "-t", "tmpfs", "tmpfs", "/tilbo/socks"},
+	); err != nil ||
+		code != 0 {
 		_ = ctr.Terminate(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("mount socks tmpfs: %w", err)
