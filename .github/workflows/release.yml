@@ -28,16 +28,6 @@ jobs:
           go-version-file: go.mod
           cache: true
 
-      - name: Install Qt6 development dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            qt6-base-dev \
-            qt6-base-dev-tools \
-            qt6-declarative-dev \
-            qt6-declarative-dev-tools \
-            qt6-tools-dev-tools
-
       # nfpm is embedded in goreleaser; no separate install needed.
       # fpm/dpkg-dev tools are available on ubuntu-24.04 runners for .deb/.rpm.
       - name: Install packaging dependencies

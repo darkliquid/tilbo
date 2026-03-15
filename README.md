@@ -8,8 +8,8 @@ files manually and automatically, and extract and associate metadata with them.
 This data can then be used for file navigation using FUSE or a simple IPC system.
 
 In addition to the daemon that maintains the tags and metadata, there is a CLI
-tool for tagging, a GUI file browser and an xdg portal for exposing a custom file
-picker.
+tool for tagging and a Quickshell GUI file browser that communicates with the
+daemon over D-Bus.
 
 Tags and metadata are stored via extended filesystem attributes by default, with
 a fallback to storing the data in an sqlite database for filesystems that do not
@@ -24,6 +24,7 @@ support extended filesystem attributes.
 - [Getting Started](#getting-started)
 - [The Daemon](#the-daemon)
 - [The CLI](#the-cli)
+- [The GUI Browser](#the-gui-browser)
 - [FUSE Virtual Filesystem](#fuse-virtual-filesystem)
 - [Auto-tagging: Harvesters and Rules](#auto-tagging-harvesters-and-rules)
 - [Optional External Dependencies](#optional-external-dependencies)
@@ -37,6 +38,7 @@ support extended filesystem attributes.
 - Linux (kernel 5.10+ for fanotify; 5.17+ recommended for rename tracking)
 - Go 1.22 or later (to build from source)
 - FUSE kernel module (`fuse` package)
+- [Quickshell](https://quickshell.outfoxxed.me/) (optional — only required for the GUI browser)
 
 ---
 
@@ -49,6 +51,10 @@ go build -o tilbo-cli    ./cmd/tilbo-cli
 
 # Install to ~/bin (or /usr/local/bin)
 cp tilbo-daemon tilbo-cli ~/bin/
+
+# The GUI browser is a pure-QML app — no Go build step needed.
+# Install Quickshell (https://quickshell.outfoxxed.me/), then run directly:
+#   quickshell run cmd/tilbo-quickshell/shell.qml
 
 # Generate shell completions
 tilbo completion bash > ~/.local/share/bash-completion/completions/tilbo
@@ -93,20 +99,26 @@ systemctl --user enable --now tilbo-daemon
    tilbo-daemon --watch ~ --fuse-mount ~/tags
    ```
 
-2. **Tag a file**:
+2. **Open the GUI browser** (optional, requires Quickshell):
+
+   ```sh
+   quickshell run cmd/tilbo-quickshell/shell.qml
+   ```
+
+3. **Tag a file**:
 
    ```sh
    tilbo tag add ~/documents/report.pdf work project-alpha
    ```
 
-3. **Browse by tag** (after FUSE is mounted):
+4. **Browse by tag** (after FUSE is mounted):
 
    ```sh
    ls ~/tags/work/
    ls ~/tags/work+project-alpha/
    ```
 
-4. **Search from the CLI**:
+5. **Search from the CLI**:
 
    ```sh
    tilbo search --tags work+project-alpha
@@ -313,6 +325,59 @@ tilbo --socket /run/user/$UID/tilbo.sock config init
 # Generate shell completions
 tilbo completion fish > ~/.config/fish/completions/tilbo.fish
 ```
+
+---
+
+## The GUI Browser
+
+The Quickshell frontend (`cmd/tilbo-quickshell`) is a pure-QML file browser
+that communicates with a running daemon over D-Bus. It requires
+[Quickshell](https://quickshell.outfoxxed.me/) to be installed.
+
+### Running
+
+```sh
+# Start the daemon first (D-Bus service must be available on the session bus)
+tilbo-daemon --watch ~ --fuse-mount ~/tags
+
+# Then launch the browser in another terminal (or via autostart)
+quickshell run cmd/tilbo-quickshell/shell.qml
+
+# Or with the mise task shorthand
+mise run run-quickshell
+```
+
+### Layout
+
+| Area | Description |
+| --- | --- |
+| Header | Search bar (chips for tags, globs, full-text), grid/list toggle, hidden-files toggle |
+| Left sidebar (Places) | Home directory, XDG user dirs, FUSE tag mount when active |
+| Main pane | File grid or list; double-click to navigate/open |
+| Right sidebar (Properties) | Name, path, size, mtime, metadata key/value pairs, tag badges for the selected file |
+| Footer | Clickable breadcrumb strip; click the last segment or the ✎ icon to type a path directly |
+
+### Search chip syntax
+
+| Chip | Behaviour |
+| --- | --- |
+| `photo` | Indexed tag search — files tagged `photo` |
+| `glob:*.jpg` | Filesystem glob search |
+| `fts:sunset` | Full-text search over metadata values |
+| `hidden:any` | Include hidden files in results |
+
+Multiple chips are combined: tag chips use AND semantics; glob chips run a
+separate filesystem walk; results from both are merged.
+
+### D-Bus signals
+
+The browser reacts to live daemon signals without polling:
+
+| Signal | Browser reaction |
+| --- | --- |
+| `FileTagged` | Tag badges on the affected entry update in-place |
+| `IndexUpdated` | Active search re-executes with the latest index |
+| `DaemonStateChanged` | Connection indicator in the search bar updates |
 
 ---
 
@@ -646,13 +711,9 @@ Delete the cache directory to force recompilation.
 
 ### Not yet implemented
 
-- **Qt/QML browser and XDG portal backend** (`tilbo-browser`) — the GUI file
-  manager and portal file picker are planned but not yet implemented.
 - **Vector embeddings** — the schema includes an `embeddings` column and
   sqlite-vec integration for semantic similarity, but the embedding pipeline
   (`knights-analytics/hugot`, ONNX) is not yet wired up. `@similar:` queries
   use graph traversal only.
 - **`tilbo rule list/validate/test`** and **`tilbo harvester list/test`** CLI
   subcommands are planned but not yet implemented.
-- **D-Bus signals** (`FileTagged`, `IndexUpdated`, `DaemonStateChanged`) are
-  defined in the architecture but not yet implemented in the daemon.

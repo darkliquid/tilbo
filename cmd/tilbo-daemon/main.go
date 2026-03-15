@@ -21,7 +21,6 @@ import (
 
 	"github.com/darkliquid/tilbo/internal/bookmarks"
 	"github.com/darkliquid/tilbo/internal/config"
-	"github.com/darkliquid/tilbo/internal/dbus"
 	tilbofuse "github.com/darkliquid/tilbo/internal/fuse"
 	"github.com/darkliquid/tilbo/internal/graph"
 	"github.com/darkliquid/tilbo/internal/harvester"
@@ -30,6 +29,7 @@ import (
 	ipcv1 "github.com/darkliquid/tilbo/internal/ipc/gen/tilbo/ipc/v1"
 	"github.com/darkliquid/tilbo/internal/rules"
 	isync "github.com/darkliquid/tilbo/internal/sync"
+	"github.com/darkliquid/tilbo/internal/uisocket"
 	"github.com/darkliquid/tilbo/internal/vectorize"
 	"github.com/darkliquid/tilbo/internal/watcher"
 	"github.com/darkliquid/tilbo/internal/xattr"
@@ -121,31 +121,6 @@ func run(
 	}
 	syncer := isync.New(idx, tags, watchPath, watchHidden, syncerExcludePaths)
 
-	// Start D-Bus so we can report daemon state changes.
-	dbusConn, dbusErr := dbus.NewDaemonBus()
-	if dbusErr != nil {
-		slog.WarnContext(ctx, "dbus: failed to connect; continuing without D-Bus signals", "err", dbusErr)
-	} else {
-		defer dbusConn.Close()
-		syncer.OnStateChanged = func(state ipcv1.DaemonState) {
-			s := "idle"
-			// Translate protobuf states into strings for D-Bus
-			switch state {
-			case ipcv1.DaemonState_DAEMON_STATE_UNSPECIFIED, ipcv1.DaemonState_DAEMON_STATE_IDLE:
-				s = "idle"
-			case ipcv1.DaemonState_DAEMON_STATE_SCANNING:
-				s = "scanning"
-			case ipcv1.DaemonState_DAEMON_STATE_READY:
-				s = "ready"
-			case ipcv1.DaemonState_DAEMON_STATE_DEGRADED:
-				s = "degraded"
-			}
-			dbusConn.EmitDaemonStateChanged(s)
-		}
-		syncer.OnIndexUpdated = func(filesTotal, tagsTotal uint64) {
-			dbusConn.EmitIndexUpdated(filesTotal, tagsTotal)
-		}
-	}
 
 	// --- M2: harvester pipeline and rule engine ---
 
@@ -212,11 +187,50 @@ func run(
 
 	// Processor (runs pipeline + rules on each file event).
 	proc := newProcessor(idx, tags, pipeline, engine, fileGraph, embedder)
-	if dbusConn != nil {
-		proc.OnFileTagged = func(path string, added, removed []string) {
-			dbusConn.EmitFileTagged(path, added, removed)
-		}
+
+	// UI socket server — primary frontend IPC; always started, D-Bus-independent.
+	uiSockPath := strings.TrimSuffix(sockPath, ".sock") + "-ui.sock"
+	uiBrowserMethods := &daemonBrowserMethods{
+		idx:       idx,
+		tags:      tags,
+		g:         fileGraph,
+		fuseMount: fuseMount,
+		// onFileTagged is captured via closure; proc.OnFileTagged is set below.
+		onFileTagged: func(path string, added, removed []string) {
+			proc.OnFileTagged(path, added, removed)
+		},
 	}
+	uiSrv := uisocket.New(uiSockPath, uiBrowserMethods)
+
+	// Wire event callbacks to broadcast to all UI socket clients.
+	proc.OnFileTagged = func(path string, added, removed []string) {
+		uiSrv.BroadcastFileTagged(path, added, removed)
+	}
+
+	syncer.OnStateChanged = func(state ipcv1.DaemonState) {
+		s := "idle"
+		switch state {
+		case ipcv1.DaemonState_DAEMON_STATE_SCANNING:
+			s = "scanning"
+		case ipcv1.DaemonState_DAEMON_STATE_READY:
+			s = "ready"
+		case ipcv1.DaemonState_DAEMON_STATE_DEGRADED:
+			s = "degraded"
+		}
+		uiSrv.BroadcastDaemonStateChanged(s)
+	}
+
+	syncer.OnIndexUpdated = func(filesTotal, tagsTotal uint64) {
+		uiSrv.BroadcastIndexUpdated(filesTotal, tagsTotal)
+	}
+
+	// Start the UI socket listener. All callbacks are wired above so the
+	// goroutine is safe to receive connections immediately.
+	go func() {
+		if err := uiSrv.Listen(ctx); err != nil {
+			slog.WarnContext(ctx, "uisocket: stopped", "err", err)
+		}
+	}()
 
 	// Sweeper (re-evaluates all files after rule reload).
 	sweeper := rules.NewSweeper(idx, tags, pipeline, engine)

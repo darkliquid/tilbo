@@ -9,11 +9,9 @@ require (
 	github.com/charmbracelet/fang v0.4.4
 	github.com/dhowden/tag v0.0.0-20240417053706-3d75831295e8
 	github.com/dominikbraun/graph v0.23.0
-	github.com/godbus/dbus/v5 v5.2.2
 	github.com/h2non/filetype v1.1.3
 	github.com/hanwen/go-fuse/v2 v2.9.0
 	github.com/knights-analytics/hugot v0.6.4
-	github.com/mappu/miqt v0.13.0
 	github.com/ncruces/go-sqlite3 v0.31.1
 	github.com/pdfcpu/pdfcpu v0.11.1
 	github.com/pkg/xattr v0.4.12

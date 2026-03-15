@@ -1,4 +1,0 @@
-[portal]
-DBusName=uk.co.darkliquid.tilbo.Browser
-Interfaces=org.freedesktop.impl.portal.FileChooser;
-UseIn=gnome;kde;sway;hyprland;
