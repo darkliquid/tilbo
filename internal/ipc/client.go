@@ -66,9 +66,8 @@ func (c *Client) readLoop() {
 	defer c.wg.Done()
 	defer c.conn.Close()
 
-	const maxTokenSize = 4 * 1024 * 1024
 	scanner := bufio.NewScanner(c.conn)
-	scanner.Buffer(make([]byte, maxTokenSize), maxTokenSize)
+	scanner.Buffer(make([]byte, maxFrameSize), maxFrameSize)
 
 	for scanner.Scan() {
 		if c.closed.Load() {
