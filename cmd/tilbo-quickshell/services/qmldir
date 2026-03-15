@@ -1,0 +1,2 @@
+module services
+singleton TilboDaemon 1.0 TilboDaemon.qml
