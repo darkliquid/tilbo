@@ -217,6 +217,31 @@ func TestServer_ContextCancelBeforeCall(t *testing.T) {
 	}
 }
 
+// dialUnixWithRetry repeatedly attempts to dial the Unix socket until it
+// succeeds or the context is done.
+func dialUnixWithRetry(ctx context.Context, sockPath string) (net.Conn, error) {
+	var lastErr error
+
+	for {
+		select {
+		case <-ctx.Done():
+			if lastErr == nil {
+				lastErr = ctx.Err()
+			}
+			return nil, fmt.Errorf("dialUnixWithRetry: %w", lastErr)
+		default:
+		}
+
+		conn, err := dialUnix(sockPath)
+		if err == nil {
+			return conn, nil
+		}
+
+		lastErr = err
+		time.Sleep(10 * time.Millisecond)
+	}
+}
+
 func TestBroadcastEvent_Delivery(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -229,15 +254,13 @@ func TestBroadcastEvent_Delivery(t *testing.T) {
 		t.Fatalf("srv.Start: %v", err)
 	}
 	defer srv.Stop()
-	time.Sleep(20 * time.Millisecond)
 
 	// Connect a raw net.Conn so we can read frames directly.
-	rawConn, err := dialUnix(sockPath)
+	rawConn, err := dialUnixWithRetry(ctx, sockPath)
 	if err != nil {
 		t.Fatalf("dial: %v", err)
 	}
 	defer rawConn.Close()
-	time.Sleep(20 * time.Millisecond)
 
 	// Broadcast an event.
 	srv.BroadcastEvent(&ipcv1.Event{
@@ -253,14 +276,20 @@ func TestBroadcastEvent_Delivery(t *testing.T) {
 	var gotEnv *ipcv1.Envelope
 	go func() {
 		defer close(done)
-		if scanner.Scan() {
-			env := &ipcv1.Envelope{}
-			if err := (protojson.UnmarshalOptions{DiscardUnknown: true}).Unmarshal(scanner.Bytes(), env); err != nil {
+		if !scanner.Scan() {
+			if err := scanner.Err(); err != nil {
 				gotErr = err
-				return
+			} else {
+				gotErr = fmt.Errorf("scanner stopped before reading broadcast event frame")
 			}
-			gotEnv = env
+			return
 		}
+		env := &ipcv1.Envelope{}
+		if err := (protojson.UnmarshalOptions{DiscardUnknown: true}).Unmarshal(scanner.Bytes(), env); err != nil {
+			gotErr = err
+			return
+		}
+		gotEnv = env
 	}()
 
 	select {
@@ -343,7 +372,10 @@ func TestClient_ConnectionDrop(t *testing.T) {
 
 	// Use a blocking handler so the call is always pending when we drop the conn.
 	block := make(chan struct{})
+	started := make(chan struct{})
 	sockPath := startTestServer(t, func(_ context.Context, _ *ipcv1.Request) (*ipcv1.Response, error) {
+		// Signal that the server has received the request and is about to block.
+		close(started)
 		<-block
 		return &ipcv1.Response{Kind: &ipcv1.Response_Status{Status: &ipcv1.StatusResponse{}}}, nil
 	})
@@ -360,8 +392,13 @@ func TestClient_ConnectionDrop(t *testing.T) {
 		callDone <- callErr
 	}()
 
-	// Give Call time to register the request and be waiting on the channel.
-	time.Sleep(30 * time.Millisecond)
+	// Wait deterministically until the server has received the request and is blocking.
+	select {
+	case <-started:
+		// proceed
+	case <-ctx.Done():
+		t.Fatalf("timed out waiting for call to start: %v", ctx.Err())
+	}
 
 	// Forcibly close the underlying connection to simulate a drop.
 	cli.conn.Close()
