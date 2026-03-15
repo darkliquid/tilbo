@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"sync"
@@ -16,6 +17,27 @@ import (
 )
 
 // --- Framing edge cases ---
+
+func TestFraming_OversizedFrame(t *testing.T) {
+	// Build a SearchRequest whose FtsQuery field pushes the marshaled JSON
+	// over the maxFrameSize limit.
+	bigQuery := strings.Repeat("x", maxFrameSize+1)
+	env := &ipcv1.Envelope{
+		RequestId: 1,
+		Payload: &ipcv1.Envelope_Request{
+			Request: &ipcv1.Request{
+				Kind: &ipcv1.Request_Search{
+					Search: &ipcv1.SearchRequest{FtsQuery: bigQuery},
+				},
+			},
+		},
+	}
+	var buf bytes.Buffer
+	err := WriteEnvelope(&buf, env)
+	if !errors.Is(err, ErrFrameTooLarge) {
+		t.Fatalf("expected ErrFrameTooLarge, got %v", err)
+	}
+}
 
 func TestFraming_EmptyPayload(t *testing.T) {
 	env := &ipcv1.Envelope{RequestId: 1}

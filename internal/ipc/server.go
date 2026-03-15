@@ -163,9 +163,8 @@ func (s *Server) handleConn(ctx context.Context, conn net.Conn, cw *connWriter) 
 	defer s.untrackConn(conn)
 	defer conn.Close()
 
-	const maxTokenSize = 4 * 1024 * 1024
 	scanner := bufio.NewScanner(conn)
-	scanner.Buffer(make([]byte, maxTokenSize), maxTokenSize)
+	scanner.Buffer(make([]byte, maxFrameSize), maxFrameSize)
 
 	for scanner.Scan() {
 		if s.closing.Load() {
