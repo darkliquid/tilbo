@@ -167,9 +167,13 @@ func (h *daemonBrowserMethods) Search(
 }
 
 // GlobSearch executes a local filesystem glob search (no index required).
-// patterns must be standard filepath.Glob patterns. Hidden files are excluded
+// patterns must be standard [filepath.Glob] patterns. Hidden files are excluded
 // unless allowHidden is true.
-func (h *daemonBrowserMethods) GlobSearch(patterns []string, limit uint32, allowHidden bool) ([]browser.FileResult, error) {
+func (h *daemonBrowserMethods) GlobSearch(
+	patterns []string,
+	limit uint32,
+	allowHidden bool,
+) ([]browser.FileResult, error) {
 	maxResults := int(limit)
 	if maxResults <= 0 {
 		maxResults = defaultGlobLimit
@@ -179,40 +183,60 @@ func (h *daemonBrowserMethods) GlobSearch(patterns []string, limit uint32, allow
 	files := make([]browser.FileResult, 0, maxResults)
 
 	for _, pattern := range patterns {
-		if strings.ContainsRune(pattern, 0) {
-			return nil, fmt.Errorf("pattern must not contain null bytes: %q", pattern)
-		}
-		matches, err := filepath.Glob(pattern)
+		var err error
+		files, err = globPattern(pattern, allowHidden, seen, files, maxResults)
 		if err != nil {
-			return nil, fmt.Errorf("glob %q: %w", pattern, err)
+			return nil, err
 		}
-		sort.Strings(matches)
-
-		for _, match := range matches {
-			if len(files) >= maxResults {
-				return files, nil
-			}
-			if _, dup := seen[match]; dup {
-				continue
-			}
-			seen[match] = struct{}{}
-
-			base := filepath.Base(match)
-			if !allowHidden && base != "" && base[0] == '.' {
-				continue
-			}
-
-			info, statErr := os.Stat(match)
-			if statErr != nil {
-				continue
-			}
-			files = append(files, browser.FileResult{
-				Path:  match,
-				Tags:  []string{},
-				MTime: info.ModTime().Unix(),
-				Size:  info.Size(),
-			})
+		if len(files) >= maxResults {
+			return files, nil
 		}
+	}
+	return files, nil
+}
+
+// globPattern executes a single [filepath.Glob] pattern and appends matching
+// results to files, stopping when maxResults is reached.
+func globPattern(
+	pattern string,
+	allowHidden bool,
+	seen map[string]struct{},
+	files []browser.FileResult,
+	maxResults int,
+) ([]browser.FileResult, error) {
+	if strings.ContainsRune(pattern, 0) {
+		return nil, fmt.Errorf("pattern must not contain null bytes: %q", pattern)
+	}
+	matches, err := filepath.Glob(pattern)
+	if err != nil {
+		return nil, fmt.Errorf("glob %q: %w", pattern, err)
+	}
+	sort.Strings(matches)
+
+	for _, match := range matches {
+		if len(files) >= maxResults {
+			return files, nil
+		}
+		if _, dup := seen[match]; dup {
+			continue
+		}
+		seen[match] = struct{}{}
+
+		base := filepath.Base(match)
+		if !allowHidden && base != "" && base[0] == '.' {
+			continue
+		}
+
+		info, statErr := os.Stat(match)
+		if statErr != nil {
+			continue
+		}
+		files = append(files, browser.FileResult{
+			Path:  match,
+			Tags:  []string{},
+			MTime: info.ModTime().Unix(),
+			Size:  info.Size(),
+		})
 	}
 	return files, nil
 }

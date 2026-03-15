@@ -121,7 +121,6 @@ func run(
 	}
 	syncer := isync.New(idx, tags, watchPath, watchHidden, syncerExcludePaths)
 
-
 	// --- M2: harvester pipeline and rule engine ---
 
 	// Shared WASM compilation cache stored in the OS temp directory.
@@ -210,6 +209,8 @@ func run(
 	syncer.OnStateChanged = func(state ipcv1.DaemonState) {
 		s := "idle"
 		switch state {
+		case ipcv1.DaemonState_DAEMON_STATE_UNSPECIFIED, ipcv1.DaemonState_DAEMON_STATE_IDLE:
+			s = "idle"
 		case ipcv1.DaemonState_DAEMON_STATE_SCANNING:
 			s = "scanning"
 		case ipcv1.DaemonState_DAEMON_STATE_READY:

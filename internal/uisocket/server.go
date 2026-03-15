@@ -59,7 +59,7 @@ type pushEvent struct {
 	Args  any    `json:"args"`
 }
 
-// connWriter wraps a net.Conn with a per-connection write mutex so that
+// connWriter wraps a [net.Conn] with a per-connection write mutex so that
 // concurrent dispatch goroutines and broadcast calls cannot interleave bytes.
 type connWriter struct {
 	conn net.Conn
@@ -76,8 +76,9 @@ func (cw *connWriter) write(data []byte) {
 // Server listens on a Unix socket, dispatches JSON calls to BrowserMethods,
 // and broadcasts push events to all connected clients.
 type Server struct {
-	path    string
-	methods browser.Methods
+	path     string
+	methods  browser.Methods
+	handlers map[string]func([]json.RawMessage) (any, error)
 
 	mu      sync.Mutex
 	clients map[net.Conn]*connWriter
@@ -85,11 +86,27 @@ type Server struct {
 
 // New returns a Server that will bind to socketPath and delegate calls to m.
 func New(socketPath string, m browser.Methods) *Server {
-	return &Server{
+	s := &Server{
 		path:    socketPath,
 		methods: m,
 		clients: make(map[net.Conn]*connWriter),
 	}
+	s.handlers = map[string]func([]json.RawMessage) (any, error){
+		"ListDirectory": s.callListDirectory,
+		"StatFile":      s.callStatFile,
+		"Search":        s.callSearch,
+		"GlobSearch":    s.callGlobSearch,
+		"GetMetadata":   s.callGetMetadata,
+		"SetMetadata":   s.callSetMetadata,
+		"ModifyTags":    s.callModifyTags,
+		"HydrateTags":   s.callHydrateTags,
+		"ListTags":      s.callListTags,
+		"RenameFile":    s.callRenameFile,
+		"DeleteFile":    s.callDeleteFile,
+		"ChmodFile":     s.callChmodFile,
+		"ListPlaces":    func(_ []json.RawMessage) (any, error) { return s.methods.ListPlaces() },
+	}
+	return s
 }
 
 // Listen binds the Unix socket and accepts connections until ctx is cancelled.
@@ -100,7 +117,8 @@ func (s *Server) Listen(ctx context.Context) error {
 	if err := os.MkdirAll(filepath.Dir(s.path), 0o700); err != nil {
 		return fmt.Errorf("uisocket: mkdir: %w", err)
 	}
-	ln, err := net.Listen("unix", s.path)
+	lc := &net.ListenConfig{}
+	ln, err := lc.Listen(ctx, "unix", s.path)
 	if err != nil {
 		return fmt.Errorf("uisocket: listen %s: %w", s.path, err)
 	}
@@ -114,7 +132,7 @@ func (s *Server) Listen(ctx context.Context) error {
 
 	go func() {
 		<-ctx.Done()
-		ln.Close()
+		_ = ln.Close()
 	}()
 
 	slog.InfoContext(ctx, "uisocket: listening", "path", s.path)
@@ -187,13 +205,13 @@ func (s *Server) handleConn(ctx context.Context, conn net.Conn) {
 		s.mu.Lock()
 		delete(s.clients, conn)
 		s.mu.Unlock()
-		conn.Close()
+		_ = conn.Close()
 	}()
 
 	// Close conn when ctx is cancelled so the scanner loop exits.
 	go func() {
 		<-ctx.Done()
-		conn.Close()
+		_ = conn.Close()
 	}()
 
 	// Use a 4 MiB scan buffer to handle large directory listings / search
@@ -239,6 +257,9 @@ func (s *Server) dispatch(ctx context.Context, cw *connWriter, req request) {
 	cw.write(data)
 }
 
+// argIdx2 is the positional index of the third argument in an RPC args slice.
+const argIdx2 = 2
+
 // unmarshal is a helper that unmarshals args[idx] into v.
 func unmarshal(args []json.RawMessage, idx int, v any) error {
 	if idx >= len(args) {
@@ -247,155 +268,161 @@ func unmarshal(args []json.RawMessage, idx int, v any) error {
 	return json.Unmarshal(args[idx], v)
 }
 
-// call dispatches req.Method with req.Args to BrowserMethods.
-//
-//nolint:cyclop,gocyclo // flat switch for RPC dispatch is intentional
-func (s *Server) call(ctx context.Context, method string, args []json.RawMessage) (any, error) {
-	_ = ctx // reserved for future cancellation propagation
-
-	switch method {
-	case "ListDirectory":
-		var path string
-		var hidden bool
-		if err := unmarshal(args, 0, &path); err != nil {
-			return nil, err
-		}
-		if err := unmarshal(args, 1, &hidden); err != nil {
-			return nil, err
-		}
-		return s.methods.ListDirectory(path, hidden)
-
-	case "StatFile":
-		var path string
-		if err := unmarshal(args, 0, &path); err != nil {
-			return nil, err
-		}
-		return s.methods.StatFile(path)
-
-	case "Search":
-		var (
-			tags        []string
-			tagsAny     bool
-			tagExclude  []string
-			metaFilters map[string]string
-			ftsQuery    string
-			limit       uint32
-			offset      uint32
-			sortBy      []string
-		)
-		for i, dst := range []any{
-			&tags, &tagsAny, &tagExclude, &metaFilters,
-			&ftsQuery, &limit, &offset, &sortBy,
-		} {
-			if err := unmarshal(args, i, dst); err != nil {
-				return nil, err
-			}
-		}
-		files, total, err := s.methods.Search(tags, tagsAny, tagExclude, metaFilters, ftsQuery, limit, offset, sortBy)
-		if err != nil {
-			return nil, err
-		}
-		return map[string]any{"files": files, "total": total}, nil
-
-	case "GlobSearch":
-		var patterns []string
-		var limit uint32
-		var allowHidden bool
-		if err := unmarshal(args, 0, &patterns); err != nil {
-			return nil, err
-		}
-		if err := unmarshal(args, 1, &limit); err != nil {
-			return nil, err
-		}
-		if err := unmarshal(args, 2, &allowHidden); err != nil {
-			return nil, err
-		}
-		return s.methods.GlobSearch(patterns, limit, allowHidden)
-
-	case "GetMetadata":
-		var path string
-		if err := unmarshal(args, 0, &path); err != nil {
-			return nil, err
-		}
-		vals, sources, err := s.methods.GetMetadata(path)
-		if err != nil {
-			return nil, err
-		}
-		return map[string]any{"metadata": vals, "sources": sources}, nil
-
-	case "SetMetadata":
-		var path, key, value string
-		if err := unmarshal(args, 0, &path); err != nil {
-			return nil, err
-		}
-		if err := unmarshal(args, 1, &key); err != nil {
-			return nil, err
-		}
-		if err := unmarshal(args, 2, &value); err != nil {
-			return nil, err
-		}
-		return nil, s.methods.SetMetadata(path, key, value)
-
-	case "ModifyTags":
-		var paths, tags []string
-		var operation string
-		if err := unmarshal(args, 0, &paths); err != nil {
-			return nil, err
-		}
-		if err := unmarshal(args, 1, &tags); err != nil {
-			return nil, err
-		}
-		if err := unmarshal(args, 2, &operation); err != nil {
-			return nil, err
-		}
-		return s.methods.ModifyTags(paths, tags, operation)
-
-	case "HydrateTags":
-		var paths []string
-		if err := unmarshal(args, 0, &paths); err != nil {
-			return nil, err
-		}
-		return s.methods.HydrateTags(paths)
-
-	case "ListTags":
-		var prefix string
-		if err := unmarshal(args, 0, &prefix); err != nil {
-			return nil, err
-		}
-		return s.methods.ListTags(prefix)
-
-	case "RenameFile":
-		var path, newName string
-		if err := unmarshal(args, 0, &path); err != nil {
-			return nil, err
-		}
-		if err := unmarshal(args, 1, &newName); err != nil {
-			return nil, err
-		}
-		return s.methods.RenameFile(path, newName)
-
-	case "DeleteFile":
-		var path string
-		if err := unmarshal(args, 0, &path); err != nil {
-			return nil, err
-		}
-		return nil, s.methods.DeleteFile(path)
-
-	case "ChmodFile":
-		var path string
-		var mode uint32
-		if err := unmarshal(args, 0, &path); err != nil {
-			return nil, err
-		}
-		if err := unmarshal(args, 1, &mode); err != nil {
-			return nil, err
-		}
-		return nil, s.methods.ChmodFile(path, mode)
-
-	case "ListPlaces":
-		return s.methods.ListPlaces()
-
-	default:
+// call dispatches method with args to the registered handler.
+func (s *Server) call(_ context.Context, method string, args []json.RawMessage) (any, error) {
+	h, ok := s.handlers[method]
+	if !ok {
 		return nil, fmt.Errorf("unknown method %q", method)
 	}
+	return h(args)
+}
+
+func (s *Server) callListDirectory(args []json.RawMessage) (any, error) {
+	var path string
+	var hidden bool
+	if err := unmarshal(args, 0, &path); err != nil {
+		return nil, err
+	}
+	if err := unmarshal(args, 1, &hidden); err != nil {
+		return nil, err
+	}
+	return s.methods.ListDirectory(path, hidden)
+}
+
+func (s *Server) callStatFile(args []json.RawMessage) (any, error) {
+	var path string
+	if err := unmarshal(args, 0, &path); err != nil {
+		return nil, err
+	}
+	return s.methods.StatFile(path)
+}
+
+func (s *Server) callSearch(args []json.RawMessage) (any, error) {
+	var (
+		tags        []string
+		tagsAny     bool
+		tagExclude  []string
+		metaFilters map[string]string
+		ftsQuery    string
+		limit       uint32
+		offset      uint32
+		sortBy      []string
+	)
+	for i, dst := range []any{
+		&tags, &tagsAny, &tagExclude, &metaFilters,
+		&ftsQuery, &limit, &offset, &sortBy,
+	} {
+		if err := unmarshal(args, i, dst); err != nil {
+			return nil, err
+		}
+	}
+	files, total, err := s.methods.Search(tags, tagsAny, tagExclude, metaFilters, ftsQuery, limit, offset, sortBy)
+	if err != nil {
+		return nil, err
+	}
+	return map[string]any{"files": files, "total": total}, nil
+}
+
+func (s *Server) callGlobSearch(args []json.RawMessage) (any, error) {
+	var patterns []string
+	var limit uint32
+	var allowHidden bool
+	if err := unmarshal(args, 0, &patterns); err != nil {
+		return nil, err
+	}
+	if err := unmarshal(args, 1, &limit); err != nil {
+		return nil, err
+	}
+	if err := unmarshal(args, argIdx2, &allowHidden); err != nil {
+		return nil, err
+	}
+	return s.methods.GlobSearch(patterns, limit, allowHidden)
+}
+
+func (s *Server) callGetMetadata(args []json.RawMessage) (any, error) {
+	var path string
+	if err := unmarshal(args, 0, &path); err != nil {
+		return nil, err
+	}
+	vals, sources, err := s.methods.GetMetadata(path)
+	if err != nil {
+		return nil, err
+	}
+	return map[string]any{"metadata": vals, "sources": sources}, nil
+}
+
+func (s *Server) callSetMetadata(args []json.RawMessage) (any, error) {
+	var path, key, value string
+	if err := unmarshal(args, 0, &path); err != nil {
+		return nil, err
+	}
+	if err := unmarshal(args, 1, &key); err != nil {
+		return nil, err
+	}
+	if err := unmarshal(args, argIdx2, &value); err != nil {
+		return nil, err
+	}
+	return nil, s.methods.SetMetadata(path, key, value)
+}
+
+func (s *Server) callModifyTags(args []json.RawMessage) (any, error) {
+	var paths, tags []string
+	var operation string
+	if err := unmarshal(args, 0, &paths); err != nil {
+		return nil, err
+	}
+	if err := unmarshal(args, 1, &tags); err != nil {
+		return nil, err
+	}
+	if err := unmarshal(args, argIdx2, &operation); err != nil {
+		return nil, err
+	}
+	return s.methods.ModifyTags(paths, tags, operation)
+}
+
+func (s *Server) callHydrateTags(args []json.RawMessage) (any, error) {
+	var paths []string
+	if err := unmarshal(args, 0, &paths); err != nil {
+		return nil, err
+	}
+	return s.methods.HydrateTags(paths)
+}
+
+func (s *Server) callListTags(args []json.RawMessage) (any, error) {
+	var prefix string
+	if err := unmarshal(args, 0, &prefix); err != nil {
+		return nil, err
+	}
+	return s.methods.ListTags(prefix)
+}
+
+func (s *Server) callRenameFile(args []json.RawMessage) (any, error) {
+	var path, newName string
+	if err := unmarshal(args, 0, &path); err != nil {
+		return nil, err
+	}
+	if err := unmarshal(args, 1, &newName); err != nil {
+		return nil, err
+	}
+	return s.methods.RenameFile(path, newName)
+}
+
+func (s *Server) callDeleteFile(args []json.RawMessage) (any, error) {
+	var path string
+	if err := unmarshal(args, 0, &path); err != nil {
+		return nil, err
+	}
+	return nil, s.methods.DeleteFile(path)
+}
+
+func (s *Server) callChmodFile(args []json.RawMessage) (any, error) {
+	var path string
+	var mode uint32
+	if err := unmarshal(args, 0, &path); err != nil {
+		return nil, err
+	}
+	if err := unmarshal(args, 1, &mode); err != nil {
+		return nil, err
+	}
+	return nil, s.methods.ChmodFile(path, mode)
 }

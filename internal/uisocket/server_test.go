@@ -39,7 +39,9 @@ func (s *stubMethods) ListDirectory(path string, hidden bool) ([]browser.DirEntr
 func (s *stubMethods) StatFile(string) (browser.FileStat, error) {
 	return browser.FileStat{}, errNotImplemented
 }
-func (s *stubMethods) Search([]string, bool, []string, map[string]string, string, uint32, uint32, []string) ([]browser.FileResult, uint32, error) {
+func (s *stubMethods) Search(
+	[]string, bool, []string, map[string]string, string, uint32, uint32, []string,
+) ([]browser.FileResult, uint32, error) {
 	return nil, 0, errNotImplemented
 }
 func (s *stubMethods) GlobSearch([]string, uint32, bool) ([]browser.FileResult, error) {
@@ -83,11 +85,11 @@ func (s *stubMethods) ListPlaces() ([]browser.PlaceEntry, error) {
 
 // startServer starts a uisocket Server using a temp directory, returning the
 // socket path, the Server, and a cancel function that shuts the server down.
-func startServer(t *testing.T, m browser.Methods) (sockPath string, srv *uisocket.Server, cancel context.CancelFunc) {
+func startServer(t *testing.T, m browser.Methods) (string, *uisocket.Server, context.CancelFunc) {
 	t.Helper()
 	dir := t.TempDir()
-	sockPath = filepath.Join(dir, "test.sock")
-	srv = uisocket.New(sockPath, m)
+	sockPath := filepath.Join(dir, "test.sock")
+	srv := uisocket.New(sockPath, m)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	ready := make(chan struct{})
