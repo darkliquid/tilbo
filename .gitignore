@@ -19,6 +19,8 @@
 !*.txt
 !*.wasm
 !*.qml
+!*.js
+!*.ts
 
 # Specific project files
 !.gitignore
