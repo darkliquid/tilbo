@@ -65,6 +65,7 @@ func (c *Client) Close() error {
 func (c *Client) readLoop() {
 	defer c.wg.Done()
 	defer c.conn.Close()
+	defer c.drainReqs()
 
 	scanner := bufio.NewScanner(c.conn)
 	scanner.Buffer(make([]byte, maxFrameSize), maxFrameSize)
@@ -80,7 +81,7 @@ func (c *Client) readLoop() {
 		}
 
 		env := &ipcv1.Envelope{}
-		if err := protojson.Unmarshal(line, env); err != nil {
+		if err := (protojson.UnmarshalOptions{DiscardUnknown: true}).Unmarshal(line, env); err != nil {
 			if c.closed.Load() {
 				return
 			}
@@ -103,6 +104,17 @@ func (c *Client) readLoop() {
 			ch <- resp
 			close(ch)
 		}
+	}
+}
+
+// drainReqs closes all outstanding request channels so Call() callers unblock
+// when the connection drops unexpectedly.
+func (c *Client) drainReqs() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	for id, ch := range c.reqs {
+		close(ch)
+		delete(c.reqs, id)
 	}
 }
 
@@ -154,7 +166,10 @@ func (c *Client) Call(ctx context.Context, req *ipcv1.Request) (*ipcv1.Response,
 		delete(c.reqs, id)
 		c.mu.Unlock()
 		return nil, ctx.Err()
-	case resp := <-ch:
+	case resp, ok := <-ch:
+		if !ok {
+			return nil, errors.New("ipc: connection closed")
+		}
 		if errResp := resp.GetError(); errResp != nil {
 			return nil, fmt.Errorf("remote error: %s (code %d)", errResp.GetMessage(), errResp.GetCode())
 		}

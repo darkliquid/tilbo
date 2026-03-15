@@ -97,8 +97,8 @@ func (s *Server) closeActiveConnections() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	for cw := range s.conns {
-		if err := cw.Close(); err != nil && !errors.Is(err, net.ErrClosed) {
+	for conn := range s.conns {
+		if err := conn.Close(); err != nil && !errors.Is(err, net.ErrClosed) {
 			slog.Debug("ipc server close connection", "err", err)
 		}
 	}
@@ -118,7 +118,7 @@ func (s *Server) untrackConn(conn net.Conn) {
 	delete(s.conns, conn)
 }
 
-// BroadcastEvent pushes an event to all connected clients asynchronously.
+// BroadcastEvent pushes an event to all connected clients.
 func (s *Server) BroadcastEvent(event *ipcv1.Event) {
 	s.mu.Lock()
 	writers := make([]*connWriter, 0, len(s.conns))
@@ -177,7 +177,7 @@ func (s *Server) handleConn(ctx context.Context, conn net.Conn, cw *connWriter) 
 		}
 
 		env := &ipcv1.Envelope{}
-		if err := protojson.Unmarshal(line, env); err != nil {
+		if err := (protojson.UnmarshalOptions{DiscardUnknown: true}).Unmarshal(line, env); err != nil {
 			if s.closing.Load() {
 				return
 			}
