@@ -280,7 +280,7 @@ func TestBroadcastEvent_Delivery(t *testing.T) {
 			if err := scanner.Err(); err != nil {
 				gotErr = err
 			} else {
-				gotErr = fmt.Errorf("scanner stopped before reading broadcast event frame")
+				gotErr = errors.New("scanner stopped before reading broadcast event frame")
 			}
 			return
 		}
