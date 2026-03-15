@@ -135,6 +135,7 @@ type Envelope struct {
 	//
 	//	*Envelope_Request
 	//	*Envelope_Response
+	//	*Envelope_Event
 	Payload       isEnvelope_Payload `protobuf_oneof:"payload"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -202,6 +203,15 @@ func (x *Envelope) GetResponse() *Response {
 	return nil
 }
 
+func (x *Envelope) GetEvent() *Event {
+	if x != nil {
+		if x, ok := x.Payload.(*Envelope_Event); ok {
+			return x.Event
+		}
+	}
+	return nil
+}
+
 type isEnvelope_Payload interface {
 	isEnvelope_Payload()
 }
@@ -214,9 +224,15 @@ type Envelope_Response struct {
 	Response *Response `protobuf:"bytes,3,opt,name=response,proto3,oneof"`
 }
 
+type Envelope_Event struct {
+	Event *Event `protobuf:"bytes,4,opt,name=event,proto3,oneof"`
+}
+
 func (*Envelope_Request) isEnvelope_Payload() {}
 
 func (*Envelope_Response) isEnvelope_Payload() {}
+
+func (*Envelope_Event) isEnvelope_Payload() {}
 
 type Request struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -231,6 +247,13 @@ type Request struct {
 	//	*Request_ReloadRules
 	//	*Request_ListTags
 	//	*Request_HydrateTags
+	//	*Request_ListDirectory
+	//	*Request_StatFile
+	//	*Request_GlobSearch
+	//	*Request_RenameFile
+	//	*Request_DeleteFile
+	//	*Request_ChmodFile
+	//	*Request_ListPlaces
 	Kind          isRequest_Kind `protobuf_oneof:"kind"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -354,6 +377,69 @@ func (x *Request) GetHydrateTags() *HydrateTagsRequest {
 	return nil
 }
 
+func (x *Request) GetListDirectory() *ListDirectoryRequest {
+	if x != nil {
+		if x, ok := x.Kind.(*Request_ListDirectory); ok {
+			return x.ListDirectory
+		}
+	}
+	return nil
+}
+
+func (x *Request) GetStatFile() *StatFileRequest {
+	if x != nil {
+		if x, ok := x.Kind.(*Request_StatFile); ok {
+			return x.StatFile
+		}
+	}
+	return nil
+}
+
+func (x *Request) GetGlobSearch() *GlobSearchRequest {
+	if x != nil {
+		if x, ok := x.Kind.(*Request_GlobSearch); ok {
+			return x.GlobSearch
+		}
+	}
+	return nil
+}
+
+func (x *Request) GetRenameFile() *RenameFileRequest {
+	if x != nil {
+		if x, ok := x.Kind.(*Request_RenameFile); ok {
+			return x.RenameFile
+		}
+	}
+	return nil
+}
+
+func (x *Request) GetDeleteFile() *DeleteFileRequest {
+	if x != nil {
+		if x, ok := x.Kind.(*Request_DeleteFile); ok {
+			return x.DeleteFile
+		}
+	}
+	return nil
+}
+
+func (x *Request) GetChmodFile() *ChmodFileRequest {
+	if x != nil {
+		if x, ok := x.Kind.(*Request_ChmodFile); ok {
+			return x.ChmodFile
+		}
+	}
+	return nil
+}
+
+func (x *Request) GetListPlaces() *ListPlacesRequest {
+	if x != nil {
+		if x, ok := x.Kind.(*Request_ListPlaces); ok {
+			return x.ListPlaces
+		}
+	}
+	return nil
+}
+
 type isRequest_Kind interface {
 	isRequest_Kind()
 }
@@ -394,6 +480,34 @@ type Request_HydrateTags struct {
 	HydrateTags *HydrateTagsRequest `protobuf:"bytes,9,opt,name=hydrate_tags,json=hydrateTags,proto3,oneof"`
 }
 
+type Request_ListDirectory struct {
+	ListDirectory *ListDirectoryRequest `protobuf:"bytes,10,opt,name=list_directory,json=listDirectory,proto3,oneof"`
+}
+
+type Request_StatFile struct {
+	StatFile *StatFileRequest `protobuf:"bytes,11,opt,name=stat_file,json=statFile,proto3,oneof"`
+}
+
+type Request_GlobSearch struct {
+	GlobSearch *GlobSearchRequest `protobuf:"bytes,12,opt,name=glob_search,json=globSearch,proto3,oneof"`
+}
+
+type Request_RenameFile struct {
+	RenameFile *RenameFileRequest `protobuf:"bytes,13,opt,name=rename_file,json=renameFile,proto3,oneof"`
+}
+
+type Request_DeleteFile struct {
+	DeleteFile *DeleteFileRequest `protobuf:"bytes,14,opt,name=delete_file,json=deleteFile,proto3,oneof"`
+}
+
+type Request_ChmodFile struct {
+	ChmodFile *ChmodFileRequest `protobuf:"bytes,15,opt,name=chmod_file,json=chmodFile,proto3,oneof"`
+}
+
+type Request_ListPlaces struct {
+	ListPlaces *ListPlacesRequest `protobuf:"bytes,16,opt,name=list_places,json=listPlaces,proto3,oneof"`
+}
+
 func (*Request_Search) isRequest_Kind() {}
 
 func (*Request_Tag) isRequest_Kind() {}
@@ -412,6 +526,20 @@ func (*Request_ListTags) isRequest_Kind() {}
 
 func (*Request_HydrateTags) isRequest_Kind() {}
 
+func (*Request_ListDirectory) isRequest_Kind() {}
+
+func (*Request_StatFile) isRequest_Kind() {}
+
+func (*Request_GlobSearch) isRequest_Kind() {}
+
+func (*Request_RenameFile) isRequest_Kind() {}
+
+func (*Request_DeleteFile) isRequest_Kind() {}
+
+func (*Request_ChmodFile) isRequest_Kind() {}
+
+func (*Request_ListPlaces) isRequest_Kind() {}
+
 type Response struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Types that are valid to be assigned to Kind:
@@ -425,6 +553,13 @@ type Response struct {
 	//	*Response_ReloadRules
 	//	*Response_ListTags
 	//	*Response_HydrateTags
+	//	*Response_ListDirectory
+	//	*Response_StatFile
+	//	*Response_GlobSearch
+	//	*Response_RenameFile
+	//	*Response_DeleteFile
+	//	*Response_ChmodFile
+	//	*Response_ListPlaces
 	Kind          isResponse_Kind `protobuf_oneof:"kind"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -548,6 +683,69 @@ func (x *Response) GetHydrateTags() *HydrateTagsResponse {
 	return nil
 }
 
+func (x *Response) GetListDirectory() *ListDirectoryResponse {
+	if x != nil {
+		if x, ok := x.Kind.(*Response_ListDirectory); ok {
+			return x.ListDirectory
+		}
+	}
+	return nil
+}
+
+func (x *Response) GetStatFile() *StatFileResponse {
+	if x != nil {
+		if x, ok := x.Kind.(*Response_StatFile); ok {
+			return x.StatFile
+		}
+	}
+	return nil
+}
+
+func (x *Response) GetGlobSearch() *GlobSearchResponse {
+	if x != nil {
+		if x, ok := x.Kind.(*Response_GlobSearch); ok {
+			return x.GlobSearch
+		}
+	}
+	return nil
+}
+
+func (x *Response) GetRenameFile() *RenameFileResponse {
+	if x != nil {
+		if x, ok := x.Kind.(*Response_RenameFile); ok {
+			return x.RenameFile
+		}
+	}
+	return nil
+}
+
+func (x *Response) GetDeleteFile() *DeleteFileResponse {
+	if x != nil {
+		if x, ok := x.Kind.(*Response_DeleteFile); ok {
+			return x.DeleteFile
+		}
+	}
+	return nil
+}
+
+func (x *Response) GetChmodFile() *ChmodFileResponse {
+	if x != nil {
+		if x, ok := x.Kind.(*Response_ChmodFile); ok {
+			return x.ChmodFile
+		}
+	}
+	return nil
+}
+
+func (x *Response) GetListPlaces() *ListPlacesResponse {
+	if x != nil {
+		if x, ok := x.Kind.(*Response_ListPlaces); ok {
+			return x.ListPlaces
+		}
+	}
+	return nil
+}
+
 type isResponse_Kind interface {
 	isResponse_Kind()
 }
@@ -588,6 +786,34 @@ type Response_HydrateTags struct {
 	HydrateTags *HydrateTagsResponse `protobuf:"bytes,9,opt,name=hydrate_tags,json=hydrateTags,proto3,oneof"`
 }
 
+type Response_ListDirectory struct {
+	ListDirectory *ListDirectoryResponse `protobuf:"bytes,10,opt,name=list_directory,json=listDirectory,proto3,oneof"`
+}
+
+type Response_StatFile struct {
+	StatFile *StatFileResponse `protobuf:"bytes,11,opt,name=stat_file,json=statFile,proto3,oneof"`
+}
+
+type Response_GlobSearch struct {
+	GlobSearch *GlobSearchResponse `protobuf:"bytes,12,opt,name=glob_search,json=globSearch,proto3,oneof"`
+}
+
+type Response_RenameFile struct {
+	RenameFile *RenameFileResponse `protobuf:"bytes,13,opt,name=rename_file,json=renameFile,proto3,oneof"`
+}
+
+type Response_DeleteFile struct {
+	DeleteFile *DeleteFileResponse `protobuf:"bytes,14,opt,name=delete_file,json=deleteFile,proto3,oneof"`
+}
+
+type Response_ChmodFile struct {
+	ChmodFile *ChmodFileResponse `protobuf:"bytes,15,opt,name=chmod_file,json=chmodFile,proto3,oneof"`
+}
+
+type Response_ListPlaces struct {
+	ListPlaces *ListPlacesResponse `protobuf:"bytes,16,opt,name=list_places,json=listPlaces,proto3,oneof"`
+}
+
 func (*Response_Error) isResponse_Kind() {}
 
 func (*Response_Search) isResponse_Kind() {}
@@ -606,6 +832,118 @@ func (*Response_ListTags) isResponse_Kind() {}
 
 func (*Response_HydrateTags) isResponse_Kind() {}
 
+func (*Response_ListDirectory) isResponse_Kind() {}
+
+func (*Response_StatFile) isResponse_Kind() {}
+
+func (*Response_GlobSearch) isResponse_Kind() {}
+
+func (*Response_RenameFile) isResponse_Kind() {}
+
+func (*Response_DeleteFile) isResponse_Kind() {}
+
+func (*Response_ChmodFile) isResponse_Kind() {}
+
+func (*Response_ListPlaces) isResponse_Kind() {}
+
+type Event struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Types that are valid to be assigned to Kind:
+	//
+	//	*Event_FileTagged
+	//	*Event_IndexUpdated
+	//	*Event_DaemonStateChanged
+	Kind          isEvent_Kind `protobuf_oneof:"kind"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Event) Reset() {
+	*x = Event{}
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Event) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Event) ProtoMessage() {}
+
+func (x *Event) ProtoReflect() protoreflect.Message {
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Event.ProtoReflect.Descriptor instead.
+func (*Event) Descriptor() ([]byte, []int) {
+	return file_tilbo_ipc_v1_ipc_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *Event) GetKind() isEvent_Kind {
+	if x != nil {
+		return x.Kind
+	}
+	return nil
+}
+
+func (x *Event) GetFileTagged() *FileTaggedEvent {
+	if x != nil {
+		if x, ok := x.Kind.(*Event_FileTagged); ok {
+			return x.FileTagged
+		}
+	}
+	return nil
+}
+
+func (x *Event) GetIndexUpdated() *IndexUpdatedEvent {
+	if x != nil {
+		if x, ok := x.Kind.(*Event_IndexUpdated); ok {
+			return x.IndexUpdated
+		}
+	}
+	return nil
+}
+
+func (x *Event) GetDaemonStateChanged() *DaemonStateChangedEvent {
+	if x != nil {
+		if x, ok := x.Kind.(*Event_DaemonStateChanged); ok {
+			return x.DaemonStateChanged
+		}
+	}
+	return nil
+}
+
+type isEvent_Kind interface {
+	isEvent_Kind()
+}
+
+type Event_FileTagged struct {
+	FileTagged *FileTaggedEvent `protobuf:"bytes,1,opt,name=file_tagged,json=fileTagged,proto3,oneof"`
+}
+
+type Event_IndexUpdated struct {
+	IndexUpdated *IndexUpdatedEvent `protobuf:"bytes,2,opt,name=index_updated,json=indexUpdated,proto3,oneof"`
+}
+
+type Event_DaemonStateChanged struct {
+	DaemonStateChanged *DaemonStateChangedEvent `protobuf:"bytes,3,opt,name=daemon_state_changed,json=daemonStateChanged,proto3,oneof"`
+}
+
+func (*Event_FileTagged) isEvent_Kind() {}
+
+func (*Event_IndexUpdated) isEvent_Kind() {}
+
+func (*Event_DaemonStateChanged) isEvent_Kind() {}
+
 type ErrorResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Code          uint32                 `protobuf:"varint,1,opt,name=code,proto3" json:"code,omitempty"` // 1=not_found, 2=permission, 3=invalid, 4=daemon_unavailable
@@ -616,7 +954,7 @@ type ErrorResponse struct {
 
 func (x *ErrorResponse) Reset() {
 	*x = ErrorResponse{}
-	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[3]
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -628,7 +966,7 @@ func (x *ErrorResponse) String() string {
 func (*ErrorResponse) ProtoMessage() {}
 
 func (x *ErrorResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[3]
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -641,7 +979,7 @@ func (x *ErrorResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ErrorResponse.ProtoReflect.Descriptor instead.
 func (*ErrorResponse) Descriptor() ([]byte, []int) {
-	return file_tilbo_ipc_v1_ipc_proto_rawDescGZIP(), []int{3}
+	return file_tilbo_ipc_v1_ipc_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *ErrorResponse) GetCode() uint32 {
@@ -675,7 +1013,7 @@ type SearchRequest struct {
 
 func (x *SearchRequest) Reset() {
 	*x = SearchRequest{}
-	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[4]
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -687,7 +1025,7 @@ func (x *SearchRequest) String() string {
 func (*SearchRequest) ProtoMessage() {}
 
 func (x *SearchRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[4]
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -700,7 +1038,7 @@ func (x *SearchRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SearchRequest.ProtoReflect.Descriptor instead.
 func (*SearchRequest) Descriptor() ([]byte, []int) {
-	return file_tilbo_ipc_v1_ipc_proto_rawDescGZIP(), []int{4}
+	return file_tilbo_ipc_v1_ipc_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *SearchRequest) GetTags() []string {
@@ -780,7 +1118,7 @@ type FileResult struct {
 
 func (x *FileResult) Reset() {
 	*x = FileResult{}
-	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[5]
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -792,7 +1130,7 @@ func (x *FileResult) String() string {
 func (*FileResult) ProtoMessage() {}
 
 func (x *FileResult) ProtoReflect() protoreflect.Message {
-	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[5]
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -805,7 +1143,7 @@ func (x *FileResult) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FileResult.ProtoReflect.Descriptor instead.
 func (*FileResult) Descriptor() ([]byte, []int) {
-	return file_tilbo_ipc_v1_ipc_proto_rawDescGZIP(), []int{5}
+	return file_tilbo_ipc_v1_ipc_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *FileResult) GetPath() string {
@@ -860,7 +1198,7 @@ type SearchResponse struct {
 
 func (x *SearchResponse) Reset() {
 	*x = SearchResponse{}
-	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[6]
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -872,7 +1210,7 @@ func (x *SearchResponse) String() string {
 func (*SearchResponse) ProtoMessage() {}
 
 func (x *SearchResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[6]
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -885,7 +1223,7 @@ func (x *SearchResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SearchResponse.ProtoReflect.Descriptor instead.
 func (*SearchResponse) Descriptor() ([]byte, []int) {
-	return file_tilbo_ipc_v1_ipc_proto_rawDescGZIP(), []int{6}
+	return file_tilbo_ipc_v1_ipc_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *SearchResponse) GetFiles() []*FileResult {
@@ -913,7 +1251,7 @@ type TagRequest struct {
 
 func (x *TagRequest) Reset() {
 	*x = TagRequest{}
-	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[7]
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -925,7 +1263,7 @@ func (x *TagRequest) String() string {
 func (*TagRequest) ProtoMessage() {}
 
 func (x *TagRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[7]
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -938,7 +1276,7 @@ func (x *TagRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TagRequest.ProtoReflect.Descriptor instead.
 func (*TagRequest) Descriptor() ([]byte, []int) {
-	return file_tilbo_ipc_v1_ipc_proto_rawDescGZIP(), []int{7}
+	return file_tilbo_ipc_v1_ipc_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *TagRequest) GetPaths() []string {
@@ -973,7 +1311,7 @@ type TagResponse struct {
 
 func (x *TagResponse) Reset() {
 	*x = TagResponse{}
-	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[8]
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -985,7 +1323,7 @@ func (x *TagResponse) String() string {
 func (*TagResponse) ProtoMessage() {}
 
 func (x *TagResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[8]
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -998,7 +1336,7 @@ func (x *TagResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TagResponse.ProtoReflect.Descriptor instead.
 func (*TagResponse) Descriptor() ([]byte, []int) {
-	return file_tilbo_ipc_v1_ipc_proto_rawDescGZIP(), []int{8}
+	return file_tilbo_ipc_v1_ipc_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *TagResponse) GetPathsOk() []string {
@@ -1031,7 +1369,7 @@ type MetadataRequest struct {
 
 func (x *MetadataRequest) Reset() {
 	*x = MetadataRequest{}
-	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[9]
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1043,7 +1381,7 @@ func (x *MetadataRequest) String() string {
 func (*MetadataRequest) ProtoMessage() {}
 
 func (x *MetadataRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[9]
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1056,7 +1394,7 @@ func (x *MetadataRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MetadataRequest.ProtoReflect.Descriptor instead.
 func (*MetadataRequest) Descriptor() ([]byte, []int) {
-	return file_tilbo_ipc_v1_ipc_proto_rawDescGZIP(), []int{9}
+	return file_tilbo_ipc_v1_ipc_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *MetadataRequest) GetPath() string {
@@ -1077,7 +1415,7 @@ type MetadataResponse struct {
 
 func (x *MetadataResponse) Reset() {
 	*x = MetadataResponse{}
-	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[10]
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1089,7 +1427,7 @@ func (x *MetadataResponse) String() string {
 func (*MetadataResponse) ProtoMessage() {}
 
 func (x *MetadataResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[10]
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1102,7 +1440,7 @@ func (x *MetadataResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MetadataResponse.ProtoReflect.Descriptor instead.
 func (*MetadataResponse) Descriptor() ([]byte, []int) {
-	return file_tilbo_ipc_v1_ipc_proto_rawDescGZIP(), []int{10}
+	return file_tilbo_ipc_v1_ipc_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *MetadataResponse) GetPath() string {
@@ -1137,7 +1475,7 @@ type MetadataSetRequest struct {
 
 func (x *MetadataSetRequest) Reset() {
 	*x = MetadataSetRequest{}
-	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[11]
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1149,7 +1487,7 @@ func (x *MetadataSetRequest) String() string {
 func (*MetadataSetRequest) ProtoMessage() {}
 
 func (x *MetadataSetRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[11]
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1162,7 +1500,7 @@ func (x *MetadataSetRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MetadataSetRequest.ProtoReflect.Descriptor instead.
 func (*MetadataSetRequest) Descriptor() ([]byte, []int) {
-	return file_tilbo_ipc_v1_ipc_proto_rawDescGZIP(), []int{11}
+	return file_tilbo_ipc_v1_ipc_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *MetadataSetRequest) GetPath() string {
@@ -1199,7 +1537,7 @@ type RelatedRequest struct {
 
 func (x *RelatedRequest) Reset() {
 	*x = RelatedRequest{}
-	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[12]
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1211,7 +1549,7 @@ func (x *RelatedRequest) String() string {
 func (*RelatedRequest) ProtoMessage() {}
 
 func (x *RelatedRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[12]
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1224,7 +1562,7 @@ func (x *RelatedRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RelatedRequest.ProtoReflect.Descriptor instead.
 func (*RelatedRequest) Descriptor() ([]byte, []int) {
-	return file_tilbo_ipc_v1_ipc_proto_rawDescGZIP(), []int{12}
+	return file_tilbo_ipc_v1_ipc_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *RelatedRequest) GetSeedPath() string {
@@ -1274,7 +1612,7 @@ type ScoredFile struct {
 
 func (x *ScoredFile) Reset() {
 	*x = ScoredFile{}
-	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[13]
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1286,7 +1624,7 @@ func (x *ScoredFile) String() string {
 func (*ScoredFile) ProtoMessage() {}
 
 func (x *ScoredFile) ProtoReflect() protoreflect.Message {
-	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[13]
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1299,7 +1637,7 @@ func (x *ScoredFile) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ScoredFile.ProtoReflect.Descriptor instead.
 func (*ScoredFile) Descriptor() ([]byte, []int) {
-	return file_tilbo_ipc_v1_ipc_proto_rawDescGZIP(), []int{13}
+	return file_tilbo_ipc_v1_ipc_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *ScoredFile) GetFile() *FileResult {
@@ -1339,7 +1677,7 @@ type RelatedResponse struct {
 
 func (x *RelatedResponse) Reset() {
 	*x = RelatedResponse{}
-	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[14]
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1351,7 +1689,7 @@ func (x *RelatedResponse) String() string {
 func (*RelatedResponse) ProtoMessage() {}
 
 func (x *RelatedResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[14]
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1364,7 +1702,7 @@ func (x *RelatedResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RelatedResponse.ProtoReflect.Descriptor instead.
 func (*RelatedResponse) Descriptor() ([]byte, []int) {
-	return file_tilbo_ipc_v1_ipc_proto_rawDescGZIP(), []int{14}
+	return file_tilbo_ipc_v1_ipc_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *RelatedResponse) GetFiles() []*ScoredFile {
@@ -1382,7 +1720,7 @@ type StatusRequest struct {
 
 func (x *StatusRequest) Reset() {
 	*x = StatusRequest{}
-	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[15]
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1394,7 +1732,7 @@ func (x *StatusRequest) String() string {
 func (*StatusRequest) ProtoMessage() {}
 
 func (x *StatusRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[15]
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1407,7 +1745,7 @@ func (x *StatusRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StatusRequest.ProtoReflect.Descriptor instead.
 func (*StatusRequest) Descriptor() ([]byte, []int) {
-	return file_tilbo_ipc_v1_ipc_proto_rawDescGZIP(), []int{15}
+	return file_tilbo_ipc_v1_ipc_proto_rawDescGZIP(), []int{16}
 }
 
 type StatusResponse struct {
@@ -1424,7 +1762,7 @@ type StatusResponse struct {
 
 func (x *StatusResponse) Reset() {
 	*x = StatusResponse{}
-	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[16]
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1436,7 +1774,7 @@ func (x *StatusResponse) String() string {
 func (*StatusResponse) ProtoMessage() {}
 
 func (x *StatusResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[16]
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1449,7 +1787,7 @@ func (x *StatusResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StatusResponse.ProtoReflect.Descriptor instead.
 func (*StatusResponse) Descriptor() ([]byte, []int) {
-	return file_tilbo_ipc_v1_ipc_proto_rawDescGZIP(), []int{16}
+	return file_tilbo_ipc_v1_ipc_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *StatusResponse) GetState() DaemonState {
@@ -1502,7 +1840,7 @@ type ReloadRulesRequest struct {
 
 func (x *ReloadRulesRequest) Reset() {
 	*x = ReloadRulesRequest{}
-	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[17]
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1514,7 +1852,7 @@ func (x *ReloadRulesRequest) String() string {
 func (*ReloadRulesRequest) ProtoMessage() {}
 
 func (x *ReloadRulesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[17]
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1527,7 +1865,7 @@ func (x *ReloadRulesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReloadRulesRequest.ProtoReflect.Descriptor instead.
 func (*ReloadRulesRequest) Descriptor() ([]byte, []int) {
-	return file_tilbo_ipc_v1_ipc_proto_rawDescGZIP(), []int{17}
+	return file_tilbo_ipc_v1_ipc_proto_rawDescGZIP(), []int{18}
 }
 
 type ReloadRulesResponse struct {
@@ -1540,7 +1878,7 @@ type ReloadRulesResponse struct {
 
 func (x *ReloadRulesResponse) Reset() {
 	*x = ReloadRulesResponse{}
-	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[18]
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1552,7 +1890,7 @@ func (x *ReloadRulesResponse) String() string {
 func (*ReloadRulesResponse) ProtoMessage() {}
 
 func (x *ReloadRulesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[18]
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1565,7 +1903,7 @@ func (x *ReloadRulesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReloadRulesResponse.ProtoReflect.Descriptor instead.
 func (*ReloadRulesResponse) Descriptor() ([]byte, []int) {
-	return file_tilbo_ipc_v1_ipc_proto_rawDescGZIP(), []int{18}
+	return file_tilbo_ipc_v1_ipc_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *ReloadRulesResponse) GetRulesLoaded() uint32 {
@@ -1591,7 +1929,7 @@ type ListTagsRequest struct {
 
 func (x *ListTagsRequest) Reset() {
 	*x = ListTagsRequest{}
-	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[19]
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1603,7 +1941,7 @@ func (x *ListTagsRequest) String() string {
 func (*ListTagsRequest) ProtoMessage() {}
 
 func (x *ListTagsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[19]
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1616,7 +1954,7 @@ func (x *ListTagsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListTagsRequest.ProtoReflect.Descriptor instead.
 func (*ListTagsRequest) Descriptor() ([]byte, []int) {
-	return file_tilbo_ipc_v1_ipc_proto_rawDescGZIP(), []int{19}
+	return file_tilbo_ipc_v1_ipc_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *ListTagsRequest) GetPrefix() string {
@@ -1635,7 +1973,7 @@ type ListTagsResponse struct {
 
 func (x *ListTagsResponse) Reset() {
 	*x = ListTagsResponse{}
-	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[20]
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1647,7 +1985,7 @@ func (x *ListTagsResponse) String() string {
 func (*ListTagsResponse) ProtoMessage() {}
 
 func (x *ListTagsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[20]
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1660,7 +1998,7 @@ func (x *ListTagsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListTagsResponse.ProtoReflect.Descriptor instead.
 func (*ListTagsResponse) Descriptor() ([]byte, []int) {
-	return file_tilbo_ipc_v1_ipc_proto_rawDescGZIP(), []int{20}
+	return file_tilbo_ipc_v1_ipc_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *ListTagsResponse) GetTags() []string {
@@ -1679,7 +2017,7 @@ type HydrateTagsRequest struct {
 
 func (x *HydrateTagsRequest) Reset() {
 	*x = HydrateTagsRequest{}
-	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[21]
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1691,7 +2029,7 @@ func (x *HydrateTagsRequest) String() string {
 func (*HydrateTagsRequest) ProtoMessage() {}
 
 func (x *HydrateTagsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[21]
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1704,7 +2042,7 @@ func (x *HydrateTagsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HydrateTagsRequest.ProtoReflect.Descriptor instead.
 func (*HydrateTagsRequest) Descriptor() ([]byte, []int) {
-	return file_tilbo_ipc_v1_ipc_proto_rawDescGZIP(), []int{21}
+	return file_tilbo_ipc_v1_ipc_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *HydrateTagsRequest) GetPaths() []string {
@@ -1724,7 +2062,7 @@ type HydratedPathTags struct {
 
 func (x *HydratedPathTags) Reset() {
 	*x = HydratedPathTags{}
-	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[22]
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1736,7 +2074,7 @@ func (x *HydratedPathTags) String() string {
 func (*HydratedPathTags) ProtoMessage() {}
 
 func (x *HydratedPathTags) ProtoReflect() protoreflect.Message {
-	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[22]
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1749,7 +2087,7 @@ func (x *HydratedPathTags) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HydratedPathTags.ProtoReflect.Descriptor instead.
 func (*HydratedPathTags) Descriptor() ([]byte, []int) {
-	return file_tilbo_ipc_v1_ipc_proto_rawDescGZIP(), []int{22}
+	return file_tilbo_ipc_v1_ipc_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *HydratedPathTags) GetPath() string {
@@ -1775,7 +2113,7 @@ type HydrateTagsResponse struct {
 
 func (x *HydrateTagsResponse) Reset() {
 	*x = HydrateTagsResponse{}
-	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[23]
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1787,7 +2125,7 @@ func (x *HydrateTagsResponse) String() string {
 func (*HydrateTagsResponse) ProtoMessage() {}
 
 func (x *HydrateTagsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[23]
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1800,7 +2138,7 @@ func (x *HydrateTagsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HydrateTagsResponse.ProtoReflect.Descriptor instead.
 func (*HydrateTagsResponse) Descriptor() ([]byte, []int) {
-	return file_tilbo_ipc_v1_ipc_proto_rawDescGZIP(), []int{23}
+	return file_tilbo_ipc_v1_ipc_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *HydrateTagsResponse) GetEntries() []*HydratedPathTags {
@@ -1810,17 +2148,1010 @@ func (x *HydrateTagsResponse) GetEntries() []*HydratedPathTags {
 	return nil
 }
 
+type ListDirectoryRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Path          string                 `protobuf:"bytes,1,opt,name=path,proto3" json:"path,omitempty"`
+	Hidden        bool                   `protobuf:"varint,2,opt,name=hidden,proto3" json:"hidden,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListDirectoryRequest) Reset() {
+	*x = ListDirectoryRequest{}
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[25]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListDirectoryRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListDirectoryRequest) ProtoMessage() {}
+
+func (x *ListDirectoryRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[25]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListDirectoryRequest.ProtoReflect.Descriptor instead.
+func (*ListDirectoryRequest) Descriptor() ([]byte, []int) {
+	return file_tilbo_ipc_v1_ipc_proto_rawDescGZIP(), []int{25}
+}
+
+func (x *ListDirectoryRequest) GetPath() string {
+	if x != nil {
+		return x.Path
+	}
+	return ""
+}
+
+func (x *ListDirectoryRequest) GetHidden() bool {
+	if x != nil {
+		return x.Hidden
+	}
+	return false
+}
+
+type DirEntry struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Path          string                 `protobuf:"bytes,2,opt,name=path,proto3" json:"path,omitempty"`
+	IsDir         bool                   `protobuf:"varint,3,opt,name=is_dir,json=isDir,proto3" json:"is_dir,omitempty"`
+	SizeBytes     int64                  `protobuf:"varint,4,opt,name=size_bytes,json=sizeBytes,proto3" json:"size_bytes,omitempty"`
+	Mtime         int64                  `protobuf:"varint,5,opt,name=mtime,proto3" json:"mtime,omitempty"`
+	Mode          uint32                 `protobuf:"varint,6,opt,name=mode,proto3" json:"mode,omitempty"`
+	Hidden        bool                   `protobuf:"varint,7,opt,name=hidden,proto3" json:"hidden,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DirEntry) Reset() {
+	*x = DirEntry{}
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[26]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DirEntry) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DirEntry) ProtoMessage() {}
+
+func (x *DirEntry) ProtoReflect() protoreflect.Message {
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[26]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DirEntry.ProtoReflect.Descriptor instead.
+func (*DirEntry) Descriptor() ([]byte, []int) {
+	return file_tilbo_ipc_v1_ipc_proto_rawDescGZIP(), []int{26}
+}
+
+func (x *DirEntry) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *DirEntry) GetPath() string {
+	if x != nil {
+		return x.Path
+	}
+	return ""
+}
+
+func (x *DirEntry) GetIsDir() bool {
+	if x != nil {
+		return x.IsDir
+	}
+	return false
+}
+
+func (x *DirEntry) GetSizeBytes() int64 {
+	if x != nil {
+		return x.SizeBytes
+	}
+	return 0
+}
+
+func (x *DirEntry) GetMtime() int64 {
+	if x != nil {
+		return x.Mtime
+	}
+	return 0
+}
+
+func (x *DirEntry) GetMode() uint32 {
+	if x != nil {
+		return x.Mode
+	}
+	return 0
+}
+
+func (x *DirEntry) GetHidden() bool {
+	if x != nil {
+		return x.Hidden
+	}
+	return false
+}
+
+type ListDirectoryResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Entries       []*DirEntry            `protobuf:"bytes,1,rep,name=entries,proto3" json:"entries,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListDirectoryResponse) Reset() {
+	*x = ListDirectoryResponse{}
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[27]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListDirectoryResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListDirectoryResponse) ProtoMessage() {}
+
+func (x *ListDirectoryResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[27]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListDirectoryResponse.ProtoReflect.Descriptor instead.
+func (*ListDirectoryResponse) Descriptor() ([]byte, []int) {
+	return file_tilbo_ipc_v1_ipc_proto_rawDescGZIP(), []int{27}
+}
+
+func (x *ListDirectoryResponse) GetEntries() []*DirEntry {
+	if x != nil {
+		return x.Entries
+	}
+	return nil
+}
+
+type StatFileRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Path          string                 `protobuf:"bytes,1,opt,name=path,proto3" json:"path,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *StatFileRequest) Reset() {
+	*x = StatFileRequest{}
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[28]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StatFileRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StatFileRequest) ProtoMessage() {}
+
+func (x *StatFileRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[28]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StatFileRequest.ProtoReflect.Descriptor instead.
+func (*StatFileRequest) Descriptor() ([]byte, []int) {
+	return file_tilbo_ipc_v1_ipc_proto_rawDescGZIP(), []int{28}
+}
+
+func (x *StatFileRequest) GetPath() string {
+	if x != nil {
+		return x.Path
+	}
+	return ""
+}
+
+type FileStat struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	SizeBytes     int64                  `protobuf:"varint,1,opt,name=size_bytes,json=sizeBytes,proto3" json:"size_bytes,omitempty"`
+	Mtime         int64                  `protobuf:"varint,2,opt,name=mtime,proto3" json:"mtime,omitempty"`
+	Mode          uint32                 `protobuf:"varint,3,opt,name=mode,proto3" json:"mode,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *FileStat) Reset() {
+	*x = FileStat{}
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[29]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *FileStat) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FileStat) ProtoMessage() {}
+
+func (x *FileStat) ProtoReflect() protoreflect.Message {
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[29]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FileStat.ProtoReflect.Descriptor instead.
+func (*FileStat) Descriptor() ([]byte, []int) {
+	return file_tilbo_ipc_v1_ipc_proto_rawDescGZIP(), []int{29}
+}
+
+func (x *FileStat) GetSizeBytes() int64 {
+	if x != nil {
+		return x.SizeBytes
+	}
+	return 0
+}
+
+func (x *FileStat) GetMtime() int64 {
+	if x != nil {
+		return x.Mtime
+	}
+	return 0
+}
+
+func (x *FileStat) GetMode() uint32 {
+	if x != nil {
+		return x.Mode
+	}
+	return 0
+}
+
+type StatFileResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Stat          *FileStat              `protobuf:"bytes,1,opt,name=stat,proto3" json:"stat,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *StatFileResponse) Reset() {
+	*x = StatFileResponse{}
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[30]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StatFileResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StatFileResponse) ProtoMessage() {}
+
+func (x *StatFileResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[30]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StatFileResponse.ProtoReflect.Descriptor instead.
+func (*StatFileResponse) Descriptor() ([]byte, []int) {
+	return file_tilbo_ipc_v1_ipc_proto_rawDescGZIP(), []int{30}
+}
+
+func (x *StatFileResponse) GetStat() *FileStat {
+	if x != nil {
+		return x.Stat
+	}
+	return nil
+}
+
+type GlobSearchRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Patterns      []string               `protobuf:"bytes,1,rep,name=patterns,proto3" json:"patterns,omitempty"`
+	Limit         uint32                 `protobuf:"varint,2,opt,name=limit,proto3" json:"limit,omitempty"`
+	AllowHidden   bool                   `protobuf:"varint,3,opt,name=allow_hidden,json=allowHidden,proto3" json:"allow_hidden,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GlobSearchRequest) Reset() {
+	*x = GlobSearchRequest{}
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[31]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GlobSearchRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GlobSearchRequest) ProtoMessage() {}
+
+func (x *GlobSearchRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[31]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GlobSearchRequest.ProtoReflect.Descriptor instead.
+func (*GlobSearchRequest) Descriptor() ([]byte, []int) {
+	return file_tilbo_ipc_v1_ipc_proto_rawDescGZIP(), []int{31}
+}
+
+func (x *GlobSearchRequest) GetPatterns() []string {
+	if x != nil {
+		return x.Patterns
+	}
+	return nil
+}
+
+func (x *GlobSearchRequest) GetLimit() uint32 {
+	if x != nil {
+		return x.Limit
+	}
+	return 0
+}
+
+func (x *GlobSearchRequest) GetAllowHidden() bool {
+	if x != nil {
+		return x.AllowHidden
+	}
+	return false
+}
+
+type GlobSearchResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Files         []*FileResult          `protobuf:"bytes,1,rep,name=files,proto3" json:"files,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GlobSearchResponse) Reset() {
+	*x = GlobSearchResponse{}
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[32]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GlobSearchResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GlobSearchResponse) ProtoMessage() {}
+
+func (x *GlobSearchResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[32]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GlobSearchResponse.ProtoReflect.Descriptor instead.
+func (*GlobSearchResponse) Descriptor() ([]byte, []int) {
+	return file_tilbo_ipc_v1_ipc_proto_rawDescGZIP(), []int{32}
+}
+
+func (x *GlobSearchResponse) GetFiles() []*FileResult {
+	if x != nil {
+		return x.Files
+	}
+	return nil
+}
+
+type RenameFileRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Path          string                 `protobuf:"bytes,1,opt,name=path,proto3" json:"path,omitempty"`
+	NewName       string                 `protobuf:"bytes,2,opt,name=new_name,json=newName,proto3" json:"new_name,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RenameFileRequest) Reset() {
+	*x = RenameFileRequest{}
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[33]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RenameFileRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RenameFileRequest) ProtoMessage() {}
+
+func (x *RenameFileRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[33]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RenameFileRequest.ProtoReflect.Descriptor instead.
+func (*RenameFileRequest) Descriptor() ([]byte, []int) {
+	return file_tilbo_ipc_v1_ipc_proto_rawDescGZIP(), []int{33}
+}
+
+func (x *RenameFileRequest) GetPath() string {
+	if x != nil {
+		return x.Path
+	}
+	return ""
+}
+
+func (x *RenameFileRequest) GetNewName() string {
+	if x != nil {
+		return x.NewName
+	}
+	return ""
+}
+
+type RenameFileResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	NewPath       string                 `protobuf:"bytes,1,opt,name=new_path,json=newPath,proto3" json:"new_path,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RenameFileResponse) Reset() {
+	*x = RenameFileResponse{}
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[34]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RenameFileResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RenameFileResponse) ProtoMessage() {}
+
+func (x *RenameFileResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[34]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RenameFileResponse.ProtoReflect.Descriptor instead.
+func (*RenameFileResponse) Descriptor() ([]byte, []int) {
+	return file_tilbo_ipc_v1_ipc_proto_rawDescGZIP(), []int{34}
+}
+
+func (x *RenameFileResponse) GetNewPath() string {
+	if x != nil {
+		return x.NewPath
+	}
+	return ""
+}
+
+type DeleteFileRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Path          string                 `protobuf:"bytes,1,opt,name=path,proto3" json:"path,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteFileRequest) Reset() {
+	*x = DeleteFileRequest{}
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[35]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteFileRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteFileRequest) ProtoMessage() {}
+
+func (x *DeleteFileRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[35]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteFileRequest.ProtoReflect.Descriptor instead.
+func (*DeleteFileRequest) Descriptor() ([]byte, []int) {
+	return file_tilbo_ipc_v1_ipc_proto_rawDescGZIP(), []int{35}
+}
+
+func (x *DeleteFileRequest) GetPath() string {
+	if x != nil {
+		return x.Path
+	}
+	return ""
+}
+
+type DeleteFileResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteFileResponse) Reset() {
+	*x = DeleteFileResponse{}
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[36]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteFileResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteFileResponse) ProtoMessage() {}
+
+func (x *DeleteFileResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[36]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteFileResponse.ProtoReflect.Descriptor instead.
+func (*DeleteFileResponse) Descriptor() ([]byte, []int) {
+	return file_tilbo_ipc_v1_ipc_proto_rawDescGZIP(), []int{36}
+}
+
+type ChmodFileRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Path          string                 `protobuf:"bytes,1,opt,name=path,proto3" json:"path,omitempty"`
+	Mode          uint32                 `protobuf:"varint,2,opt,name=mode,proto3" json:"mode,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ChmodFileRequest) Reset() {
+	*x = ChmodFileRequest{}
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[37]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ChmodFileRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ChmodFileRequest) ProtoMessage() {}
+
+func (x *ChmodFileRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[37]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ChmodFileRequest.ProtoReflect.Descriptor instead.
+func (*ChmodFileRequest) Descriptor() ([]byte, []int) {
+	return file_tilbo_ipc_v1_ipc_proto_rawDescGZIP(), []int{37}
+}
+
+func (x *ChmodFileRequest) GetPath() string {
+	if x != nil {
+		return x.Path
+	}
+	return ""
+}
+
+func (x *ChmodFileRequest) GetMode() uint32 {
+	if x != nil {
+		return x.Mode
+	}
+	return 0
+}
+
+type ChmodFileResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ChmodFileResponse) Reset() {
+	*x = ChmodFileResponse{}
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[38]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ChmodFileResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ChmodFileResponse) ProtoMessage() {}
+
+func (x *ChmodFileResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[38]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ChmodFileResponse.ProtoReflect.Descriptor instead.
+func (*ChmodFileResponse) Descriptor() ([]byte, []int) {
+	return file_tilbo_ipc_v1_ipc_proto_rawDescGZIP(), []int{38}
+}
+
+type ListPlacesRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListPlacesRequest) Reset() {
+	*x = ListPlacesRequest{}
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[39]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListPlacesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListPlacesRequest) ProtoMessage() {}
+
+func (x *ListPlacesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[39]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListPlacesRequest.ProtoReflect.Descriptor instead.
+func (*ListPlacesRequest) Descriptor() ([]byte, []int) {
+	return file_tilbo_ipc_v1_ipc_proto_rawDescGZIP(), []int{39}
+}
+
+type PlaceEntry struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Path          string                 `protobuf:"bytes,2,opt,name=path,proto3" json:"path,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PlaceEntry) Reset() {
+	*x = PlaceEntry{}
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[40]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PlaceEntry) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PlaceEntry) ProtoMessage() {}
+
+func (x *PlaceEntry) ProtoReflect() protoreflect.Message {
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[40]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PlaceEntry.ProtoReflect.Descriptor instead.
+func (*PlaceEntry) Descriptor() ([]byte, []int) {
+	return file_tilbo_ipc_v1_ipc_proto_rawDescGZIP(), []int{40}
+}
+
+func (x *PlaceEntry) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *PlaceEntry) GetPath() string {
+	if x != nil {
+		return x.Path
+	}
+	return ""
+}
+
+type ListPlacesResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Places        []*PlaceEntry          `protobuf:"bytes,1,rep,name=places,proto3" json:"places,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListPlacesResponse) Reset() {
+	*x = ListPlacesResponse{}
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[41]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListPlacesResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListPlacesResponse) ProtoMessage() {}
+
+func (x *ListPlacesResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[41]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListPlacesResponse.ProtoReflect.Descriptor instead.
+func (*ListPlacesResponse) Descriptor() ([]byte, []int) {
+	return file_tilbo_ipc_v1_ipc_proto_rawDescGZIP(), []int{41}
+}
+
+func (x *ListPlacesResponse) GetPlaces() []*PlaceEntry {
+	if x != nil {
+		return x.Places
+	}
+	return nil
+}
+
+type FileTaggedEvent struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Path          string                 `protobuf:"bytes,1,opt,name=path,proto3" json:"path,omitempty"`
+	Added         []string               `protobuf:"bytes,2,rep,name=added,proto3" json:"added,omitempty"`
+	Removed       []string               `protobuf:"bytes,3,rep,name=removed,proto3" json:"removed,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *FileTaggedEvent) Reset() {
+	*x = FileTaggedEvent{}
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[42]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *FileTaggedEvent) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FileTaggedEvent) ProtoMessage() {}
+
+func (x *FileTaggedEvent) ProtoReflect() protoreflect.Message {
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[42]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FileTaggedEvent.ProtoReflect.Descriptor instead.
+func (*FileTaggedEvent) Descriptor() ([]byte, []int) {
+	return file_tilbo_ipc_v1_ipc_proto_rawDescGZIP(), []int{42}
+}
+
+func (x *FileTaggedEvent) GetPath() string {
+	if x != nil {
+		return x.Path
+	}
+	return ""
+}
+
+func (x *FileTaggedEvent) GetAdded() []string {
+	if x != nil {
+		return x.Added
+	}
+	return nil
+}
+
+func (x *FileTaggedEvent) GetRemoved() []string {
+	if x != nil {
+		return x.Removed
+	}
+	return nil
+}
+
+type IndexUpdatedEvent struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	FilesTotal    uint64                 `protobuf:"varint,1,opt,name=files_total,json=filesTotal,proto3" json:"files_total,omitempty"`
+	TagsTotal     uint64                 `protobuf:"varint,2,opt,name=tags_total,json=tagsTotal,proto3" json:"tags_total,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *IndexUpdatedEvent) Reset() {
+	*x = IndexUpdatedEvent{}
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[43]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *IndexUpdatedEvent) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*IndexUpdatedEvent) ProtoMessage() {}
+
+func (x *IndexUpdatedEvent) ProtoReflect() protoreflect.Message {
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[43]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use IndexUpdatedEvent.ProtoReflect.Descriptor instead.
+func (*IndexUpdatedEvent) Descriptor() ([]byte, []int) {
+	return file_tilbo_ipc_v1_ipc_proto_rawDescGZIP(), []int{43}
+}
+
+func (x *IndexUpdatedEvent) GetFilesTotal() uint64 {
+	if x != nil {
+		return x.FilesTotal
+	}
+	return 0
+}
+
+func (x *IndexUpdatedEvent) GetTagsTotal() uint64 {
+	if x != nil {
+		return x.TagsTotal
+	}
+	return 0
+}
+
+type DaemonStateChangedEvent struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	State         string                 `protobuf:"bytes,1,opt,name=state,proto3" json:"state,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DaemonStateChangedEvent) Reset() {
+	*x = DaemonStateChangedEvent{}
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[44]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DaemonStateChangedEvent) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DaemonStateChangedEvent) ProtoMessage() {}
+
+func (x *DaemonStateChangedEvent) ProtoReflect() protoreflect.Message {
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[44]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DaemonStateChangedEvent.ProtoReflect.Descriptor instead.
+func (*DaemonStateChangedEvent) Descriptor() ([]byte, []int) {
+	return file_tilbo_ipc_v1_ipc_proto_rawDescGZIP(), []int{44}
+}
+
+func (x *DaemonStateChangedEvent) GetState() string {
+	if x != nil {
+		return x.State
+	}
+	return ""
+}
+
 var File_tilbo_ipc_v1_ipc_proto protoreflect.FileDescriptor
 
 const file_tilbo_ipc_v1_ipc_proto_rawDesc = "" +
 	"\n" +
-	"\x16tilbo/ipc/v1/ipc.proto\x12\ftilbo.ipc.v1\"\x9d\x01\n" +
+	"\x16tilbo/ipc/v1/ipc.proto\x12\ftilbo.ipc.v1\"\xca\x01\n" +
 	"\bEnvelope\x12\x1d\n" +
 	"\n" +
 	"request_id\x18\x01 \x01(\x04R\trequestId\x121\n" +
 	"\arequest\x18\x02 \x01(\v2\x15.tilbo.ipc.v1.RequestH\x00R\arequest\x124\n" +
-	"\bresponse\x18\x03 \x01(\v2\x16.tilbo.ipc.v1.ResponseH\x00R\bresponseB\t\n" +
-	"\apayload\"\xb7\x04\n" +
+	"\bresponse\x18\x03 \x01(\v2\x16.tilbo.ipc.v1.ResponseH\x00R\bresponse\x12+\n" +
+	"\x05event\x18\x04 \x01(\v2\x13.tilbo.ipc.v1.EventH\x00R\x05eventB\t\n" +
+	"\apayload\"\x93\b\n" +
 	"\aRequest\x125\n" +
 	"\x06search\x18\x01 \x01(\v2\x1b.tilbo.ipc.v1.SearchRequestH\x00R\x06search\x12,\n" +
 	"\x03tag\x18\x02 \x01(\v2\x18.tilbo.ipc.v1.TagRequestH\x00R\x03tag\x12;\n" +
@@ -1830,8 +3161,21 @@ const file_tilbo_ipc_v1_ipc_proto_rawDesc = "" +
 	"\x06status\x18\x06 \x01(\v2\x1b.tilbo.ipc.v1.StatusRequestH\x00R\x06status\x12E\n" +
 	"\freload_rules\x18\a \x01(\v2 .tilbo.ipc.v1.ReloadRulesRequestH\x00R\vreloadRules\x12<\n" +
 	"\tlist_tags\x18\b \x01(\v2\x1d.tilbo.ipc.v1.ListTagsRequestH\x00R\blistTags\x12E\n" +
-	"\fhydrate_tags\x18\t \x01(\v2 .tilbo.ipc.v1.HydrateTagsRequestH\x00R\vhydrateTagsB\x06\n" +
-	"\x04kind\"\xae\x04\n" +
+	"\fhydrate_tags\x18\t \x01(\v2 .tilbo.ipc.v1.HydrateTagsRequestH\x00R\vhydrateTags\x12K\n" +
+	"\x0elist_directory\x18\n" +
+	" \x01(\v2\".tilbo.ipc.v1.ListDirectoryRequestH\x00R\rlistDirectory\x12<\n" +
+	"\tstat_file\x18\v \x01(\v2\x1d.tilbo.ipc.v1.StatFileRequestH\x00R\bstatFile\x12B\n" +
+	"\vglob_search\x18\f \x01(\v2\x1f.tilbo.ipc.v1.GlobSearchRequestH\x00R\n" +
+	"globSearch\x12B\n" +
+	"\vrename_file\x18\r \x01(\v2\x1f.tilbo.ipc.v1.RenameFileRequestH\x00R\n" +
+	"renameFile\x12B\n" +
+	"\vdelete_file\x18\x0e \x01(\v2\x1f.tilbo.ipc.v1.DeleteFileRequestH\x00R\n" +
+	"deleteFile\x12?\n" +
+	"\n" +
+	"chmod_file\x18\x0f \x01(\v2\x1e.tilbo.ipc.v1.ChmodFileRequestH\x00R\tchmodFile\x12B\n" +
+	"\vlist_places\x18\x10 \x01(\v2\x1f.tilbo.ipc.v1.ListPlacesRequestH\x00R\n" +
+	"listPlacesB\x06\n" +
+	"\x04kind\"\x91\b\n" +
 	"\bResponse\x123\n" +
 	"\x05error\x18\x01 \x01(\v2\x1b.tilbo.ipc.v1.ErrorResponseH\x00R\x05error\x126\n" +
 	"\x06search\x18\x02 \x01(\v2\x1c.tilbo.ipc.v1.SearchResponseH\x00R\x06search\x12-\n" +
@@ -1841,7 +3185,26 @@ const file_tilbo_ipc_v1_ipc_proto_rawDesc = "" +
 	"\x06status\x18\x06 \x01(\v2\x1c.tilbo.ipc.v1.StatusResponseH\x00R\x06status\x12F\n" +
 	"\freload_rules\x18\a \x01(\v2!.tilbo.ipc.v1.ReloadRulesResponseH\x00R\vreloadRules\x12=\n" +
 	"\tlist_tags\x18\b \x01(\v2\x1e.tilbo.ipc.v1.ListTagsResponseH\x00R\blistTags\x12F\n" +
-	"\fhydrate_tags\x18\t \x01(\v2!.tilbo.ipc.v1.HydrateTagsResponseH\x00R\vhydrateTagsB\x06\n" +
+	"\fhydrate_tags\x18\t \x01(\v2!.tilbo.ipc.v1.HydrateTagsResponseH\x00R\vhydrateTags\x12L\n" +
+	"\x0elist_directory\x18\n" +
+	" \x01(\v2#.tilbo.ipc.v1.ListDirectoryResponseH\x00R\rlistDirectory\x12=\n" +
+	"\tstat_file\x18\v \x01(\v2\x1e.tilbo.ipc.v1.StatFileResponseH\x00R\bstatFile\x12C\n" +
+	"\vglob_search\x18\f \x01(\v2 .tilbo.ipc.v1.GlobSearchResponseH\x00R\n" +
+	"globSearch\x12C\n" +
+	"\vrename_file\x18\r \x01(\v2 .tilbo.ipc.v1.RenameFileResponseH\x00R\n" +
+	"renameFile\x12C\n" +
+	"\vdelete_file\x18\x0e \x01(\v2 .tilbo.ipc.v1.DeleteFileResponseH\x00R\n" +
+	"deleteFile\x12@\n" +
+	"\n" +
+	"chmod_file\x18\x0f \x01(\v2\x1f.tilbo.ipc.v1.ChmodFileResponseH\x00R\tchmodFile\x12C\n" +
+	"\vlist_places\x18\x10 \x01(\v2 .tilbo.ipc.v1.ListPlacesResponseH\x00R\n" +
+	"listPlacesB\x06\n" +
+	"\x04kind\"\xf4\x01\n" +
+	"\x05Event\x12@\n" +
+	"\vfile_tagged\x18\x01 \x01(\v2\x1d.tilbo.ipc.v1.FileTaggedEventH\x00R\n" +
+	"fileTagged\x12F\n" +
+	"\rindex_updated\x18\x02 \x01(\v2\x1f.tilbo.ipc.v1.IndexUpdatedEventH\x00R\findexUpdated\x12Y\n" +
+	"\x14daemon_state_changed\x18\x03 \x01(\v2%.tilbo.ipc.v1.DaemonStateChangedEventH\x00R\x12daemonStateChangedB\x06\n" +
 	"\x04kind\"=\n" +
 	"\rErrorResponse\x12\x12\n" +
 	"\x04code\x18\x01 \x01(\rR\x04code\x12\x18\n" +
@@ -1944,7 +3307,66 @@ const file_tilbo_ipc_v1_ipc_proto_rawDesc = "" +
 	"\x04path\x18\x01 \x01(\tR\x04path\x12\x12\n" +
 	"\x04tags\x18\x02 \x03(\tR\x04tags\"O\n" +
 	"\x13HydrateTagsResponse\x128\n" +
-	"\aentries\x18\x01 \x03(\v2\x1e.tilbo.ipc.v1.HydratedPathTagsR\aentries*u\n" +
+	"\aentries\x18\x01 \x03(\v2\x1e.tilbo.ipc.v1.HydratedPathTagsR\aentries\"B\n" +
+	"\x14ListDirectoryRequest\x12\x12\n" +
+	"\x04path\x18\x01 \x01(\tR\x04path\x12\x16\n" +
+	"\x06hidden\x18\x02 \x01(\bR\x06hidden\"\xaa\x01\n" +
+	"\bDirEntry\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12\x12\n" +
+	"\x04path\x18\x02 \x01(\tR\x04path\x12\x15\n" +
+	"\x06is_dir\x18\x03 \x01(\bR\x05isDir\x12\x1d\n" +
+	"\n" +
+	"size_bytes\x18\x04 \x01(\x03R\tsizeBytes\x12\x14\n" +
+	"\x05mtime\x18\x05 \x01(\x03R\x05mtime\x12\x12\n" +
+	"\x04mode\x18\x06 \x01(\rR\x04mode\x12\x16\n" +
+	"\x06hidden\x18\a \x01(\bR\x06hidden\"I\n" +
+	"\x15ListDirectoryResponse\x120\n" +
+	"\aentries\x18\x01 \x03(\v2\x16.tilbo.ipc.v1.DirEntryR\aentries\"%\n" +
+	"\x0fStatFileRequest\x12\x12\n" +
+	"\x04path\x18\x01 \x01(\tR\x04path\"S\n" +
+	"\bFileStat\x12\x1d\n" +
+	"\n" +
+	"size_bytes\x18\x01 \x01(\x03R\tsizeBytes\x12\x14\n" +
+	"\x05mtime\x18\x02 \x01(\x03R\x05mtime\x12\x12\n" +
+	"\x04mode\x18\x03 \x01(\rR\x04mode\">\n" +
+	"\x10StatFileResponse\x12*\n" +
+	"\x04stat\x18\x01 \x01(\v2\x16.tilbo.ipc.v1.FileStatR\x04stat\"h\n" +
+	"\x11GlobSearchRequest\x12\x1a\n" +
+	"\bpatterns\x18\x01 \x03(\tR\bpatterns\x12\x14\n" +
+	"\x05limit\x18\x02 \x01(\rR\x05limit\x12!\n" +
+	"\fallow_hidden\x18\x03 \x01(\bR\vallowHidden\"D\n" +
+	"\x12GlobSearchResponse\x12.\n" +
+	"\x05files\x18\x01 \x03(\v2\x18.tilbo.ipc.v1.FileResultR\x05files\"B\n" +
+	"\x11RenameFileRequest\x12\x12\n" +
+	"\x04path\x18\x01 \x01(\tR\x04path\x12\x19\n" +
+	"\bnew_name\x18\x02 \x01(\tR\anewName\"/\n" +
+	"\x12RenameFileResponse\x12\x19\n" +
+	"\bnew_path\x18\x01 \x01(\tR\anewPath\"'\n" +
+	"\x11DeleteFileRequest\x12\x12\n" +
+	"\x04path\x18\x01 \x01(\tR\x04path\"\x14\n" +
+	"\x12DeleteFileResponse\":\n" +
+	"\x10ChmodFileRequest\x12\x12\n" +
+	"\x04path\x18\x01 \x01(\tR\x04path\x12\x12\n" +
+	"\x04mode\x18\x02 \x01(\rR\x04mode\"\x13\n" +
+	"\x11ChmodFileResponse\"\x13\n" +
+	"\x11ListPlacesRequest\"4\n" +
+	"\n" +
+	"PlaceEntry\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12\x12\n" +
+	"\x04path\x18\x02 \x01(\tR\x04path\"F\n" +
+	"\x12ListPlacesResponse\x120\n" +
+	"\x06places\x18\x01 \x03(\v2\x18.tilbo.ipc.v1.PlaceEntryR\x06places\"U\n" +
+	"\x0fFileTaggedEvent\x12\x12\n" +
+	"\x04path\x18\x01 \x01(\tR\x04path\x12\x14\n" +
+	"\x05added\x18\x02 \x03(\tR\x05added\x12\x18\n" +
+	"\aremoved\x18\x03 \x03(\tR\aremoved\"S\n" +
+	"\x11IndexUpdatedEvent\x12\x1f\n" +
+	"\vfiles_total\x18\x01 \x01(\x04R\n" +
+	"filesTotal\x12\x1d\n" +
+	"\n" +
+	"tags_total\x18\x02 \x01(\x04R\ttagsTotal\"/\n" +
+	"\x17DaemonStateChangedEvent\x12\x14\n" +
+	"\x05state\x18\x01 \x01(\tR\x05state*u\n" +
 	"\fTagOperation\x12\x1d\n" +
 	"\x19TAG_OPERATION_UNSPECIFIED\x10\x00\x12\x15\n" +
 	"\x11TAG_OPERATION_ADD\x10\x01\x12\x18\n" +
@@ -1971,77 +3393,120 @@ func file_tilbo_ipc_v1_ipc_proto_rawDescGZIP() []byte {
 }
 
 var file_tilbo_ipc_v1_ipc_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_tilbo_ipc_v1_ipc_proto_msgTypes = make([]protoimpl.MessageInfo, 29)
+var file_tilbo_ipc_v1_ipc_proto_msgTypes = make([]protoimpl.MessageInfo, 50)
 var file_tilbo_ipc_v1_ipc_proto_goTypes = []any{
-	(TagOperation)(0),           // 0: tilbo.ipc.v1.TagOperation
-	(DaemonState)(0),            // 1: tilbo.ipc.v1.DaemonState
-	(*Envelope)(nil),            // 2: tilbo.ipc.v1.Envelope
-	(*Request)(nil),             // 3: tilbo.ipc.v1.Request
-	(*Response)(nil),            // 4: tilbo.ipc.v1.Response
-	(*ErrorResponse)(nil),       // 5: tilbo.ipc.v1.ErrorResponse
-	(*SearchRequest)(nil),       // 6: tilbo.ipc.v1.SearchRequest
-	(*FileResult)(nil),          // 7: tilbo.ipc.v1.FileResult
-	(*SearchResponse)(nil),      // 8: tilbo.ipc.v1.SearchResponse
-	(*TagRequest)(nil),          // 9: tilbo.ipc.v1.TagRequest
-	(*TagResponse)(nil),         // 10: tilbo.ipc.v1.TagResponse
-	(*MetadataRequest)(nil),     // 11: tilbo.ipc.v1.MetadataRequest
-	(*MetadataResponse)(nil),    // 12: tilbo.ipc.v1.MetadataResponse
-	(*MetadataSetRequest)(nil),  // 13: tilbo.ipc.v1.MetadataSetRequest
-	(*RelatedRequest)(nil),      // 14: tilbo.ipc.v1.RelatedRequest
-	(*ScoredFile)(nil),          // 15: tilbo.ipc.v1.ScoredFile
-	(*RelatedResponse)(nil),     // 16: tilbo.ipc.v1.RelatedResponse
-	(*StatusRequest)(nil),       // 17: tilbo.ipc.v1.StatusRequest
-	(*StatusResponse)(nil),      // 18: tilbo.ipc.v1.StatusResponse
-	(*ReloadRulesRequest)(nil),  // 19: tilbo.ipc.v1.ReloadRulesRequest
-	(*ReloadRulesResponse)(nil), // 20: tilbo.ipc.v1.ReloadRulesResponse
-	(*ListTagsRequest)(nil),     // 21: tilbo.ipc.v1.ListTagsRequest
-	(*ListTagsResponse)(nil),    // 22: tilbo.ipc.v1.ListTagsResponse
-	(*HydrateTagsRequest)(nil),  // 23: tilbo.ipc.v1.HydrateTagsRequest
-	(*HydratedPathTags)(nil),    // 24: tilbo.ipc.v1.HydratedPathTags
-	(*HydrateTagsResponse)(nil), // 25: tilbo.ipc.v1.HydrateTagsResponse
-	nil,                         // 26: tilbo.ipc.v1.SearchRequest.MetaFiltersEntry
-	nil,                         // 27: tilbo.ipc.v1.FileResult.MetadataEntry
-	nil,                         // 28: tilbo.ipc.v1.TagResponse.ErrorsEntry
-	nil,                         // 29: tilbo.ipc.v1.MetadataResponse.MetadataEntry
-	nil,                         // 30: tilbo.ipc.v1.MetadataResponse.SourcesEntry
+	(TagOperation)(0),               // 0: tilbo.ipc.v1.TagOperation
+	(DaemonState)(0),                // 1: tilbo.ipc.v1.DaemonState
+	(*Envelope)(nil),                // 2: tilbo.ipc.v1.Envelope
+	(*Request)(nil),                 // 3: tilbo.ipc.v1.Request
+	(*Response)(nil),                // 4: tilbo.ipc.v1.Response
+	(*Event)(nil),                   // 5: tilbo.ipc.v1.Event
+	(*ErrorResponse)(nil),           // 6: tilbo.ipc.v1.ErrorResponse
+	(*SearchRequest)(nil),           // 7: tilbo.ipc.v1.SearchRequest
+	(*FileResult)(nil),              // 8: tilbo.ipc.v1.FileResult
+	(*SearchResponse)(nil),          // 9: tilbo.ipc.v1.SearchResponse
+	(*TagRequest)(nil),              // 10: tilbo.ipc.v1.TagRequest
+	(*TagResponse)(nil),             // 11: tilbo.ipc.v1.TagResponse
+	(*MetadataRequest)(nil),         // 12: tilbo.ipc.v1.MetadataRequest
+	(*MetadataResponse)(nil),        // 13: tilbo.ipc.v1.MetadataResponse
+	(*MetadataSetRequest)(nil),      // 14: tilbo.ipc.v1.MetadataSetRequest
+	(*RelatedRequest)(nil),          // 15: tilbo.ipc.v1.RelatedRequest
+	(*ScoredFile)(nil),              // 16: tilbo.ipc.v1.ScoredFile
+	(*RelatedResponse)(nil),         // 17: tilbo.ipc.v1.RelatedResponse
+	(*StatusRequest)(nil),           // 18: tilbo.ipc.v1.StatusRequest
+	(*StatusResponse)(nil),          // 19: tilbo.ipc.v1.StatusResponse
+	(*ReloadRulesRequest)(nil),      // 20: tilbo.ipc.v1.ReloadRulesRequest
+	(*ReloadRulesResponse)(nil),     // 21: tilbo.ipc.v1.ReloadRulesResponse
+	(*ListTagsRequest)(nil),         // 22: tilbo.ipc.v1.ListTagsRequest
+	(*ListTagsResponse)(nil),        // 23: tilbo.ipc.v1.ListTagsResponse
+	(*HydrateTagsRequest)(nil),      // 24: tilbo.ipc.v1.HydrateTagsRequest
+	(*HydratedPathTags)(nil),        // 25: tilbo.ipc.v1.HydratedPathTags
+	(*HydrateTagsResponse)(nil),     // 26: tilbo.ipc.v1.HydrateTagsResponse
+	(*ListDirectoryRequest)(nil),    // 27: tilbo.ipc.v1.ListDirectoryRequest
+	(*DirEntry)(nil),                // 28: tilbo.ipc.v1.DirEntry
+	(*ListDirectoryResponse)(nil),   // 29: tilbo.ipc.v1.ListDirectoryResponse
+	(*StatFileRequest)(nil),         // 30: tilbo.ipc.v1.StatFileRequest
+	(*FileStat)(nil),                // 31: tilbo.ipc.v1.FileStat
+	(*StatFileResponse)(nil),        // 32: tilbo.ipc.v1.StatFileResponse
+	(*GlobSearchRequest)(nil),       // 33: tilbo.ipc.v1.GlobSearchRequest
+	(*GlobSearchResponse)(nil),      // 34: tilbo.ipc.v1.GlobSearchResponse
+	(*RenameFileRequest)(nil),       // 35: tilbo.ipc.v1.RenameFileRequest
+	(*RenameFileResponse)(nil),      // 36: tilbo.ipc.v1.RenameFileResponse
+	(*DeleteFileRequest)(nil),       // 37: tilbo.ipc.v1.DeleteFileRequest
+	(*DeleteFileResponse)(nil),      // 38: tilbo.ipc.v1.DeleteFileResponse
+	(*ChmodFileRequest)(nil),        // 39: tilbo.ipc.v1.ChmodFileRequest
+	(*ChmodFileResponse)(nil),       // 40: tilbo.ipc.v1.ChmodFileResponse
+	(*ListPlacesRequest)(nil),       // 41: tilbo.ipc.v1.ListPlacesRequest
+	(*PlaceEntry)(nil),              // 42: tilbo.ipc.v1.PlaceEntry
+	(*ListPlacesResponse)(nil),      // 43: tilbo.ipc.v1.ListPlacesResponse
+	(*FileTaggedEvent)(nil),         // 44: tilbo.ipc.v1.FileTaggedEvent
+	(*IndexUpdatedEvent)(nil),       // 45: tilbo.ipc.v1.IndexUpdatedEvent
+	(*DaemonStateChangedEvent)(nil), // 46: tilbo.ipc.v1.DaemonStateChangedEvent
+	nil,                             // 47: tilbo.ipc.v1.SearchRequest.MetaFiltersEntry
+	nil,                             // 48: tilbo.ipc.v1.FileResult.MetadataEntry
+	nil,                             // 49: tilbo.ipc.v1.TagResponse.ErrorsEntry
+	nil,                             // 50: tilbo.ipc.v1.MetadataResponse.MetadataEntry
+	nil,                             // 51: tilbo.ipc.v1.MetadataResponse.SourcesEntry
 }
 var file_tilbo_ipc_v1_ipc_proto_depIdxs = []int32{
 	3,  // 0: tilbo.ipc.v1.Envelope.request:type_name -> tilbo.ipc.v1.Request
 	4,  // 1: tilbo.ipc.v1.Envelope.response:type_name -> tilbo.ipc.v1.Response
-	6,  // 2: tilbo.ipc.v1.Request.search:type_name -> tilbo.ipc.v1.SearchRequest
-	9,  // 3: tilbo.ipc.v1.Request.tag:type_name -> tilbo.ipc.v1.TagRequest
-	11, // 4: tilbo.ipc.v1.Request.metadata:type_name -> tilbo.ipc.v1.MetadataRequest
-	13, // 5: tilbo.ipc.v1.Request.metadata_set:type_name -> tilbo.ipc.v1.MetadataSetRequest
-	14, // 6: tilbo.ipc.v1.Request.related:type_name -> tilbo.ipc.v1.RelatedRequest
-	17, // 7: tilbo.ipc.v1.Request.status:type_name -> tilbo.ipc.v1.StatusRequest
-	19, // 8: tilbo.ipc.v1.Request.reload_rules:type_name -> tilbo.ipc.v1.ReloadRulesRequest
-	21, // 9: tilbo.ipc.v1.Request.list_tags:type_name -> tilbo.ipc.v1.ListTagsRequest
-	23, // 10: tilbo.ipc.v1.Request.hydrate_tags:type_name -> tilbo.ipc.v1.HydrateTagsRequest
-	5,  // 11: tilbo.ipc.v1.Response.error:type_name -> tilbo.ipc.v1.ErrorResponse
-	8,  // 12: tilbo.ipc.v1.Response.search:type_name -> tilbo.ipc.v1.SearchResponse
-	10, // 13: tilbo.ipc.v1.Response.tag:type_name -> tilbo.ipc.v1.TagResponse
-	12, // 14: tilbo.ipc.v1.Response.metadata:type_name -> tilbo.ipc.v1.MetadataResponse
-	16, // 15: tilbo.ipc.v1.Response.related:type_name -> tilbo.ipc.v1.RelatedResponse
-	18, // 16: tilbo.ipc.v1.Response.status:type_name -> tilbo.ipc.v1.StatusResponse
-	20, // 17: tilbo.ipc.v1.Response.reload_rules:type_name -> tilbo.ipc.v1.ReloadRulesResponse
-	22, // 18: tilbo.ipc.v1.Response.list_tags:type_name -> tilbo.ipc.v1.ListTagsResponse
-	25, // 19: tilbo.ipc.v1.Response.hydrate_tags:type_name -> tilbo.ipc.v1.HydrateTagsResponse
-	26, // 20: tilbo.ipc.v1.SearchRequest.meta_filters:type_name -> tilbo.ipc.v1.SearchRequest.MetaFiltersEntry
-	27, // 21: tilbo.ipc.v1.FileResult.metadata:type_name -> tilbo.ipc.v1.FileResult.MetadataEntry
-	7,  // 22: tilbo.ipc.v1.SearchResponse.files:type_name -> tilbo.ipc.v1.FileResult
-	0,  // 23: tilbo.ipc.v1.TagRequest.operation:type_name -> tilbo.ipc.v1.TagOperation
-	28, // 24: tilbo.ipc.v1.TagResponse.errors:type_name -> tilbo.ipc.v1.TagResponse.ErrorsEntry
-	29, // 25: tilbo.ipc.v1.MetadataResponse.metadata:type_name -> tilbo.ipc.v1.MetadataResponse.MetadataEntry
-	30, // 26: tilbo.ipc.v1.MetadataResponse.sources:type_name -> tilbo.ipc.v1.MetadataResponse.SourcesEntry
-	7,  // 27: tilbo.ipc.v1.ScoredFile.file:type_name -> tilbo.ipc.v1.FileResult
-	15, // 28: tilbo.ipc.v1.RelatedResponse.files:type_name -> tilbo.ipc.v1.ScoredFile
-	1,  // 29: tilbo.ipc.v1.StatusResponse.state:type_name -> tilbo.ipc.v1.DaemonState
-	24, // 30: tilbo.ipc.v1.HydrateTagsResponse.entries:type_name -> tilbo.ipc.v1.HydratedPathTags
-	31, // [31:31] is the sub-list for method output_type
-	31, // [31:31] is the sub-list for method input_type
-	31, // [31:31] is the sub-list for extension type_name
-	31, // [31:31] is the sub-list for extension extendee
-	0,  // [0:31] is the sub-list for field type_name
+	5,  // 2: tilbo.ipc.v1.Envelope.event:type_name -> tilbo.ipc.v1.Event
+	7,  // 3: tilbo.ipc.v1.Request.search:type_name -> tilbo.ipc.v1.SearchRequest
+	10, // 4: tilbo.ipc.v1.Request.tag:type_name -> tilbo.ipc.v1.TagRequest
+	12, // 5: tilbo.ipc.v1.Request.metadata:type_name -> tilbo.ipc.v1.MetadataRequest
+	14, // 6: tilbo.ipc.v1.Request.metadata_set:type_name -> tilbo.ipc.v1.MetadataSetRequest
+	15, // 7: tilbo.ipc.v1.Request.related:type_name -> tilbo.ipc.v1.RelatedRequest
+	18, // 8: tilbo.ipc.v1.Request.status:type_name -> tilbo.ipc.v1.StatusRequest
+	20, // 9: tilbo.ipc.v1.Request.reload_rules:type_name -> tilbo.ipc.v1.ReloadRulesRequest
+	22, // 10: tilbo.ipc.v1.Request.list_tags:type_name -> tilbo.ipc.v1.ListTagsRequest
+	24, // 11: tilbo.ipc.v1.Request.hydrate_tags:type_name -> tilbo.ipc.v1.HydrateTagsRequest
+	27, // 12: tilbo.ipc.v1.Request.list_directory:type_name -> tilbo.ipc.v1.ListDirectoryRequest
+	30, // 13: tilbo.ipc.v1.Request.stat_file:type_name -> tilbo.ipc.v1.StatFileRequest
+	33, // 14: tilbo.ipc.v1.Request.glob_search:type_name -> tilbo.ipc.v1.GlobSearchRequest
+	35, // 15: tilbo.ipc.v1.Request.rename_file:type_name -> tilbo.ipc.v1.RenameFileRequest
+	37, // 16: tilbo.ipc.v1.Request.delete_file:type_name -> tilbo.ipc.v1.DeleteFileRequest
+	39, // 17: tilbo.ipc.v1.Request.chmod_file:type_name -> tilbo.ipc.v1.ChmodFileRequest
+	41, // 18: tilbo.ipc.v1.Request.list_places:type_name -> tilbo.ipc.v1.ListPlacesRequest
+	6,  // 19: tilbo.ipc.v1.Response.error:type_name -> tilbo.ipc.v1.ErrorResponse
+	9,  // 20: tilbo.ipc.v1.Response.search:type_name -> tilbo.ipc.v1.SearchResponse
+	11, // 21: tilbo.ipc.v1.Response.tag:type_name -> tilbo.ipc.v1.TagResponse
+	13, // 22: tilbo.ipc.v1.Response.metadata:type_name -> tilbo.ipc.v1.MetadataResponse
+	17, // 23: tilbo.ipc.v1.Response.related:type_name -> tilbo.ipc.v1.RelatedResponse
+	19, // 24: tilbo.ipc.v1.Response.status:type_name -> tilbo.ipc.v1.StatusResponse
+	21, // 25: tilbo.ipc.v1.Response.reload_rules:type_name -> tilbo.ipc.v1.ReloadRulesResponse
+	23, // 26: tilbo.ipc.v1.Response.list_tags:type_name -> tilbo.ipc.v1.ListTagsResponse
+	26, // 27: tilbo.ipc.v1.Response.hydrate_tags:type_name -> tilbo.ipc.v1.HydrateTagsResponse
+	29, // 28: tilbo.ipc.v1.Response.list_directory:type_name -> tilbo.ipc.v1.ListDirectoryResponse
+	32, // 29: tilbo.ipc.v1.Response.stat_file:type_name -> tilbo.ipc.v1.StatFileResponse
+	34, // 30: tilbo.ipc.v1.Response.glob_search:type_name -> tilbo.ipc.v1.GlobSearchResponse
+	36, // 31: tilbo.ipc.v1.Response.rename_file:type_name -> tilbo.ipc.v1.RenameFileResponse
+	38, // 32: tilbo.ipc.v1.Response.delete_file:type_name -> tilbo.ipc.v1.DeleteFileResponse
+	40, // 33: tilbo.ipc.v1.Response.chmod_file:type_name -> tilbo.ipc.v1.ChmodFileResponse
+	43, // 34: tilbo.ipc.v1.Response.list_places:type_name -> tilbo.ipc.v1.ListPlacesResponse
+	44, // 35: tilbo.ipc.v1.Event.file_tagged:type_name -> tilbo.ipc.v1.FileTaggedEvent
+	45, // 36: tilbo.ipc.v1.Event.index_updated:type_name -> tilbo.ipc.v1.IndexUpdatedEvent
+	46, // 37: tilbo.ipc.v1.Event.daemon_state_changed:type_name -> tilbo.ipc.v1.DaemonStateChangedEvent
+	47, // 38: tilbo.ipc.v1.SearchRequest.meta_filters:type_name -> tilbo.ipc.v1.SearchRequest.MetaFiltersEntry
+	48, // 39: tilbo.ipc.v1.FileResult.metadata:type_name -> tilbo.ipc.v1.FileResult.MetadataEntry
+	8,  // 40: tilbo.ipc.v1.SearchResponse.files:type_name -> tilbo.ipc.v1.FileResult
+	0,  // 41: tilbo.ipc.v1.TagRequest.operation:type_name -> tilbo.ipc.v1.TagOperation
+	49, // 42: tilbo.ipc.v1.TagResponse.errors:type_name -> tilbo.ipc.v1.TagResponse.ErrorsEntry
+	50, // 43: tilbo.ipc.v1.MetadataResponse.metadata:type_name -> tilbo.ipc.v1.MetadataResponse.MetadataEntry
+	51, // 44: tilbo.ipc.v1.MetadataResponse.sources:type_name -> tilbo.ipc.v1.MetadataResponse.SourcesEntry
+	8,  // 45: tilbo.ipc.v1.ScoredFile.file:type_name -> tilbo.ipc.v1.FileResult
+	16, // 46: tilbo.ipc.v1.RelatedResponse.files:type_name -> tilbo.ipc.v1.ScoredFile
+	1,  // 47: tilbo.ipc.v1.StatusResponse.state:type_name -> tilbo.ipc.v1.DaemonState
+	25, // 48: tilbo.ipc.v1.HydrateTagsResponse.entries:type_name -> tilbo.ipc.v1.HydratedPathTags
+	28, // 49: tilbo.ipc.v1.ListDirectoryResponse.entries:type_name -> tilbo.ipc.v1.DirEntry
+	31, // 50: tilbo.ipc.v1.StatFileResponse.stat:type_name -> tilbo.ipc.v1.FileStat
+	8,  // 51: tilbo.ipc.v1.GlobSearchResponse.files:type_name -> tilbo.ipc.v1.FileResult
+	42, // 52: tilbo.ipc.v1.ListPlacesResponse.places:type_name -> tilbo.ipc.v1.PlaceEntry
+	53, // [53:53] is the sub-list for method output_type
+	53, // [53:53] is the sub-list for method input_type
+	53, // [53:53] is the sub-list for extension type_name
+	53, // [53:53] is the sub-list for extension extendee
+	0,  // [0:53] is the sub-list for field type_name
 }
 
 func init() { file_tilbo_ipc_v1_ipc_proto_init() }
@@ -2052,6 +3517,7 @@ func file_tilbo_ipc_v1_ipc_proto_init() {
 	file_tilbo_ipc_v1_ipc_proto_msgTypes[0].OneofWrappers = []any{
 		(*Envelope_Request)(nil),
 		(*Envelope_Response)(nil),
+		(*Envelope_Event)(nil),
 	}
 	file_tilbo_ipc_v1_ipc_proto_msgTypes[1].OneofWrappers = []any{
 		(*Request_Search)(nil),
@@ -2063,6 +3529,13 @@ func file_tilbo_ipc_v1_ipc_proto_init() {
 		(*Request_ReloadRules)(nil),
 		(*Request_ListTags)(nil),
 		(*Request_HydrateTags)(nil),
+		(*Request_ListDirectory)(nil),
+		(*Request_StatFile)(nil),
+		(*Request_GlobSearch)(nil),
+		(*Request_RenameFile)(nil),
+		(*Request_DeleteFile)(nil),
+		(*Request_ChmodFile)(nil),
+		(*Request_ListPlaces)(nil),
 	}
 	file_tilbo_ipc_v1_ipc_proto_msgTypes[2].OneofWrappers = []any{
 		(*Response_Error)(nil),
@@ -2074,6 +3547,18 @@ func file_tilbo_ipc_v1_ipc_proto_init() {
 		(*Response_ReloadRules)(nil),
 		(*Response_ListTags)(nil),
 		(*Response_HydrateTags)(nil),
+		(*Response_ListDirectory)(nil),
+		(*Response_StatFile)(nil),
+		(*Response_GlobSearch)(nil),
+		(*Response_RenameFile)(nil),
+		(*Response_DeleteFile)(nil),
+		(*Response_ChmodFile)(nil),
+		(*Response_ListPlaces)(nil),
+	}
+	file_tilbo_ipc_v1_ipc_proto_msgTypes[3].OneofWrappers = []any{
+		(*Event_FileTagged)(nil),
+		(*Event_IndexUpdated)(nil),
+		(*Event_DaemonStateChanged)(nil),
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -2081,7 +3566,7 @@ func file_tilbo_ipc_v1_ipc_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_tilbo_ipc_v1_ipc_proto_rawDesc), len(file_tilbo_ipc_v1_ipc_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   29,
+			NumMessages:   50,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

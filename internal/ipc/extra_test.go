@@ -1,19 +1,44 @@
 package ipc
 
 import (
+	"bufio"
 	"bytes"
 	"context"
-	"encoding/binary"
+	"errors"
 	"fmt"
+	"net"
 	"strings"
 	"sync"
 	"testing"
 	"time"
 
+	"google.golang.org/protobuf/encoding/protojson"
+
 	ipcv1 "github.com/darkliquid/tilbo/internal/ipc/gen/tilbo/ipc/v1"
 )
 
 // --- Framing edge cases ---
+
+func TestFraming_OversizedFrame(t *testing.T) {
+	// Build a SearchRequest whose FtsQuery field pushes the marshaled JSON
+	// over the maxFrameSize limit.
+	bigQuery := strings.Repeat("x", maxFrameSize+1)
+	env := &ipcv1.Envelope{
+		RequestId: 1,
+		Payload: &ipcv1.Envelope_Request{
+			Request: &ipcv1.Request{
+				Kind: &ipcv1.Request_Search{
+					Search: &ipcv1.SearchRequest{FtsQuery: bigQuery},
+				},
+			},
+		},
+	}
+	var buf bytes.Buffer
+	err := WriteEnvelope(&buf, env)
+	if !errors.Is(err, ErrFrameTooLarge) {
+		t.Fatalf("expected ErrFrameTooLarge, got %v", err)
+	}
+}
 
 func TestFraming_EmptyPayload(t *testing.T) {
 	env := &ipcv1.Envelope{RequestId: 1}
@@ -21,56 +46,36 @@ func TestFraming_EmptyPayload(t *testing.T) {
 	if err := WriteEnvelope(&buf, env); err != nil {
 		t.Fatalf("WriteEnvelope: %v", err)
 	}
-	got, err := ReadEnvelope(&buf)
-	if err != nil {
-		t.Fatalf("ReadEnvelope: %v", err)
+
+	scanner := bufio.NewScanner(&buf)
+	if !scanner.Scan() {
+		t.Fatal("expected one line")
+	}
+
+	got := &ipcv1.Envelope{}
+	if err := protojson.Unmarshal(scanner.Bytes(), got); err != nil {
+		t.Fatalf("Unmarshal: %v", err)
 	}
 	if got.GetRequestId() != 1 {
 		t.Errorf("RequestId: got %d, want 1", got.GetRequestId())
 	}
 }
 
-func TestFraming_OverSizeLimit_Write(t *testing.T) {
-	// Construct an envelope that, when serialized, exceeds 100MB by stuffing
-	// it with a very large byte slice. We fake this by manually encoding a
-	// length header > 100MB.
-	var buf bytes.Buffer
-	var lenBuf [4]byte
-	binary.LittleEndian.PutUint32(lenBuf[:], 101*1024*1024) // 101MB
-	buf.Write(lenBuf[:])
-
-	_, err := ReadEnvelope(&buf)
-	if err == nil {
-		t.Fatal("expected error for over-sized message")
-	}
-}
-
-func TestFraming_TruncatedPayload(t *testing.T) {
-	// Write a valid length header claiming 100 bytes, then only write 10 bytes.
-	var buf bytes.Buffer
-	var lenBuf [4]byte
-	binary.LittleEndian.PutUint32(lenBuf[:], 100)
-	buf.Write(lenBuf[:])
-	buf.Write(make([]byte, 10)) // only 10 of the promised 100
-
-	_, err := ReadEnvelope(&buf)
-	if err == nil {
-		t.Fatal("expected error for truncated frame")
-	}
-}
-
 func TestFraming_CorruptProtobuf(t *testing.T) {
-	// Write a valid length header then garbage bytes.
-	garbage := []byte("not valid protobuf data at all!!!")
+	// Write invalid JSON data
+	garbage := []byte("not valid json data at all!!!\n")
 	var buf bytes.Buffer
-	var lenBuf [4]byte
-	binary.LittleEndian.PutUint32(lenBuf[:], uint32(len(garbage)))
-	buf.Write(lenBuf[:])
 	buf.Write(garbage)
 
-	_, err := ReadEnvelope(&buf)
+	scanner := bufio.NewScanner(&buf)
+	if !scanner.Scan() {
+		t.Fatal("expected one line")
+	}
+
+	got := &ipcv1.Envelope{}
+	err := protojson.Unmarshal(scanner.Bytes(), got)
 	if err == nil {
-		t.Fatal("expected error for corrupt protobuf")
+		t.Fatal("expected error for corrupt json")
 	}
 }
 
@@ -82,10 +87,15 @@ func TestFraming_MultipleEnvelopes(t *testing.T) {
 			t.Fatalf("WriteEnvelope %d: %v", i, err)
 		}
 	}
+
+	scanner := bufio.NewScanner(&buf)
 	for i := uint64(1); i <= 5; i++ {
-		got, err := ReadEnvelope(&buf)
-		if err != nil {
-			t.Fatalf("ReadEnvelope %d: %v", i, err)
+		if !scanner.Scan() {
+			t.Fatalf("expected envelope %d", i)
+		}
+		got := &ipcv1.Envelope{}
+		if err := protojson.Unmarshal(scanner.Bytes(), got); err != nil {
+			t.Fatalf("Unmarshal %d: %v", i, err)
 		}
 		if got.GetRequestId() != i {
 			t.Errorf("envelope %d: got id %d", i, got.GetRequestId())
@@ -205,6 +215,225 @@ func TestServer_ContextCancelBeforeCall(t *testing.T) {
 	if err == nil {
 		t.Error("expected error when context is already canceled")
 	}
+}
+
+// dialUnixWithRetry repeatedly attempts to dial the Unix socket until it
+// succeeds or the context is done.
+func dialUnixWithRetry(ctx context.Context, sockPath string) (net.Conn, error) {
+	var lastErr error
+
+	for {
+		select {
+		case <-ctx.Done():
+			if lastErr == nil {
+				lastErr = ctx.Err()
+			}
+			return nil, fmt.Errorf("dialUnixWithRetry: %w", lastErr)
+		default:
+		}
+
+		conn, err := dialUnix(sockPath)
+		if err == nil {
+			return conn, nil
+		}
+
+		lastErr = err
+		time.Sleep(10 * time.Millisecond)
+	}
+}
+
+func TestBroadcastEvent_Delivery(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	sockPath := t.TempDir() + "/broadcast.sock"
+	srv := NewServer(sockPath, func(_ context.Context, _ *ipcv1.Request) (*ipcv1.Response, error) {
+		return &ipcv1.Response{Kind: &ipcv1.Response_Status{Status: &ipcv1.StatusResponse{}}}, nil
+	})
+	if err := srv.Start(ctx); err != nil {
+		t.Fatalf("srv.Start: %v", err)
+	}
+	defer srv.Stop()
+
+	// Connect a raw net.Conn so we can read frames directly.
+	rawConn, err := dialUnixWithRetry(ctx, sockPath)
+	if err != nil {
+		t.Fatalf("dial: %v", err)
+	}
+	defer rawConn.Close()
+
+	// Wait until the server has tracked the connection before broadcasting,
+	// otherwise the event is sent to an empty set of connections.
+	ticker := time.NewTicker(5 * time.Millisecond)
+	defer ticker.Stop()
+	for {
+		srv.mu.Lock()
+		tracked := len(srv.conns)
+		srv.mu.Unlock()
+		if tracked > 0 {
+			break
+		}
+		select {
+		case <-ctx.Done():
+			t.Fatal("timed out waiting for server to track connection")
+		case <-ticker.C:
+		}
+	}
+
+	// Broadcast an event.
+	srv.BroadcastEvent(&ipcv1.Event{
+		Kind: &ipcv1.Event_IndexUpdated{IndexUpdated: &ipcv1.IndexUpdatedEvent{}},
+	})
+
+	// Read the event frame.
+	scanner := bufio.NewScanner(rawConn)
+	scanner.Buffer(make([]byte, maxFrameSize), maxFrameSize)
+
+	done := make(chan struct{})
+	var gotErr error
+	var gotEnv *ipcv1.Envelope
+	go func() {
+		defer close(done)
+		if !scanner.Scan() {
+			if err := scanner.Err(); err != nil {
+				gotErr = err
+			} else {
+				gotErr = errors.New("scanner stopped before reading broadcast event frame")
+			}
+			return
+		}
+		env := &ipcv1.Envelope{}
+		if err := (protojson.UnmarshalOptions{DiscardUnknown: true}).Unmarshal(scanner.Bytes(), env); err != nil {
+			gotErr = err
+			return
+		}
+		gotEnv = env
+	}()
+
+	select {
+	case <-done:
+	case <-ctx.Done():
+		t.Fatal("timed out waiting for broadcast event")
+	}
+
+	if gotErr != nil {
+		t.Fatalf("unmarshal broadcast event: %v", gotErr)
+	}
+	if gotEnv == nil {
+		t.Fatal("expected broadcast event envelope, got nil")
+	}
+	if gotEnv.GetEvent() == nil {
+		t.Fatalf("expected event payload, got %T", gotEnv.GetPayload())
+	}
+}
+
+func TestBroadcastEvent_NoInterleave(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	// Server that blocks inside the handler, letting us race a broadcast against a response write.
+	started := make(chan struct{})
+	proceed := make(chan struct{})
+
+	sockPath := t.TempDir() + "/nointerleave.sock"
+	srv := NewServer(sockPath, func(_ context.Context, _ *ipcv1.Request) (*ipcv1.Response, error) {
+		close(started)
+		<-proceed
+		return &ipcv1.Response{Kind: &ipcv1.Response_Status{Status: &ipcv1.StatusResponse{UptimeSeconds: 7}}}, nil
+	})
+	if err := srv.Start(ctx); err != nil {
+		t.Fatalf("srv.Start: %v", err)
+	}
+	defer srv.Stop()
+	time.Sleep(20 * time.Millisecond)
+
+	cli, err := NewClient(ctx, sockPath)
+	if err != nil {
+		t.Fatalf("NewClient: %v", err)
+	}
+	defer cli.Close()
+
+	// Start a call (server will block until proceed is closed).
+	callDone := make(chan error, 1)
+	go func() {
+		_, err := cli.Call(ctx, &ipcv1.Request{Kind: &ipcv1.Request_Status{Status: &ipcv1.StatusRequest{}}})
+		callDone <- err
+	}()
+
+	// Wait for handler to start processing.
+	select {
+	case <-started:
+	case <-ctx.Done():
+		t.Fatal("timed out waiting for handler to start")
+	}
+
+	// Broadcast while the handler is blocked (so it races with the response write).
+	srv.BroadcastEvent(&ipcv1.Event{Kind: &ipcv1.Event_IndexUpdated{IndexUpdated: &ipcv1.IndexUpdatedEvent{}}})
+
+	// Unblock the handler.
+	close(proceed)
+
+	// Call should succeed without error.
+	select {
+	case err := <-callDone:
+		if err != nil {
+			t.Errorf("Call after concurrent broadcast: %v", err)
+		}
+	case <-ctx.Done():
+		t.Fatal("timed out waiting for Call to complete")
+	}
+}
+
+func TestClient_ConnectionDrop(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	// Use a blocking handler so the call is always pending when we drop the conn.
+	block := make(chan struct{})
+	started := make(chan struct{})
+	sockPath := startTestServer(t, func(_ context.Context, _ *ipcv1.Request) (*ipcv1.Response, error) {
+		// Signal that the server has received the request and is about to block.
+		close(started)
+		<-block
+		return &ipcv1.Response{Kind: &ipcv1.Response_Status{Status: &ipcv1.StatusResponse{}}}, nil
+	})
+
+	cli, err := NewClient(ctx, sockPath)
+	if err != nil {
+		t.Fatalf("NewClient: %v", err)
+	}
+
+	// Register a pending call.
+	callDone := make(chan error, 1)
+	go func() {
+		_, callErr := cli.Call(ctx, &ipcv1.Request{Kind: &ipcv1.Request_Status{Status: &ipcv1.StatusRequest{}}})
+		callDone <- callErr
+	}()
+
+	// Wait deterministically until the server has received the request and is blocking.
+	select {
+	case <-started:
+		// proceed
+	case <-ctx.Done():
+		t.Fatalf("timed out waiting for call to start: %v", ctx.Err())
+	}
+
+	// Forcibly close the underlying connection to simulate a drop.
+	cli.conn.Close()
+
+	select {
+	case err := <-callDone:
+		if err == nil {
+			t.Error("expected error when connection drops, got nil")
+		}
+	case <-ctx.Done():
+		t.Fatal("timed out: Call did not unblock after connection drop")
+	}
+}
+
+// dialUnix is a test helper that opens a raw [net.Conn] to a Unix socket.
+func dialUnix(path string) (net.Conn, error) {
+	return net.Dial("unix", path)
 }
 
 func TestServer_AllRequestTypes(t *testing.T) {

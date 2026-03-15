@@ -1,14 +1,16 @@
 package ipc
 
 import (
+	"bufio"
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"net"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"google.golang.org/protobuf/encoding/protojson"
 
 	ipcv1 "github.com/darkliquid/tilbo/internal/ipc/gen/tilbo/ipc/v1"
 )
@@ -63,15 +65,24 @@ func (c *Client) Close() error {
 func (c *Client) readLoop() {
 	defer c.wg.Done()
 	defer c.conn.Close()
+	defer c.drainReqs()
 
-	for {
+	scanner := bufio.NewScanner(c.conn)
+	scanner.Buffer(make([]byte, maxFrameSize), maxFrameSize)
+
+	for scanner.Scan() {
 		if c.closed.Load() {
 			return
 		}
 
-		env, err := ReadEnvelope(c.conn)
-		if err != nil {
-			if errors.Is(err, io.EOF) || errors.Is(err, io.ErrUnexpectedEOF) || c.closed.Load() {
+		line := scanner.Bytes()
+		if len(line) == 0 {
+			continue
+		}
+
+		env := &ipcv1.Envelope{}
+		if err := (protojson.UnmarshalOptions{DiscardUnknown: true}).Unmarshal(line, env); err != nil {
+			if c.closed.Load() {
 				return
 			}
 			continue
@@ -93,6 +104,17 @@ func (c *Client) readLoop() {
 			ch <- resp
 			close(ch)
 		}
+	}
+}
+
+// drainReqs closes all outstanding request channels so Call() callers unblock
+// when the connection drops unexpectedly.
+func (c *Client) drainReqs() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	for id, ch := range c.reqs {
+		close(ch)
+		delete(c.reqs, id)
 	}
 }
 
@@ -144,7 +166,10 @@ func (c *Client) Call(ctx context.Context, req *ipcv1.Request) (*ipcv1.Response,
 		delete(c.reqs, id)
 		c.mu.Unlock()
 		return nil, ctx.Err()
-	case resp := <-ch:
+	case resp, ok := <-ch:
+		if !ok {
+			return nil, errors.New("ipc: connection closed")
+		}
 		if errResp := resp.GetError(); errResp != nil {
 			return nil, fmt.Errorf("remote error: %s (code %d)", errResp.GetMessage(), errResp.GetCode())
 		}

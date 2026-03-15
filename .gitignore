@@ -19,6 +19,11 @@
 !*.txt
 !*.wasm
 !*.qml
+!*.js
+!*.ts
+!qmldir
+!*.mjs
+!*.sh
 
 # Specific project files
 !.gitignore
@@ -35,3 +40,4 @@
 memory/
 .claude/
 .vscode/
+node_modules/

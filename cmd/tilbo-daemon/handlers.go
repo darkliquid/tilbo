@@ -316,3 +316,107 @@ func applyTagsXattr(ctx context.Context, path string, tagNames []string, op stri
 	}
 	return store.WriteTags(ctx, path, merged)
 }
+
+func handleListDirectory(req *ipcv1.ListDirectoryRequest, browser *daemonBrowserMethods) (*ipcv1.Response, error) {
+	entries, err := browser.ListDirectory(req.GetPath(), req.GetHidden())
+	if err != nil {
+		return errResponse(daemonInternalErrCode, err.Error()), nil
+	}
+	resEntries := make([]*ipcv1.DirEntry, len(entries))
+	for i, e := range entries {
+		resEntries[i] = &ipcv1.DirEntry{
+			Name:      e.Name,
+			Path:      e.Path,
+			IsDir:     e.IsDir,
+			SizeBytes: e.Size,
+			Mtime:     e.MTime,
+			Mode:      e.Mode,
+			Hidden:    e.Hidden,
+		}
+	}
+	return &ipcv1.Response{Kind: &ipcv1.Response_ListDirectory{
+		ListDirectory: &ipcv1.ListDirectoryResponse{Entries: resEntries},
+	}}, nil
+}
+
+func handleStatFile(req *ipcv1.StatFileRequest, browser *daemonBrowserMethods) (*ipcv1.Response, error) {
+	stat, err := browser.StatFile(req.GetPath())
+	if err != nil {
+		return errResponse(daemonInternalErrCode, err.Error()), nil
+	}
+	return &ipcv1.Response{Kind: &ipcv1.Response_StatFile{
+		StatFile: &ipcv1.StatFileResponse{
+			Stat: &ipcv1.FileStat{
+				SizeBytes: stat.Size,
+				Mtime:     stat.MTime,
+				Mode:      stat.Mode,
+			},
+		},
+	}}, nil
+}
+
+func handleGlobSearch(req *ipcv1.GlobSearchRequest, browser *daemonBrowserMethods) (*ipcv1.Response, error) {
+	files, err := browser.GlobSearch(req.GetPatterns(), req.GetLimit(), req.GetAllowHidden())
+	if err != nil {
+		return errResponse(daemonInternalErrCode, err.Error()), nil
+	}
+	resFiles := make([]*ipcv1.FileResult, len(files))
+	for i, f := range files {
+		resFiles[i] = &ipcv1.FileResult{
+			Path:      f.Path,
+			Tags:      f.Tags,
+			Metadata:  f.Metadata,
+			Score:     f.Score,
+			Mtime:     f.MTime,
+			SizeBytes: f.Size,
+		}
+	}
+	return &ipcv1.Response{Kind: &ipcv1.Response_GlobSearch{
+		GlobSearch: &ipcv1.GlobSearchResponse{Files: resFiles},
+	}}, nil
+}
+
+func handleRenameFile(req *ipcv1.RenameFileRequest, browser *daemonBrowserMethods) (*ipcv1.Response, error) {
+	newPath, err := browser.RenameFile(req.GetPath(), req.GetNewName())
+	if err != nil {
+		return errResponse(daemonInternalErrCode, err.Error()), nil
+	}
+	return &ipcv1.Response{Kind: &ipcv1.Response_RenameFile{
+		RenameFile: &ipcv1.RenameFileResponse{NewPath: newPath},
+	}}, nil
+}
+
+func handleDeleteFile(req *ipcv1.DeleteFileRequest, browser *daemonBrowserMethods) (*ipcv1.Response, error) {
+	if err := browser.DeleteFile(req.GetPath()); err != nil {
+		return errResponse(daemonInternalErrCode, err.Error()), nil
+	}
+	return &ipcv1.Response{Kind: &ipcv1.Response_DeleteFile{
+		DeleteFile: &ipcv1.DeleteFileResponse{},
+	}}, nil
+}
+
+func handleChmodFile(req *ipcv1.ChmodFileRequest, browser *daemonBrowserMethods) (*ipcv1.Response, error) {
+	if err := browser.ChmodFile(req.GetPath(), req.GetMode()); err != nil {
+		return errResponse(daemonInternalErrCode, err.Error()), nil
+	}
+	return &ipcv1.Response{Kind: &ipcv1.Response_ChmodFile{
+		ChmodFile: &ipcv1.ChmodFileResponse{},
+	}}, nil
+}
+
+func handleListPlaces(_ *ipcv1.ListPlacesRequest, browser *daemonBrowserMethods) (*ipcv1.Response, error) {
+	places, err := browser.ListPlaces()
+	if err != nil {
+		return errResponse(daemonInternalErrCode, err.Error()), nil
+	}
+	resPlaces := make([]*ipcv1.PlaceEntry, len(places))
+	for i, p := range places {
+		resPlaces[i] = &ipcv1.PlaceEntry{
+			Name: p.Name,
+			Path: p.Path,
+		}
+	}
+	return &ipcv1.Response{Kind: &ipcv1.Response_ListPlaces{
+		ListPlaces: &ipcv1.ListPlacesResponse{Places: resPlaces},
+	}}, nil
+}
