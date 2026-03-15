@@ -21,7 +21,8 @@ type SearchParams struct {
 	Untagged    bool              // if true, only files with no tags
 	Limit       uint32            // 0 = 50
 	Offset      uint32
-	SortBy      []string // e.g. ["mtime:desc", "name:asc"]
+	SortBy      []string  // e.g. ["mtime:desc", "name:asc"]
+	VectorQuery []float32 // optional embedding vector for semantic search
 }
 
 func buildOrderClauses(sortBy []string) []string {
@@ -60,6 +61,7 @@ type SearchResult struct {
 	Metadata  map[string]string
 	Mtime     int64
 	SizeBytes int64
+	Score     float64 // relevance score (FTS rank or vector distance)
 }
 
 const searchArgsCap = 16
@@ -68,6 +70,10 @@ const searchArgsCap = 16
 //
 //nolint:funlen,gocognit // SQL builder keeps filter and ordering semantics centralized
 func (d *DB) Search(ctx context.Context, p SearchParams) ([]SearchResult, int, error) {
+	if len(p.VectorQuery) > 0 {
+		return d.vectorSearch(ctx, p)
+	}
+
 	limit := int(p.Limit)
 	if limit <= 0 {
 		limit = 50
@@ -76,15 +82,14 @@ func (d *DB) Search(ctx context.Context, p SearchParams) ([]SearchResult, int, e
 	var sb strings.Builder
 	args := make([]any, 0, searchArgsCap)
 
-	sb.WriteString("SELECT f.id, f.path, f.mtime, f.size_bytes FROM files f WHERE 1=1")
-
-	// FTS filter.
 	if p.FTSQuery != "" {
-		sb.WriteString(` AND f.id IN (
-			SELECT m.file_id FROM metadata m
+		sb.WriteString("SELECT f.id, f.path, f.mtime, f.size_bytes, fts.rank FROM files f")
+		sb.WriteString(` JOIN metadata m ON m.file_id = f.id
 			JOIN metadata_fts fts ON fts.rowid = m.rowid
-			WHERE fts.value MATCH ?)`)
+			WHERE fts.value MATCH ?`)
 		args = append(args, p.FTSQuery)
+	} else {
+		sb.WriteString("SELECT f.id, f.path, f.mtime, f.size_bytes, 0.0 as rank FROM files f WHERE 1=1")
 	}
 
 	// Tag include.
@@ -145,32 +150,7 @@ func (d *DB) Search(ctx context.Context, p SearchParams) ([]SearchResult, int, e
 	}
 
 	// Meta filters.
-	for key, opval := range p.MetaFilters {
-		if key == "__path__" {
-			continue
-		}
-		op, val, _ := strings.Cut(opval, ":")
-		var cond string
-		switch op {
-		case "eq", "":
-			cond = `AND EXISTS (SELECT 1 FROM metadata WHERE file_id = f.id AND key = ? AND value = ?)`
-			args = append(args, key, val)
-		case "contains":
-			cond = `AND EXISTS (SELECT 1 FROM metadata WHERE file_id = f.id AND key = ? AND value LIKE ?)`
-			args = append(args, key, "%"+val+"%")
-		case "gt", "gte", "lt", "lte":
-			sqlOp := map[string]string{"gt": ">", "gte": ">=", "lt": "<", "lte": "<="}[op]
-			cond = fmt.Sprintf(
-				`AND EXISTS (SELECT 1 FROM metadata WHERE file_id = f.id AND key = ? AND CAST(value AS REAL) %s ?)`,
-				sqlOp,
-			)
-			args = append(args, key, val)
-		default:
-			continue
-		}
-		sb.WriteString(" ")
-		sb.WriteString(cond)
-	}
+	d.applyMetaFilters(&sb, &args, p.MetaFilters)
 
 	// Count query (before limit/offset).
 	countQuery := "SELECT COUNT(*) FROM (" + sb.String() + ")"
@@ -180,7 +160,12 @@ func (d *DB) Search(ctx context.Context, p SearchParams) ([]SearchResult, int, e
 	}
 
 	// ORDER BY.
-	orderBy := "f.mtime DESC"
+	var orderBy string
+	if p.FTSQuery != "" {
+		orderBy = "fts.rank"
+	} else {
+		orderBy = "f.mtime DESC"
+	}
 	if orderClauses := buildOrderClauses(p.SortBy); len(orderClauses) > 0 {
 		orderBy = strings.Join(orderClauses, ", ")
 	}
@@ -201,11 +186,12 @@ func (d *DB) Search(ctx context.Context, p SearchParams) ([]SearchResult, int, e
 		path      string
 		mtime     int64
 		sizeBytes int64
+		score     float64
 	}
 	var fileRows []fileRow
 	for rows.Next() {
 		var r fileRow
-		if err := rows.Scan(&r.id, &r.path, &r.mtime, &r.sizeBytes); err != nil {
+		if err := rows.Scan(&r.id, &r.path, &r.mtime, &r.sizeBytes, &r.score); err != nil {
 			return nil, 0, fmt.Errorf("index: search scan: %w", err)
 		}
 		fileRows = append(fileRows, r)
@@ -221,6 +207,7 @@ func (d *DB) Search(ctx context.Context, p SearchParams) ([]SearchResult, int, e
 			Path:      fr.path,
 			Mtime:     fr.mtime,
 			SizeBytes: fr.sizeBytes,
+			Score:     fr.score,
 		}
 
 		// Tags.
@@ -424,4 +411,102 @@ func (d *DB) ModifyFileTags(ctx context.Context, path string, tags []string, op 
 		return fmt.Errorf("index: unknown tag operation %q", op)
 	}
 	return nil
+}
+
+func (d *DB) vectorSearch(ctx context.Context, p SearchParams) ([]SearchResult, int, error) {
+	limit := int(p.Limit)
+	if limit <= 0 {
+		limit = 50
+	}
+
+	// For vector search, we use KNNSearch which already handles tag inclusion filters (AND semantics).
+	// We don't support p.TagsAny or p.TagExclude or p.MetaFilters or p.FTSQuery in the optimized path yet.
+	// For now, we'll support p.Tags (AND) if p.TagsAny is false and p.TagExclude is empty.
+	var filterTags []string
+	if !p.TagsAny &&
+		len(p.TagExclude) == 0 &&
+		len(p.MetaFilters) == 0 &&
+		p.FTSQuery == "" &&
+		p.MtimeSince == 0 &&
+		!p.Untagged {
+		filterTags = p.Tags
+	}
+
+	knnResults, err := d.KNNSearch(ctx, p.VectorQuery, limit+int(p.Offset), filterTags)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	// Pagination.
+	if int(p.Offset) >= len(knnResults) {
+		return nil, len(knnResults), nil
+	}
+	start := int(p.Offset)
+	end := min(int(p.Offset)+limit, len(knnResults))
+	knnResults = knnResults[start:end]
+
+	results := make([]SearchResult, 0, len(knnResults))
+	for _, kr := range knnResults {
+		summary, err := d.GetFileSummary(ctx, kr.Path)
+		if err != nil {
+			continue
+		}
+
+		// Metadata.
+		mrows, err := d.db.QueryContext(ctx,
+			"SELECT key, value FROM metadata WHERE file_id = ?", kr.FileID)
+		meta := make(map[string]string)
+		if err == nil {
+			func() {
+				defer mrows.Close()
+				for mrows.Next() {
+					var k, v string
+					if err := mrows.Scan(&k, &v); err == nil {
+						meta[k] = v
+					}
+				}
+				_ = mrows.Err()
+			}()
+		}
+
+		results = append(results, SearchResult{
+			Path:      summary.Path,
+			Tags:      summary.Tags,
+			Metadata:  meta,
+			Mtime:     summary.Mtime,
+			SizeBytes: summary.SizeBytes,
+			Score:     kr.Distance,
+		})
+	}
+
+	return results, len(results), nil // Total is approximate for KNN
+}
+
+func (d *DB) applyMetaFilters(sb *strings.Builder, args *[]any, metaFilters map[string]string) {
+	for key, opval := range metaFilters {
+		if key == "__path__" {
+			continue
+		}
+		op, val, _ := strings.Cut(opval, ":")
+		var cond string
+		switch op {
+		case "eq", "":
+			cond = "AND EXISTS (SELECT 1 FROM metadata WHERE file_id = f.id AND key = ? AND value = ?)"
+			*args = append(*args, key, val)
+		case "contains":
+			cond = "AND EXISTS (SELECT 1 FROM metadata WHERE file_id = f.id AND key = ? AND value LIKE ?)"
+			*args = append(*args, key, "%"+val+"%")
+		case "gt", "gte", "lt", "lte":
+			sqlOp := map[string]string{"gt": ">", "gte": ">=", "lt": "<", "lte": "<="}[op]
+			cond = fmt.Sprintf(
+				"AND EXISTS (SELECT 1 FROM metadata WHERE file_id = f.id AND key = ? AND CAST(value AS REAL) %s ?)",
+				sqlOp,
+			)
+			*args = append(*args, key, val)
+		default:
+			continue
+		}
+		sb.WriteString(" ")
+		sb.WriteString(cond)
+	}
 }

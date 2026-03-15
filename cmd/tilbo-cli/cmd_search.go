@@ -28,6 +28,7 @@ Examples:
   tilbo search --tags photo,vacation
   tilbo search --tags photo --any --exclude archived
   tilbo search --fts "holiday 2023"
+  tilbo search --vector "scenic mountain sunset"
   tilbo search --meta camera_make:eq:Canon --meta iso:gt:1600
   tilbo search --format json | jq '.[].path'`,
 	RunE: func(cmd *cobra.Command, _ []string) error {
@@ -37,6 +38,7 @@ Examples:
 		tagsAny, _ := cmd.Flags().GetBool("any")
 		exclude, _ := cmd.Flags().GetStringSlice("exclude")
 		fts, _ := cmd.Flags().GetString("fts")
+		vector, _ := cmd.Flags().GetString("vector")
 		metaRaw, _ := cmd.Flags().GetStringToString("meta")
 		sortBy, _ := cmd.Flags().GetStringSlice("sort")
 		limit, _ := cmd.Flags().GetUint32("limit")
@@ -49,6 +51,7 @@ Examples:
 				TagsAny:     tagsAny,
 				TagExclude:  exclude,
 				FtsQuery:    fts,
+				VectorQuery: vector,
 				MetaFilters: metaRaw,
 				SortBy:      sortBy,
 				Limit:       limit,
@@ -83,6 +86,7 @@ func init() {
 	f.Bool("any", false, "use OR semantics for --tags")
 	f.StringSlice("exclude", nil, "tags that must not be present")
 	f.String("fts", "", "full-text search query against metadata values")
+	f.String("vector", "", "semantic search query using vector embeddings")
 	f.StringToString("meta", nil, "metadata filters: key=op:value (e.g. iso=gt:1600)")
 	f.StringSlice("sort", []string{"mtime:desc"}, "sort order: field:asc|desc (mtime, name, size)")
 	f.Uint32("limit", defaultSearchLimit, "maximum results to return")
@@ -117,6 +121,7 @@ type jsonFileResult struct {
 	Metadata  map[string]string `json:"metadata,omitempty"`
 	Mtime     string            `json:"mtime"`
 	SizeBytes int64             `json:"size_bytes"`
+	Score     float64           `json:"score,omitempty"`
 }
 
 func printSearchJSON(files []*ipcv1.FileResult) error {
@@ -128,6 +133,7 @@ func printSearchJSON(files []*ipcv1.FileResult) error {
 			Metadata:  f.GetMetadata(),
 			Mtime:     time.Unix(f.GetMtime(), 0).Format(time.RFC3339),
 			SizeBytes: f.GetSizeBytes(),
+			Score:     f.GetScore(),
 		})
 	}
 	enc := json.NewEncoder(os.Stdout)
@@ -137,13 +143,14 @@ func printSearchJSON(files []*ipcv1.FileResult) error {
 
 func printSearchTSV(files []*ipcv1.FileResult) error {
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 1, ' ', 0)
-	fmt.Fprintln(w, "PATH\tTAGS\tSIZE\tMTIME")
+	fmt.Fprintln(w, "PATH\tTAGS\tSIZE\tMTIME\tSCORE")
 	for _, f := range files {
-		fmt.Fprintf(w, "%s\t%s\t%d\t%s\n",
+		fmt.Fprintf(w, "%s\t%s\t%d\t%s\t%.4f\n",
 			f.GetPath(),
 			strings.Join(f.GetTags(), ","),
 			f.GetSizeBytes(),
 			time.Unix(f.GetMtime(), 0).Format("2006-01-02 15:04"),
+			f.GetScore(),
 		)
 	}
 	return w.Flush()
@@ -160,7 +167,11 @@ func printSearchHuman(files []*ipcv1.FileResult, total uint32) {
 		if len(f.GetTags()) > 0 {
 			tags = strings.Join(f.GetTags(), ", ")
 		}
-		fmt.Fprintf(w, "%s\t[%s]\n", f.GetPath(), tags)
+		scoreStr := ""
+		if f.GetScore() != 0 {
+			scoreStr = fmt.Sprintf("\t(score: %.4f)", f.GetScore())
+		}
+		fmt.Fprintf(w, "%s\t[%s]%s\n", f.GetPath(), tags, scoreStr)
 	}
 	if err := w.Flush(); err != nil {
 		slog.Warn("failed to flush search output", "err", err)

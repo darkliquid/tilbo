@@ -668,6 +668,7 @@ type SearchRequest struct {
 	Limit         uint32                 `protobuf:"varint,6,opt,name=limit,proto3" json:"limit,omitempty"` // default 100
 	Offset        uint32                 `protobuf:"varint,7,opt,name=offset,proto3" json:"offset,omitempty"`
 	SortBy        []string               `protobuf:"bytes,8,rep,name=sort_by,json=sortBy,proto3" json:"sort_by,omitempty"` // e.g. ["mtime:desc", "name:asc"]
+	VectorQuery   string                 `protobuf:"bytes,9,opt,name=vector_query,json=vectorQuery,proto3" json:"vector_query,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -756,6 +757,13 @@ func (x *SearchRequest) GetSortBy() []string {
 		return x.SortBy
 	}
 	return nil
+}
+
+func (x *SearchRequest) GetVectorQuery() string {
+	if x != nil {
+		return x.VectorQuery
+	}
+	return ""
 }
 
 type FileResult struct {
@@ -1837,7 +1845,7 @@ const file_tilbo_ipc_v1_ipc_proto_rawDesc = "" +
 	"\x04kind\"=\n" +
 	"\rErrorResponse\x12\x12\n" +
 	"\x04code\x18\x01 \x01(\rR\x04code\x12\x18\n" +
-	"\amessage\x18\x02 \x01(\tR\amessage\"\xd4\x02\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage\"\xf7\x02\n" +
 	"\rSearchRequest\x12\x12\n" +
 	"\x04tags\x18\x01 \x03(\tR\x04tags\x12\x19\n" +
 	"\btags_any\x18\x02 \x01(\bR\atagsAny\x12\x1f\n" +
@@ -1847,7 +1855,8 @@ const file_tilbo_ipc_v1_ipc_proto_rawDesc = "" +
 	"\tfts_query\x18\x05 \x01(\tR\bftsQuery\x12\x14\n" +
 	"\x05limit\x18\x06 \x01(\rR\x05limit\x12\x16\n" +
 	"\x06offset\x18\a \x01(\rR\x06offset\x12\x17\n" +
-	"\asort_by\x18\b \x03(\tR\x06sortBy\x1a>\n" +
+	"\asort_by\x18\b \x03(\tR\x06sortBy\x12!\n" +
+	"\fvector_query\x18\t \x01(\tR\vvectorQuery\x1a>\n" +
 	"\x10MetaFiltersEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\x80\x02\n" +

@@ -10,6 +10,7 @@ import (
 	"github.com/darkliquid/tilbo/internal/graph"
 	"github.com/darkliquid/tilbo/internal/index"
 	ipcv1 "github.com/darkliquid/tilbo/internal/ipc/gen/tilbo/ipc/v1"
+	"github.com/darkliquid/tilbo/internal/vectorize"
 	"github.com/darkliquid/tilbo/internal/xattr"
 )
 
@@ -23,7 +24,12 @@ func errResponse(code uint32, msg string) *ipcv1.Response {
 }
 
 // handleSearch executes a Search IPC request against the index.
-func handleSearch(ctx context.Context, req *ipcv1.SearchRequest, idx *index.DB) (*ipcv1.Response, error) {
+func handleSearch(
+	ctx context.Context,
+	req *ipcv1.SearchRequest,
+	idx *index.DB,
+	embedder *vectorize.ONNXEmbedder,
+) (*ipcv1.Response, error) {
 	params := index.SearchParams{
 		Tags:        req.GetTags(),
 		TagsAny:     req.GetTagsAny(),
@@ -33,6 +39,17 @@ func handleSearch(ctx context.Context, req *ipcv1.SearchRequest, idx *index.DB) 
 		Limit:       req.GetLimit(),
 		Offset:      req.GetOffset(),
 		SortBy:      req.GetSortBy(),
+	}
+
+	if req.GetVectorQuery() != "" {
+		if embedder == nil {
+			return errResponse(daemonInternalErrCode, "semantic search requested but embedding model is disabled"), nil
+		}
+		vec, err := embedder.EmbedText(ctx, req.GetVectorQuery())
+		if err != nil {
+			return errResponse(daemonInternalErrCode, fmt.Sprintf("failed to generate query embedding: %v", err)), nil
+		}
+		params.VectorQuery = vec
 	}
 
 	results, total, err := idx.Search(ctx, params)
@@ -50,6 +67,7 @@ func handleSearch(ctx context.Context, req *ipcv1.SearchRequest, idx *index.DB) 
 			Metadata:  meta,
 			Mtime:     r.Mtime,
 			SizeBytes: r.SizeBytes,
+			Score:     r.Score,
 		})
 	}
 

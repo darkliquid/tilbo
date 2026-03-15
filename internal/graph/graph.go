@@ -30,6 +30,7 @@ type RelatedFile struct {
 	Path        string
 	Score       float64
 	HopDistance int
+	CosineSim   float64
 }
 
 // Graph is a thread-safe bipartite in-memory graph between file and tag nodes.
@@ -133,6 +134,12 @@ func (g *Graph) RemoveFile(path string) {
 	g.rebuildCountsLocked()
 }
 
+type scoringResult struct {
+	score     float64
+	hop       int
+	cosineSim float64
+}
+
 // Related returns at most limit files related to seedPath via multi-hop BFS.
 // maxHops is the maximum number of file→tag→file traversal steps (1 = direct
 // tag neighbours). hopWeight scales the per-hop IDF contribution. Files
@@ -144,8 +151,6 @@ func (g *Graph) RemoveFile(path string) {
 //     removal analogue); their IDF is near-zero anyway.
 //  2. The BFS frontier is capped at limit×20 per hop; only the highest-scored
 //     files advance to keep work per hop bounded.
-//
-//nolint:funlen,gocognit // ranking and traversal logic is kept in one place for consistency
 func (g *Graph) Related(
 	_ context.Context,
 	seedPath string,
@@ -160,12 +165,8 @@ func (g *Graph) Related(
 		return nil
 	}
 
-	// High-cardinality skip: tags in >5% of files are too generic for useful
-	// traversal. Minimum threshold of 50 avoids skipping everything on tiny graphs.
 	maxCard := max(g.totalFiles/highCardinalityDivisor, minHighCardinalityThreshold)
 
-	// Frontier cap: keeps work per hop at O(cap × tagsPerFile × maxCardinality).
-	// Factor of 8 balances result quality (enough candidates) against latency.
 	const frontierFactor = 8
 	maxFrontier := limit * frontierFactor
 	if maxFrontier <= 0 {
@@ -173,97 +174,120 @@ func (g *Graph) Related(
 	}
 
 	seedVec, hasSeedVec := g.fileEmbeddings[fk]
-
-	type result struct {
-		score float64
-		hop   int
-	}
-	scores := make(map[string]result)
-
-	// scored tracks files already assigned a hop so they are not re-scored.
+	scores := make(map[string]scoringResult)
 	scored := map[string]struct{}{fk: {}}
 	frontier := map[string]struct{}{fk: {}}
 
 	for hop := 1; hop <= maxHops; hop++ {
-		// Accumulate scores for new neighbours discovered this hop.
-		pending := make(map[string]float64)
-
-		for curFk := range frontier {
-			for tk := range g.fileAdj[curFk] {
-				tagName := strings.TrimPrefix(tk, tagPrefix)
-				card := g.tagCardinality[tagName]
-				if card >= maxCard {
-					continue // skip high-cardinality stopword tags
-				}
-				idf := math.Log2(float64(g.totalFiles+1) / float64(card+1))
-				contrib := hopWeight * idf / float64(hop)
-
-				for nfk := range g.tagAdj[tk] {
-					if _, seen := scored[nfk]; seen {
-						continue
-					}
-					pending[nfk] += contrib
-				}
-			}
-		}
-
+		pending := g.discoverNextHop(frontier, scored, maxCard, hopWeight, hop)
 		if len(pending) == 0 {
 			break
 		}
 
-		// Build next frontier, capped at maxFrontier.
-		if len(pending) <= maxFrontier {
-			nextFrontier := make(map[string]struct{}, len(pending))
-			for nfk, sc := range pending {
-				scores[nfk] = result{score: sc, hop: hop}
-				scored[nfk] = struct{}{}
-				nextFrontier[nfk] = struct{}{}
-			}
-			frontier = nextFrontier
-		} else {
-			// Keep only the top-scoring candidates for the next hop.
-			type kv struct {
-				k  string
-				sc float64
-			}
-			sl := make([]kv, 0, len(pending))
-			for k, sc := range pending {
-				sl = append(sl, kv{k, sc})
-			}
-			sort.Slice(sl, func(i, j int) bool { return sl[i].sc > sl[j].sc })
-			nextFrontier := make(map[string]struct{}, maxFrontier)
-			for _, item := range sl {
-				scores[item.k] = result{score: item.sc, hop: hop}
-				scored[item.k] = struct{}{}
-				if len(nextFrontier) < maxFrontier {
-					nextFrontier[item.k] = struct{}{}
-				}
-			}
-			frontier = nextFrontier
-		}
+		g.applySimilarityBoost(pending, seedVec, hasSeedVec, vecWeight)
+		frontier = g.advanceFrontier(pending, scores, scored, seedVec, hasSeedVec, maxFrontier, hop)
+	}
 
-		// Apply vector similarity boost exactly once per discovered target
-		if hasSeedVec {
-			for nfk := range pending {
-				if tgtVec, ok := g.fileEmbeddings[nfk]; ok {
-					sim := cosineSimilarity(seedVec, tgtVec)
-					if sim > 0 {
-						// Only boost positive similarities
-						r := scores[nfk]
-						r.score += (sim * vecWeight)
-						scores[nfk] = r
-					}
+	return g.formatRelatedOutput(scores, limit)
+}
+
+func (g *Graph) discoverNextHop(
+	frontier map[string]struct{},
+	scored map[string]struct{},
+	maxCard int,
+	hopWeight float64,
+	hop int,
+) map[string]float64 {
+	pending := make(map[string]float64)
+	for curFk := range frontier {
+		for tk := range g.fileAdj[curFk] {
+			tagName := strings.TrimPrefix(tk, tagPrefix)
+			card := g.tagCardinality[tagName]
+			if card >= maxCard {
+				continue
+			}
+			idf := math.Log2(float64(g.totalFiles+1) / float64(card+1))
+			contrib := hopWeight * idf / float64(hop)
+
+			for nfk := range g.tagAdj[tk] {
+				if _, seen := scored[nfk]; !seen {
+					pending[nfk] += contrib
 				}
 			}
 		}
 	}
+	return pending
+}
 
+func (g *Graph) applySimilarityBoost(
+	pending map[string]float64,
+	seedVec []float32,
+	hasSeedVec bool,
+	vecWeight float64,
+) {
+	if !hasSeedVec {
+		return
+	}
+	for nfk := range pending {
+		if tgtVec, ok := g.fileEmbeddings[nfk]; ok {
+			if sim := cosineSimilarity(seedVec, tgtVec); sim > 0 {
+				pending[nfk] += (sim * vecWeight)
+			}
+		}
+	}
+}
+
+func (g *Graph) advanceFrontier(
+	pending map[string]float64,
+	scores map[string]scoringResult,
+	scored map[string]struct{},
+	seedVec []float32,
+	hasSeedVec bool,
+	maxFrontier int,
+	hop int,
+) map[string]struct{} {
+	nextFrontier := make(map[string]struct{})
+	candidates := pending
+
+	if len(pending) > maxFrontier {
+		type kv struct {
+			k  string
+			sc float64
+		}
+		sl := make([]kv, 0, len(pending))
+		for k, sc := range pending {
+			sl = append(sl, kv{k, sc})
+		}
+		sort.Slice(sl, func(i, j int) bool { return sl[i].sc > sl[j].sc })
+		sl = sl[:maxFrontier]
+		candidates = make(map[string]float64, maxFrontier)
+		for _, item := range sl {
+			candidates[item.k] = item.sc
+		}
+	}
+
+	for nfk, sc := range candidates {
+		sim := 0.0
+		if hasSeedVec {
+			if tgtVec, ok := g.fileEmbeddings[nfk]; ok {
+				sim = cosineSimilarity(seedVec, tgtVec)
+			}
+		}
+		scores[nfk] = scoringResult{score: sc, hop: hop, cosineSim: sim}
+		scored[nfk] = struct{}{}
+		nextFrontier[nfk] = struct{}{}
+	}
+	return nextFrontier
+}
+
+func (g *Graph) formatRelatedOutput(scores map[string]scoringResult, limit int) []RelatedFile {
 	out := make([]RelatedFile, 0, len(scores))
 	for fk, r := range scores {
 		out = append(out, RelatedFile{
 			Path:        strings.TrimPrefix(fk, filePrefix),
 			Score:       r.score,
 			HopDistance: r.hop,
+			CosineSim:   r.cosineSim,
 		})
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Score > out[j].Score })

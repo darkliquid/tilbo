@@ -36,7 +36,7 @@ support extended filesystem attributes.
 ## Requirements
 
 - Linux (kernel 5.10+ for fanotify; 5.17+ recommended for rename tracking)
-- Go 1.22 or later (to build from source)
+- Go 1.26 or later (to build from source)
 - FUSE kernel module (`fuse` package)
 - [Quickshell](https://quickshell.outfoxxed.me/) (optional — only required for the GUI browser)
 
@@ -142,10 +142,15 @@ FUSE virtual filesystem, and exposes a Unix socket IPC endpoint.
 | Flag | Default | Description |
 | --- | --- | --- |
 | `--watch <path>` | `~` | Filesystem path to watch via fanotify |
-| `--db <path>` | `~/.cache/tilbo/index.db` | SQLite index database path |
-| `--fuse-mount <path>` | `~/tags` | FUSE virtual filesystem mount point (empty to disable) |
+| `--db <path>` | `~/.local/state/tilbo/index.db` | SQLite index database path |
+| `--fuse-mount <path>` | `/run/user/$UID/tilbo/tags` | FUSE virtual filesystem mount point (empty to disable) |
 | `--log-format <fmt>` | `text` | Log format: `text` or `json` |
 | `--log-level <lvl>` | `info` | Log level: `debug`, `info`, `warn`, `error` |
+| `--embed-disabled` | `false` | Disable vector embeddings entirely |
+| `--embed-model <path>` | | Path to local ONNX model directory (overrides auto-download) |
+| `--embed-model-name <name>` | `sentence-transformers/all-MiniLM-L6-v2` | Huggingface model to auto-download |
+| `--watch-hidden` | `false` | Watch hidden files and directories |
+| `--watcher <backend>` | `auto` | Filesystem watcher backend: `auto`, `fanotify`, `inotify` |
 
 ### Config and Shell Setup
 
@@ -239,6 +244,12 @@ tilbo tag list <path>
 # Find files matching a tag expression
 tilbo search --tags <expr>
 
+# Find files matching ANY of the given tags
+tilbo search --tags tag1,tag2 --any
+
+# Exclude files with specific tags
+tilbo search --tags work --exclude archived
+
 # Full-text search over metadata values
 tilbo search --fts "invoice 2024"
 
@@ -248,12 +259,25 @@ tilbo search --meta "codec=h265"
 # Combine filters
 tilbo search --tags work --fts "quarterly report"
 
-# Control output and pagination
-tilbo search --tags video --limit 50 --offset 0 --format json
+# Control output, sorting, and pagination
+tilbo search --tags video --sort mtime:desc --limit 50 --offset 0 --format json
 tilbo search --tags photo --format tsv | cut -f1 | xargs ...
 ```
 
 **Output formats:** `human` (default), `json`, `tsv`
+
+**Search options:**
+
+| Flag | Default | Description |
+| --- | --- | --- |
+| `--any` | `false` | Use OR semantics for `--tags` |
+| `--exclude <tags>` | | Comma-separated tags that must not be present |
+| `--fts <query>` | | Full-text search over metadata values |
+| `--meta <filter>` | | Metadata filters: `key=op:value` (e.g. `iso=gt:1600`) |
+| `--sort <order>` | `mtime:desc` | Sort order: `field:asc|desc` (`mtime`, `name`, `size`) |
+| `--limit <n>` | `50` | Maximum results to return |
+| `--offset <n>` | `0` | Result offset for pagination |
+| `--format <fmt>` | `human` | Output format: `human`, `json`, `tsv` |
 
 **Tag expression syntax:**
 
@@ -268,7 +292,7 @@ tilbo search --tags photo --format tsv | cut -f1 | xargs ...
 | `@recent:30d` | Files modified in the last 30 days |
 | `@untagged` | Files with no tags |
 | `@search:invoice 2024` | Full-text search over metadata values |
-| `@similar:/path/to/file` | Files similar to the given file (graph traversal) |
+| `@similar:/path/to/file` | Files similar via tag graph and vector embeddings |
 | `@meta:iso:gte:1600` | Files where the `iso` metadata key is ≥ 1600 |
 
 Notes:
@@ -295,16 +319,23 @@ tilbo meta delete <path> <key>
 ### Related files
 
 ```sh
-# Find files related to a given file via shared tags
+# Find files related to a given file via tag graph and vector embeddings
 tilbo related <path>
-tilbo related <path> --limit 20 --hops 3
+tilbo related <path> --limit 20 --hops 3 --vec-weight 0.8
 tilbo related <path> --format json
 ```
 
-Related files are ranked by a weighted IDF score across shared tags, decayed
-by hop distance. Tags shared by many files contribute less to the score (stopword
-analogy). High-cardinality tags (shared by more than 5% of all indexed files) are
-skipped during traversal.
+Related files are ranked by a combination of:
+1.  **Tag Graph Traversal:** A weighted IDF score across shared tags, decayed by hop distance. Tags shared by many files contribute less to the score. High-cardinality tags (shared by more than 5% of all indexed files) are skipped.
+2.  **Vector Similarity:** If vector embeddings are enabled (default), a cosine similarity boost is applied to files found during traversal.
+
+| Flag | Default | Description |
+| --- | --- | --- |
+| `--hops <n>` | `3` | Maximum graph hops from seed |
+| `--hop-weight <w>` | `1.0` | Weight multiplier for graph hop distance |
+| `--vec-weight <w>` | `0.4` | Weight multiplier for vector similarity |
+| `--limit <n>` | `20` | Maximum results to return |
+| `--format <fmt>` | `human` | Output format: `human`, `json`, `tsv` |
 
 ### Daemon management
 
@@ -604,6 +635,25 @@ The `apply(meta)` function receives the metadata map and returns a list of tags.
 The sandbox has no filesystem or network access — only standard math, string, and
 table libraries are available.
 
+### Testing and validation
+
+```sh
+# List all active harvesters
+tilbo harvester list
+
+# Test the harvester pipeline against a specific file
+tilbo harvester test ~/photos/vacation.jpg
+
+# List all configured rules
+tilbo rule list
+
+# Validate rule syntax and configuration
+tilbo rule validate
+
+# Test rule evaluation against a file (shows what tags would be applied)
+tilbo rule test ~/photos/vacation.jpg
+```
+
 ---
 
 ## Optional External Dependencies
@@ -634,7 +684,7 @@ present on the system.
 
 | Path | Purpose |
 | --- | --- |
-| `~/.cache/tilbo/index.db` | SQLite index (default; override with `--db`) |
+| `~/.local/state/tilbo/index.db` | SQLite index (default; override with `--db`) |
 | `~/.local/share/tilbo/sidecar.db` | Sidecar store for non-xattr filesystems |
 | `~/.config/tilbo/harvesters/*.toml` | User harvester registrations |
 | `/etc/tilbo/harvesters/*.toml` | System-wide harvester registrations |
@@ -644,7 +694,7 @@ present on the system.
 | `~/.local/lib/tilbo/plugins/*.so` | Native plugin harvesters |
 | `/usr/lib/tilbo/plugins/*.so` | System-wide native plugins |
 | `/run/user/$UID/tilbo.sock` | IPC Unix socket |
-| `~/tags` | FUSE mount point (default; override with `--fuse-mount`) |
+| `/run/user/$UID/tilbo/tags` | FUSE mount point (default; override with `--fuse-mount`) |
 
 ### Wasm plugin cache
 
@@ -711,11 +761,8 @@ Delete the cache directory to force recompilation.
 - WASM and subprocess harvesters have WASI stdio only — no filesystem or
   network access from within the sandbox.
 
-### Not yet implemented
+### Vector embeddings
 
-- **Vector embeddings** — the schema includes an `embeddings` column and
-  sqlite-vec integration for semantic similarity, but the embedding pipeline
-  (`knights-analytics/hugot`, ONNX) is not yet wired up. `@similar:` queries
-  use graph traversal only.
-- **`tilbo rule list/validate/test`** and **`tilbo harvester list/test`** CLI
-  subcommands are planned but not yet implemented.
+- The embedding pipeline using `knights-analytics/hugot` and ONNX runs locally. The first run will automatically download the default model (`all-MiniLM-L6-v2`) unless configured otherwise.
+- Semantic similarity search via `@similar:` or `tilbo related` combines tag graph traversal with vector similarity.
+- Vector search requires the `sqlite-vec` extension to be available to the daemon's SQLite driver (built-in by default).

@@ -54,6 +54,7 @@ message SearchRequest {
   uint32 limit = 6; // default 100
   uint32 offset = 7;
   repeated string sort_by = 8; // e.g. ["mtime:desc", "name:asc"]
+  string vector_query = 9;
 }
 
 message FileResult {

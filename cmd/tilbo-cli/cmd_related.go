@@ -79,6 +79,7 @@ func init() {
 type jsonRelatedResult struct {
 	Path        string            `json:"path"`
 	Score       float64           `json:"score"`
+	CosineSim   float64           `json:"cosine_sim,omitempty"`
 	HopDistance uint32            `json:"hop_distance"`
 	Tags        []string          `json:"tags"`
 	Metadata    map[string]string `json:"metadata,omitempty"`
@@ -93,6 +94,7 @@ func printRelatedJSON(files []*ipcv1.ScoredFile) error {
 		out = append(out, jsonRelatedResult{
 			Path:        f.GetPath(),
 			Score:       sf.GetScore(),
+			CosineSim:   sf.GetCosineSim(),
 			HopDistance: sf.GetHopDistance(),
 			Tags:        f.GetTags(),
 			Metadata:    f.GetMetadata(),
@@ -107,12 +109,13 @@ func printRelatedJSON(files []*ipcv1.ScoredFile) error {
 
 func printRelatedTSV(files []*ipcv1.ScoredFile) error {
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 1, ' ', 0)
-	fmt.Fprintln(w, "PATH\tSCORE\tHOPS\tTAGS")
+	fmt.Fprintln(w, "PATH\tSCORE\tSIM\tHOPS\tTAGS")
 	for _, sf := range files {
 		f := sf.GetFile()
-		fmt.Fprintf(w, "%s\t%.3f\t%d\t%s\n",
+		fmt.Fprintf(w, "%s\t%.3f\t%.3f\t%d\t%s\n",
 			f.GetPath(),
 			sf.GetScore(),
+			sf.GetCosineSim(),
 			sf.GetHopDistance(),
 			strings.Join(f.GetTags(), ","),
 		)
@@ -132,8 +135,12 @@ func printRelatedHuman(files []*ipcv1.ScoredFile) {
 		if ts := f.GetTags(); len(ts) > 0 {
 			tags = strings.Join(ts, ", ")
 		}
-		fmt.Fprintf(w, "%s\t[%s]\t(score %.3f, %d hops)\n",
-			f.GetPath(), tags, sf.GetScore(), sf.GetHopDistance())
+		simStr := ""
+		if sf.GetCosineSim() != 0 {
+			simStr = fmt.Sprintf(", sim %.3f", sf.GetCosineSim())
+		}
+		fmt.Fprintf(w, "%s\t[%s]\t(score %.3f, %d hops%s)\n",
+			f.GetPath(), tags, sf.GetScore(), sf.GetHopDistance(), simStr)
 	}
 	if err := w.Flush(); err != nil {
 		slog.Warn("failed to flush related output", "err", err)

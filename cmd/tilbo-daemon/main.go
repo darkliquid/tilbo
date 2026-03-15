@@ -129,6 +129,7 @@ func run(
 		wasmCache,
 		cfgPath,
 		engine,
+		embedder,
 	)
 
 	ipcServer, err := startIPCServer(ctx, sockPath, handleIPCRequest)
@@ -405,6 +406,7 @@ func buildIPCRequestHandler(
 	wasmCache wazero.CompilationCache,
 	cfgPath string,
 	engine *rules.Engine,
+	embedder *vectorize.ONNXEmbedder,
 ) func(context.Context, *ipcv1.Request) (*ipcv1.Response, error) {
 	return func(ctx context.Context, req *ipcv1.Request) (*ipcv1.Response, error) {
 		switch r := req.GetKind().(type) {
@@ -424,7 +426,7 @@ func buildIPCRequestHandler(
 			return handleRelated(ctx, r.Related, fileGraph, idx)
 
 		case *ipcv1.Request_Search:
-			return handleSearch(ctx, r.Search, idx)
+			return handleSearch(ctx, r.Search, idx, embedder)
 
 		case *ipcv1.Request_Tag:
 			return handleTagReq(ctx, r.Tag)
@@ -693,6 +695,7 @@ func handleRelated(
 			},
 			Score:       r.Score,
 			HopDistance: hopDistanceToUint32(r.HopDistance),
+			CosineSim:   r.CosineSim,
 		})
 	}
 	return &ipcv1.Response{
