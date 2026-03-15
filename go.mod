@@ -12,7 +12,7 @@ require (
 	github.com/h2non/filetype v1.1.3
 	github.com/hanwen/go-fuse/v2 v2.9.0
 	github.com/knights-analytics/hugot v0.6.4
-	github.com/ncruces/go-sqlite3 v0.31.1
+	github.com/ncruces/go-sqlite3 v0.27.1
 	github.com/pdfcpu/pdfcpu v0.11.1
 	github.com/pkg/xattr v0.4.12
 	github.com/planetscale/vtprotobuf v0.6.0

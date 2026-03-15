@@ -19,15 +19,17 @@ import (
 
 // DaemonConfig holds tilbo-daemon settings.
 type DaemonConfig struct {
-	Watch       string `toml:"watch"`
-	DB          string `toml:"db"`
-	FuseMount   string `toml:"fuse_mount"`
-	Socket      string `toml:"socket"`
-	LogFormat   string `toml:"log_format"`
-	LogLevel    string `toml:"log_level"`
-	Watcher     string `toml:"watcher"`
-	WatchHidden bool   `toml:"watch_hidden"`
-	EmbedModel  string `toml:"embed_model"`
+	Watch          string `toml:"watch"`
+	DB             string `toml:"db"`
+	FuseMount      string `toml:"fuse_mount"`
+	Socket         string `toml:"socket"`
+	LogFormat      string `toml:"log_format"`
+	LogLevel       string `toml:"log_level"`
+	Watcher        string `toml:"watcher"`
+	WatchHidden    bool   `toml:"watch_hidden"`
+	EmbedModel     string `toml:"embed_model"`      // Local path to ONNX model directory. Overrides auto-download.
+	EmbedModelName string `toml:"embed_model_name"` // HuggingFace model name to download if embed_model is unset. Defaults to sentence-transformers/all-MiniLM-L6-v2.
+	EmbedDisabled  bool   `toml:"embed_disabled"`   // Explicitly disable vector embeddings.
 }
 
 // CLIConfig holds tilbo-cli settings.

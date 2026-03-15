@@ -4,11 +4,61 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
 	"sync"
 
 	"github.com/knights-analytics/hugot"
 	"github.com/knights-analytics/hugot/pipelines"
 )
+
+// DefaultModelName is the HuggingFace model used when no embed_model path is
+// configured and embed_disabled is false.
+const DefaultModelName = "sentence-transformers/all-MiniLM-L6-v2"
+
+// DefaultModelDir returns the directory where auto-downloaded models are stored.
+// Uses $XDG_DATA_HOME/tilbo/models or ~/.local/share/tilbo/models.
+func DefaultModelDir() string {
+	if dir := os.Getenv("XDG_DATA_HOME"); dir != "" {
+		return filepath.Join(dir, "tilbo", "models")
+	}
+	if home, err := os.UserHomeDir(); err == nil {
+		return filepath.Join(home, ".local", "share", "tilbo", "models")
+	}
+	return filepath.Join(os.TempDir(), "tilbo", "models")
+}
+
+// EnsureModel resolves a local model path for modelName, downloading it from
+// HuggingFace into modelsDir if it is not already present.
+// Returns the local path or an error if the download fails.
+func EnsureModel(ctx context.Context, modelName, modelsDir string) (string, error) {
+	// hugot.DownloadModel stores models at <modelsDir>/<model_name with "/" replaced by "_">.
+	localPath := filepath.Join(modelsDir, strings.ReplaceAll(modelName, "/", "_"))
+
+	if fi, err := os.Stat(localPath); err == nil && fi.IsDir() {
+		return localPath, nil
+	}
+
+	if err := os.MkdirAll(modelsDir, 0o700); err != nil {
+		return "", fmt.Errorf("vectorize: create models dir: %w", err)
+	}
+
+	opts := hugot.NewDownloadOptions()
+	opts.Verbose = false
+
+	select {
+	case <-ctx.Done():
+		return "", ctx.Err()
+	default:
+	}
+
+	path, err := hugot.DownloadModel(modelName, modelsDir, opts)
+	if err != nil {
+		return "", fmt.Errorf("vectorize: download model %q: %w", modelName, err)
+	}
+	return path, nil
+}
 
 // Embedder provides vector embeddings for strings.
 type Embedder interface {

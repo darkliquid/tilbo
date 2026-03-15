@@ -57,8 +57,6 @@ func main() {
 
 // run is the main daemon loop. It returns nil on clean shutdown and a non-nil
 // error if any component fails unexpectedly.
-//
-//nolint:gocyclo,cyclop,funlen,gocognit // daemon startup/shutdown orchestration is intentionally centralized for lifecycle safety
 func run(
 	ctx context.Context,
 	hupCh <-chan os.Signal,
@@ -66,73 +64,159 @@ func run(
 	watcherBackend watcher.Backend,
 	watchHidden bool,
 	embedModelPath string,
+	embedModelName string,
+	embedDisabled bool,
 ) error {
-	// Ensure the database directory exists.
-	if err := os.MkdirAll(filepath.Dir(dbPath), 0o700); err != nil {
-		return fmt.Errorf("create db dir: %w", err)
+	if err := ensureParentDir(dbPath, "create db dir"); err != nil {
+		return err
 	}
 
-	// Open (or create) the SQLite index.
-	idx, err := index.Open(ctx, dbPath)
+	idx, err := openIndexDB(ctx, dbPath)
 	if err != nil {
-		return fmt.Errorf("open index: %w", err)
+		return err
 	}
-	defer func() {
-		if ctx.Err() != nil {
-			slog.Debug("skip index close during canceled shutdown")
-			return
-		}
-		if closeErr := idx.Close(); closeErr != nil {
-			slog.Error("close index", "err", closeErr)
-		}
-	}()
+	defer closeIndexOnShutdown(ctx, idx)
 	slog.InfoContext(ctx, "index ready", "path", dbPath)
 
-	// Start the filesystem watcher (fanotify, inotify, or auto-detected).
-	watchOpts := watcher.Options{WatchHidden: watchHidden}
-	if fuseMount != "" {
-		watchOpts.ExcludePaths = []string{fuseMount}
-	}
-	w, err := watcher.New(ctx, watchPath, watcherBackend, watchOpts)
+	events, watchErrCh, warningStore, err := startWatcher(ctx, watchPath, fuseMount, watcherBackend, watchHidden)
 	if err != nil {
-		return fmt.Errorf("create watcher: %w", err)
+		return err
 	}
-	statusWarnings := append([]string(nil), w.CapabilityWarnings()...)
-	var statusWarningsMu sync.Mutex
-	appendStatusWarning := func(warning string) {
-		if warning == "" {
-			return
-		}
-		statusWarningsMu.Lock()
-		defer statusWarningsMu.Unlock()
-		statusWarnings = append(statusWarnings, warning)
-	}
-
-	watchErrCh := make(chan error, 1)
-	go func() { watchErrCh <- w.Run(ctx) }()
-	slog.InfoContext(ctx, "watcher running", "path", watchPath)
 
 	tags := xattr.New(nil)
 
-	// Initialize the background syncer.
 	var syncerExcludePaths []string
 	if fuseMount != "" {
 		syncerExcludePaths = []string{fuseMount}
 	}
 	syncer := isync.New(idx, tags, watchPath, watchHidden, syncerExcludePaths)
 
-	// --- M2: harvester pipeline and rule engine ---
+	wasmCache := initWASMCache(ctx)
 
-	// Shared WASM compilation cache stored in the OS temp directory.
+	pipeline, harvReg := initHarvesterPipeline(ctx, wasmCache)
+	defer harvReg.Close(ctx)
+
+	engine, ruleReg := initRuleEngine(ctx, cfgPath, wasmCache)
+	defer ruleReg.Close(ctx)
+
+	fileGraph := loadGraphState(ctx, idx)
+	embedder := initOptionalEmbedder(ctx, embedModelPath, embedModelName, embedDisabled)
+
+	proc := newProcessor(idx, tags, pipeline, engine, fileGraph, embedder)
+
+	uiSrv := initUIServerSocket(idx, tags, fileGraph, fuseMount, proc, syncer)
+	startUISocketListener(ctx, uiSrv)
+
+	sweeper := rules.NewSweeper(idx, tags, pipeline, engine)
+
+	syncErrCh := startSyncerLoop(ctx, syncer, proc)
+	defer logSyncerShutdown(syncErrCh)
+
+	if err := ensureParentDir(sockPath, "create socket dir"); err != nil {
+		return err
+	}
+
+	handleTagReq := func(reqCtx context.Context, req *ipcv1.TagRequest) (*ipcv1.Response, error) {
+		return handleTag(reqCtx, req, idx, tags, fileGraph, proc.OnFileTagged)
+	}
+	handleIPCRequest := buildIPCRequestHandler(
+		syncer,
+		warningStore,
+		fileGraph,
+		idx,
+		handleTagReq,
+		sweeper,
+		wasmCache,
+		cfgPath,
+		engine,
+	)
+
+	ipcServer, err := startIPCServer(ctx, sockPath, handleIPCRequest)
+	if err != nil {
+		return err
+	}
+	defer ipcServer.Stop()
+
+	slog.InfoContext(ctx, "tilbo-daemon ready", "socket", sockPath)
+	startFuseMount(ctx, fuseMount, idx, fileGraph, warningStore.Append)
+
+	return runEventLoop(ctx, events, watchErrCh, hupCh, syncer, idx, proc, engine, ruleReg, sweeper, wasmCache, cfgPath)
+}
+
+func initUIServerSocket(
+	idx *index.DB,
+	tags *xattr.Service,
+	fileGraph *graph.Graph,
+	fuseMount string,
+	proc *Processor,
+	syncer *isync.Syncer,
+) *uisocket.Server {
+	uiBrowserMethods := &daemonBrowserMethods{
+		idx:       idx,
+		tags:      tags,
+		g:         fileGraph,
+		fuseMount: fuseMount,
+		// onFileTagged is captured via closure; proc.OnFileTagged is set below.
+		onFileTagged: func(path string, added, removed []string) {
+			proc.OnFileTagged(path, added, removed)
+		},
+	}
+	uiSrv := uisocket.New(uiSocketPath(), uiBrowserMethods)
+
+	proc.OnFileTagged = func(path string, added, removed []string) {
+		uiSrv.BroadcastFileTagged(path, added, removed)
+	}
+	syncer.OnStateChanged = func(state ipcv1.DaemonState) {
+		uiSrv.BroadcastDaemonStateChanged(daemonStateLabel(state))
+	}
+	syncer.OnIndexUpdated = func(filesTotal, tagsTotal uint64) {
+		uiSrv.BroadcastIndexUpdated(filesTotal, tagsTotal)
+	}
+
+	return uiSrv
+}
+
+func ensureParentDir(path string, action string) error {
+	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+		return fmt.Errorf("%s: %w", action, err)
+	}
+	return nil
+}
+
+func openIndexDB(ctx context.Context, dbPath string) (*index.DB, error) {
+	idx, err := index.Open(ctx, dbPath)
+	if err != nil {
+		return nil, fmt.Errorf("open index: %w", err)
+	}
+	return idx, nil
+}
+
+func closeIndexOnShutdown(ctx context.Context, idx *index.DB) {
+	if ctx.Err() != nil {
+		slog.DebugContext(ctx, "skip index close during canceled shutdown")
+		return
+	}
+	if closeErr := idx.Close(); closeErr != nil {
+		slog.ErrorContext(ctx, "close index", "err", closeErr)
+	}
+}
+
+func initWASMCache(ctx context.Context) wazero.CompilationCache {
 	wasmCacheDir := filepath.Join(os.TempDir(), "tilbo-wasm-cache")
 	_ = os.MkdirAll(wasmCacheDir, 0o700)
+
 	wasmCache, err := wazero.NewCompilationCacheWithDir(wasmCacheDir)
 	if err != nil {
 		slog.WarnContext(ctx, "wasm cache unavailable; compilation cache disabled", "err", err)
-		wasmCache = nil
+		return nil
 	}
+	return wasmCache
+}
 
-	// Harvester pipeline — built-ins first, then user drop-ins.
+func initHarvesterPipeline(
+	ctx context.Context,
+	wasmCache wazero.CompilationCache,
+) (*harvester.Pipeline, *harvester.Registry) {
 	pipeline := harvester.NewPipeline()
 	registerBuiltins(pipeline)
 
@@ -140,24 +224,32 @@ func run(
 	if loadErr := harvReg.Load(ctx, pipeline); loadErr != nil {
 		slog.WarnContext(ctx, "harvester registry load error", "err", loadErr)
 	}
-	defer harvReg.Close(ctx)
+	return pipeline, harvReg
+}
 
-	// Rule engine.
+func initRuleEngine(
+	ctx context.Context,
+	cfgPath string,
+	wasmCache wazero.CompilationCache,
+) (*rules.Engine, *rules.Registry) {
 	engine := rules.NewEngine()
 	ruleReg := rules.NewRegistry(rules.DefaultDirs(), wasmCache)
+
 	if loadErr := ruleReg.Load(ctx, engine); loadErr != nil {
 		slog.WarnContext(ctx, "rule registry load error", "err", loadErr)
 	}
-	defer ruleReg.Close(ctx)
 	if inlineCfg, loadErr := config.Load(cfgPath); loadErr != nil {
 		slog.WarnContext(ctx, "config inline rules: load error", "err", loadErr)
 	} else if loadErr := ruleReg.LoadInline(ctx, inlineCfg.Rules, engine); loadErr != nil {
 		slog.WarnContext(ctx, "config inline rules: register error", "err", loadErr)
 	}
 
-	// --- M4: in-memory bipartite file-tag graph ---
+	return engine, ruleReg
+}
 
+func loadGraphState(ctx context.Context, idx *index.DB) *graph.Graph {
 	fileGraph := graph.New()
+
 	if pairs, pairsErr := idx.ListFileTagPairs(ctx); pairsErr != nil {
 		slog.WarnContext(ctx, "graph: failed to load file-tag pairs", "err", pairsErr)
 	} else {
@@ -172,102 +264,158 @@ func run(
 		slog.InfoContext(ctx, "embeddings loaded", "vectors", len(embs))
 	}
 
-	var embedder *vectorize.ONNXEmbedder
-	if embedModelPath != "" {
-		emb, embErr := vectorize.NewONNXEmbedder(ctx, embedModelPath)
-		if embErr != nil {
-			slog.WarnContext(ctx, "failed to init embedder; continuing without vector search", "err", embErr)
-		} else {
-			embedder = emb
-			defer embedder.Close()
-			slog.InfoContext(ctx, "embedder initialized", "model", embedModelPath)
-		}
+	return fileGraph
+}
+
+func initOptionalEmbedder(
+	ctx context.Context,
+	embedModelPath string,
+	embedModelName string,
+	embedDisabled bool,
+) *vectorize.ONNXEmbedder {
+	if embedDisabled {
+		return nil
 	}
 
-	// Processor (runs pipeline + rules on each file event).
-	proc := newProcessor(idx, tags, pipeline, engine, fileGraph, embedder)
-
-	// UI socket server — primary frontend IPC; always started on the well-known
-	// path so the Quickshell client can connect without configuration.
-	uiBrowserMethods := &daemonBrowserMethods{
-		idx:       idx,
-		tags:      tags,
-		g:         fileGraph,
-		fuseMount: fuseMount,
-		// onFileTagged is captured via closure; proc.OnFileTagged is set below.
-		onFileTagged: func(path string, added, removed []string) {
-			proc.OnFileTagged(path, added, removed)
-		},
-	}
-	uiSrv := uisocket.New(uiSocketPath(), uiBrowserMethods)
-
-	// Wire event callbacks to broadcast to all UI socket clients.
-	proc.OnFileTagged = func(path string, added, removed []string) {
-		uiSrv.BroadcastFileTagged(path, added, removed)
+	if embedModelPath == "" {
+		embedModelName = vectorize.DefaultModelName
 	}
 
-	syncer.OnStateChanged = func(state ipcv1.DaemonState) {
-		s := "idle"
-		switch state {
-		case ipcv1.DaemonState_DAEMON_STATE_UNSPECIFIED, ipcv1.DaemonState_DAEMON_STATE_IDLE:
-			s = "idle"
-		case ipcv1.DaemonState_DAEMON_STATE_SCANNING:
-			s = "scanning"
-		case ipcv1.DaemonState_DAEMON_STATE_READY:
-			s = "ready"
-		case ipcv1.DaemonState_DAEMON_STATE_DEGRADED:
-			s = "degraded"
-		}
-		uiSrv.BroadcastDaemonStateChanged(s)
+	resolvedPath, dlErr := vectorize.EnsureModel(ctx, embedModelName, vectorize.DefaultModelDir())
+	if dlErr != nil {
+		slog.WarnContext(ctx, "embedding model unavailable; vectorization disabled", "err", dlErr)
+		return nil
 	}
 
-	syncer.OnIndexUpdated = func(filesTotal, tagsTotal uint64) {
-		uiSrv.BroadcastIndexUpdated(filesTotal, tagsTotal)
+	embedder, err := vectorize.NewONNXEmbedder(ctx, resolvedPath)
+	if err != nil {
+		slog.WarnContext(ctx, "embedding model failed to load; vectorization disabled", "err", err)
+		return nil
 	}
 
-	// Start the UI socket listener. All callbacks are wired above so the
-	// goroutine is safe to receive connections immediately.
+	return embedder
+}
+
+func startUISocketListener(ctx context.Context, uiSrv *uisocket.Server) {
 	go func() {
 		if err := uiSrv.Listen(ctx); err != nil {
 			slog.WarnContext(ctx, "uisocket: stopped", "err", err)
 		}
 	}()
+}
 
-	// Sweeper (re-evaluates all files after rule reload).
-	sweeper := rules.NewSweeper(idx, tags, pipeline, engine)
-
-	// Launch the background syncer now that the processor is ready.
-	// OnFileSynced fires the harvester pipeline for every pre-existing file
-	// so they get MIME detection, ffprobe, rule evaluation, etc. on startup.
+func startSyncerLoop(ctx context.Context, syncer *isync.Syncer, proc *Processor) <-chan error {
 	syncer.OnFileSynced = proc.ProcessFile
+
 	syncErrCh := make(chan error, 1)
 	go func() {
 		syncErrCh <- syncer.Run(ctx)
 	}()
-	defer func() {
-		if syncErr := waitForSyncerShutdown(syncErrCh); syncErr != nil && !errors.Is(syncErr, context.Canceled) {
-			slog.Warn("syncer shutdown timed out or failed", "err", syncErr)
-		}
-	}()
+	return syncErrCh
+}
 
-	// Start the IPC server.
-	if mkErr := os.MkdirAll(filepath.Dir(sockPath), 0o700); mkErr != nil {
-		return fmt.Errorf("create socket dir: %w", mkErr)
+func logSyncerShutdown(syncErrCh <-chan error) {
+	if syncErr := waitForSyncerShutdown(syncErrCh); syncErr != nil && !errors.Is(syncErr, context.Canceled) {
+		slog.Warn("syncer shutdown timed out or failed", "err", syncErr)
+	}
+}
+
+func startIPCServer(
+	ctx context.Context,
+	sockPath string,
+	handleIPCRequest func(context.Context, *ipcv1.Request) (*ipcv1.Response, error),
+) (*ipc.Server, error) {
+	ipcServer := ipc.NewServer(sockPath, handleIPCRequest)
+	if startErr := ipcServer.Start(ctx); startErr != nil {
+		return nil, fmt.Errorf("start ipc server: %w", startErr)
+	}
+	return ipcServer, nil
+}
+
+type statusWarningStore struct {
+	mu       sync.Mutex
+	warnings []string
+}
+
+func newStatusWarningStore(initial []string) *statusWarningStore {
+	return &statusWarningStore{
+		warnings: append([]string(nil), initial...),
+	}
+}
+
+func (s *statusWarningStore) Append(warning string) {
+	if warning == "" {
+		return
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.warnings = append(s.warnings, warning)
+}
+
+func (s *statusWarningStore) List() []string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return append([]string(nil), s.warnings...)
+}
+
+func startWatcher(
+	ctx context.Context,
+	watchPath, fuseMount string,
+	watcherBackend watcher.Backend,
+	watchHidden bool,
+) (<-chan watcher.Event, <-chan error, *statusWarningStore, error) {
+	watchOpts := watcher.Options{WatchHidden: watchHidden}
+	if fuseMount != "" {
+		watchOpts.ExcludePaths = []string{fuseMount}
 	}
 
-	handleIPCRequest := func(ctx context.Context, req *ipcv1.Request) (*ipcv1.Response, error) {
+	w, err := watcher.New(ctx, watchPath, watcherBackend, watchOpts)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("create watcher: %w", err)
+	}
+
+	warningStore := newStatusWarningStore(w.CapabilityWarnings())
+	watchErrCh := make(chan error, 1)
+	go func() { watchErrCh <- w.Run(ctx) }()
+	slog.InfoContext(ctx, "watcher running", "path", watchPath)
+
+	return w.Events(), watchErrCh, warningStore, nil
+}
+
+func daemonStateLabel(state ipcv1.DaemonState) string {
+	switch state {
+	case ipcv1.DaemonState_DAEMON_STATE_SCANNING:
+		return "scanning"
+	case ipcv1.DaemonState_DAEMON_STATE_READY:
+		return "ready"
+	case ipcv1.DaemonState_DAEMON_STATE_DEGRADED:
+		return "degraded"
+	default:
+		return "idle"
+	}
+}
+
+func buildIPCRequestHandler(
+	syncer *isync.Syncer,
+	warningStore *statusWarningStore,
+	fileGraph *graph.Graph,
+	idx *index.DB,
+	handleTagReq func(context.Context, *ipcv1.TagRequest) (*ipcv1.Response, error),
+	sweeper *rules.Sweeper,
+	wasmCache wazero.CompilationCache,
+	cfgPath string,
+	engine *rules.Engine,
+) func(context.Context, *ipcv1.Request) (*ipcv1.Response, error) {
+	return func(ctx context.Context, req *ipcv1.Request) (*ipcv1.Response, error) {
 		switch r := req.GetKind().(type) {
 		case *ipcv1.Request_Status:
 			state := syncer.State()
-			statusWarningsMu.Lock()
-			warnings := append([]string(nil), statusWarnings...)
-			statusWarningsMu.Unlock()
 			return &ipcv1.Response{
 				Kind: &ipcv1.Response_Status{
 					Status: &ipcv1.StatusResponse{
 						State:        state.State,
 						FilesIndexed: state.FilesIndexed,
-						Warnings:     warnings,
+						Warnings:     warningStore.List(),
 					},
 				},
 			}, nil
@@ -279,7 +427,7 @@ func run(
 			return handleSearch(ctx, r.Search, idx)
 
 		case *ipcv1.Request_Tag:
-			return handleTag(ctx, r.Tag, idx, tags, fileGraph, proc.OnFileTagged)
+			return handleTagReq(ctx, r.Tag)
 
 		case *ipcv1.Request_Metadata:
 			return handleMetadata(ctx, r.Metadata, idx)
@@ -318,20 +466,25 @@ func run(
 			return nil, fmt.Errorf("unimplemented request type: %T", req.GetKind())
 		}
 	}
+}
 
-	ipcServer := ipc.NewServer(sockPath, handleIPCRequest)
-	if startErr := ipcServer.Start(ctx); startErr != nil {
-		return fmt.Errorf("start ipc server: %w", startErr)
-	}
-	defer ipcServer.Stop()
-
-	slog.InfoContext(ctx, "tilbo-daemon ready", "socket", sockPath)
-	startFuseMount(ctx, fuseMount, idx, fileGraph, appendStatusWarning)
-
-	// Main event loop.
+func runEventLoop(
+	ctx context.Context,
+	events <-chan watcher.Event,
+	watchErrCh <-chan error,
+	hupCh <-chan os.Signal,
+	syncer *isync.Syncer,
+	idx *index.DB,
+	proc *Processor,
+	engine *rules.Engine,
+	ruleReg *rules.Registry,
+	sweeper *rules.Sweeper,
+	wasmCache wazero.CompilationCache,
+	cfgPath string,
+) error {
 	for {
 		select {
-		case ev, ok := <-w.Events():
+		case ev, ok := <-events:
 			if !ok {
 				// Events channel closed: watcher has stopped.
 				return cleanShutdownErr(ctx, waitForWatcherShutdown(watchErrCh))

@@ -57,6 +57,15 @@ description = "Format the Go codebase"
 run = "golangci-lint fmt ./..."
 sources = ["**/*.go"]
 
+[tasks.fixup]
+description = "Format the Go codebase"
+run = """
+go fix ./...
+golangci-lint run --fix ./... 2>/dev/null
+"""
+sources = ["**/*.go"]
+
+
 [tasks.generate-proto]
 description = "Generate protobuf code using buf and vtprotobuf"
 run = "buf generate"
@@ -89,15 +98,6 @@ run = "quickshell -p cmd/tilbo-quickshell/shell.qml"
 sources = ["cmd/tilbo-quickshell/**/*.qml"]
 
 [tasks.build-sqlite-vec]
-description = "Rebuild sqlite-vec.wasm for the index package"
-run = """
-#!/usr/bin/env bash
-set -euo pipefail
-WORK_DIR=$(mktemp -d)
-trap 'rm -rf "$WORK_DIR"' EXIT
-git clone https://github.com/ncruces/sqlite-vec-go "$WORK_DIR"
-cd "$WORK_DIR"
-./build.sh
-cp sqlite-vec.wasm "{{config_root}}/internal/index/sqlite-vec.wasm"
-echo "Successfully rebuilt and copied sqlite-vec.wasm to internal/index/"
-"""
+description = "Rebuild sqlite-vec.wasm for the index package using pinned sqlite-vec-go versions"
+run = "bash contrib/scripts/build-sqlite-vec.sh"
+

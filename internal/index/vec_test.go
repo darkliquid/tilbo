@@ -2,8 +2,10 @@ package index
 
 import (
 	"context"
+	"fmt"
 	"math"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -61,6 +63,53 @@ func TestUpsertEmbedding(t *testing.T) {
 	vec2 := makeVec(0.9)
 	if err := db.UpsertEmbedding(ctx, fileID, vec2); err != nil {
 		t.Fatalf("UpsertEmbedding (overwrite): %v", err)
+	}
+}
+
+func TestSQLiteVecExtensionLoaded(t *testing.T) {
+	ctx := context.Background()
+	db := openTestDB(t)
+
+	var vecVersion string
+	if err := db.db.QueryRowContext(ctx, "SELECT vec_version()").Scan(&vecVersion); err != nil {
+		t.Fatalf("vec_version: %v", err)
+	}
+	if vecVersion == "" {
+		t.Fatal("vec_version returned empty string")
+	}
+
+	var moduleSQL string
+	if err := db.db.QueryRowContext(ctx, "SELECT sql FROM sqlite_master WHERE type='table' AND name='file_embeddings'").
+		Scan(&moduleSQL); err != nil {
+		t.Fatalf("sqlite_master lookup for file_embeddings: %v", err)
+	}
+	if moduleSQL == "" {
+		t.Fatal("expected file_embeddings schema SQL")
+	}
+	if want := "USING vec0"; moduleSQL != "" && !strings.Contains(moduleSQL, want) {
+		t.Fatalf("expected file_embeddings to use vec0, got: %s", moduleSQL)
+	}
+}
+
+func TestSQLiteVecCoreFunctions(t *testing.T) {
+	ctx := context.Background()
+	db := openTestDB(t)
+
+	var json string
+	if err := db.db.QueryRowContext(ctx, `SELECT vec_to_json(vec_f32('[1,2,3]'))`).Scan(&json); err != nil {
+		t.Fatalf("vec_f32/vec_to_json: %v", err)
+	}
+	if !strings.HasPrefix(json, "[") || !strings.Contains(json, "1") {
+		t.Fatalf("unexpected vec_to_json output: %q", json)
+	}
+
+	var d float64
+	if err := db.db.QueryRowContext(ctx, `SELECT vec_distance_l2(vec_f32('[0,0]'), vec_f32('[3,4]'))`).
+		Scan(&d); err != nil {
+		t.Fatalf("vec_distance_l2: %v", err)
+	}
+	if math.Abs(d-5.0) > 1e-6 {
+		t.Fatalf("expected L2 distance 5, got %v", d)
 	}
 }
 
@@ -155,5 +204,40 @@ func TestKNNSearchWrongDim(t *testing.T) {
 	db := openTestDB(t)
 	if _, err := db.KNNSearch(ctx, []float32{1, 2, 3}, 5, nil); err == nil {
 		t.Fatal("expected error for wrong query dimension")
+	}
+}
+
+func TestListEmbeddingsRoundTrip(t *testing.T) {
+	ctx := context.Background()
+	db := openTestDB(t)
+
+	for i := range 2 {
+		path := fmt.Sprintf("/tmp/rt-%d.txt", i)
+		fileID, err := db.UpsertFile(ctx, path, int64(200+i), 1, 100, 10)
+		if err != nil {
+			t.Fatalf("UpsertFile %s: %v", path, err)
+		}
+		if err := db.UpsertEmbedding(ctx, fileID, makeVec(float32(i)+0.25)); err != nil {
+			t.Fatalf("UpsertEmbedding %s: %v", path, err)
+		}
+	}
+
+	embs, err := db.ListEmbeddings(ctx)
+	if err != nil {
+		t.Fatalf("ListEmbeddings: %v", err)
+	}
+
+	if len(embs) != 2 {
+		t.Fatalf("expected 2 embeddings, got %d", len(embs))
+	}
+	v, ok := embs["/tmp/rt-0.txt"]
+	if !ok {
+		t.Fatal("missing embedding for /tmp/rt-0.txt")
+	}
+	if len(v) != EmbeddingDim {
+		t.Fatalf("expected embedding dim %d, got %d", EmbeddingDim, len(v))
+	}
+	if v[0] != float32(0.25) {
+		t.Fatalf("unexpected first value after vec_to_blob roundtrip: got %v", v[0])
 	}
 }

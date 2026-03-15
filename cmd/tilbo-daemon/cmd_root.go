@@ -28,6 +28,8 @@ type daemonOptions struct {
 	watcherBackend string
 	watchHidden    bool
 	embedModel     string
+	embedModelName string
+	embedDisabled  bool
 	printVersion   bool
 }
 
@@ -52,6 +54,8 @@ func newRootCmd() *cobra.Command {
 		watcherBackend: orDefault(cfg.Daemon.Watcher, "auto"),
 		watchHidden:    cfg.Daemon.WatchHidden,
 		embedModel:     cfg.Daemon.EmbedModel,
+		embedModelName: cfg.Daemon.EmbedModelName,
+		embedDisabled:  cfg.Daemon.EmbedDisabled,
 	}
 
 	rootCmd := &cobra.Command{
@@ -91,7 +95,19 @@ func newRootCmd() *cobra.Command {
 		&opts.embedModel,
 		"embed-model",
 		opts.embedModel,
-		"path to ONNX tokenizer/model directory for embeddings",
+		"path to local ONNX tokenizer/model directory for embeddings (overrides auto-download)",
+	)
+	rootCmd.Flags().StringVar(
+		&opts.embedModelName,
+		"embed-model-name",
+		opts.embedModelName,
+		"HuggingFace model name to auto-download when embed-model is unset (default: sentence-transformers/all-MiniLM-L6-v2)",
+	)
+	rootCmd.Flags().BoolVar(
+		&opts.embedDisabled,
+		"embed-disabled",
+		opts.embedDisabled,
+		"disable vector embeddings entirely",
 	)
 	rootCmd.Flags().BoolVar(&opts.printVersion, "version", false, "print version information and exit")
 
@@ -144,6 +160,8 @@ func runDaemon(ctx context.Context, cfgPath string, cfgErr error, opts *daemonOp
 		watcher.Backend(opts.watcherBackend),
 		opts.watchHidden,
 		opts.embedModel,
+		opts.embedModelName,
+		opts.embedDisabled,
 	); err != nil {
 		slog.ErrorContext(runCtx, "daemon error", "err", err)
 		return err
@@ -180,15 +198,17 @@ func newConfigCmd(opts *daemonOptions, defaultConfigPath string) *cobra.Command 
 				return err
 			}
 			cfg.Daemon = config.DaemonConfig{
-				Watch:       opts.watchPath,
-				DB:          opts.dbPath,
-				FuseMount:   opts.fuseMount,
-				Socket:      opts.socketOverride,
-				LogFormat:   opts.logFormat,
-				LogLevel:    opts.logLevel,
-				Watcher:     opts.watcherBackend,
-				WatchHidden: opts.watchHidden,
-				EmbedModel:  opts.embedModel,
+				Watch:          opts.watchPath,
+				DB:             opts.dbPath,
+				FuseMount:      opts.fuseMount,
+				Socket:         opts.socketOverride,
+				LogFormat:      opts.logFormat,
+				LogLevel:       opts.logLevel,
+				Watcher:        opts.watcherBackend,
+				WatchHidden:    opts.watchHidden,
+				EmbedModel:     opts.embedModel,
+				EmbedModelName: opts.embedModelName,
+				EmbedDisabled:  opts.embedDisabled,
 			}
 
 			if err := config.Save(initPath, cfg); err != nil {

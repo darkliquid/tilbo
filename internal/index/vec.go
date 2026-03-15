@@ -3,6 +3,7 @@ package index
 import (
 	"context"
 	"encoding/binary"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"math"
@@ -173,12 +174,12 @@ func (d *DB) KNNSearch(ctx context.Context, vec []float32, k int, filterTags []s
 
 // ListEmbeddings returns all file embeddings to populate the memory graph.
 func (d *DB) ListEmbeddings(ctx context.Context) (map[string][]float32, error) {
-	query := `SELECT f.path, vec_to_blob(fe.embedding) 
+	query := `SELECT f.path, vec_to_json(fe.embedding)
 		FROM file_embeddings fe
 		JOIN files f ON f.id = fe.file_id`
 	rows, err := d.db.QueryContext(ctx, query)
 	if err != nil {
-		// "no such function: vec_to_blob" means the sqlite-vec extension is not
+		// "no such function" means the sqlite-vec extension is not
 		// loaded. Treat as empty rather than a hard error; embeddings are
 		// optional and only generated when an embed model is configured.
 		if strings.Contains(err.Error(), "no such function") || strings.Contains(err.Error(), "no such module") {
@@ -192,15 +193,26 @@ func (d *DB) ListEmbeddings(ctx context.Context) (map[string][]float32, error) {
 	embs := make(map[string][]float32)
 	for rows.Next() {
 		var (
-			path string
-			blob []byte
+			path    string
+			jsonVec string
 		)
-		if err := rows.Scan(&path, &blob); err != nil {
+		if err := rows.Scan(&path, &jsonVec); err != nil {
 			return nil, fmt.Errorf("index: scan embedding: %w", err)
 		}
-		if len(blob) == EmbeddingDim*4 {
-			embs[path] = DeserializeFloat32(blob)
+
+		var decoded []float64
+		if err := json.Unmarshal([]byte(jsonVec), &decoded); err != nil {
+			return nil, fmt.Errorf("index: decode embedding json: %w", err)
 		}
+		if len(decoded) != EmbeddingDim {
+			continue
+		}
+
+		vec := make([]float32, EmbeddingDim)
+		for i, v := range decoded {
+			vec[i] = float32(v)
+		}
+		embs[path] = vec
 	}
 	return embs, rows.Err()
 }

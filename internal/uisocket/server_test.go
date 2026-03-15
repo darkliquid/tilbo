@@ -418,7 +418,6 @@ func TestConcurrentBroadcastAndDispatch(t *testing.T) {
 	defer cancel()
 
 	conn, scanner := dialAndScan(t, sockPath)
-	defer conn.Close()
 
 	const (
 		numRequests   = 20
@@ -449,27 +448,32 @@ func TestConcurrentBroadcastAndDispatch(t *testing.T) {
 	wg.Wait()
 
 	// Drain all incoming frames; every frame must be valid JSON.
-	received := 0
+	var received atomic.Int64
 	total := numRequests + numBroadcasts
 	done := make(chan struct{})
+	scanDone := make(chan struct{})
 	go func() {
+		defer close(scanDone)
 		for scanner.Scan() {
 			var m map[string]any
 			if err := json.Unmarshal(scanner.Bytes(), &m); err != nil {
 				t.Errorf("corrupt frame: %v", err)
 			}
-			received++
-			if received >= total {
+			if received.Add(1) >= int64(total) {
 				close(done)
 				return
 			}
 		}
 	}()
+	defer func() {
+		_ = conn.Close()
+		<-scanDone
+	}()
 
 	select {
 	case <-done:
 	case <-time.After(5 * time.Second):
-		t.Logf("received %d/%d frames before timeout (some broadcasts may arrive after reads)", received, total)
+		t.Logf("received %d/%d frames before timeout (some broadcasts may arrive after reads)", received.Load(), total)
 	}
 }
 
