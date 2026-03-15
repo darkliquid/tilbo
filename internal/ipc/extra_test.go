@@ -413,7 +413,7 @@ func TestClient_ConnectionDrop(t *testing.T) {
 	}
 }
 
-// dialUnix is a test helper that opens a raw net.Conn to a Unix socket.
+// dialUnix is a test helper that opens a raw [net.Conn] to a Unix socket.
 func dialUnix(path string) (net.Conn, error) {
 	return net.Dial("unix", path)
 }
