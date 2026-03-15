@@ -2,13 +2,13 @@ name: CI
 
 on:
   push:
-    branches: ["**"]
+    branches: [main]
     tags-ignore: ["v*"] # releases are handled by release.yml
   pull_request:
 
-# Cancel in-progress runs on the same branch when a new push arrives.
+# Cancel in-progress runs when a new push arrives.
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
