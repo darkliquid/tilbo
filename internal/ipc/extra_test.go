@@ -264,6 +264,8 @@ func TestBroadcastEvent_Delivery(t *testing.T) {
 
 	// Wait until the server has tracked the connection before broadcasting,
 	// otherwise the event is sent to an empty set of connections.
+	ticker := time.NewTicker(5 * time.Millisecond)
+	defer ticker.Stop()
 	for {
 		srv.mu.Lock()
 		tracked := len(srv.conns)
@@ -274,7 +276,7 @@ func TestBroadcastEvent_Delivery(t *testing.T) {
 		select {
 		case <-ctx.Done():
 			t.Fatal("timed out waiting for server to track connection")
-		case <-time.After(5 * time.Millisecond):
+		case <-ticker.C:
 		}
 	}
 
