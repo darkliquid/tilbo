@@ -188,7 +188,6 @@ ApplicationWindow {
     function selectFile(fileData) {
         selectedFile     = fileData
         selectedFileMeta = null
-        showRightSidebar = !!fileData
 
         if (!fileData) return
 
