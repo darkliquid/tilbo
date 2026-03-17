@@ -47,6 +47,20 @@ ApplicationWindow {
     // Shorthand for the active file list
     readonly property var activeEntries: isSearchMode ? searchResults : dirEntries
 
+    // ── Navigation History (Feature 1) ────────────────────────────────────
+    property var    _history: []
+    property int    _historyIndex: -1
+    readonly property bool canGoBack: _historyIndex > 0
+    readonly property bool canGoForward: _historyIndex < _history.length - 1
+
+    // ── Browser Config / Keybindings (Feature 6) ─────────────────────────
+    property var    _keybindings: ({})
+    property bool   _useTrash: true
+
+    // ── Trash state ───────────────────────────────────────────────────────
+    property bool   isTrashView: false
+    property var    trashEntries: []
+
     // ── Daemon connection ─────────────────────────────────────────────────
 
     property bool daemonConnected: TilboDaemon.connected
@@ -56,6 +70,15 @@ ApplicationWindow {
 
         function onDaemonStateChanged(state) {
             window.daemonConnected = TilboDaemon.connected
+        }
+
+        function onShowWindow(path) {
+            window.show()
+            window.raise()
+            window.requestActivate()
+            if (path && path !== "") {
+                window.navigateTo(path)
+            }
         }
 
         // When a file's tags change, patch the in-place entry so the badge row
@@ -82,6 +105,12 @@ ApplicationWindow {
     Component.onCompleted: {
         _loadPlaces()
         navigateTo(currentPath)
+        TilboDaemon.getBrowserConfig(function(cfg, _err) {
+            if (cfg) {
+                _keybindings = cfg.keybindings || {}
+                _useTrash = cfg.useTrash !== undefined ? cfg.useTrash : true
+            }
+        })
     }
 
     // ── Navigation ────────────────────────────────────────────────────────
@@ -89,11 +118,63 @@ ApplicationWindow {
     function navigateTo(path) {
         if (!path || path === "") return
         isSearchMode = false
+        isTrashView  = false
         searchChips  = []
-        currentPath  = path
         selectedFile = null
         showRightSidebar = false
+
+        // Update history: truncate forward entries, push new path
+        if (_historyIndex < 0 || _history[_historyIndex] !== path) {
+            var newHistory = _history.slice(0, _historyIndex + 1)
+            newHistory.push(path)
+            _history = newHistory
+            _historyIndex = newHistory.length - 1
+        }
+
+        currentPath = path
         _loadDirectory(path)
+    }
+
+    function goBack() {
+        if (!canGoBack) return
+        _historyIndex--
+        var path = _history[_historyIndex]
+        isSearchMode = false
+        isTrashView  = false
+        searchChips  = []
+        selectedFile = null
+        showRightSidebar = false
+        currentPath = path
+        _loadDirectory(path)
+    }
+
+    function goForward() {
+        if (!canGoForward) return
+        _historyIndex++
+        var path = _history[_historyIndex]
+        isSearchMode = false
+        isTrashView  = false
+        searchChips  = []
+        selectedFile = null
+        showRightSidebar = false
+        currentPath = path
+        _loadDirectory(path)
+    }
+
+    function navigateToTrash() {
+        isSearchMode = false
+        isTrashView  = true
+        searchChips  = []
+        selectedFile = null
+        showRightSidebar = false
+        _loadTrash()
+    }
+
+    function _loadTrash() {
+        TilboDaemon.listTrash(function(entries, err) {
+            if (err) { trashEntries = []; return }
+            trashEntries = entries
+        })
     }
 
     function _loadDirectory(path) {
@@ -232,6 +313,36 @@ ApplicationWindow {
         }
     }
 
+    // ── Delete helpers ────────────────────────────────────────────────────
+
+    function _deleteSelected() {
+        if (!selectedFile) return
+        var path = selectedFile.path
+        TilboDaemon.deleteFile(path, function(err) {
+            if (err) { console.warn("delete:", err); return }
+            if (window.selectedFile && window.selectedFile.path === path)
+                window.selectedFile = null
+            if (window.isTrashView) _loadTrash()
+            else _loadDirectory(window.currentPath)
+        })
+    }
+
+    function _permanentDeleteSelected() {
+        if (!selectedFile) return
+        var path = selectedFile.path
+        // Force permanent delete by calling deleteFile on the resolved path
+        // The daemon checks use_trash; Shift+Delete bypasses by using trashFile=false
+        // For now we call deleteFile which respects config; if user wants force-permanent
+        // they should set use_trash=false in config.
+        TilboDaemon.deleteFile(path, function(err) {
+            if (err) { console.warn("permanent delete:", err); return }
+            if (window.selectedFile && window.selectedFile.path === path)
+                window.selectedFile = null
+            if (window.isTrashView) _loadTrash()
+            else _loadDirectory(window.currentPath)
+        })
+    }
+
     // ── Breadcrumb model ──────────────────────────────────────────────────
 
     function breadcrumbModel(path) {
@@ -259,20 +370,90 @@ ApplicationWindow {
 
     // ── Layout ────────────────────────────────────────────────────────────
 
+    // ── Keyboard shortcuts ────────────────────────────────────────────────
+
+    Shortcut {
+        sequence: window._keybindings["back"] || "Alt+Left"
+        onActivated: window.goBack()
+    }
+    Shortcut {
+        sequence: window._keybindings["forward"] || "Alt+Right"
+        onActivated: window.goForward()
+    }
+    Shortcut {
+        sequence: window._keybindings["toggle_hidden"] || "Ctrl+H"
+        onActivated: {
+            window.showHidden = !window.showHidden
+            if (window.isSearchMode) _executeSearch(window.searchChips)
+            else if (!window.isTrashView) _loadDirectory(window.currentPath)
+        }
+    }
+    Shortcut {
+        sequence: window._keybindings["toggle_grid"] || "Ctrl+G"
+        onActivated: window.isGridView = !window.isGridView
+    }
+    Shortcut {
+        sequence: window._keybindings["refresh"] || "F5"
+        onActivated: {
+            if (window.isTrashView) _loadTrash()
+            else if (window.isSearchMode) _executeSearch(window.searchChips)
+            else _loadDirectory(window.currentPath)
+        }
+    }
+    Shortcut {
+        sequence: window._keybindings["focus_path"] || "Ctrl+L"
+        onActivated: { window.pathEditMode = true; pathEditor.forceActiveFocus() }
+    }
+    Shortcut {
+        sequence: window._keybindings["delete"] || "Delete"
+        onActivated: {
+            if (window.selectedFile) window._deleteSelected()
+        }
+    }
+    Shortcut {
+        sequence: "Shift+Delete"
+        onActivated: {
+            if (window.selectedFile) window._permanentDeleteSelected()
+        }
+    }
+
     header: ToolBar {
         background: Rectangle { color: "#22252E" }
         height: 60
         RowLayout {
             anchors.fill: parent
-            anchors.leftMargin: 16
+            anchors.leftMargin: 8
             anchors.rightMargin: 16
-            spacing: 16
+            spacing: 8
 
             Label {
                 text: "tilbo"
                 font.pixelSize: 20
                 font.bold: true
                 color: "#88C0D0"
+                leftPadding: 8
+            }
+
+            // Back / Forward buttons (Feature 1)
+            ToolButton {
+                text: "←"
+                font.pixelSize: 16
+                enabled: window.canGoBack
+                opacity: enabled ? 1.0 : 0.4
+                onClicked: window.goBack()
+                ToolTip.text: "Back (Alt+Left)"
+                ToolTip.visible: hovered
+                ToolTip.delay: 500
+            }
+            ToolButton {
+                text: "→"
+                font.pixelSize: 16
+                enabled: window.canGoForward
+                opacity: enabled ? 1.0 : 0.4
+                onClicked: window.goForward()
+                ToolTip.text: "Forward (Alt+Right)"
+                ToolTip.visible: hovered
+                ToolTip.delay: 500
             }
 
             TagSearchBar {
@@ -296,7 +477,7 @@ ApplicationWindow {
                 onToggled: {
                     window.showHidden = checked
                     if (window.isSearchMode) _executeSearch(window.searchChips)
-                    else                     _loadDirectory(window.currentPath)
+                    else if (!window.isTrashView) _loadDirectory(window.currentPath)
                 }
             }
         }
@@ -348,8 +529,8 @@ ApplicationWindow {
 
             ColumnLayout {
                 anchors.fill: parent
-                anchors.margins: 16
-                spacing: 12
+                anchors.margins: 8
+                spacing: 4
                 visible: window.showLeftSidebar
 
                 ListView {
@@ -366,23 +547,189 @@ ApplicationWindow {
 
                     delegate: ItemDelegate {
                         required property var modelData
+                        required property int index
                         width: ListView.view.width
-                        leftPadding: 12
-                        rightPadding: 12 + (placesScrollBar.visible ? placesScrollBar.width + 8 : 0)
-                        text: modelData.name
+                        leftPadding: 8
+                        rightPadding: 8 + (placesScrollBar.visible ? placesScrollBar.width + 4 : 0)
+                        topPadding: 0; bottomPadding: 0
+                        height: 36
                         onClicked: window.navigateTo(modelData.path)
-                        contentItem: Text {
-                            text: parent.text
-                            font.pixelSize: 14
-                            color: "#ECEFF4"
+                        contentItem: Row {
+                            spacing: 8
+                            ThemeIcon {
+                                iconName: modelData.iconName || "folder"
+                                width: 20; height: 20
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+                            Text {
+                                text: modelData.name
+                                font.pixelSize: 14
+                                color: "#ECEFF4"
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
                         }
                         background: Rectangle {
-                            x: 8
-                            width: parent.width - 16
-                                   - (placesScrollBar.visible ? placesScrollBar.width + 8 : 0)
+                            x: 4
+                            width: parent.width - 8
+                                   - (placesScrollBar.visible ? placesScrollBar.width + 4 : 0)
                             color: parent.hovered ? "#2E3440" : "transparent"
                             radius: 4
                         }
+
+                        MouseArea {
+                            anchors.fill: parent
+                            acceptedButtons: Qt.RightButton
+                            onClicked: (mouse) => {
+                                if (mouse.button === Qt.RightButton && modelData.pinned) {
+                                    placesCtxMenu.targetPath    = modelData.path
+                                    placesCtxMenu.targetIcon    = modelData.iconName || "folder"
+                                    placesCtxMenu.targetName    = modelData.name
+                                    placesCtxMenu.popup()
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Trash entry
+                ItemDelegate {
+                    Layout.fillWidth: true
+                    leftPadding: 8; topPadding: 0; bottomPadding: 0; height: 36
+                    onClicked: window.navigateToTrash()
+                    contentItem: Row {
+                        spacing: 8
+                        ThemeIcon {
+                            iconName: "user-trash"
+                            width: 20; height: 20
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
+                        Text {
+                            text: "Trash"
+                            font.pixelSize: 14
+                            color: window.isTrashView ? "#88C0D0" : "#ECEFF4"
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
+                    }
+                    background: Rectangle {
+                        x: 4; width: parent.width - 8
+                        color: parent.hovered ? "#2E3440" : "transparent"
+                        radius: 4
+                    }
+                }
+
+                // Pin current folder button
+                Button {
+                    Layout.fillWidth: true
+                    visible: !window.isSearchMode && !window.isTrashView
+                    onClicked: {
+                        var name = window.currentPath.split("/").pop() || window.currentPath
+                        TilboDaemon.pinPlace(name, window.currentPath, "folder", function(err) {
+                            if (!err) window._loadPlaces()
+                        })
+                    }
+                    background: Rectangle {
+                        color: parent.hovered ? "#2E3440" : "transparent"
+                        radius: 4; border.color: "#3B4252"; border.width: 1
+                    }
+                    contentItem: Row {
+                        anchors.centerIn: parent
+                        spacing: 4
+                        ThemeIcon {
+                            iconName: "folder-new"
+                            width: 14; height: 14
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
+                        Text {
+                            text: "Pin Current Folder"
+                            font.pixelSize: 12; color: "#88C0D0"
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
+                    }
+                }
+            }
+
+            // Context menu for pinned places
+            Menu {
+                id: placesCtxMenu
+                property string targetPath: ""
+                property string targetIcon: "folder"
+                property string targetName: ""
+
+                MenuItem {
+                    text: "Change Icon..."
+                    onTriggered: {
+                        iconPickerDialog.targetPath = placesCtxMenu.targetPath
+                        iconPickerDialog.targetName = placesCtxMenu.targetName
+                        iconPickerField.text        = placesCtxMenu.targetIcon
+                        iconPickerDialog.open()
+                    }
+                }
+                MenuItem {
+                    text: "Remove from sidebar"
+                    onTriggered: {
+                        TilboDaemon.unpinPlace(placesCtxMenu.targetPath, function(err) {
+                            if (!err) window._loadPlaces()
+                        })
+                    }
+                }
+            }
+
+            // Icon picker dialog for pinned places
+            Dialog {
+                id: iconPickerDialog
+                title: "Change Icon"
+                property string targetPath: ""
+                property string targetName: ""
+                modal: true
+                standardButtons: Dialog.Ok | Dialog.Cancel
+                anchors.centerIn: parent
+                width: 320
+
+                onAccepted: {
+                    var icon = iconPickerField.text.trim() || "folder"
+                    TilboDaemon.pinPlace(targetName, targetPath, icon, function(err) {
+                        if (!err) window._loadPlaces()
+                    })
+                }
+
+                ColumnLayout {
+                    width: parent.width
+                    spacing: 12
+
+                    Text {
+                        text: "Enter an XDG icon theme name:"
+                        color: "#D8DEE9"; font.pixelSize: 13
+                        Layout.fillWidth: true
+                    }
+
+                    Row {
+                        Layout.fillWidth: true
+                        spacing: 12
+
+                        ThemeIcon {
+                            id: iconPickerPreview
+                            iconName: iconPickerField.text.trim()
+                            width: 48; height: 48
+                        }
+
+                        TextField {
+                            id: iconPickerField
+                            Layout.fillWidth: true
+                            width: parent.width - 60
+                            placeholderText: "e.g. folder, user-home, tag…"
+                            color: "#ECEFF4"
+                            background: Rectangle {
+                                color: "#1A1C23"; radius: 4
+                                border.color: parent.activeFocus ? "#5E81AC" : "#3B4252"
+                                border.width: 1
+                            }
+                        }
+                    }
+
+                    Text {
+                        text: "Common names: folder, user-home, user-trash, tag,\nfolder-documents, folder-download, folder-recent"
+                        color: "#4C566A"; font.pixelSize: 11
+                        Layout.fillWidth: true; wrapMode: Text.WordWrap
                     }
                 }
             }
@@ -394,19 +741,120 @@ ApplicationWindow {
             Layout.fillHeight: true
             color: "#111419"
 
+            // Trash view
+            Rectangle {
+                anchors.fill: parent
+                color: "transparent"
+                visible: window.isTrashView
+
+                ColumnLayout {
+                    anchors.fill: parent
+                    spacing: 0
+
+                    // Trash toolbar
+                    Rectangle {
+                        Layout.fillWidth: true
+                        height: 40
+                        color: "#1E212A"
+                        RowLayout {
+                            anchors.fill: parent
+                            anchors.leftMargin: 12; anchors.rightMargin: 12
+                            Text {
+                                text: "Trash  (" + window.trashEntries.length + " items)"
+                                color: "#88C0D0"; font.pixelSize: 14; font.bold: true
+                            }
+                            Item { Layout.fillWidth: true }
+                            Button {
+                                text: "Empty Trash"
+                                enabled: window.trashEntries.length > 0
+                                onClicked: {
+                                    TilboDaemon.emptyTrash(function(err) {
+                                        if (!err) window._loadTrash()
+                                    })
+                                }
+                            }
+                        }
+                    }
+
+                    ListView {
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        clip: true
+                        model: window.trashEntries
+                        ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
+
+                        delegate: Rectangle {
+                            required property var modelData
+                            width: ListView.view.width
+                            height: 48
+                            color: trashRowMA.containsMouse ? "#2E3440" : "transparent"
+
+                            Row {
+                                anchors.fill: parent; anchors.leftMargin: 12; anchors.rightMargin: 12
+                                spacing: 8
+                                Text {
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    text: "🗑"
+                                    font.pixelSize: 18
+                                }
+                                Column {
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    spacing: 2
+                                    Text {
+                                        text: modelData.name
+                                        color: "#ECEFF4"; font.pixelSize: 13
+                                    }
+                                    Text {
+                                        text: modelData.originalPath
+                                        color: "#9099A3"; font.pixelSize: 11
+                                        elide: Text.ElideMiddle
+                                        width: 300
+                                    }
+                                }
+                                Item { width: 1; height: 1; Layout.fillWidth: true }
+                                Button {
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    text: "Restore"
+                                    onClicked: {
+                                        TilboDaemon.restoreTrash(modelData.name, function(err) {
+                                            if (!err) window._loadTrash()
+                                        })
+                                    }
+                                }
+                                Button {
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    text: "Delete"
+                                    onClicked: {
+                                        // Permanent delete from trash
+                                        var trashBase = Qt.resolvedUrl("~/.local/share/Trash/files/" + modelData.name).toString()
+                                        TilboDaemon.deleteFile(trashBase, function(_err) {
+                                            window._loadTrash()
+                                        })
+                                    }
+                                }
+                            }
+
+                            MouseArea {
+                                id: trashRowMA
+                                anchors.fill: parent
+                                hoverEnabled: true
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Normal file area (grid/list)
             StackLayout {
                 anchors.fill: parent
                 currentIndex: window.isGridView ? 0 : 1
+                visible: !window.isTrashView
 
                 FileGrid {
                     entries: window.activeEntries
                     onFileSelected: fileData => window.selectFile(fileData)
                     onDirectoryActivated: path => window.navigateTo(path)
-                    onFileOpenRequested: path => {
-                        // xdg-open via daemon is not exposed; keep it local for now.
-                        // Phase 4 can wire daemon.OpenFile if needed.
-                        Qt.openUrlExternally("file://" + path)
-                    }
+                    onFileOpenRequested: path => Qt.openUrlExternally("file://" + path)
                     onRenameRequested: (path, newName) => {
                         TilboDaemon.renameFile(path, newName, function(newPath, err) {
                             if (err) { console.warn("rename:", err); return }
@@ -416,12 +864,27 @@ ApplicationWindow {
                     onDeleteRequested: path => {
                         TilboDaemon.deleteFile(path, function(err) {
                             if (err) { console.warn("delete:", err); return }
-                            if (window.selectedFile && window.selectedFile.path === path) {
+                            if (window.selectedFile && window.selectedFile.path === path)
                                 window.selectedFile = null
-                            }
                             _loadDirectory(window.currentPath)
                         })
                     }
+                    onOpenWithRequested: path => {
+                        TilboDaemon.listAppsForFile(path, function(apps, _err) {
+                            openWithDialog.filePath = path
+                            openWithDialog.apps = apps || []
+                            openWithDialog.open()
+                        })
+                    }
+                    onOpenInTerminalRequested: path => {
+                        var dir = path
+                        var cmd = Qt.createQmlObject(
+                            'import QtQuick; SystemCommand { command: "xdg-terminal-exec"; arguments: [dir] }',
+                            window, "terminalCmd")
+                    }
+                    onGetFileActions: (path, cb) => TilboDaemon.getFileActions(path, cb)
+                    onRunFileAction: (path, actionId) => TilboDaemon.runFileAction(path, actionId, null)
+                    onGetFileBadges: (path, cb) => TilboDaemon.getFileBadges(path, cb)
                 }
 
                 FileList {
@@ -442,6 +905,59 @@ ApplicationWindow {
                                 window.selectedFile = null
                             _loadDirectory(window.currentPath)
                         })
+                    }
+                    onOpenWithRequested: path => {
+                        TilboDaemon.listAppsForFile(path, function(apps, _err) {
+                            openWithDialog.filePath = path
+                            openWithDialog.apps = apps || []
+                            openWithDialog.open()
+                        })
+                    }
+                    onGetFileActions: (path, cb) => TilboDaemon.getFileActions(path, cb)
+                    onRunFileAction: (path, actionId) => TilboDaemon.runFileAction(path, actionId, null)
+                    onGetFileBadges: (path, cb) => TilboDaemon.getFileBadges(path, cb)
+                    onOpenInTerminalRequested: dir => Qt.openUrlExternally("file://" + dir)
+                }
+            }
+        }
+
+        // Open With dialog
+        Dialog {
+            id: openWithDialog
+            title: "Open With..."
+            property string filePath: ""
+            property var apps: []
+            modal: true
+            standardButtons: Dialog.Cancel
+            anchors.centerIn: parent
+            width: 360
+
+            ListView {
+                width: parent.width
+                height: Math.min(openWithDialog.apps.length * 48, 300)
+                model: openWithDialog.apps
+                clip: true
+                delegate: ItemDelegate {
+                    required property var modelData
+                    width: ListView.view.width
+                    height: 48
+                    contentItem: Row {
+                        spacing: 8
+                        ThemeIcon {
+                            iconName: modelData.iconName || ""
+                            width: 32; height: 32
+                            anchors.verticalCenter: parent.verticalCenter
+                            visible: modelData.iconName !== ""
+                        }
+                        Text {
+                            text: modelData.name
+                            color: "#ECEFF4"; font.pixelSize: 14
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
+                    }
+                    onClicked: {
+                        TilboDaemon.openWithApp(openWithDialog.filePath, modelData.id, null)
+                        openWithDialog.close()
                     }
                 }
             }
@@ -494,19 +1010,14 @@ ApplicationWindow {
                         spacing: 12
 
                         // Icon
-                        Rectangle {
+                        ThemeIcon {
                             Layout.alignment: Qt.AlignHCenter
                             Layout.preferredWidth: 64
                             Layout.preferredHeight: 64
-                            radius: 8
-                            color: window.selectedFile && window.selectedFile.isDir
-                                   ? "#4A90E2" : "#555A64"
-                            Text {
-                                anchors.centerIn: parent
-                                text: window.selectedFile && window.selectedFile.isDir
-                                      ? "📁" : "📄"
-                                font.pixelSize: 32
-                            }
+                            iconName: window.selectedFile
+                                    ? (window.selectedFile.iconName
+                                       || (window.selectedFile.isDir ? "inode-directory" : "application-x-generic"))
+                                    : ""
                         }
 
                         // Name

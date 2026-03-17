@@ -27,9 +27,10 @@ type DaemonConfig struct {
 	LogLevel       string `toml:"log_level"`
 	Watcher        string `toml:"watcher"`
 	WatchHidden    bool   `toml:"watch_hidden"`
-	EmbedModel     string `toml:"embed_model"`      // Local path to ONNX model directory. Overrides auto-download.
-	EmbedModelName string `toml:"embed_model_name"` // HuggingFace model name to download if embed_model is unset. Defaults to sentence-transformers/all-MiniLM-L6-v2.
-	EmbedDisabled  bool   `toml:"embed_disabled"`   // Explicitly disable vector embeddings.
+	EmbedModel     string `toml:"embed_model"`       // Local path to ONNX model directory. Overrides auto-download.
+	EmbedModelName string `toml:"embed_model_name"`  // HuggingFace model name to download if embed_model is unset. Defaults to sentence-transformers/all-MiniLM-L6-v2.
+	EmbedDisabled  bool   `toml:"embed_disabled"`    // Explicitly disable vector embeddings.
+	GUIShellPath   string `toml:"gui_shell_path"`    // Path to the Quickshell shell.qml entry point. Auto-detected if empty.
 }
 
 // CLIConfig holds tilbo-cli settings.
@@ -37,10 +38,25 @@ type CLIConfig struct {
 	Socket string `toml:"socket"`
 }
 
+// PinnedPlace is a user-pinned sidebar entry.
+type PinnedPlace struct {
+	Name     string `toml:"name"`
+	Path     string `toml:"path"`
+	IconName string `toml:"icon"`
+}
+
+// BrowserConfig holds tilbo file-browser settings.
+type BrowserConfig struct {
+	PinnedPlaces []PinnedPlace     `toml:"pinned_place"`
+	UseTrash     bool              `toml:"use_trash"`
+	Keybindings  map[string]string `toml:"keybindings"`
+}
+
 // Config is the top-level structure of the shared config file.
 type Config struct {
-	Daemon DaemonConfig `toml:"daemon"`
-	CLI    CLIConfig    `toml:"cli"`
+	Daemon  DaemonConfig  `toml:"daemon"`
+	CLI     CLIConfig     `toml:"cli"`
+	Browser BrowserConfig `toml:"browser"`
 
 	// Rules holds inline tag rules equivalent to per-file rules in the rules
 	// directory. TOML rule files in the rules directory continue to work; these

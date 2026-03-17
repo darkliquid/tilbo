@@ -15,6 +15,11 @@ Item {
     signal fileOpenRequested(string path)
     signal renameRequested(string path, string newName)
     signal deleteRequested(string path)
+    signal openWithRequested(string path)
+    signal openInTerminalRequested(string path)
+    signal getFileActions(string path, var cb)
+    signal runFileAction(string path, string actionId)
+    signal getFileBadges(string path, var cb)
 
     property int _renamingIndex: -1
 
@@ -86,12 +91,35 @@ Item {
                 anchors.leftMargin: 8; anchors.rightMargin: 8
                 spacing: 0
 
-                // Icon
-                Text {
+                // Icon with badge overlay
+                Item {
+                    id: iconItem
                     width: root._colIcon; height: parent.height
-                    text: row.modelData.isDir ? "📁" : "📄"
-                    font.pixelSize: 18
-                    verticalAlignment: Text.AlignVCenter
+
+                    ThemeIcon {
+                        anchors.centerIn: parent
+                        width: 24; height: 24
+                        iconName: row.modelData.iconName
+                                || (row.modelData.isDir ? "inode-directory" : "application-x-generic")
+                    }
+
+                    property var _badges: []
+                    Component.onCompleted: {
+                        if (row.modelData && !row.modelData.isDir) {
+                            root.getFileBadges(row.modelData.path, function(badges, _err) {
+                                iconItem._badges = badges || []
+                            })
+                        }
+                    }
+
+                    // Badge overlay — bottom-right corner
+                    ThemeIcon {
+                        anchors.bottom: parent.bottom
+                        anchors.right: parent.right
+                        width: 10; height: 10
+                        iconName: iconItem._badges.length > 0 ? iconItem._badges[0] : ""
+                        visible: iconItem._badges.length > 0
+                    }
                 }
 
                 // Name / rename editor
@@ -197,6 +225,7 @@ Item {
                         rowCtxMenu.targetPath  = row.modelData.path
                         rowCtxMenu.targetName  = row.modelData.name
                         rowCtxMenu.targetIndex = row.index
+                        rowCtxMenu.targetIsDir = row.modelData.isDir
                         rowCtxMenu.popup()
                     } else {
                         root.fileSelected(row.modelData)
@@ -217,16 +246,60 @@ Item {
         property string targetPath: ""
         property string targetName: ""
         property int    targetIndex: -1
+        property bool   targetIsDir: false
+        property var    _extActions: []
 
+        onAboutToShow: {
+            _extActions = []
+            root.getFileActions(targetPath, function(actions, _err) {
+                rowCtxMenu._extActions = actions || []
+            })
+        }
+
+        MenuItem {
+            text: "Open"
+            onTriggered: {
+                if (rowCtxMenu.targetIsDir)
+                    root.directoryActivated(rowCtxMenu.targetPath)
+                else
+                    root.fileOpenRequested(rowCtxMenu.targetPath)
+            }
+        }
+        MenuItem {
+            text: "Open With..."
+            visible: !rowCtxMenu.targetIsDir
+            onTriggered: {
+                if (rowCtxMenu.targetPath)
+                    root.openWithRequested(rowCtxMenu.targetPath)
+            }
+        }
+        MenuItem {
+            text: "Open in Terminal"
+            onTriggered: {
+                var dir = rowCtxMenu.targetIsDir ? rowCtxMenu.targetPath
+                         : rowCtxMenu.targetPath.substring(0, rowCtxMenu.targetPath.lastIndexOf("/"))
+                root.openInTerminalRequested(dir)
+            }
+        }
+        MenuSeparator {}
         MenuItem {
             text: "Rename"
             onTriggered: root._renamingIndex = rowCtxMenu.targetIndex
         }
         MenuItem {
-            text: "Delete"
+            text: "Move to Trash"
             onTriggered: {
                 if (rowCtxMenu.targetPath)
                     root.deleteRequested(rowCtxMenu.targetPath)
+            }
+        }
+        MenuSeparator { visible: rowCtxMenu._extActions.length > 0 }
+        Repeater {
+            model: rowCtxMenu._extActions
+            MenuItem {
+                required property var modelData
+                text: modelData.label
+                onTriggered: root.runFileAction(rowCtxMenu.targetPath, modelData.id)
             }
         }
     }

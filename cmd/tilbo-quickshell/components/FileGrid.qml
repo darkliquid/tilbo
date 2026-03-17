@@ -1,7 +1,7 @@
 // FileGrid.qml — tile/grid view for the tilbo browser.
 //
 // Accepts a plain JS array via the `entries` property.  Each element must have
-// at minimum: name, path, isDir, size, mtime, tags.
+// at minimum: name, path, isDir, size, mtime, tags, iconName.
 //
 // Signals emitted:
 //   fileSelected(fileData)          — single click; pass the full entry object
@@ -9,6 +9,11 @@
 //   fileOpenRequested(path)         — double-click on a regular file
 //   renameRequested(path, newName)  — user confirmed rename via inline editor
 //   deleteRequested(path)           — user chose Delete from context menu
+//   openWithRequested(path)         — user chose Open With from context menu
+//   openInTerminalRequested(path)   — user chose Open in Terminal
+//   getFileActions(path, cb)        — request extension actions
+//   runFileAction(path, actionId)   — run an extension action
+//   getFileBadges(path, cb)         — request badge overlays
 import QtQuick
 import QtQuick.Controls
 
@@ -22,6 +27,11 @@ Item {
     signal fileOpenRequested(string path)
     signal renameRequested(string path, string newName)
     signal deleteRequested(string path)
+    signal openWithRequested(string path)
+    signal openInTerminalRequested(string path)
+    signal getFileActions(string path, var cb)
+    signal runFileAction(string path, string actionId)
+    signal getFileBadges(string path, var cb)
 
     // Index of the cell currently being renamed; -1 means none.
     property int _renamingIndex: -1
@@ -58,11 +68,40 @@ Item {
                     anchors.margins: 8
                     spacing: 4
 
-                    // File type icon
-                    Text {
+                    // File type icon with badge overlay
+                    Item {
+                        id: gridIconItem
                         anchors.horizontalCenter: parent.horizontalCenter
-                        text: cell.modelData.isDir ? "📁" : "📄"
-                        font.pixelSize: 36
+                        width: 48; height: 48
+
+                        ThemeIcon {
+                            anchors.fill: parent
+                            iconName: cell.modelData.iconName
+                                    || (cell.modelData.isDir ? "inode-directory" : "application-x-generic")
+                        }
+
+                        // Badge overlays (loaded asynchronously)
+                        property var _badges: []
+                        Component.onCompleted: {
+                            if (!cell.modelData.isDir) {
+                                root.getFileBadges(cell.modelData.path, function(badges, _err) {
+                                    gridIconItem._badges = badges || []
+                                })
+                            }
+                        }
+
+                        Row {
+                            anchors.bottom: parent.bottom
+                            anchors.right: parent.right
+                            spacing: 1
+                            Repeater {
+                                model: gridIconItem._badges.slice(0, 3)
+                                ThemeIcon {
+                                    iconName: modelData
+                                    width: 16; height: 16
+                                }
+                            }
+                        }
                     }
 
                     // File name — static label
@@ -138,6 +177,7 @@ Item {
                         ctxMenu.targetPath  = cell.modelData.path
                         ctxMenu.targetName  = cell.modelData.name
                         ctxMenu.targetIndex = cell.index
+                        ctxMenu.targetIsDir = cell.modelData.isDir
                         ctxMenu.popup()
                     } else {
                         root.fileSelected(cell.modelData)
@@ -159,16 +199,62 @@ Item {
         property string targetPath: ""
         property string targetName: ""
         property int    targetIndex: -1
+        property bool   targetIsDir: false
+        property var    _extActions: []
 
+        onAboutToShow: {
+            // Load extension actions asynchronously
+            _extActions = []
+            root.getFileActions(targetPath, function(actions, _err) {
+                ctxMenu._extActions = actions || []
+            })
+        }
+
+        MenuItem {
+            text: "Open"
+            onTriggered: {
+                if (!ctxMenu.targetIsDir)
+                    root.fileOpenRequested(ctxMenu.targetPath)
+                else
+                    root.directoryActivated(ctxMenu.targetPath)
+            }
+        }
+        MenuItem {
+            text: "Open With..."
+            visible: !ctxMenu.targetIsDir
+            onTriggered: {
+                if (ctxMenu.targetPath)
+                    root.openWithRequested(ctxMenu.targetPath)
+            }
+        }
+        MenuItem {
+            text: "Open in Terminal"
+            onTriggered: {
+                var dir = ctxMenu.targetIsDir ? ctxMenu.targetPath
+                         : ctxMenu.targetPath.substring(0, ctxMenu.targetPath.lastIndexOf("/"))
+                root.openInTerminalRequested(dir)
+            }
+        }
+        MenuSeparator {}
         MenuItem {
             text: "Rename"
             onTriggered: root._renamingIndex = ctxMenu.targetIndex
         }
         MenuItem {
-            text: "Delete"
+            text: "Move to Trash"
             onTriggered: {
                 if (ctxMenu.targetPath)
                     root.deleteRequested(ctxMenu.targetPath)
+            }
+        }
+        MenuSeparator { visible: ctxMenu._extActions.length > 0 }
+        // Extension actions (dynamic)
+        Repeater {
+            model: ctxMenu._extActions
+            MenuItem {
+                required property var modelData
+                text: modelData.label
+                onTriggered: root.runFileAction(ctxMenu.targetPath, modelData.id)
             }
         }
     }
