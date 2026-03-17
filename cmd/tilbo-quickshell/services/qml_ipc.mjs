@@ -1641,9 +1641,22 @@ var tilbo = $root.tilbo = (() => {
         Request.prototype.deleteFile = null;
         Request.prototype.chmodFile = null;
         Request.prototype.listPlaces = null;
+        Request.prototype.pinPlace = null;
+        Request.prototype.unpinPlace = null;
+        Request.prototype.trashFile = null;
+        Request.prototype.listTrash = null;
+        Request.prototype.restoreTrash = null;
+        Request.prototype.emptyTrash = null;
+        Request.prototype.listAppsForFile = null;
+        Request.prototype.openWithApp = null;
+        Request.prototype.getBrowserConfig = null;
+        Request.prototype.getFileBadges = null;
+        Request.prototype.getFileActions = null;
+        Request.prototype.runFileAction = null;
+        Request.prototype.launchGui = null;
         let $oneOfFields;
         Object.defineProperty(Request.prototype, "kind", {
-          get: $util.oneOfGetter($oneOfFields = ["search", "tag", "metadata", "metadataSet", "related", "status", "reloadRules", "listTags", "hydrateTags", "listDirectory", "statFile", "globSearch", "renameFile", "deleteFile", "chmodFile", "listPlaces"]),
+          get: $util.oneOfGetter($oneOfFields = ["search", "tag", "metadata", "metadataSet", "related", "status", "reloadRules", "listTags", "hydrateTags", "listDirectory", "statFile", "globSearch", "renameFile", "deleteFile", "chmodFile", "listPlaces", "pinPlace", "unpinPlace", "trashFile", "listTrash", "restoreTrash", "emptyTrash", "listAppsForFile", "openWithApp", "getBrowserConfig", "getFileBadges", "getFileActions", "runFileAction", "launchGui"]),
           set: $util.oneOfSetter($oneOfFields)
         });
         Request.create = function create(properties) {
@@ -1732,6 +1745,71 @@ var tilbo = $root.tilbo = (() => {
               /* id 16, wireType 2 =*/
               130
             ).fork()).ldelim();
+          if (message.pinPlace != null && Object.hasOwnProperty.call(message, "pinPlace"))
+            $root.tilbo.ipc.v1.PinPlaceRequest.encode(message.pinPlace, writer.uint32(
+              /* id 17, wireType 2 =*/
+              138
+            ).fork()).ldelim();
+          if (message.unpinPlace != null && Object.hasOwnProperty.call(message, "unpinPlace"))
+            $root.tilbo.ipc.v1.UnpinPlaceRequest.encode(message.unpinPlace, writer.uint32(
+              /* id 18, wireType 2 =*/
+              146
+            ).fork()).ldelim();
+          if (message.trashFile != null && Object.hasOwnProperty.call(message, "trashFile"))
+            $root.tilbo.ipc.v1.TrashFileRequest.encode(message.trashFile, writer.uint32(
+              /* id 19, wireType 2 =*/
+              154
+            ).fork()).ldelim();
+          if (message.listTrash != null && Object.hasOwnProperty.call(message, "listTrash"))
+            $root.tilbo.ipc.v1.ListTrashRequest.encode(message.listTrash, writer.uint32(
+              /* id 20, wireType 2 =*/
+              162
+            ).fork()).ldelim();
+          if (message.restoreTrash != null && Object.hasOwnProperty.call(message, "restoreTrash"))
+            $root.tilbo.ipc.v1.RestoreTrashRequest.encode(message.restoreTrash, writer.uint32(
+              /* id 21, wireType 2 =*/
+              170
+            ).fork()).ldelim();
+          if (message.emptyTrash != null && Object.hasOwnProperty.call(message, "emptyTrash"))
+            $root.tilbo.ipc.v1.EmptyTrashRequest.encode(message.emptyTrash, writer.uint32(
+              /* id 22, wireType 2 =*/
+              178
+            ).fork()).ldelim();
+          if (message.listAppsForFile != null && Object.hasOwnProperty.call(message, "listAppsForFile"))
+            $root.tilbo.ipc.v1.ListAppsForFileRequest.encode(message.listAppsForFile, writer.uint32(
+              /* id 23, wireType 2 =*/
+              186
+            ).fork()).ldelim();
+          if (message.openWithApp != null && Object.hasOwnProperty.call(message, "openWithApp"))
+            $root.tilbo.ipc.v1.OpenWithAppRequest.encode(message.openWithApp, writer.uint32(
+              /* id 24, wireType 2 =*/
+              194
+            ).fork()).ldelim();
+          if (message.getBrowserConfig != null && Object.hasOwnProperty.call(message, "getBrowserConfig"))
+            $root.tilbo.ipc.v1.GetBrowserConfigRequest.encode(message.getBrowserConfig, writer.uint32(
+              /* id 25, wireType 2 =*/
+              202
+            ).fork()).ldelim();
+          if (message.getFileBadges != null && Object.hasOwnProperty.call(message, "getFileBadges"))
+            $root.tilbo.ipc.v1.GetFileBadgesRequest.encode(message.getFileBadges, writer.uint32(
+              /* id 26, wireType 2 =*/
+              210
+            ).fork()).ldelim();
+          if (message.getFileActions != null && Object.hasOwnProperty.call(message, "getFileActions"))
+            $root.tilbo.ipc.v1.GetFileActionsRequest.encode(message.getFileActions, writer.uint32(
+              /* id 27, wireType 2 =*/
+              218
+            ).fork()).ldelim();
+          if (message.runFileAction != null && Object.hasOwnProperty.call(message, "runFileAction"))
+            $root.tilbo.ipc.v1.RunFileActionRequest.encode(message.runFileAction, writer.uint32(
+              /* id 28, wireType 2 =*/
+              226
+            ).fork()).ldelim();
+          if (message.launchGui != null && Object.hasOwnProperty.call(message, "launchGui"))
+            $root.tilbo.ipc.v1.LaunchGUIRequest.encode(message.launchGui, writer.uint32(
+              /* id 29, wireType 2 =*/
+              234
+            ).fork()).ldelim();
           return writer;
         };
         Request.encodeDelimited = function encodeDelimited(message, writer) {
@@ -1808,6 +1886,58 @@ var tilbo = $root.tilbo = (() => {
               }
               case 16: {
                 message.listPlaces = $root.tilbo.ipc.v1.ListPlacesRequest.decode(reader, reader.uint32());
+                break;
+              }
+              case 17: {
+                message.pinPlace = $root.tilbo.ipc.v1.PinPlaceRequest.decode(reader, reader.uint32());
+                break;
+              }
+              case 18: {
+                message.unpinPlace = $root.tilbo.ipc.v1.UnpinPlaceRequest.decode(reader, reader.uint32());
+                break;
+              }
+              case 19: {
+                message.trashFile = $root.tilbo.ipc.v1.TrashFileRequest.decode(reader, reader.uint32());
+                break;
+              }
+              case 20: {
+                message.listTrash = $root.tilbo.ipc.v1.ListTrashRequest.decode(reader, reader.uint32());
+                break;
+              }
+              case 21: {
+                message.restoreTrash = $root.tilbo.ipc.v1.RestoreTrashRequest.decode(reader, reader.uint32());
+                break;
+              }
+              case 22: {
+                message.emptyTrash = $root.tilbo.ipc.v1.EmptyTrashRequest.decode(reader, reader.uint32());
+                break;
+              }
+              case 23: {
+                message.listAppsForFile = $root.tilbo.ipc.v1.ListAppsForFileRequest.decode(reader, reader.uint32());
+                break;
+              }
+              case 24: {
+                message.openWithApp = $root.tilbo.ipc.v1.OpenWithAppRequest.decode(reader, reader.uint32());
+                break;
+              }
+              case 25: {
+                message.getBrowserConfig = $root.tilbo.ipc.v1.GetBrowserConfigRequest.decode(reader, reader.uint32());
+                break;
+              }
+              case 26: {
+                message.getFileBadges = $root.tilbo.ipc.v1.GetFileBadgesRequest.decode(reader, reader.uint32());
+                break;
+              }
+              case 27: {
+                message.getFileActions = $root.tilbo.ipc.v1.GetFileActionsRequest.decode(reader, reader.uint32());
+                break;
+              }
+              case 28: {
+                message.runFileAction = $root.tilbo.ipc.v1.RunFileActionRequest.decode(reader, reader.uint32());
+                break;
+              }
+              case 29: {
+                message.launchGui = $root.tilbo.ipc.v1.LaunchGUIRequest.decode(reader, reader.uint32());
                 break;
               }
               default:
@@ -1984,6 +2114,136 @@ var tilbo = $root.tilbo = (() => {
                 return "listPlaces." + error;
             }
           }
+          if (message.pinPlace != null && message.hasOwnProperty("pinPlace")) {
+            if (properties.kind === 1)
+              return "kind: multiple values";
+            properties.kind = 1;
+            {
+              let error = $root.tilbo.ipc.v1.PinPlaceRequest.verify(message.pinPlace);
+              if (error)
+                return "pinPlace." + error;
+            }
+          }
+          if (message.unpinPlace != null && message.hasOwnProperty("unpinPlace")) {
+            if (properties.kind === 1)
+              return "kind: multiple values";
+            properties.kind = 1;
+            {
+              let error = $root.tilbo.ipc.v1.UnpinPlaceRequest.verify(message.unpinPlace);
+              if (error)
+                return "unpinPlace." + error;
+            }
+          }
+          if (message.trashFile != null && message.hasOwnProperty("trashFile")) {
+            if (properties.kind === 1)
+              return "kind: multiple values";
+            properties.kind = 1;
+            {
+              let error = $root.tilbo.ipc.v1.TrashFileRequest.verify(message.trashFile);
+              if (error)
+                return "trashFile." + error;
+            }
+          }
+          if (message.listTrash != null && message.hasOwnProperty("listTrash")) {
+            if (properties.kind === 1)
+              return "kind: multiple values";
+            properties.kind = 1;
+            {
+              let error = $root.tilbo.ipc.v1.ListTrashRequest.verify(message.listTrash);
+              if (error)
+                return "listTrash." + error;
+            }
+          }
+          if (message.restoreTrash != null && message.hasOwnProperty("restoreTrash")) {
+            if (properties.kind === 1)
+              return "kind: multiple values";
+            properties.kind = 1;
+            {
+              let error = $root.tilbo.ipc.v1.RestoreTrashRequest.verify(message.restoreTrash);
+              if (error)
+                return "restoreTrash." + error;
+            }
+          }
+          if (message.emptyTrash != null && message.hasOwnProperty("emptyTrash")) {
+            if (properties.kind === 1)
+              return "kind: multiple values";
+            properties.kind = 1;
+            {
+              let error = $root.tilbo.ipc.v1.EmptyTrashRequest.verify(message.emptyTrash);
+              if (error)
+                return "emptyTrash." + error;
+            }
+          }
+          if (message.listAppsForFile != null && message.hasOwnProperty("listAppsForFile")) {
+            if (properties.kind === 1)
+              return "kind: multiple values";
+            properties.kind = 1;
+            {
+              let error = $root.tilbo.ipc.v1.ListAppsForFileRequest.verify(message.listAppsForFile);
+              if (error)
+                return "listAppsForFile." + error;
+            }
+          }
+          if (message.openWithApp != null && message.hasOwnProperty("openWithApp")) {
+            if (properties.kind === 1)
+              return "kind: multiple values";
+            properties.kind = 1;
+            {
+              let error = $root.tilbo.ipc.v1.OpenWithAppRequest.verify(message.openWithApp);
+              if (error)
+                return "openWithApp." + error;
+            }
+          }
+          if (message.getBrowserConfig != null && message.hasOwnProperty("getBrowserConfig")) {
+            if (properties.kind === 1)
+              return "kind: multiple values";
+            properties.kind = 1;
+            {
+              let error = $root.tilbo.ipc.v1.GetBrowserConfigRequest.verify(message.getBrowserConfig);
+              if (error)
+                return "getBrowserConfig." + error;
+            }
+          }
+          if (message.getFileBadges != null && message.hasOwnProperty("getFileBadges")) {
+            if (properties.kind === 1)
+              return "kind: multiple values";
+            properties.kind = 1;
+            {
+              let error = $root.tilbo.ipc.v1.GetFileBadgesRequest.verify(message.getFileBadges);
+              if (error)
+                return "getFileBadges." + error;
+            }
+          }
+          if (message.getFileActions != null && message.hasOwnProperty("getFileActions")) {
+            if (properties.kind === 1)
+              return "kind: multiple values";
+            properties.kind = 1;
+            {
+              let error = $root.tilbo.ipc.v1.GetFileActionsRequest.verify(message.getFileActions);
+              if (error)
+                return "getFileActions." + error;
+            }
+          }
+          if (message.runFileAction != null && message.hasOwnProperty("runFileAction")) {
+            if (properties.kind === 1)
+              return "kind: multiple values";
+            properties.kind = 1;
+            {
+              let error = $root.tilbo.ipc.v1.RunFileActionRequest.verify(message.runFileAction);
+              if (error)
+                return "runFileAction." + error;
+            }
+          }
+          if (message.launchGui != null && message.hasOwnProperty("launchGui")) {
+            if (properties.kind === 1)
+              return "kind: multiple values";
+            properties.kind = 1;
+            {
+              let error = $root.tilbo.ipc.v1.LaunchGUIRequest.verify(message.launchGui);
+              if (error)
+                return "launchGui." + error;
+            }
+          }
           return null;
         };
         Request.fromObject = function fromObject(object) {
@@ -2069,6 +2329,71 @@ var tilbo = $root.tilbo = (() => {
             if (typeof object.listPlaces !== "object")
               throw TypeError(".tilbo.ipc.v1.Request.listPlaces: object expected");
             message.listPlaces = $root.tilbo.ipc.v1.ListPlacesRequest.fromObject(object.listPlaces);
+          }
+          if (object.pinPlace != null) {
+            if (typeof object.pinPlace !== "object")
+              throw TypeError(".tilbo.ipc.v1.Request.pinPlace: object expected");
+            message.pinPlace = $root.tilbo.ipc.v1.PinPlaceRequest.fromObject(object.pinPlace);
+          }
+          if (object.unpinPlace != null) {
+            if (typeof object.unpinPlace !== "object")
+              throw TypeError(".tilbo.ipc.v1.Request.unpinPlace: object expected");
+            message.unpinPlace = $root.tilbo.ipc.v1.UnpinPlaceRequest.fromObject(object.unpinPlace);
+          }
+          if (object.trashFile != null) {
+            if (typeof object.trashFile !== "object")
+              throw TypeError(".tilbo.ipc.v1.Request.trashFile: object expected");
+            message.trashFile = $root.tilbo.ipc.v1.TrashFileRequest.fromObject(object.trashFile);
+          }
+          if (object.listTrash != null) {
+            if (typeof object.listTrash !== "object")
+              throw TypeError(".tilbo.ipc.v1.Request.listTrash: object expected");
+            message.listTrash = $root.tilbo.ipc.v1.ListTrashRequest.fromObject(object.listTrash);
+          }
+          if (object.restoreTrash != null) {
+            if (typeof object.restoreTrash !== "object")
+              throw TypeError(".tilbo.ipc.v1.Request.restoreTrash: object expected");
+            message.restoreTrash = $root.tilbo.ipc.v1.RestoreTrashRequest.fromObject(object.restoreTrash);
+          }
+          if (object.emptyTrash != null) {
+            if (typeof object.emptyTrash !== "object")
+              throw TypeError(".tilbo.ipc.v1.Request.emptyTrash: object expected");
+            message.emptyTrash = $root.tilbo.ipc.v1.EmptyTrashRequest.fromObject(object.emptyTrash);
+          }
+          if (object.listAppsForFile != null) {
+            if (typeof object.listAppsForFile !== "object")
+              throw TypeError(".tilbo.ipc.v1.Request.listAppsForFile: object expected");
+            message.listAppsForFile = $root.tilbo.ipc.v1.ListAppsForFileRequest.fromObject(object.listAppsForFile);
+          }
+          if (object.openWithApp != null) {
+            if (typeof object.openWithApp !== "object")
+              throw TypeError(".tilbo.ipc.v1.Request.openWithApp: object expected");
+            message.openWithApp = $root.tilbo.ipc.v1.OpenWithAppRequest.fromObject(object.openWithApp);
+          }
+          if (object.getBrowserConfig != null) {
+            if (typeof object.getBrowserConfig !== "object")
+              throw TypeError(".tilbo.ipc.v1.Request.getBrowserConfig: object expected");
+            message.getBrowserConfig = $root.tilbo.ipc.v1.GetBrowserConfigRequest.fromObject(object.getBrowserConfig);
+          }
+          if (object.getFileBadges != null) {
+            if (typeof object.getFileBadges !== "object")
+              throw TypeError(".tilbo.ipc.v1.Request.getFileBadges: object expected");
+            message.getFileBadges = $root.tilbo.ipc.v1.GetFileBadgesRequest.fromObject(object.getFileBadges);
+          }
+          if (object.getFileActions != null) {
+            if (typeof object.getFileActions !== "object")
+              throw TypeError(".tilbo.ipc.v1.Request.getFileActions: object expected");
+            message.getFileActions = $root.tilbo.ipc.v1.GetFileActionsRequest.fromObject(object.getFileActions);
+          }
+          if (object.runFileAction != null) {
+            if (typeof object.runFileAction !== "object")
+              throw TypeError(".tilbo.ipc.v1.Request.runFileAction: object expected");
+            message.runFileAction = $root.tilbo.ipc.v1.RunFileActionRequest.fromObject(object.runFileAction);
+          }
+          if (object.launchGui != null) {
+            if (typeof object.launchGui !== "object")
+              throw TypeError(".tilbo.ipc.v1.Request.launchGui: object expected");
+            message.launchGui = $root.tilbo.ipc.v1.LaunchGUIRequest.fromObject(object.launchGui);
           }
           return message;
         };
@@ -2156,6 +2481,71 @@ var tilbo = $root.tilbo = (() => {
             if (options.oneofs)
               object.kind = "listPlaces";
           }
+          if (message.pinPlace != null && message.hasOwnProperty("pinPlace")) {
+            object.pinPlace = $root.tilbo.ipc.v1.PinPlaceRequest.toObject(message.pinPlace, options);
+            if (options.oneofs)
+              object.kind = "pinPlace";
+          }
+          if (message.unpinPlace != null && message.hasOwnProperty("unpinPlace")) {
+            object.unpinPlace = $root.tilbo.ipc.v1.UnpinPlaceRequest.toObject(message.unpinPlace, options);
+            if (options.oneofs)
+              object.kind = "unpinPlace";
+          }
+          if (message.trashFile != null && message.hasOwnProperty("trashFile")) {
+            object.trashFile = $root.tilbo.ipc.v1.TrashFileRequest.toObject(message.trashFile, options);
+            if (options.oneofs)
+              object.kind = "trashFile";
+          }
+          if (message.listTrash != null && message.hasOwnProperty("listTrash")) {
+            object.listTrash = $root.tilbo.ipc.v1.ListTrashRequest.toObject(message.listTrash, options);
+            if (options.oneofs)
+              object.kind = "listTrash";
+          }
+          if (message.restoreTrash != null && message.hasOwnProperty("restoreTrash")) {
+            object.restoreTrash = $root.tilbo.ipc.v1.RestoreTrashRequest.toObject(message.restoreTrash, options);
+            if (options.oneofs)
+              object.kind = "restoreTrash";
+          }
+          if (message.emptyTrash != null && message.hasOwnProperty("emptyTrash")) {
+            object.emptyTrash = $root.tilbo.ipc.v1.EmptyTrashRequest.toObject(message.emptyTrash, options);
+            if (options.oneofs)
+              object.kind = "emptyTrash";
+          }
+          if (message.listAppsForFile != null && message.hasOwnProperty("listAppsForFile")) {
+            object.listAppsForFile = $root.tilbo.ipc.v1.ListAppsForFileRequest.toObject(message.listAppsForFile, options);
+            if (options.oneofs)
+              object.kind = "listAppsForFile";
+          }
+          if (message.openWithApp != null && message.hasOwnProperty("openWithApp")) {
+            object.openWithApp = $root.tilbo.ipc.v1.OpenWithAppRequest.toObject(message.openWithApp, options);
+            if (options.oneofs)
+              object.kind = "openWithApp";
+          }
+          if (message.getBrowserConfig != null && message.hasOwnProperty("getBrowserConfig")) {
+            object.getBrowserConfig = $root.tilbo.ipc.v1.GetBrowserConfigRequest.toObject(message.getBrowserConfig, options);
+            if (options.oneofs)
+              object.kind = "getBrowserConfig";
+          }
+          if (message.getFileBadges != null && message.hasOwnProperty("getFileBadges")) {
+            object.getFileBadges = $root.tilbo.ipc.v1.GetFileBadgesRequest.toObject(message.getFileBadges, options);
+            if (options.oneofs)
+              object.kind = "getFileBadges";
+          }
+          if (message.getFileActions != null && message.hasOwnProperty("getFileActions")) {
+            object.getFileActions = $root.tilbo.ipc.v1.GetFileActionsRequest.toObject(message.getFileActions, options);
+            if (options.oneofs)
+              object.kind = "getFileActions";
+          }
+          if (message.runFileAction != null && message.hasOwnProperty("runFileAction")) {
+            object.runFileAction = $root.tilbo.ipc.v1.RunFileActionRequest.toObject(message.runFileAction, options);
+            if (options.oneofs)
+              object.kind = "runFileAction";
+          }
+          if (message.launchGui != null && message.hasOwnProperty("launchGui")) {
+            object.launchGui = $root.tilbo.ipc.v1.LaunchGUIRequest.toObject(message.launchGui, options);
+            if (options.oneofs)
+              object.kind = "launchGui";
+          }
           return object;
         };
         Request.prototype.toJSON = function toJSON() {
@@ -2193,9 +2583,22 @@ var tilbo = $root.tilbo = (() => {
         Response.prototype.deleteFile = null;
         Response.prototype.chmodFile = null;
         Response.prototype.listPlaces = null;
+        Response.prototype.pinPlace = null;
+        Response.prototype.unpinPlace = null;
+        Response.prototype.trashFile = null;
+        Response.prototype.listTrash = null;
+        Response.prototype.restoreTrash = null;
+        Response.prototype.emptyTrash = null;
+        Response.prototype.listAppsForFile = null;
+        Response.prototype.openWithApp = null;
+        Response.prototype.getBrowserConfig = null;
+        Response.prototype.getFileBadges = null;
+        Response.prototype.getFileActions = null;
+        Response.prototype.runFileAction = null;
+        Response.prototype.launchGui = null;
         let $oneOfFields;
         Object.defineProperty(Response.prototype, "kind", {
-          get: $util.oneOfGetter($oneOfFields = ["error", "search", "tag", "metadata", "related", "status", "reloadRules", "listTags", "hydrateTags", "listDirectory", "statFile", "globSearch", "renameFile", "deleteFile", "chmodFile", "listPlaces"]),
+          get: $util.oneOfGetter($oneOfFields = ["error", "search", "tag", "metadata", "related", "status", "reloadRules", "listTags", "hydrateTags", "listDirectory", "statFile", "globSearch", "renameFile", "deleteFile", "chmodFile", "listPlaces", "pinPlace", "unpinPlace", "trashFile", "listTrash", "restoreTrash", "emptyTrash", "listAppsForFile", "openWithApp", "getBrowserConfig", "getFileBadges", "getFileActions", "runFileAction", "launchGui"]),
           set: $util.oneOfSetter($oneOfFields)
         });
         Response.create = function create(properties) {
@@ -2284,6 +2687,71 @@ var tilbo = $root.tilbo = (() => {
               /* id 16, wireType 2 =*/
               130
             ).fork()).ldelim();
+          if (message.pinPlace != null && Object.hasOwnProperty.call(message, "pinPlace"))
+            $root.tilbo.ipc.v1.PinPlaceResponse.encode(message.pinPlace, writer.uint32(
+              /* id 17, wireType 2 =*/
+              138
+            ).fork()).ldelim();
+          if (message.unpinPlace != null && Object.hasOwnProperty.call(message, "unpinPlace"))
+            $root.tilbo.ipc.v1.UnpinPlaceResponse.encode(message.unpinPlace, writer.uint32(
+              /* id 18, wireType 2 =*/
+              146
+            ).fork()).ldelim();
+          if (message.trashFile != null && Object.hasOwnProperty.call(message, "trashFile"))
+            $root.tilbo.ipc.v1.TrashFileResponse.encode(message.trashFile, writer.uint32(
+              /* id 19, wireType 2 =*/
+              154
+            ).fork()).ldelim();
+          if (message.listTrash != null && Object.hasOwnProperty.call(message, "listTrash"))
+            $root.tilbo.ipc.v1.ListTrashResponse.encode(message.listTrash, writer.uint32(
+              /* id 20, wireType 2 =*/
+              162
+            ).fork()).ldelim();
+          if (message.restoreTrash != null && Object.hasOwnProperty.call(message, "restoreTrash"))
+            $root.tilbo.ipc.v1.RestoreTrashResponse.encode(message.restoreTrash, writer.uint32(
+              /* id 21, wireType 2 =*/
+              170
+            ).fork()).ldelim();
+          if (message.emptyTrash != null && Object.hasOwnProperty.call(message, "emptyTrash"))
+            $root.tilbo.ipc.v1.EmptyTrashResponse.encode(message.emptyTrash, writer.uint32(
+              /* id 22, wireType 2 =*/
+              178
+            ).fork()).ldelim();
+          if (message.listAppsForFile != null && Object.hasOwnProperty.call(message, "listAppsForFile"))
+            $root.tilbo.ipc.v1.ListAppsForFileResponse.encode(message.listAppsForFile, writer.uint32(
+              /* id 23, wireType 2 =*/
+              186
+            ).fork()).ldelim();
+          if (message.openWithApp != null && Object.hasOwnProperty.call(message, "openWithApp"))
+            $root.tilbo.ipc.v1.OpenWithAppResponse.encode(message.openWithApp, writer.uint32(
+              /* id 24, wireType 2 =*/
+              194
+            ).fork()).ldelim();
+          if (message.getBrowserConfig != null && Object.hasOwnProperty.call(message, "getBrowserConfig"))
+            $root.tilbo.ipc.v1.GetBrowserConfigResponse.encode(message.getBrowserConfig, writer.uint32(
+              /* id 25, wireType 2 =*/
+              202
+            ).fork()).ldelim();
+          if (message.getFileBadges != null && Object.hasOwnProperty.call(message, "getFileBadges"))
+            $root.tilbo.ipc.v1.GetFileBadgesResponse.encode(message.getFileBadges, writer.uint32(
+              /* id 26, wireType 2 =*/
+              210
+            ).fork()).ldelim();
+          if (message.getFileActions != null && Object.hasOwnProperty.call(message, "getFileActions"))
+            $root.tilbo.ipc.v1.GetFileActionsResponse.encode(message.getFileActions, writer.uint32(
+              /* id 27, wireType 2 =*/
+              218
+            ).fork()).ldelim();
+          if (message.runFileAction != null && Object.hasOwnProperty.call(message, "runFileAction"))
+            $root.tilbo.ipc.v1.RunFileActionResponse.encode(message.runFileAction, writer.uint32(
+              /* id 28, wireType 2 =*/
+              226
+            ).fork()).ldelim();
+          if (message.launchGui != null && Object.hasOwnProperty.call(message, "launchGui"))
+            $root.tilbo.ipc.v1.LaunchGUIResponse.encode(message.launchGui, writer.uint32(
+              /* id 29, wireType 2 =*/
+              234
+            ).fork()).ldelim();
           return writer;
         };
         Response.encodeDelimited = function encodeDelimited(message, writer) {
@@ -2360,6 +2828,58 @@ var tilbo = $root.tilbo = (() => {
               }
               case 16: {
                 message.listPlaces = $root.tilbo.ipc.v1.ListPlacesResponse.decode(reader, reader.uint32());
+                break;
+              }
+              case 17: {
+                message.pinPlace = $root.tilbo.ipc.v1.PinPlaceResponse.decode(reader, reader.uint32());
+                break;
+              }
+              case 18: {
+                message.unpinPlace = $root.tilbo.ipc.v1.UnpinPlaceResponse.decode(reader, reader.uint32());
+                break;
+              }
+              case 19: {
+                message.trashFile = $root.tilbo.ipc.v1.TrashFileResponse.decode(reader, reader.uint32());
+                break;
+              }
+              case 20: {
+                message.listTrash = $root.tilbo.ipc.v1.ListTrashResponse.decode(reader, reader.uint32());
+                break;
+              }
+              case 21: {
+                message.restoreTrash = $root.tilbo.ipc.v1.RestoreTrashResponse.decode(reader, reader.uint32());
+                break;
+              }
+              case 22: {
+                message.emptyTrash = $root.tilbo.ipc.v1.EmptyTrashResponse.decode(reader, reader.uint32());
+                break;
+              }
+              case 23: {
+                message.listAppsForFile = $root.tilbo.ipc.v1.ListAppsForFileResponse.decode(reader, reader.uint32());
+                break;
+              }
+              case 24: {
+                message.openWithApp = $root.tilbo.ipc.v1.OpenWithAppResponse.decode(reader, reader.uint32());
+                break;
+              }
+              case 25: {
+                message.getBrowserConfig = $root.tilbo.ipc.v1.GetBrowserConfigResponse.decode(reader, reader.uint32());
+                break;
+              }
+              case 26: {
+                message.getFileBadges = $root.tilbo.ipc.v1.GetFileBadgesResponse.decode(reader, reader.uint32());
+                break;
+              }
+              case 27: {
+                message.getFileActions = $root.tilbo.ipc.v1.GetFileActionsResponse.decode(reader, reader.uint32());
+                break;
+              }
+              case 28: {
+                message.runFileAction = $root.tilbo.ipc.v1.RunFileActionResponse.decode(reader, reader.uint32());
+                break;
+              }
+              case 29: {
+                message.launchGui = $root.tilbo.ipc.v1.LaunchGUIResponse.decode(reader, reader.uint32());
                 break;
               }
               default:
@@ -2536,6 +3056,136 @@ var tilbo = $root.tilbo = (() => {
                 return "listPlaces." + error;
             }
           }
+          if (message.pinPlace != null && message.hasOwnProperty("pinPlace")) {
+            if (properties.kind === 1)
+              return "kind: multiple values";
+            properties.kind = 1;
+            {
+              let error = $root.tilbo.ipc.v1.PinPlaceResponse.verify(message.pinPlace);
+              if (error)
+                return "pinPlace." + error;
+            }
+          }
+          if (message.unpinPlace != null && message.hasOwnProperty("unpinPlace")) {
+            if (properties.kind === 1)
+              return "kind: multiple values";
+            properties.kind = 1;
+            {
+              let error = $root.tilbo.ipc.v1.UnpinPlaceResponse.verify(message.unpinPlace);
+              if (error)
+                return "unpinPlace." + error;
+            }
+          }
+          if (message.trashFile != null && message.hasOwnProperty("trashFile")) {
+            if (properties.kind === 1)
+              return "kind: multiple values";
+            properties.kind = 1;
+            {
+              let error = $root.tilbo.ipc.v1.TrashFileResponse.verify(message.trashFile);
+              if (error)
+                return "trashFile." + error;
+            }
+          }
+          if (message.listTrash != null && message.hasOwnProperty("listTrash")) {
+            if (properties.kind === 1)
+              return "kind: multiple values";
+            properties.kind = 1;
+            {
+              let error = $root.tilbo.ipc.v1.ListTrashResponse.verify(message.listTrash);
+              if (error)
+                return "listTrash." + error;
+            }
+          }
+          if (message.restoreTrash != null && message.hasOwnProperty("restoreTrash")) {
+            if (properties.kind === 1)
+              return "kind: multiple values";
+            properties.kind = 1;
+            {
+              let error = $root.tilbo.ipc.v1.RestoreTrashResponse.verify(message.restoreTrash);
+              if (error)
+                return "restoreTrash." + error;
+            }
+          }
+          if (message.emptyTrash != null && message.hasOwnProperty("emptyTrash")) {
+            if (properties.kind === 1)
+              return "kind: multiple values";
+            properties.kind = 1;
+            {
+              let error = $root.tilbo.ipc.v1.EmptyTrashResponse.verify(message.emptyTrash);
+              if (error)
+                return "emptyTrash." + error;
+            }
+          }
+          if (message.listAppsForFile != null && message.hasOwnProperty("listAppsForFile")) {
+            if (properties.kind === 1)
+              return "kind: multiple values";
+            properties.kind = 1;
+            {
+              let error = $root.tilbo.ipc.v1.ListAppsForFileResponse.verify(message.listAppsForFile);
+              if (error)
+                return "listAppsForFile." + error;
+            }
+          }
+          if (message.openWithApp != null && message.hasOwnProperty("openWithApp")) {
+            if (properties.kind === 1)
+              return "kind: multiple values";
+            properties.kind = 1;
+            {
+              let error = $root.tilbo.ipc.v1.OpenWithAppResponse.verify(message.openWithApp);
+              if (error)
+                return "openWithApp." + error;
+            }
+          }
+          if (message.getBrowserConfig != null && message.hasOwnProperty("getBrowserConfig")) {
+            if (properties.kind === 1)
+              return "kind: multiple values";
+            properties.kind = 1;
+            {
+              let error = $root.tilbo.ipc.v1.GetBrowserConfigResponse.verify(message.getBrowserConfig);
+              if (error)
+                return "getBrowserConfig." + error;
+            }
+          }
+          if (message.getFileBadges != null && message.hasOwnProperty("getFileBadges")) {
+            if (properties.kind === 1)
+              return "kind: multiple values";
+            properties.kind = 1;
+            {
+              let error = $root.tilbo.ipc.v1.GetFileBadgesResponse.verify(message.getFileBadges);
+              if (error)
+                return "getFileBadges." + error;
+            }
+          }
+          if (message.getFileActions != null && message.hasOwnProperty("getFileActions")) {
+            if (properties.kind === 1)
+              return "kind: multiple values";
+            properties.kind = 1;
+            {
+              let error = $root.tilbo.ipc.v1.GetFileActionsResponse.verify(message.getFileActions);
+              if (error)
+                return "getFileActions." + error;
+            }
+          }
+          if (message.runFileAction != null && message.hasOwnProperty("runFileAction")) {
+            if (properties.kind === 1)
+              return "kind: multiple values";
+            properties.kind = 1;
+            {
+              let error = $root.tilbo.ipc.v1.RunFileActionResponse.verify(message.runFileAction);
+              if (error)
+                return "runFileAction." + error;
+            }
+          }
+          if (message.launchGui != null && message.hasOwnProperty("launchGui")) {
+            if (properties.kind === 1)
+              return "kind: multiple values";
+            properties.kind = 1;
+            {
+              let error = $root.tilbo.ipc.v1.LaunchGUIResponse.verify(message.launchGui);
+              if (error)
+                return "launchGui." + error;
+            }
+          }
           return null;
         };
         Response.fromObject = function fromObject(object) {
@@ -2621,6 +3271,71 @@ var tilbo = $root.tilbo = (() => {
             if (typeof object.listPlaces !== "object")
               throw TypeError(".tilbo.ipc.v1.Response.listPlaces: object expected");
             message.listPlaces = $root.tilbo.ipc.v1.ListPlacesResponse.fromObject(object.listPlaces);
+          }
+          if (object.pinPlace != null) {
+            if (typeof object.pinPlace !== "object")
+              throw TypeError(".tilbo.ipc.v1.Response.pinPlace: object expected");
+            message.pinPlace = $root.tilbo.ipc.v1.PinPlaceResponse.fromObject(object.pinPlace);
+          }
+          if (object.unpinPlace != null) {
+            if (typeof object.unpinPlace !== "object")
+              throw TypeError(".tilbo.ipc.v1.Response.unpinPlace: object expected");
+            message.unpinPlace = $root.tilbo.ipc.v1.UnpinPlaceResponse.fromObject(object.unpinPlace);
+          }
+          if (object.trashFile != null) {
+            if (typeof object.trashFile !== "object")
+              throw TypeError(".tilbo.ipc.v1.Response.trashFile: object expected");
+            message.trashFile = $root.tilbo.ipc.v1.TrashFileResponse.fromObject(object.trashFile);
+          }
+          if (object.listTrash != null) {
+            if (typeof object.listTrash !== "object")
+              throw TypeError(".tilbo.ipc.v1.Response.listTrash: object expected");
+            message.listTrash = $root.tilbo.ipc.v1.ListTrashResponse.fromObject(object.listTrash);
+          }
+          if (object.restoreTrash != null) {
+            if (typeof object.restoreTrash !== "object")
+              throw TypeError(".tilbo.ipc.v1.Response.restoreTrash: object expected");
+            message.restoreTrash = $root.tilbo.ipc.v1.RestoreTrashResponse.fromObject(object.restoreTrash);
+          }
+          if (object.emptyTrash != null) {
+            if (typeof object.emptyTrash !== "object")
+              throw TypeError(".tilbo.ipc.v1.Response.emptyTrash: object expected");
+            message.emptyTrash = $root.tilbo.ipc.v1.EmptyTrashResponse.fromObject(object.emptyTrash);
+          }
+          if (object.listAppsForFile != null) {
+            if (typeof object.listAppsForFile !== "object")
+              throw TypeError(".tilbo.ipc.v1.Response.listAppsForFile: object expected");
+            message.listAppsForFile = $root.tilbo.ipc.v1.ListAppsForFileResponse.fromObject(object.listAppsForFile);
+          }
+          if (object.openWithApp != null) {
+            if (typeof object.openWithApp !== "object")
+              throw TypeError(".tilbo.ipc.v1.Response.openWithApp: object expected");
+            message.openWithApp = $root.tilbo.ipc.v1.OpenWithAppResponse.fromObject(object.openWithApp);
+          }
+          if (object.getBrowserConfig != null) {
+            if (typeof object.getBrowserConfig !== "object")
+              throw TypeError(".tilbo.ipc.v1.Response.getBrowserConfig: object expected");
+            message.getBrowserConfig = $root.tilbo.ipc.v1.GetBrowserConfigResponse.fromObject(object.getBrowserConfig);
+          }
+          if (object.getFileBadges != null) {
+            if (typeof object.getFileBadges !== "object")
+              throw TypeError(".tilbo.ipc.v1.Response.getFileBadges: object expected");
+            message.getFileBadges = $root.tilbo.ipc.v1.GetFileBadgesResponse.fromObject(object.getFileBadges);
+          }
+          if (object.getFileActions != null) {
+            if (typeof object.getFileActions !== "object")
+              throw TypeError(".tilbo.ipc.v1.Response.getFileActions: object expected");
+            message.getFileActions = $root.tilbo.ipc.v1.GetFileActionsResponse.fromObject(object.getFileActions);
+          }
+          if (object.runFileAction != null) {
+            if (typeof object.runFileAction !== "object")
+              throw TypeError(".tilbo.ipc.v1.Response.runFileAction: object expected");
+            message.runFileAction = $root.tilbo.ipc.v1.RunFileActionResponse.fromObject(object.runFileAction);
+          }
+          if (object.launchGui != null) {
+            if (typeof object.launchGui !== "object")
+              throw TypeError(".tilbo.ipc.v1.Response.launchGui: object expected");
+            message.launchGui = $root.tilbo.ipc.v1.LaunchGUIResponse.fromObject(object.launchGui);
           }
           return message;
         };
@@ -2708,6 +3423,71 @@ var tilbo = $root.tilbo = (() => {
             if (options.oneofs)
               object.kind = "listPlaces";
           }
+          if (message.pinPlace != null && message.hasOwnProperty("pinPlace")) {
+            object.pinPlace = $root.tilbo.ipc.v1.PinPlaceResponse.toObject(message.pinPlace, options);
+            if (options.oneofs)
+              object.kind = "pinPlace";
+          }
+          if (message.unpinPlace != null && message.hasOwnProperty("unpinPlace")) {
+            object.unpinPlace = $root.tilbo.ipc.v1.UnpinPlaceResponse.toObject(message.unpinPlace, options);
+            if (options.oneofs)
+              object.kind = "unpinPlace";
+          }
+          if (message.trashFile != null && message.hasOwnProperty("trashFile")) {
+            object.trashFile = $root.tilbo.ipc.v1.TrashFileResponse.toObject(message.trashFile, options);
+            if (options.oneofs)
+              object.kind = "trashFile";
+          }
+          if (message.listTrash != null && message.hasOwnProperty("listTrash")) {
+            object.listTrash = $root.tilbo.ipc.v1.ListTrashResponse.toObject(message.listTrash, options);
+            if (options.oneofs)
+              object.kind = "listTrash";
+          }
+          if (message.restoreTrash != null && message.hasOwnProperty("restoreTrash")) {
+            object.restoreTrash = $root.tilbo.ipc.v1.RestoreTrashResponse.toObject(message.restoreTrash, options);
+            if (options.oneofs)
+              object.kind = "restoreTrash";
+          }
+          if (message.emptyTrash != null && message.hasOwnProperty("emptyTrash")) {
+            object.emptyTrash = $root.tilbo.ipc.v1.EmptyTrashResponse.toObject(message.emptyTrash, options);
+            if (options.oneofs)
+              object.kind = "emptyTrash";
+          }
+          if (message.listAppsForFile != null && message.hasOwnProperty("listAppsForFile")) {
+            object.listAppsForFile = $root.tilbo.ipc.v1.ListAppsForFileResponse.toObject(message.listAppsForFile, options);
+            if (options.oneofs)
+              object.kind = "listAppsForFile";
+          }
+          if (message.openWithApp != null && message.hasOwnProperty("openWithApp")) {
+            object.openWithApp = $root.tilbo.ipc.v1.OpenWithAppResponse.toObject(message.openWithApp, options);
+            if (options.oneofs)
+              object.kind = "openWithApp";
+          }
+          if (message.getBrowserConfig != null && message.hasOwnProperty("getBrowserConfig")) {
+            object.getBrowserConfig = $root.tilbo.ipc.v1.GetBrowserConfigResponse.toObject(message.getBrowserConfig, options);
+            if (options.oneofs)
+              object.kind = "getBrowserConfig";
+          }
+          if (message.getFileBadges != null && message.hasOwnProperty("getFileBadges")) {
+            object.getFileBadges = $root.tilbo.ipc.v1.GetFileBadgesResponse.toObject(message.getFileBadges, options);
+            if (options.oneofs)
+              object.kind = "getFileBadges";
+          }
+          if (message.getFileActions != null && message.hasOwnProperty("getFileActions")) {
+            object.getFileActions = $root.tilbo.ipc.v1.GetFileActionsResponse.toObject(message.getFileActions, options);
+            if (options.oneofs)
+              object.kind = "getFileActions";
+          }
+          if (message.runFileAction != null && message.hasOwnProperty("runFileAction")) {
+            object.runFileAction = $root.tilbo.ipc.v1.RunFileActionResponse.toObject(message.runFileAction, options);
+            if (options.oneofs)
+              object.kind = "runFileAction";
+          }
+          if (message.launchGui != null && message.hasOwnProperty("launchGui")) {
+            object.launchGui = $root.tilbo.ipc.v1.LaunchGUIResponse.toObject(message.launchGui, options);
+            if (options.oneofs)
+              object.kind = "launchGui";
+          }
           return object;
         };
         Response.prototype.toJSON = function toJSON() {
@@ -2732,9 +3512,10 @@ var tilbo = $root.tilbo = (() => {
         Event.prototype.fileTagged = null;
         Event.prototype.indexUpdated = null;
         Event.prototype.daemonStateChanged = null;
+        Event.prototype.showWindow = null;
         let $oneOfFields;
         Object.defineProperty(Event.prototype, "kind", {
-          get: $util.oneOfGetter($oneOfFields = ["fileTagged", "indexUpdated", "daemonStateChanged"]),
+          get: $util.oneOfGetter($oneOfFields = ["fileTagged", "indexUpdated", "daemonStateChanged", "showWindow"]),
           set: $util.oneOfSetter($oneOfFields)
         });
         Event.create = function create(properties) {
@@ -2757,6 +3538,11 @@ var tilbo = $root.tilbo = (() => {
             $root.tilbo.ipc.v1.DaemonStateChangedEvent.encode(message.daemonStateChanged, writer.uint32(
               /* id 3, wireType 2 =*/
               26
+            ).fork()).ldelim();
+          if (message.showWindow != null && Object.hasOwnProperty.call(message, "showWindow"))
+            $root.tilbo.ipc.v1.ShowWindowEvent.encode(message.showWindow, writer.uint32(
+              /* id 4, wireType 2 =*/
+              34
             ).fork()).ldelim();
           return writer;
         };
@@ -2782,6 +3568,10 @@ var tilbo = $root.tilbo = (() => {
               }
               case 3: {
                 message.daemonStateChanged = $root.tilbo.ipc.v1.DaemonStateChangedEvent.decode(reader, reader.uint32());
+                break;
+              }
+              case 4: {
+                message.showWindow = $root.tilbo.ipc.v1.ShowWindowEvent.decode(reader, reader.uint32());
                 break;
               }
               default:
@@ -2828,6 +3618,16 @@ var tilbo = $root.tilbo = (() => {
                 return "daemonStateChanged." + error;
             }
           }
+          if (message.showWindow != null && message.hasOwnProperty("showWindow")) {
+            if (properties.kind === 1)
+              return "kind: multiple values";
+            properties.kind = 1;
+            {
+              let error = $root.tilbo.ipc.v1.ShowWindowEvent.verify(message.showWindow);
+              if (error)
+                return "showWindow." + error;
+            }
+          }
           return null;
         };
         Event.fromObject = function fromObject(object) {
@@ -2849,6 +3649,11 @@ var tilbo = $root.tilbo = (() => {
               throw TypeError(".tilbo.ipc.v1.Event.daemonStateChanged: object expected");
             message.daemonStateChanged = $root.tilbo.ipc.v1.DaemonStateChangedEvent.fromObject(object.daemonStateChanged);
           }
+          if (object.showWindow != null) {
+            if (typeof object.showWindow !== "object")
+              throw TypeError(".tilbo.ipc.v1.Event.showWindow: object expected");
+            message.showWindow = $root.tilbo.ipc.v1.ShowWindowEvent.fromObject(object.showWindow);
+          }
           return message;
         };
         Event.toObject = function toObject(message, options) {
@@ -2869,6 +3674,11 @@ var tilbo = $root.tilbo = (() => {
             object.daemonStateChanged = $root.tilbo.ipc.v1.DaemonStateChangedEvent.toObject(message.daemonStateChanged, options);
             if (options.oneofs)
               object.kind = "daemonStateChanged";
+          }
+          if (message.showWindow != null && message.hasOwnProperty("showWindow")) {
+            object.showWindow = $root.tilbo.ipc.v1.ShowWindowEvent.toObject(message.showWindow, options);
+            if (options.oneofs)
+              object.kind = "showWindow";
           }
           return object;
         };
@@ -6142,6 +6952,8 @@ var tilbo = $root.tilbo = (() => {
         DirEntry.prototype.mtime = $util.Long ? $util.Long.fromBits(0, 0, false) : 0;
         DirEntry.prototype.mode = 0;
         DirEntry.prototype.hidden = false;
+        DirEntry.prototype.mimeType = "";
+        DirEntry.prototype.iconName = "";
         DirEntry.create = function create(properties) {
           return new DirEntry(properties);
         };
@@ -6183,6 +6995,16 @@ var tilbo = $root.tilbo = (() => {
               /* id 7, wireType 0 =*/
               56
             ).bool(message.hidden);
+          if (message.mimeType != null && Object.hasOwnProperty.call(message, "mimeType"))
+            writer.uint32(
+              /* id 8, wireType 2 =*/
+              66
+            ).string(message.mimeType);
+          if (message.iconName != null && Object.hasOwnProperty.call(message, "iconName"))
+            writer.uint32(
+              /* id 9, wireType 2 =*/
+              74
+            ).string(message.iconName);
           return writer;
         };
         DirEntry.encodeDelimited = function encodeDelimited(message, writer) {
@@ -6223,6 +7045,14 @@ var tilbo = $root.tilbo = (() => {
               }
               case 7: {
                 message.hidden = reader.bool();
+                break;
+              }
+              case 8: {
+                message.mimeType = reader.string();
+                break;
+              }
+              case 9: {
+                message.iconName = reader.string();
                 break;
               }
               default:
@@ -6268,6 +7098,14 @@ var tilbo = $root.tilbo = (() => {
             if (typeof message.hidden !== "boolean")
               return "hidden: boolean expected";
           }
+          if (message.mimeType != null && message.hasOwnProperty("mimeType")) {
+            if (!$util.isString(message.mimeType))
+              return "mimeType: string expected";
+          }
+          if (message.iconName != null && message.hasOwnProperty("iconName")) {
+            if (!$util.isString(message.iconName))
+              return "iconName: string expected";
+          }
           return null;
         };
         DirEntry.fromObject = function fromObject(object) {
@@ -6304,6 +7142,10 @@ var tilbo = $root.tilbo = (() => {
             message.mode = object.mode >>> 0;
           if (object.hidden != null)
             message.hidden = Boolean(object.hidden);
+          if (object.mimeType != null)
+            message.mimeType = String(object.mimeType);
+          if (object.iconName != null)
+            message.iconName = String(object.iconName);
           return message;
         };
         DirEntry.toObject = function toObject(message, options) {
@@ -6326,6 +7168,8 @@ var tilbo = $root.tilbo = (() => {
               object.mtime = options.longs === String ? "0" : 0;
             object.mode = 0;
             object.hidden = false;
+            object.mimeType = "";
+            object.iconName = "";
           }
           if (message.name != null && message.hasOwnProperty("name"))
             object.name = message.name;
@@ -6347,6 +7191,10 @@ var tilbo = $root.tilbo = (() => {
             object.mode = message.mode;
           if (message.hidden != null && message.hasOwnProperty("hidden"))
             object.hidden = message.hidden;
+          if (message.mimeType != null && message.hasOwnProperty("mimeType"))
+            object.mimeType = message.mimeType;
+          if (message.iconName != null && message.hasOwnProperty("iconName"))
+            object.iconName = message.iconName;
           return object;
         };
         DirEntry.prototype.toJSON = function toJSON() {
@@ -7650,6 +8498,8 @@ var tilbo = $root.tilbo = (() => {
         }
         PlaceEntry.prototype.name = "";
         PlaceEntry.prototype.path = "";
+        PlaceEntry.prototype.pinned = false;
+        PlaceEntry.prototype.iconName = "";
         PlaceEntry.create = function create(properties) {
           return new PlaceEntry(properties);
         };
@@ -7666,6 +8516,16 @@ var tilbo = $root.tilbo = (() => {
               /* id 2, wireType 2 =*/
               18
             ).string(message.path);
+          if (message.pinned != null && Object.hasOwnProperty.call(message, "pinned"))
+            writer.uint32(
+              /* id 3, wireType 0 =*/
+              24
+            ).bool(message.pinned);
+          if (message.iconName != null && Object.hasOwnProperty.call(message, "iconName"))
+            writer.uint32(
+              /* id 4, wireType 2 =*/
+              34
+            ).string(message.iconName);
           return writer;
         };
         PlaceEntry.encodeDelimited = function encodeDelimited(message, writer) {
@@ -7686,6 +8546,14 @@ var tilbo = $root.tilbo = (() => {
               }
               case 2: {
                 message.path = reader.string();
+                break;
+              }
+              case 3: {
+                message.pinned = reader.bool();
+                break;
+              }
+              case 4: {
+                message.iconName = reader.string();
                 break;
               }
               default:
@@ -7711,6 +8579,14 @@ var tilbo = $root.tilbo = (() => {
             if (!$util.isString(message.path))
               return "path: string expected";
           }
+          if (message.pinned != null && message.hasOwnProperty("pinned")) {
+            if (typeof message.pinned !== "boolean")
+              return "pinned: boolean expected";
+          }
+          if (message.iconName != null && message.hasOwnProperty("iconName")) {
+            if (!$util.isString(message.iconName))
+              return "iconName: string expected";
+          }
           return null;
         };
         PlaceEntry.fromObject = function fromObject(object) {
@@ -7721,6 +8597,10 @@ var tilbo = $root.tilbo = (() => {
             message.name = String(object.name);
           if (object.path != null)
             message.path = String(object.path);
+          if (object.pinned != null)
+            message.pinned = Boolean(object.pinned);
+          if (object.iconName != null)
+            message.iconName = String(object.iconName);
           return message;
         };
         PlaceEntry.toObject = function toObject(message, options) {
@@ -7730,11 +8610,17 @@ var tilbo = $root.tilbo = (() => {
           if (options.defaults) {
             object.name = "";
             object.path = "";
+            object.pinned = false;
+            object.iconName = "";
           }
           if (message.name != null && message.hasOwnProperty("name"))
             object.name = message.name;
           if (message.path != null && message.hasOwnProperty("path"))
             object.path = message.path;
+          if (message.pinned != null && message.hasOwnProperty("pinned"))
+            object.pinned = message.pinned;
+          if (message.iconName != null && message.hasOwnProperty("iconName"))
+            object.iconName = message.iconName;
           return object;
         };
         PlaceEntry.prototype.toJSON = function toJSON() {
@@ -8239,6 +9125,2767 @@ var tilbo = $root.tilbo = (() => {
           return typeUrlPrefix + "/tilbo.ipc.v1.DaemonStateChangedEvent";
         };
         return DaemonStateChangedEvent;
+      })();
+      v1.PinPlaceRequest = (function() {
+        function PinPlaceRequest(properties) {
+          if (properties) {
+            for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+              if (properties[keys[i]] != null)
+                this[keys[i]] = properties[keys[i]];
+          }
+        }
+        PinPlaceRequest.prototype.name = "";
+        PinPlaceRequest.prototype.path = "";
+        PinPlaceRequest.prototype.iconName = "";
+        PinPlaceRequest.create = function create(properties) {
+          return new PinPlaceRequest(properties);
+        };
+        PinPlaceRequest.encode = function encode(message, writer) {
+          if (!writer)
+            writer = $Writer.create();
+          if (message.name != null && Object.hasOwnProperty.call(message, "name"))
+            writer.uint32(
+              /* id 1, wireType 2 =*/
+              10
+            ).string(message.name);
+          if (message.path != null && Object.hasOwnProperty.call(message, "path"))
+            writer.uint32(
+              /* id 2, wireType 2 =*/
+              18
+            ).string(message.path);
+          if (message.iconName != null && Object.hasOwnProperty.call(message, "iconName"))
+            writer.uint32(
+              /* id 3, wireType 2 =*/
+              26
+            ).string(message.iconName);
+          return writer;
+        };
+        PinPlaceRequest.encodeDelimited = function encodeDelimited(message, writer) {
+          return this.encode(message, writer).ldelim();
+        };
+        PinPlaceRequest.decode = function decode(reader, length, error) {
+          if (!(reader instanceof $Reader))
+            reader = $Reader.create(reader);
+          let end = length === void 0 ? reader.len : reader.pos + length, message = new $root.tilbo.ipc.v1.PinPlaceRequest();
+          while (reader.pos < end) {
+            let tag = reader.uint32();
+            if (tag === error)
+              break;
+            switch (tag >>> 3) {
+              case 1: {
+                message.name = reader.string();
+                break;
+              }
+              case 2: {
+                message.path = reader.string();
+                break;
+              }
+              case 3: {
+                message.iconName = reader.string();
+                break;
+              }
+              default:
+                reader.skipType(tag & 7);
+                break;
+            }
+          }
+          return message;
+        };
+        PinPlaceRequest.decodeDelimited = function decodeDelimited(reader) {
+          if (!(reader instanceof $Reader))
+            reader = new $Reader(reader);
+          return this.decode(reader, reader.uint32());
+        };
+        PinPlaceRequest.verify = function verify(message) {
+          if (typeof message !== "object" || message === null)
+            return "object expected";
+          if (message.name != null && message.hasOwnProperty("name")) {
+            if (!$util.isString(message.name))
+              return "name: string expected";
+          }
+          if (message.path != null && message.hasOwnProperty("path")) {
+            if (!$util.isString(message.path))
+              return "path: string expected";
+          }
+          if (message.iconName != null && message.hasOwnProperty("iconName")) {
+            if (!$util.isString(message.iconName))
+              return "iconName: string expected";
+          }
+          return null;
+        };
+        PinPlaceRequest.fromObject = function fromObject(object) {
+          if (object instanceof $root.tilbo.ipc.v1.PinPlaceRequest)
+            return object;
+          let message = new $root.tilbo.ipc.v1.PinPlaceRequest();
+          if (object.name != null)
+            message.name = String(object.name);
+          if (object.path != null)
+            message.path = String(object.path);
+          if (object.iconName != null)
+            message.iconName = String(object.iconName);
+          return message;
+        };
+        PinPlaceRequest.toObject = function toObject(message, options) {
+          if (!options)
+            options = {};
+          let object = {};
+          if (options.defaults) {
+            object.name = "";
+            object.path = "";
+            object.iconName = "";
+          }
+          if (message.name != null && message.hasOwnProperty("name"))
+            object.name = message.name;
+          if (message.path != null && message.hasOwnProperty("path"))
+            object.path = message.path;
+          if (message.iconName != null && message.hasOwnProperty("iconName"))
+            object.iconName = message.iconName;
+          return object;
+        };
+        PinPlaceRequest.prototype.toJSON = function toJSON() {
+          return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+        };
+        PinPlaceRequest.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
+          if (typeUrlPrefix === void 0) {
+            typeUrlPrefix = "type.googleapis.com";
+          }
+          return typeUrlPrefix + "/tilbo.ipc.v1.PinPlaceRequest";
+        };
+        return PinPlaceRequest;
+      })();
+      v1.PinPlaceResponse = (function() {
+        function PinPlaceResponse(properties) {
+          if (properties) {
+            for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+              if (properties[keys[i]] != null)
+                this[keys[i]] = properties[keys[i]];
+          }
+        }
+        PinPlaceResponse.create = function create(properties) {
+          return new PinPlaceResponse(properties);
+        };
+        PinPlaceResponse.encode = function encode(message, writer) {
+          if (!writer)
+            writer = $Writer.create();
+          return writer;
+        };
+        PinPlaceResponse.encodeDelimited = function encodeDelimited(message, writer) {
+          return this.encode(message, writer).ldelim();
+        };
+        PinPlaceResponse.decode = function decode(reader, length, error) {
+          if (!(reader instanceof $Reader))
+            reader = $Reader.create(reader);
+          let end = length === void 0 ? reader.len : reader.pos + length, message = new $root.tilbo.ipc.v1.PinPlaceResponse();
+          while (reader.pos < end) {
+            let tag = reader.uint32();
+            if (tag === error)
+              break;
+            switch (tag >>> 3) {
+              default:
+                reader.skipType(tag & 7);
+                break;
+            }
+          }
+          return message;
+        };
+        PinPlaceResponse.decodeDelimited = function decodeDelimited(reader) {
+          if (!(reader instanceof $Reader))
+            reader = new $Reader(reader);
+          return this.decode(reader, reader.uint32());
+        };
+        PinPlaceResponse.verify = function verify(message) {
+          if (typeof message !== "object" || message === null)
+            return "object expected";
+          return null;
+        };
+        PinPlaceResponse.fromObject = function fromObject(object) {
+          if (object instanceof $root.tilbo.ipc.v1.PinPlaceResponse)
+            return object;
+          return new $root.tilbo.ipc.v1.PinPlaceResponse();
+        };
+        PinPlaceResponse.toObject = function toObject() {
+          return {};
+        };
+        PinPlaceResponse.prototype.toJSON = function toJSON() {
+          return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+        };
+        PinPlaceResponse.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
+          if (typeUrlPrefix === void 0) {
+            typeUrlPrefix = "type.googleapis.com";
+          }
+          return typeUrlPrefix + "/tilbo.ipc.v1.PinPlaceResponse";
+        };
+        return PinPlaceResponse;
+      })();
+      v1.UnpinPlaceRequest = (function() {
+        function UnpinPlaceRequest(properties) {
+          if (properties) {
+            for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+              if (properties[keys[i]] != null)
+                this[keys[i]] = properties[keys[i]];
+          }
+        }
+        UnpinPlaceRequest.prototype.path = "";
+        UnpinPlaceRequest.create = function create(properties) {
+          return new UnpinPlaceRequest(properties);
+        };
+        UnpinPlaceRequest.encode = function encode(message, writer) {
+          if (!writer)
+            writer = $Writer.create();
+          if (message.path != null && Object.hasOwnProperty.call(message, "path"))
+            writer.uint32(
+              /* id 1, wireType 2 =*/
+              10
+            ).string(message.path);
+          return writer;
+        };
+        UnpinPlaceRequest.encodeDelimited = function encodeDelimited(message, writer) {
+          return this.encode(message, writer).ldelim();
+        };
+        UnpinPlaceRequest.decode = function decode(reader, length, error) {
+          if (!(reader instanceof $Reader))
+            reader = $Reader.create(reader);
+          let end = length === void 0 ? reader.len : reader.pos + length, message = new $root.tilbo.ipc.v1.UnpinPlaceRequest();
+          while (reader.pos < end) {
+            let tag = reader.uint32();
+            if (tag === error)
+              break;
+            switch (tag >>> 3) {
+              case 1: {
+                message.path = reader.string();
+                break;
+              }
+              default:
+                reader.skipType(tag & 7);
+                break;
+            }
+          }
+          return message;
+        };
+        UnpinPlaceRequest.decodeDelimited = function decodeDelimited(reader) {
+          if (!(reader instanceof $Reader))
+            reader = new $Reader(reader);
+          return this.decode(reader, reader.uint32());
+        };
+        UnpinPlaceRequest.verify = function verify(message) {
+          if (typeof message !== "object" || message === null)
+            return "object expected";
+          if (message.path != null && message.hasOwnProperty("path")) {
+            if (!$util.isString(message.path))
+              return "path: string expected";
+          }
+          return null;
+        };
+        UnpinPlaceRequest.fromObject = function fromObject(object) {
+          if (object instanceof $root.tilbo.ipc.v1.UnpinPlaceRequest)
+            return object;
+          let message = new $root.tilbo.ipc.v1.UnpinPlaceRequest();
+          if (object.path != null)
+            message.path = String(object.path);
+          return message;
+        };
+        UnpinPlaceRequest.toObject = function toObject(message, options) {
+          if (!options)
+            options = {};
+          let object = {};
+          if (options.defaults)
+            object.path = "";
+          if (message.path != null && message.hasOwnProperty("path"))
+            object.path = message.path;
+          return object;
+        };
+        UnpinPlaceRequest.prototype.toJSON = function toJSON() {
+          return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+        };
+        UnpinPlaceRequest.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
+          if (typeUrlPrefix === void 0) {
+            typeUrlPrefix = "type.googleapis.com";
+          }
+          return typeUrlPrefix + "/tilbo.ipc.v1.UnpinPlaceRequest";
+        };
+        return UnpinPlaceRequest;
+      })();
+      v1.UnpinPlaceResponse = (function() {
+        function UnpinPlaceResponse(properties) {
+          if (properties) {
+            for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+              if (properties[keys[i]] != null)
+                this[keys[i]] = properties[keys[i]];
+          }
+        }
+        UnpinPlaceResponse.create = function create(properties) {
+          return new UnpinPlaceResponse(properties);
+        };
+        UnpinPlaceResponse.encode = function encode(message, writer) {
+          if (!writer)
+            writer = $Writer.create();
+          return writer;
+        };
+        UnpinPlaceResponse.encodeDelimited = function encodeDelimited(message, writer) {
+          return this.encode(message, writer).ldelim();
+        };
+        UnpinPlaceResponse.decode = function decode(reader, length, error) {
+          if (!(reader instanceof $Reader))
+            reader = $Reader.create(reader);
+          let end = length === void 0 ? reader.len : reader.pos + length, message = new $root.tilbo.ipc.v1.UnpinPlaceResponse();
+          while (reader.pos < end) {
+            let tag = reader.uint32();
+            if (tag === error)
+              break;
+            switch (tag >>> 3) {
+              default:
+                reader.skipType(tag & 7);
+                break;
+            }
+          }
+          return message;
+        };
+        UnpinPlaceResponse.decodeDelimited = function decodeDelimited(reader) {
+          if (!(reader instanceof $Reader))
+            reader = new $Reader(reader);
+          return this.decode(reader, reader.uint32());
+        };
+        UnpinPlaceResponse.verify = function verify(message) {
+          if (typeof message !== "object" || message === null)
+            return "object expected";
+          return null;
+        };
+        UnpinPlaceResponse.fromObject = function fromObject(object) {
+          if (object instanceof $root.tilbo.ipc.v1.UnpinPlaceResponse)
+            return object;
+          return new $root.tilbo.ipc.v1.UnpinPlaceResponse();
+        };
+        UnpinPlaceResponse.toObject = function toObject() {
+          return {};
+        };
+        UnpinPlaceResponse.prototype.toJSON = function toJSON() {
+          return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+        };
+        UnpinPlaceResponse.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
+          if (typeUrlPrefix === void 0) {
+            typeUrlPrefix = "type.googleapis.com";
+          }
+          return typeUrlPrefix + "/tilbo.ipc.v1.UnpinPlaceResponse";
+        };
+        return UnpinPlaceResponse;
+      })();
+      v1.TrashFileRequest = (function() {
+        function TrashFileRequest(properties) {
+          if (properties) {
+            for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+              if (properties[keys[i]] != null)
+                this[keys[i]] = properties[keys[i]];
+          }
+        }
+        TrashFileRequest.prototype.path = "";
+        TrashFileRequest.create = function create(properties) {
+          return new TrashFileRequest(properties);
+        };
+        TrashFileRequest.encode = function encode(message, writer) {
+          if (!writer)
+            writer = $Writer.create();
+          if (message.path != null && Object.hasOwnProperty.call(message, "path"))
+            writer.uint32(
+              /* id 1, wireType 2 =*/
+              10
+            ).string(message.path);
+          return writer;
+        };
+        TrashFileRequest.encodeDelimited = function encodeDelimited(message, writer) {
+          return this.encode(message, writer).ldelim();
+        };
+        TrashFileRequest.decode = function decode(reader, length, error) {
+          if (!(reader instanceof $Reader))
+            reader = $Reader.create(reader);
+          let end = length === void 0 ? reader.len : reader.pos + length, message = new $root.tilbo.ipc.v1.TrashFileRequest();
+          while (reader.pos < end) {
+            let tag = reader.uint32();
+            if (tag === error)
+              break;
+            switch (tag >>> 3) {
+              case 1: {
+                message.path = reader.string();
+                break;
+              }
+              default:
+                reader.skipType(tag & 7);
+                break;
+            }
+          }
+          return message;
+        };
+        TrashFileRequest.decodeDelimited = function decodeDelimited(reader) {
+          if (!(reader instanceof $Reader))
+            reader = new $Reader(reader);
+          return this.decode(reader, reader.uint32());
+        };
+        TrashFileRequest.verify = function verify(message) {
+          if (typeof message !== "object" || message === null)
+            return "object expected";
+          if (message.path != null && message.hasOwnProperty("path")) {
+            if (!$util.isString(message.path))
+              return "path: string expected";
+          }
+          return null;
+        };
+        TrashFileRequest.fromObject = function fromObject(object) {
+          if (object instanceof $root.tilbo.ipc.v1.TrashFileRequest)
+            return object;
+          let message = new $root.tilbo.ipc.v1.TrashFileRequest();
+          if (object.path != null)
+            message.path = String(object.path);
+          return message;
+        };
+        TrashFileRequest.toObject = function toObject(message, options) {
+          if (!options)
+            options = {};
+          let object = {};
+          if (options.defaults)
+            object.path = "";
+          if (message.path != null && message.hasOwnProperty("path"))
+            object.path = message.path;
+          return object;
+        };
+        TrashFileRequest.prototype.toJSON = function toJSON() {
+          return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+        };
+        TrashFileRequest.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
+          if (typeUrlPrefix === void 0) {
+            typeUrlPrefix = "type.googleapis.com";
+          }
+          return typeUrlPrefix + "/tilbo.ipc.v1.TrashFileRequest";
+        };
+        return TrashFileRequest;
+      })();
+      v1.TrashFileResponse = (function() {
+        function TrashFileResponse(properties) {
+          if (properties) {
+            for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+              if (properties[keys[i]] != null)
+                this[keys[i]] = properties[keys[i]];
+          }
+        }
+        TrashFileResponse.create = function create(properties) {
+          return new TrashFileResponse(properties);
+        };
+        TrashFileResponse.encode = function encode(message, writer) {
+          if (!writer)
+            writer = $Writer.create();
+          return writer;
+        };
+        TrashFileResponse.encodeDelimited = function encodeDelimited(message, writer) {
+          return this.encode(message, writer).ldelim();
+        };
+        TrashFileResponse.decode = function decode(reader, length, error) {
+          if (!(reader instanceof $Reader))
+            reader = $Reader.create(reader);
+          let end = length === void 0 ? reader.len : reader.pos + length, message = new $root.tilbo.ipc.v1.TrashFileResponse();
+          while (reader.pos < end) {
+            let tag = reader.uint32();
+            if (tag === error)
+              break;
+            switch (tag >>> 3) {
+              default:
+                reader.skipType(tag & 7);
+                break;
+            }
+          }
+          return message;
+        };
+        TrashFileResponse.decodeDelimited = function decodeDelimited(reader) {
+          if (!(reader instanceof $Reader))
+            reader = new $Reader(reader);
+          return this.decode(reader, reader.uint32());
+        };
+        TrashFileResponse.verify = function verify(message) {
+          if (typeof message !== "object" || message === null)
+            return "object expected";
+          return null;
+        };
+        TrashFileResponse.fromObject = function fromObject(object) {
+          if (object instanceof $root.tilbo.ipc.v1.TrashFileResponse)
+            return object;
+          return new $root.tilbo.ipc.v1.TrashFileResponse();
+        };
+        TrashFileResponse.toObject = function toObject() {
+          return {};
+        };
+        TrashFileResponse.prototype.toJSON = function toJSON() {
+          return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+        };
+        TrashFileResponse.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
+          if (typeUrlPrefix === void 0) {
+            typeUrlPrefix = "type.googleapis.com";
+          }
+          return typeUrlPrefix + "/tilbo.ipc.v1.TrashFileResponse";
+        };
+        return TrashFileResponse;
+      })();
+      v1.ListTrashRequest = (function() {
+        function ListTrashRequest(properties) {
+          if (properties) {
+            for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+              if (properties[keys[i]] != null)
+                this[keys[i]] = properties[keys[i]];
+          }
+        }
+        ListTrashRequest.create = function create(properties) {
+          return new ListTrashRequest(properties);
+        };
+        ListTrashRequest.encode = function encode(message, writer) {
+          if (!writer)
+            writer = $Writer.create();
+          return writer;
+        };
+        ListTrashRequest.encodeDelimited = function encodeDelimited(message, writer) {
+          return this.encode(message, writer).ldelim();
+        };
+        ListTrashRequest.decode = function decode(reader, length, error) {
+          if (!(reader instanceof $Reader))
+            reader = $Reader.create(reader);
+          let end = length === void 0 ? reader.len : reader.pos + length, message = new $root.tilbo.ipc.v1.ListTrashRequest();
+          while (reader.pos < end) {
+            let tag = reader.uint32();
+            if (tag === error)
+              break;
+            switch (tag >>> 3) {
+              default:
+                reader.skipType(tag & 7);
+                break;
+            }
+          }
+          return message;
+        };
+        ListTrashRequest.decodeDelimited = function decodeDelimited(reader) {
+          if (!(reader instanceof $Reader))
+            reader = new $Reader(reader);
+          return this.decode(reader, reader.uint32());
+        };
+        ListTrashRequest.verify = function verify(message) {
+          if (typeof message !== "object" || message === null)
+            return "object expected";
+          return null;
+        };
+        ListTrashRequest.fromObject = function fromObject(object) {
+          if (object instanceof $root.tilbo.ipc.v1.ListTrashRequest)
+            return object;
+          return new $root.tilbo.ipc.v1.ListTrashRequest();
+        };
+        ListTrashRequest.toObject = function toObject() {
+          return {};
+        };
+        ListTrashRequest.prototype.toJSON = function toJSON() {
+          return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+        };
+        ListTrashRequest.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
+          if (typeUrlPrefix === void 0) {
+            typeUrlPrefix = "type.googleapis.com";
+          }
+          return typeUrlPrefix + "/tilbo.ipc.v1.ListTrashRequest";
+        };
+        return ListTrashRequest;
+      })();
+      v1.TrashEntry = (function() {
+        function TrashEntry(properties) {
+          if (properties) {
+            for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+              if (properties[keys[i]] != null)
+                this[keys[i]] = properties[keys[i]];
+          }
+        }
+        TrashEntry.prototype.name = "";
+        TrashEntry.prototype.originalPath = "";
+        TrashEntry.prototype.deletionDate = $util.Long ? $util.Long.fromBits(0, 0, false) : 0;
+        TrashEntry.prototype.sizeBytes = $util.Long ? $util.Long.fromBits(0, 0, false) : 0;
+        TrashEntry.create = function create(properties) {
+          return new TrashEntry(properties);
+        };
+        TrashEntry.encode = function encode(message, writer) {
+          if (!writer)
+            writer = $Writer.create();
+          if (message.name != null && Object.hasOwnProperty.call(message, "name"))
+            writer.uint32(
+              /* id 1, wireType 2 =*/
+              10
+            ).string(message.name);
+          if (message.originalPath != null && Object.hasOwnProperty.call(message, "originalPath"))
+            writer.uint32(
+              /* id 2, wireType 2 =*/
+              18
+            ).string(message.originalPath);
+          if (message.deletionDate != null && Object.hasOwnProperty.call(message, "deletionDate"))
+            writer.uint32(
+              /* id 3, wireType 0 =*/
+              24
+            ).int64(message.deletionDate);
+          if (message.sizeBytes != null && Object.hasOwnProperty.call(message, "sizeBytes"))
+            writer.uint32(
+              /* id 4, wireType 0 =*/
+              32
+            ).int64(message.sizeBytes);
+          return writer;
+        };
+        TrashEntry.encodeDelimited = function encodeDelimited(message, writer) {
+          return this.encode(message, writer).ldelim();
+        };
+        TrashEntry.decode = function decode(reader, length, error) {
+          if (!(reader instanceof $Reader))
+            reader = $Reader.create(reader);
+          let end = length === void 0 ? reader.len : reader.pos + length, message = new $root.tilbo.ipc.v1.TrashEntry();
+          while (reader.pos < end) {
+            let tag = reader.uint32();
+            if (tag === error)
+              break;
+            switch (tag >>> 3) {
+              case 1: {
+                message.name = reader.string();
+                break;
+              }
+              case 2: {
+                message.originalPath = reader.string();
+                break;
+              }
+              case 3: {
+                message.deletionDate = reader.int64();
+                break;
+              }
+              case 4: {
+                message.sizeBytes = reader.int64();
+                break;
+              }
+              default:
+                reader.skipType(tag & 7);
+                break;
+            }
+          }
+          return message;
+        };
+        TrashEntry.decodeDelimited = function decodeDelimited(reader) {
+          if (!(reader instanceof $Reader))
+            reader = new $Reader(reader);
+          return this.decode(reader, reader.uint32());
+        };
+        TrashEntry.verify = function verify(message) {
+          if (typeof message !== "object" || message === null)
+            return "object expected";
+          if (message.name != null && message.hasOwnProperty("name")) {
+            if (!$util.isString(message.name))
+              return "name: string expected";
+          }
+          if (message.originalPath != null && message.hasOwnProperty("originalPath")) {
+            if (!$util.isString(message.originalPath))
+              return "originalPath: string expected";
+          }
+          if (message.deletionDate != null && message.hasOwnProperty("deletionDate")) {
+            if (!$util.isInteger(message.deletionDate) && !(message.deletionDate && $util.isInteger(message.deletionDate.low) && $util.isInteger(message.deletionDate.high)))
+              return "deletionDate: integer|Long expected";
+          }
+          if (message.sizeBytes != null && message.hasOwnProperty("sizeBytes")) {
+            if (!$util.isInteger(message.sizeBytes) && !(message.sizeBytes && $util.isInteger(message.sizeBytes.low) && $util.isInteger(message.sizeBytes.high)))
+              return "sizeBytes: integer|Long expected";
+          }
+          return null;
+        };
+        TrashEntry.fromObject = function fromObject(object) {
+          if (object instanceof $root.tilbo.ipc.v1.TrashEntry)
+            return object;
+          let message = new $root.tilbo.ipc.v1.TrashEntry();
+          if (object.name != null)
+            message.name = String(object.name);
+          if (object.originalPath != null)
+            message.originalPath = String(object.originalPath);
+          if (object.deletionDate != null) {
+            if ($util.Long)
+              (message.deletionDate = $util.Long.fromValue(object.deletionDate)).unsigned = false;
+            else if (typeof object.deletionDate === "string")
+              message.deletionDate = parseInt(object.deletionDate, 10);
+            else if (typeof object.deletionDate === "number")
+              message.deletionDate = object.deletionDate;
+            else if (typeof object.deletionDate === "object")
+              message.deletionDate = new $util.LongBits(object.deletionDate.low >>> 0, object.deletionDate.high >>> 0).toNumber();
+          }
+          if (object.sizeBytes != null) {
+            if ($util.Long)
+              (message.sizeBytes = $util.Long.fromValue(object.sizeBytes)).unsigned = false;
+            else if (typeof object.sizeBytes === "string")
+              message.sizeBytes = parseInt(object.sizeBytes, 10);
+            else if (typeof object.sizeBytes === "number")
+              message.sizeBytes = object.sizeBytes;
+            else if (typeof object.sizeBytes === "object")
+              message.sizeBytes = new $util.LongBits(object.sizeBytes.low >>> 0, object.sizeBytes.high >>> 0).toNumber();
+          }
+          return message;
+        };
+        TrashEntry.toObject = function toObject(message, options) {
+          if (!options)
+            options = {};
+          let object = {};
+          if (options.defaults) {
+            object.name = "";
+            object.originalPath = "";
+            if ($util.Long) {
+              let long = new $util.Long(0, 0, false);
+              object.deletionDate = options.longs === String ? long.toString() : options.longs === Number ? long.toNumber() : long;
+            } else
+              object.deletionDate = options.longs === String ? "0" : 0;
+            if ($util.Long) {
+              let long = new $util.Long(0, 0, false);
+              object.sizeBytes = options.longs === String ? long.toString() : options.longs === Number ? long.toNumber() : long;
+            } else
+              object.sizeBytes = options.longs === String ? "0" : 0;
+          }
+          if (message.name != null && message.hasOwnProperty("name"))
+            object.name = message.name;
+          if (message.originalPath != null && message.hasOwnProperty("originalPath"))
+            object.originalPath = message.originalPath;
+          if (message.deletionDate != null && message.hasOwnProperty("deletionDate"))
+            if (typeof message.deletionDate === "number")
+              object.deletionDate = options.longs === String ? String(message.deletionDate) : message.deletionDate;
+            else
+              object.deletionDate = options.longs === String ? $util.Long.prototype.toString.call(message.deletionDate) : options.longs === Number ? new $util.LongBits(message.deletionDate.low >>> 0, message.deletionDate.high >>> 0).toNumber() : message.deletionDate;
+          if (message.sizeBytes != null && message.hasOwnProperty("sizeBytes"))
+            if (typeof message.sizeBytes === "number")
+              object.sizeBytes = options.longs === String ? String(message.sizeBytes) : message.sizeBytes;
+            else
+              object.sizeBytes = options.longs === String ? $util.Long.prototype.toString.call(message.sizeBytes) : options.longs === Number ? new $util.LongBits(message.sizeBytes.low >>> 0, message.sizeBytes.high >>> 0).toNumber() : message.sizeBytes;
+          return object;
+        };
+        TrashEntry.prototype.toJSON = function toJSON() {
+          return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+        };
+        TrashEntry.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
+          if (typeUrlPrefix === void 0) {
+            typeUrlPrefix = "type.googleapis.com";
+          }
+          return typeUrlPrefix + "/tilbo.ipc.v1.TrashEntry";
+        };
+        return TrashEntry;
+      })();
+      v1.ListTrashResponse = (function() {
+        function ListTrashResponse(properties) {
+          this.entries = [];
+          if (properties) {
+            for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+              if (properties[keys[i]] != null)
+                this[keys[i]] = properties[keys[i]];
+          }
+        }
+        ListTrashResponse.prototype.entries = $util.emptyArray;
+        ListTrashResponse.create = function create(properties) {
+          return new ListTrashResponse(properties);
+        };
+        ListTrashResponse.encode = function encode(message, writer) {
+          if (!writer)
+            writer = $Writer.create();
+          if (message.entries != null && message.entries.length)
+            for (let i = 0; i < message.entries.length; ++i)
+              $root.tilbo.ipc.v1.TrashEntry.encode(message.entries[i], writer.uint32(
+                /* id 1, wireType 2 =*/
+                10
+              ).fork()).ldelim();
+          return writer;
+        };
+        ListTrashResponse.encodeDelimited = function encodeDelimited(message, writer) {
+          return this.encode(message, writer).ldelim();
+        };
+        ListTrashResponse.decode = function decode(reader, length, error) {
+          if (!(reader instanceof $Reader))
+            reader = $Reader.create(reader);
+          let end = length === void 0 ? reader.len : reader.pos + length, message = new $root.tilbo.ipc.v1.ListTrashResponse();
+          while (reader.pos < end) {
+            let tag = reader.uint32();
+            if (tag === error)
+              break;
+            switch (tag >>> 3) {
+              case 1: {
+                if (!(message.entries && message.entries.length))
+                  message.entries = [];
+                message.entries.push($root.tilbo.ipc.v1.TrashEntry.decode(reader, reader.uint32()));
+                break;
+              }
+              default:
+                reader.skipType(tag & 7);
+                break;
+            }
+          }
+          return message;
+        };
+        ListTrashResponse.decodeDelimited = function decodeDelimited(reader) {
+          if (!(reader instanceof $Reader))
+            reader = new $Reader(reader);
+          return this.decode(reader, reader.uint32());
+        };
+        ListTrashResponse.verify = function verify(message) {
+          if (typeof message !== "object" || message === null)
+            return "object expected";
+          if (message.entries != null && message.hasOwnProperty("entries")) {
+            if (!Array.isArray(message.entries))
+              return "entries: array expected";
+            for (let i = 0; i < message.entries.length; ++i) {
+              let error = $root.tilbo.ipc.v1.TrashEntry.verify(message.entries[i]);
+              if (error)
+                return "entries." + error;
+            }
+          }
+          return null;
+        };
+        ListTrashResponse.fromObject = function fromObject(object) {
+          if (object instanceof $root.tilbo.ipc.v1.ListTrashResponse)
+            return object;
+          let message = new $root.tilbo.ipc.v1.ListTrashResponse();
+          if (object.entries) {
+            if (!Array.isArray(object.entries))
+              throw TypeError(".tilbo.ipc.v1.ListTrashResponse.entries: array expected");
+            message.entries = [];
+            for (let i = 0; i < object.entries.length; ++i) {
+              if (typeof object.entries[i] !== "object")
+                throw TypeError(".tilbo.ipc.v1.ListTrashResponse.entries: object expected");
+              message.entries[i] = $root.tilbo.ipc.v1.TrashEntry.fromObject(object.entries[i]);
+            }
+          }
+          return message;
+        };
+        ListTrashResponse.toObject = function toObject(message, options) {
+          if (!options)
+            options = {};
+          let object = {};
+          if (options.arrays || options.defaults)
+            object.entries = [];
+          if (message.entries && message.entries.length) {
+            object.entries = [];
+            for (let j = 0; j < message.entries.length; ++j)
+              object.entries[j] = $root.tilbo.ipc.v1.TrashEntry.toObject(message.entries[j], options);
+          }
+          return object;
+        };
+        ListTrashResponse.prototype.toJSON = function toJSON() {
+          return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+        };
+        ListTrashResponse.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
+          if (typeUrlPrefix === void 0) {
+            typeUrlPrefix = "type.googleapis.com";
+          }
+          return typeUrlPrefix + "/tilbo.ipc.v1.ListTrashResponse";
+        };
+        return ListTrashResponse;
+      })();
+      v1.RestoreTrashRequest = (function() {
+        function RestoreTrashRequest(properties) {
+          if (properties) {
+            for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+              if (properties[keys[i]] != null)
+                this[keys[i]] = properties[keys[i]];
+          }
+        }
+        RestoreTrashRequest.prototype.trashName = "";
+        RestoreTrashRequest.create = function create(properties) {
+          return new RestoreTrashRequest(properties);
+        };
+        RestoreTrashRequest.encode = function encode(message, writer) {
+          if (!writer)
+            writer = $Writer.create();
+          if (message.trashName != null && Object.hasOwnProperty.call(message, "trashName"))
+            writer.uint32(
+              /* id 1, wireType 2 =*/
+              10
+            ).string(message.trashName);
+          return writer;
+        };
+        RestoreTrashRequest.encodeDelimited = function encodeDelimited(message, writer) {
+          return this.encode(message, writer).ldelim();
+        };
+        RestoreTrashRequest.decode = function decode(reader, length, error) {
+          if (!(reader instanceof $Reader))
+            reader = $Reader.create(reader);
+          let end = length === void 0 ? reader.len : reader.pos + length, message = new $root.tilbo.ipc.v1.RestoreTrashRequest();
+          while (reader.pos < end) {
+            let tag = reader.uint32();
+            if (tag === error)
+              break;
+            switch (tag >>> 3) {
+              case 1: {
+                message.trashName = reader.string();
+                break;
+              }
+              default:
+                reader.skipType(tag & 7);
+                break;
+            }
+          }
+          return message;
+        };
+        RestoreTrashRequest.decodeDelimited = function decodeDelimited(reader) {
+          if (!(reader instanceof $Reader))
+            reader = new $Reader(reader);
+          return this.decode(reader, reader.uint32());
+        };
+        RestoreTrashRequest.verify = function verify(message) {
+          if (typeof message !== "object" || message === null)
+            return "object expected";
+          if (message.trashName != null && message.hasOwnProperty("trashName")) {
+            if (!$util.isString(message.trashName))
+              return "trashName: string expected";
+          }
+          return null;
+        };
+        RestoreTrashRequest.fromObject = function fromObject(object) {
+          if (object instanceof $root.tilbo.ipc.v1.RestoreTrashRequest)
+            return object;
+          let message = new $root.tilbo.ipc.v1.RestoreTrashRequest();
+          if (object.trashName != null)
+            message.trashName = String(object.trashName);
+          return message;
+        };
+        RestoreTrashRequest.toObject = function toObject(message, options) {
+          if (!options)
+            options = {};
+          let object = {};
+          if (options.defaults)
+            object.trashName = "";
+          if (message.trashName != null && message.hasOwnProperty("trashName"))
+            object.trashName = message.trashName;
+          return object;
+        };
+        RestoreTrashRequest.prototype.toJSON = function toJSON() {
+          return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+        };
+        RestoreTrashRequest.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
+          if (typeUrlPrefix === void 0) {
+            typeUrlPrefix = "type.googleapis.com";
+          }
+          return typeUrlPrefix + "/tilbo.ipc.v1.RestoreTrashRequest";
+        };
+        return RestoreTrashRequest;
+      })();
+      v1.RestoreTrashResponse = (function() {
+        function RestoreTrashResponse(properties) {
+          if (properties) {
+            for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+              if (properties[keys[i]] != null)
+                this[keys[i]] = properties[keys[i]];
+          }
+        }
+        RestoreTrashResponse.create = function create(properties) {
+          return new RestoreTrashResponse(properties);
+        };
+        RestoreTrashResponse.encode = function encode(message, writer) {
+          if (!writer)
+            writer = $Writer.create();
+          return writer;
+        };
+        RestoreTrashResponse.encodeDelimited = function encodeDelimited(message, writer) {
+          return this.encode(message, writer).ldelim();
+        };
+        RestoreTrashResponse.decode = function decode(reader, length, error) {
+          if (!(reader instanceof $Reader))
+            reader = $Reader.create(reader);
+          let end = length === void 0 ? reader.len : reader.pos + length, message = new $root.tilbo.ipc.v1.RestoreTrashResponse();
+          while (reader.pos < end) {
+            let tag = reader.uint32();
+            if (tag === error)
+              break;
+            switch (tag >>> 3) {
+              default:
+                reader.skipType(tag & 7);
+                break;
+            }
+          }
+          return message;
+        };
+        RestoreTrashResponse.decodeDelimited = function decodeDelimited(reader) {
+          if (!(reader instanceof $Reader))
+            reader = new $Reader(reader);
+          return this.decode(reader, reader.uint32());
+        };
+        RestoreTrashResponse.verify = function verify(message) {
+          if (typeof message !== "object" || message === null)
+            return "object expected";
+          return null;
+        };
+        RestoreTrashResponse.fromObject = function fromObject(object) {
+          if (object instanceof $root.tilbo.ipc.v1.RestoreTrashResponse)
+            return object;
+          return new $root.tilbo.ipc.v1.RestoreTrashResponse();
+        };
+        RestoreTrashResponse.toObject = function toObject() {
+          return {};
+        };
+        RestoreTrashResponse.prototype.toJSON = function toJSON() {
+          return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+        };
+        RestoreTrashResponse.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
+          if (typeUrlPrefix === void 0) {
+            typeUrlPrefix = "type.googleapis.com";
+          }
+          return typeUrlPrefix + "/tilbo.ipc.v1.RestoreTrashResponse";
+        };
+        return RestoreTrashResponse;
+      })();
+      v1.EmptyTrashRequest = (function() {
+        function EmptyTrashRequest(properties) {
+          if (properties) {
+            for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+              if (properties[keys[i]] != null)
+                this[keys[i]] = properties[keys[i]];
+          }
+        }
+        EmptyTrashRequest.create = function create(properties) {
+          return new EmptyTrashRequest(properties);
+        };
+        EmptyTrashRequest.encode = function encode(message, writer) {
+          if (!writer)
+            writer = $Writer.create();
+          return writer;
+        };
+        EmptyTrashRequest.encodeDelimited = function encodeDelimited(message, writer) {
+          return this.encode(message, writer).ldelim();
+        };
+        EmptyTrashRequest.decode = function decode(reader, length, error) {
+          if (!(reader instanceof $Reader))
+            reader = $Reader.create(reader);
+          let end = length === void 0 ? reader.len : reader.pos + length, message = new $root.tilbo.ipc.v1.EmptyTrashRequest();
+          while (reader.pos < end) {
+            let tag = reader.uint32();
+            if (tag === error)
+              break;
+            switch (tag >>> 3) {
+              default:
+                reader.skipType(tag & 7);
+                break;
+            }
+          }
+          return message;
+        };
+        EmptyTrashRequest.decodeDelimited = function decodeDelimited(reader) {
+          if (!(reader instanceof $Reader))
+            reader = new $Reader(reader);
+          return this.decode(reader, reader.uint32());
+        };
+        EmptyTrashRequest.verify = function verify(message) {
+          if (typeof message !== "object" || message === null)
+            return "object expected";
+          return null;
+        };
+        EmptyTrashRequest.fromObject = function fromObject(object) {
+          if (object instanceof $root.tilbo.ipc.v1.EmptyTrashRequest)
+            return object;
+          return new $root.tilbo.ipc.v1.EmptyTrashRequest();
+        };
+        EmptyTrashRequest.toObject = function toObject() {
+          return {};
+        };
+        EmptyTrashRequest.prototype.toJSON = function toJSON() {
+          return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+        };
+        EmptyTrashRequest.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
+          if (typeUrlPrefix === void 0) {
+            typeUrlPrefix = "type.googleapis.com";
+          }
+          return typeUrlPrefix + "/tilbo.ipc.v1.EmptyTrashRequest";
+        };
+        return EmptyTrashRequest;
+      })();
+      v1.EmptyTrashResponse = (function() {
+        function EmptyTrashResponse(properties) {
+          if (properties) {
+            for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+              if (properties[keys[i]] != null)
+                this[keys[i]] = properties[keys[i]];
+          }
+        }
+        EmptyTrashResponse.create = function create(properties) {
+          return new EmptyTrashResponse(properties);
+        };
+        EmptyTrashResponse.encode = function encode(message, writer) {
+          if (!writer)
+            writer = $Writer.create();
+          return writer;
+        };
+        EmptyTrashResponse.encodeDelimited = function encodeDelimited(message, writer) {
+          return this.encode(message, writer).ldelim();
+        };
+        EmptyTrashResponse.decode = function decode(reader, length, error) {
+          if (!(reader instanceof $Reader))
+            reader = $Reader.create(reader);
+          let end = length === void 0 ? reader.len : reader.pos + length, message = new $root.tilbo.ipc.v1.EmptyTrashResponse();
+          while (reader.pos < end) {
+            let tag = reader.uint32();
+            if (tag === error)
+              break;
+            switch (tag >>> 3) {
+              default:
+                reader.skipType(tag & 7);
+                break;
+            }
+          }
+          return message;
+        };
+        EmptyTrashResponse.decodeDelimited = function decodeDelimited(reader) {
+          if (!(reader instanceof $Reader))
+            reader = new $Reader(reader);
+          return this.decode(reader, reader.uint32());
+        };
+        EmptyTrashResponse.verify = function verify(message) {
+          if (typeof message !== "object" || message === null)
+            return "object expected";
+          return null;
+        };
+        EmptyTrashResponse.fromObject = function fromObject(object) {
+          if (object instanceof $root.tilbo.ipc.v1.EmptyTrashResponse)
+            return object;
+          return new $root.tilbo.ipc.v1.EmptyTrashResponse();
+        };
+        EmptyTrashResponse.toObject = function toObject() {
+          return {};
+        };
+        EmptyTrashResponse.prototype.toJSON = function toJSON() {
+          return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+        };
+        EmptyTrashResponse.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
+          if (typeUrlPrefix === void 0) {
+            typeUrlPrefix = "type.googleapis.com";
+          }
+          return typeUrlPrefix + "/tilbo.ipc.v1.EmptyTrashResponse";
+        };
+        return EmptyTrashResponse;
+      })();
+      v1.AppEntry = (function() {
+        function AppEntry(properties) {
+          if (properties) {
+            for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+              if (properties[keys[i]] != null)
+                this[keys[i]] = properties[keys[i]];
+          }
+        }
+        AppEntry.prototype.id = "";
+        AppEntry.prototype.name = "";
+        AppEntry.prototype.iconName = "";
+        AppEntry.create = function create(properties) {
+          return new AppEntry(properties);
+        };
+        AppEntry.encode = function encode(message, writer) {
+          if (!writer)
+            writer = $Writer.create();
+          if (message.id != null && Object.hasOwnProperty.call(message, "id"))
+            writer.uint32(
+              /* id 1, wireType 2 =*/
+              10
+            ).string(message.id);
+          if (message.name != null && Object.hasOwnProperty.call(message, "name"))
+            writer.uint32(
+              /* id 2, wireType 2 =*/
+              18
+            ).string(message.name);
+          if (message.iconName != null && Object.hasOwnProperty.call(message, "iconName"))
+            writer.uint32(
+              /* id 3, wireType 2 =*/
+              26
+            ).string(message.iconName);
+          return writer;
+        };
+        AppEntry.encodeDelimited = function encodeDelimited(message, writer) {
+          return this.encode(message, writer).ldelim();
+        };
+        AppEntry.decode = function decode(reader, length, error) {
+          if (!(reader instanceof $Reader))
+            reader = $Reader.create(reader);
+          let end = length === void 0 ? reader.len : reader.pos + length, message = new $root.tilbo.ipc.v1.AppEntry();
+          while (reader.pos < end) {
+            let tag = reader.uint32();
+            if (tag === error)
+              break;
+            switch (tag >>> 3) {
+              case 1: {
+                message.id = reader.string();
+                break;
+              }
+              case 2: {
+                message.name = reader.string();
+                break;
+              }
+              case 3: {
+                message.iconName = reader.string();
+                break;
+              }
+              default:
+                reader.skipType(tag & 7);
+                break;
+            }
+          }
+          return message;
+        };
+        AppEntry.decodeDelimited = function decodeDelimited(reader) {
+          if (!(reader instanceof $Reader))
+            reader = new $Reader(reader);
+          return this.decode(reader, reader.uint32());
+        };
+        AppEntry.verify = function verify(message) {
+          if (typeof message !== "object" || message === null)
+            return "object expected";
+          if (message.id != null && message.hasOwnProperty("id")) {
+            if (!$util.isString(message.id))
+              return "id: string expected";
+          }
+          if (message.name != null && message.hasOwnProperty("name")) {
+            if (!$util.isString(message.name))
+              return "name: string expected";
+          }
+          if (message.iconName != null && message.hasOwnProperty("iconName")) {
+            if (!$util.isString(message.iconName))
+              return "iconName: string expected";
+          }
+          return null;
+        };
+        AppEntry.fromObject = function fromObject(object) {
+          if (object instanceof $root.tilbo.ipc.v1.AppEntry)
+            return object;
+          let message = new $root.tilbo.ipc.v1.AppEntry();
+          if (object.id != null)
+            message.id = String(object.id);
+          if (object.name != null)
+            message.name = String(object.name);
+          if (object.iconName != null)
+            message.iconName = String(object.iconName);
+          return message;
+        };
+        AppEntry.toObject = function toObject(message, options) {
+          if (!options)
+            options = {};
+          let object = {};
+          if (options.defaults) {
+            object.id = "";
+            object.name = "";
+            object.iconName = "";
+          }
+          if (message.id != null && message.hasOwnProperty("id"))
+            object.id = message.id;
+          if (message.name != null && message.hasOwnProperty("name"))
+            object.name = message.name;
+          if (message.iconName != null && message.hasOwnProperty("iconName"))
+            object.iconName = message.iconName;
+          return object;
+        };
+        AppEntry.prototype.toJSON = function toJSON() {
+          return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+        };
+        AppEntry.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
+          if (typeUrlPrefix === void 0) {
+            typeUrlPrefix = "type.googleapis.com";
+          }
+          return typeUrlPrefix + "/tilbo.ipc.v1.AppEntry";
+        };
+        return AppEntry;
+      })();
+      v1.ListAppsForFileRequest = (function() {
+        function ListAppsForFileRequest(properties) {
+          if (properties) {
+            for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+              if (properties[keys[i]] != null)
+                this[keys[i]] = properties[keys[i]];
+          }
+        }
+        ListAppsForFileRequest.prototype.path = "";
+        ListAppsForFileRequest.create = function create(properties) {
+          return new ListAppsForFileRequest(properties);
+        };
+        ListAppsForFileRequest.encode = function encode(message, writer) {
+          if (!writer)
+            writer = $Writer.create();
+          if (message.path != null && Object.hasOwnProperty.call(message, "path"))
+            writer.uint32(
+              /* id 1, wireType 2 =*/
+              10
+            ).string(message.path);
+          return writer;
+        };
+        ListAppsForFileRequest.encodeDelimited = function encodeDelimited(message, writer) {
+          return this.encode(message, writer).ldelim();
+        };
+        ListAppsForFileRequest.decode = function decode(reader, length, error) {
+          if (!(reader instanceof $Reader))
+            reader = $Reader.create(reader);
+          let end = length === void 0 ? reader.len : reader.pos + length, message = new $root.tilbo.ipc.v1.ListAppsForFileRequest();
+          while (reader.pos < end) {
+            let tag = reader.uint32();
+            if (tag === error)
+              break;
+            switch (tag >>> 3) {
+              case 1: {
+                message.path = reader.string();
+                break;
+              }
+              default:
+                reader.skipType(tag & 7);
+                break;
+            }
+          }
+          return message;
+        };
+        ListAppsForFileRequest.decodeDelimited = function decodeDelimited(reader) {
+          if (!(reader instanceof $Reader))
+            reader = new $Reader(reader);
+          return this.decode(reader, reader.uint32());
+        };
+        ListAppsForFileRequest.verify = function verify(message) {
+          if (typeof message !== "object" || message === null)
+            return "object expected";
+          if (message.path != null && message.hasOwnProperty("path")) {
+            if (!$util.isString(message.path))
+              return "path: string expected";
+          }
+          return null;
+        };
+        ListAppsForFileRequest.fromObject = function fromObject(object) {
+          if (object instanceof $root.tilbo.ipc.v1.ListAppsForFileRequest)
+            return object;
+          let message = new $root.tilbo.ipc.v1.ListAppsForFileRequest();
+          if (object.path != null)
+            message.path = String(object.path);
+          return message;
+        };
+        ListAppsForFileRequest.toObject = function toObject(message, options) {
+          if (!options)
+            options = {};
+          let object = {};
+          if (options.defaults)
+            object.path = "";
+          if (message.path != null && message.hasOwnProperty("path"))
+            object.path = message.path;
+          return object;
+        };
+        ListAppsForFileRequest.prototype.toJSON = function toJSON() {
+          return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+        };
+        ListAppsForFileRequest.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
+          if (typeUrlPrefix === void 0) {
+            typeUrlPrefix = "type.googleapis.com";
+          }
+          return typeUrlPrefix + "/tilbo.ipc.v1.ListAppsForFileRequest";
+        };
+        return ListAppsForFileRequest;
+      })();
+      v1.ListAppsForFileResponse = (function() {
+        function ListAppsForFileResponse(properties) {
+          this.apps = [];
+          if (properties) {
+            for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+              if (properties[keys[i]] != null)
+                this[keys[i]] = properties[keys[i]];
+          }
+        }
+        ListAppsForFileResponse.prototype.apps = $util.emptyArray;
+        ListAppsForFileResponse.create = function create(properties) {
+          return new ListAppsForFileResponse(properties);
+        };
+        ListAppsForFileResponse.encode = function encode(message, writer) {
+          if (!writer)
+            writer = $Writer.create();
+          if (message.apps != null && message.apps.length)
+            for (let i = 0; i < message.apps.length; ++i)
+              $root.tilbo.ipc.v1.AppEntry.encode(message.apps[i], writer.uint32(
+                /* id 1, wireType 2 =*/
+                10
+              ).fork()).ldelim();
+          return writer;
+        };
+        ListAppsForFileResponse.encodeDelimited = function encodeDelimited(message, writer) {
+          return this.encode(message, writer).ldelim();
+        };
+        ListAppsForFileResponse.decode = function decode(reader, length, error) {
+          if (!(reader instanceof $Reader))
+            reader = $Reader.create(reader);
+          let end = length === void 0 ? reader.len : reader.pos + length, message = new $root.tilbo.ipc.v1.ListAppsForFileResponse();
+          while (reader.pos < end) {
+            let tag = reader.uint32();
+            if (tag === error)
+              break;
+            switch (tag >>> 3) {
+              case 1: {
+                if (!(message.apps && message.apps.length))
+                  message.apps = [];
+                message.apps.push($root.tilbo.ipc.v1.AppEntry.decode(reader, reader.uint32()));
+                break;
+              }
+              default:
+                reader.skipType(tag & 7);
+                break;
+            }
+          }
+          return message;
+        };
+        ListAppsForFileResponse.decodeDelimited = function decodeDelimited(reader) {
+          if (!(reader instanceof $Reader))
+            reader = new $Reader(reader);
+          return this.decode(reader, reader.uint32());
+        };
+        ListAppsForFileResponse.verify = function verify(message) {
+          if (typeof message !== "object" || message === null)
+            return "object expected";
+          if (message.apps != null && message.hasOwnProperty("apps")) {
+            if (!Array.isArray(message.apps))
+              return "apps: array expected";
+            for (let i = 0; i < message.apps.length; ++i) {
+              let error = $root.tilbo.ipc.v1.AppEntry.verify(message.apps[i]);
+              if (error)
+                return "apps." + error;
+            }
+          }
+          return null;
+        };
+        ListAppsForFileResponse.fromObject = function fromObject(object) {
+          if (object instanceof $root.tilbo.ipc.v1.ListAppsForFileResponse)
+            return object;
+          let message = new $root.tilbo.ipc.v1.ListAppsForFileResponse();
+          if (object.apps) {
+            if (!Array.isArray(object.apps))
+              throw TypeError(".tilbo.ipc.v1.ListAppsForFileResponse.apps: array expected");
+            message.apps = [];
+            for (let i = 0; i < object.apps.length; ++i) {
+              if (typeof object.apps[i] !== "object")
+                throw TypeError(".tilbo.ipc.v1.ListAppsForFileResponse.apps: object expected");
+              message.apps[i] = $root.tilbo.ipc.v1.AppEntry.fromObject(object.apps[i]);
+            }
+          }
+          return message;
+        };
+        ListAppsForFileResponse.toObject = function toObject(message, options) {
+          if (!options)
+            options = {};
+          let object = {};
+          if (options.arrays || options.defaults)
+            object.apps = [];
+          if (message.apps && message.apps.length) {
+            object.apps = [];
+            for (let j = 0; j < message.apps.length; ++j)
+              object.apps[j] = $root.tilbo.ipc.v1.AppEntry.toObject(message.apps[j], options);
+          }
+          return object;
+        };
+        ListAppsForFileResponse.prototype.toJSON = function toJSON() {
+          return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+        };
+        ListAppsForFileResponse.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
+          if (typeUrlPrefix === void 0) {
+            typeUrlPrefix = "type.googleapis.com";
+          }
+          return typeUrlPrefix + "/tilbo.ipc.v1.ListAppsForFileResponse";
+        };
+        return ListAppsForFileResponse;
+      })();
+      v1.OpenWithAppRequest = (function() {
+        function OpenWithAppRequest(properties) {
+          if (properties) {
+            for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+              if (properties[keys[i]] != null)
+                this[keys[i]] = properties[keys[i]];
+          }
+        }
+        OpenWithAppRequest.prototype.path = "";
+        OpenWithAppRequest.prototype.appId = "";
+        OpenWithAppRequest.create = function create(properties) {
+          return new OpenWithAppRequest(properties);
+        };
+        OpenWithAppRequest.encode = function encode(message, writer) {
+          if (!writer)
+            writer = $Writer.create();
+          if (message.path != null && Object.hasOwnProperty.call(message, "path"))
+            writer.uint32(
+              /* id 1, wireType 2 =*/
+              10
+            ).string(message.path);
+          if (message.appId != null && Object.hasOwnProperty.call(message, "appId"))
+            writer.uint32(
+              /* id 2, wireType 2 =*/
+              18
+            ).string(message.appId);
+          return writer;
+        };
+        OpenWithAppRequest.encodeDelimited = function encodeDelimited(message, writer) {
+          return this.encode(message, writer).ldelim();
+        };
+        OpenWithAppRequest.decode = function decode(reader, length, error) {
+          if (!(reader instanceof $Reader))
+            reader = $Reader.create(reader);
+          let end = length === void 0 ? reader.len : reader.pos + length, message = new $root.tilbo.ipc.v1.OpenWithAppRequest();
+          while (reader.pos < end) {
+            let tag = reader.uint32();
+            if (tag === error)
+              break;
+            switch (tag >>> 3) {
+              case 1: {
+                message.path = reader.string();
+                break;
+              }
+              case 2: {
+                message.appId = reader.string();
+                break;
+              }
+              default:
+                reader.skipType(tag & 7);
+                break;
+            }
+          }
+          return message;
+        };
+        OpenWithAppRequest.decodeDelimited = function decodeDelimited(reader) {
+          if (!(reader instanceof $Reader))
+            reader = new $Reader(reader);
+          return this.decode(reader, reader.uint32());
+        };
+        OpenWithAppRequest.verify = function verify(message) {
+          if (typeof message !== "object" || message === null)
+            return "object expected";
+          if (message.path != null && message.hasOwnProperty("path")) {
+            if (!$util.isString(message.path))
+              return "path: string expected";
+          }
+          if (message.appId != null && message.hasOwnProperty("appId")) {
+            if (!$util.isString(message.appId))
+              return "appId: string expected";
+          }
+          return null;
+        };
+        OpenWithAppRequest.fromObject = function fromObject(object) {
+          if (object instanceof $root.tilbo.ipc.v1.OpenWithAppRequest)
+            return object;
+          let message = new $root.tilbo.ipc.v1.OpenWithAppRequest();
+          if (object.path != null)
+            message.path = String(object.path);
+          if (object.appId != null)
+            message.appId = String(object.appId);
+          return message;
+        };
+        OpenWithAppRequest.toObject = function toObject(message, options) {
+          if (!options)
+            options = {};
+          let object = {};
+          if (options.defaults) {
+            object.path = "";
+            object.appId = "";
+          }
+          if (message.path != null && message.hasOwnProperty("path"))
+            object.path = message.path;
+          if (message.appId != null && message.hasOwnProperty("appId"))
+            object.appId = message.appId;
+          return object;
+        };
+        OpenWithAppRequest.prototype.toJSON = function toJSON() {
+          return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+        };
+        OpenWithAppRequest.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
+          if (typeUrlPrefix === void 0) {
+            typeUrlPrefix = "type.googleapis.com";
+          }
+          return typeUrlPrefix + "/tilbo.ipc.v1.OpenWithAppRequest";
+        };
+        return OpenWithAppRequest;
+      })();
+      v1.OpenWithAppResponse = (function() {
+        function OpenWithAppResponse(properties) {
+          if (properties) {
+            for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+              if (properties[keys[i]] != null)
+                this[keys[i]] = properties[keys[i]];
+          }
+        }
+        OpenWithAppResponse.create = function create(properties) {
+          return new OpenWithAppResponse(properties);
+        };
+        OpenWithAppResponse.encode = function encode(message, writer) {
+          if (!writer)
+            writer = $Writer.create();
+          return writer;
+        };
+        OpenWithAppResponse.encodeDelimited = function encodeDelimited(message, writer) {
+          return this.encode(message, writer).ldelim();
+        };
+        OpenWithAppResponse.decode = function decode(reader, length, error) {
+          if (!(reader instanceof $Reader))
+            reader = $Reader.create(reader);
+          let end = length === void 0 ? reader.len : reader.pos + length, message = new $root.tilbo.ipc.v1.OpenWithAppResponse();
+          while (reader.pos < end) {
+            let tag = reader.uint32();
+            if (tag === error)
+              break;
+            switch (tag >>> 3) {
+              default:
+                reader.skipType(tag & 7);
+                break;
+            }
+          }
+          return message;
+        };
+        OpenWithAppResponse.decodeDelimited = function decodeDelimited(reader) {
+          if (!(reader instanceof $Reader))
+            reader = new $Reader(reader);
+          return this.decode(reader, reader.uint32());
+        };
+        OpenWithAppResponse.verify = function verify(message) {
+          if (typeof message !== "object" || message === null)
+            return "object expected";
+          return null;
+        };
+        OpenWithAppResponse.fromObject = function fromObject(object) {
+          if (object instanceof $root.tilbo.ipc.v1.OpenWithAppResponse)
+            return object;
+          return new $root.tilbo.ipc.v1.OpenWithAppResponse();
+        };
+        OpenWithAppResponse.toObject = function toObject() {
+          return {};
+        };
+        OpenWithAppResponse.prototype.toJSON = function toJSON() {
+          return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+        };
+        OpenWithAppResponse.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
+          if (typeUrlPrefix === void 0) {
+            typeUrlPrefix = "type.googleapis.com";
+          }
+          return typeUrlPrefix + "/tilbo.ipc.v1.OpenWithAppResponse";
+        };
+        return OpenWithAppResponse;
+      })();
+      v1.GetBrowserConfigRequest = (function() {
+        function GetBrowserConfigRequest(properties) {
+          if (properties) {
+            for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+              if (properties[keys[i]] != null)
+                this[keys[i]] = properties[keys[i]];
+          }
+        }
+        GetBrowserConfigRequest.create = function create(properties) {
+          return new GetBrowserConfigRequest(properties);
+        };
+        GetBrowserConfigRequest.encode = function encode(message, writer) {
+          if (!writer)
+            writer = $Writer.create();
+          return writer;
+        };
+        GetBrowserConfigRequest.encodeDelimited = function encodeDelimited(message, writer) {
+          return this.encode(message, writer).ldelim();
+        };
+        GetBrowserConfigRequest.decode = function decode(reader, length, error) {
+          if (!(reader instanceof $Reader))
+            reader = $Reader.create(reader);
+          let end = length === void 0 ? reader.len : reader.pos + length, message = new $root.tilbo.ipc.v1.GetBrowserConfigRequest();
+          while (reader.pos < end) {
+            let tag = reader.uint32();
+            if (tag === error)
+              break;
+            switch (tag >>> 3) {
+              default:
+                reader.skipType(tag & 7);
+                break;
+            }
+          }
+          return message;
+        };
+        GetBrowserConfigRequest.decodeDelimited = function decodeDelimited(reader) {
+          if (!(reader instanceof $Reader))
+            reader = new $Reader(reader);
+          return this.decode(reader, reader.uint32());
+        };
+        GetBrowserConfigRequest.verify = function verify(message) {
+          if (typeof message !== "object" || message === null)
+            return "object expected";
+          return null;
+        };
+        GetBrowserConfigRequest.fromObject = function fromObject(object) {
+          if (object instanceof $root.tilbo.ipc.v1.GetBrowserConfigRequest)
+            return object;
+          return new $root.tilbo.ipc.v1.GetBrowserConfigRequest();
+        };
+        GetBrowserConfigRequest.toObject = function toObject() {
+          return {};
+        };
+        GetBrowserConfigRequest.prototype.toJSON = function toJSON() {
+          return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+        };
+        GetBrowserConfigRequest.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
+          if (typeUrlPrefix === void 0) {
+            typeUrlPrefix = "type.googleapis.com";
+          }
+          return typeUrlPrefix + "/tilbo.ipc.v1.GetBrowserConfigRequest";
+        };
+        return GetBrowserConfigRequest;
+      })();
+      v1.GetBrowserConfigResponse = (function() {
+        function GetBrowserConfigResponse(properties) {
+          this.keybindings = {};
+          if (properties) {
+            for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+              if (properties[keys[i]] != null)
+                this[keys[i]] = properties[keys[i]];
+          }
+        }
+        GetBrowserConfigResponse.prototype.keybindings = $util.emptyObject;
+        GetBrowserConfigResponse.prototype.useTrash = false;
+        GetBrowserConfigResponse.create = function create(properties) {
+          return new GetBrowserConfigResponse(properties);
+        };
+        GetBrowserConfigResponse.encode = function encode(message, writer) {
+          if (!writer)
+            writer = $Writer.create();
+          if (message.keybindings != null && Object.hasOwnProperty.call(message, "keybindings"))
+            for (let keys = Object.keys(message.keybindings), i = 0; i < keys.length; ++i)
+              writer.uint32(
+                /* id 1, wireType 2 =*/
+                10
+              ).fork().uint32(
+                /* id 1, wireType 2 =*/
+                10
+              ).string(keys[i]).uint32(
+                /* id 2, wireType 2 =*/
+                18
+              ).string(message.keybindings[keys[i]]).ldelim();
+          if (message.useTrash != null && Object.hasOwnProperty.call(message, "useTrash"))
+            writer.uint32(
+              /* id 2, wireType 0 =*/
+              16
+            ).bool(message.useTrash);
+          return writer;
+        };
+        GetBrowserConfigResponse.encodeDelimited = function encodeDelimited(message, writer) {
+          return this.encode(message, writer).ldelim();
+        };
+        GetBrowserConfigResponse.decode = function decode(reader, length, error) {
+          if (!(reader instanceof $Reader))
+            reader = $Reader.create(reader);
+          let end = length === void 0 ? reader.len : reader.pos + length, message = new $root.tilbo.ipc.v1.GetBrowserConfigResponse(), key, value;
+          while (reader.pos < end) {
+            let tag = reader.uint32();
+            if (tag === error)
+              break;
+            switch (tag >>> 3) {
+              case 1: {
+                if (message.keybindings === $util.emptyObject)
+                  message.keybindings = {};
+                let end2 = reader.uint32() + reader.pos;
+                key = "";
+                value = "";
+                while (reader.pos < end2) {
+                  let tag2 = reader.uint32();
+                  switch (tag2 >>> 3) {
+                    case 1:
+                      key = reader.string();
+                      break;
+                    case 2:
+                      value = reader.string();
+                      break;
+                    default:
+                      reader.skipType(tag2 & 7);
+                      break;
+                  }
+                }
+                message.keybindings[key] = value;
+                break;
+              }
+              case 2: {
+                message.useTrash = reader.bool();
+                break;
+              }
+              default:
+                reader.skipType(tag & 7);
+                break;
+            }
+          }
+          return message;
+        };
+        GetBrowserConfigResponse.decodeDelimited = function decodeDelimited(reader) {
+          if (!(reader instanceof $Reader))
+            reader = new $Reader(reader);
+          return this.decode(reader, reader.uint32());
+        };
+        GetBrowserConfigResponse.verify = function verify(message) {
+          if (typeof message !== "object" || message === null)
+            return "object expected";
+          if (message.keybindings != null && message.hasOwnProperty("keybindings")) {
+            if (!$util.isObject(message.keybindings))
+              return "keybindings: object expected";
+            let key = Object.keys(message.keybindings);
+            for (let i = 0; i < key.length; ++i)
+              if (!$util.isString(message.keybindings[key[i]]))
+                return "keybindings: string{k:string} expected";
+          }
+          if (message.useTrash != null && message.hasOwnProperty("useTrash")) {
+            if (typeof message.useTrash !== "boolean")
+              return "useTrash: boolean expected";
+          }
+          return null;
+        };
+        GetBrowserConfigResponse.fromObject = function fromObject(object) {
+          if (object instanceof $root.tilbo.ipc.v1.GetBrowserConfigResponse)
+            return object;
+          let message = new $root.tilbo.ipc.v1.GetBrowserConfigResponse();
+          if (object.keybindings) {
+            if (typeof object.keybindings !== "object")
+              throw TypeError(".tilbo.ipc.v1.GetBrowserConfigResponse.keybindings: object expected");
+            message.keybindings = {};
+            for (let keys = Object.keys(object.keybindings), i = 0; i < keys.length; ++i)
+              message.keybindings[keys[i]] = String(object.keybindings[keys[i]]);
+          }
+          if (object.useTrash != null)
+            message.useTrash = Boolean(object.useTrash);
+          return message;
+        };
+        GetBrowserConfigResponse.toObject = function toObject(message, options) {
+          if (!options)
+            options = {};
+          let object = {};
+          if (options.objects || options.defaults)
+            object.keybindings = {};
+          if (options.defaults)
+            object.useTrash = false;
+          let keys2;
+          if (message.keybindings && (keys2 = Object.keys(message.keybindings)).length) {
+            object.keybindings = {};
+            for (let j = 0; j < keys2.length; ++j)
+              object.keybindings[keys2[j]] = message.keybindings[keys2[j]];
+          }
+          if (message.useTrash != null && message.hasOwnProperty("useTrash"))
+            object.useTrash = message.useTrash;
+          return object;
+        };
+        GetBrowserConfigResponse.prototype.toJSON = function toJSON() {
+          return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+        };
+        GetBrowserConfigResponse.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
+          if (typeUrlPrefix === void 0) {
+            typeUrlPrefix = "type.googleapis.com";
+          }
+          return typeUrlPrefix + "/tilbo.ipc.v1.GetBrowserConfigResponse";
+        };
+        return GetBrowserConfigResponse;
+      })();
+      v1.GetFileBadgesRequest = (function() {
+        function GetFileBadgesRequest(properties) {
+          if (properties) {
+            for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+              if (properties[keys[i]] != null)
+                this[keys[i]] = properties[keys[i]];
+          }
+        }
+        GetFileBadgesRequest.prototype.path = "";
+        GetFileBadgesRequest.create = function create(properties) {
+          return new GetFileBadgesRequest(properties);
+        };
+        GetFileBadgesRequest.encode = function encode(message, writer) {
+          if (!writer)
+            writer = $Writer.create();
+          if (message.path != null && Object.hasOwnProperty.call(message, "path"))
+            writer.uint32(
+              /* id 1, wireType 2 =*/
+              10
+            ).string(message.path);
+          return writer;
+        };
+        GetFileBadgesRequest.encodeDelimited = function encodeDelimited(message, writer) {
+          return this.encode(message, writer).ldelim();
+        };
+        GetFileBadgesRequest.decode = function decode(reader, length, error) {
+          if (!(reader instanceof $Reader))
+            reader = $Reader.create(reader);
+          let end = length === void 0 ? reader.len : reader.pos + length, message = new $root.tilbo.ipc.v1.GetFileBadgesRequest();
+          while (reader.pos < end) {
+            let tag = reader.uint32();
+            if (tag === error)
+              break;
+            switch (tag >>> 3) {
+              case 1: {
+                message.path = reader.string();
+                break;
+              }
+              default:
+                reader.skipType(tag & 7);
+                break;
+            }
+          }
+          return message;
+        };
+        GetFileBadgesRequest.decodeDelimited = function decodeDelimited(reader) {
+          if (!(reader instanceof $Reader))
+            reader = new $Reader(reader);
+          return this.decode(reader, reader.uint32());
+        };
+        GetFileBadgesRequest.verify = function verify(message) {
+          if (typeof message !== "object" || message === null)
+            return "object expected";
+          if (message.path != null && message.hasOwnProperty("path")) {
+            if (!$util.isString(message.path))
+              return "path: string expected";
+          }
+          return null;
+        };
+        GetFileBadgesRequest.fromObject = function fromObject(object) {
+          if (object instanceof $root.tilbo.ipc.v1.GetFileBadgesRequest)
+            return object;
+          let message = new $root.tilbo.ipc.v1.GetFileBadgesRequest();
+          if (object.path != null)
+            message.path = String(object.path);
+          return message;
+        };
+        GetFileBadgesRequest.toObject = function toObject(message, options) {
+          if (!options)
+            options = {};
+          let object = {};
+          if (options.defaults)
+            object.path = "";
+          if (message.path != null && message.hasOwnProperty("path"))
+            object.path = message.path;
+          return object;
+        };
+        GetFileBadgesRequest.prototype.toJSON = function toJSON() {
+          return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+        };
+        GetFileBadgesRequest.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
+          if (typeUrlPrefix === void 0) {
+            typeUrlPrefix = "type.googleapis.com";
+          }
+          return typeUrlPrefix + "/tilbo.ipc.v1.GetFileBadgesRequest";
+        };
+        return GetFileBadgesRequest;
+      })();
+      v1.GetFileBadgesResponse = (function() {
+        function GetFileBadgesResponse(properties) {
+          this.badges = [];
+          if (properties) {
+            for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+              if (properties[keys[i]] != null)
+                this[keys[i]] = properties[keys[i]];
+          }
+        }
+        GetFileBadgesResponse.prototype.badges = $util.emptyArray;
+        GetFileBadgesResponse.create = function create(properties) {
+          return new GetFileBadgesResponse(properties);
+        };
+        GetFileBadgesResponse.encode = function encode(message, writer) {
+          if (!writer)
+            writer = $Writer.create();
+          if (message.badges != null && message.badges.length)
+            for (let i = 0; i < message.badges.length; ++i)
+              writer.uint32(
+                /* id 1, wireType 2 =*/
+                10
+              ).string(message.badges[i]);
+          return writer;
+        };
+        GetFileBadgesResponse.encodeDelimited = function encodeDelimited(message, writer) {
+          return this.encode(message, writer).ldelim();
+        };
+        GetFileBadgesResponse.decode = function decode(reader, length, error) {
+          if (!(reader instanceof $Reader))
+            reader = $Reader.create(reader);
+          let end = length === void 0 ? reader.len : reader.pos + length, message = new $root.tilbo.ipc.v1.GetFileBadgesResponse();
+          while (reader.pos < end) {
+            let tag = reader.uint32();
+            if (tag === error)
+              break;
+            switch (tag >>> 3) {
+              case 1: {
+                if (!(message.badges && message.badges.length))
+                  message.badges = [];
+                message.badges.push(reader.string());
+                break;
+              }
+              default:
+                reader.skipType(tag & 7);
+                break;
+            }
+          }
+          return message;
+        };
+        GetFileBadgesResponse.decodeDelimited = function decodeDelimited(reader) {
+          if (!(reader instanceof $Reader))
+            reader = new $Reader(reader);
+          return this.decode(reader, reader.uint32());
+        };
+        GetFileBadgesResponse.verify = function verify(message) {
+          if (typeof message !== "object" || message === null)
+            return "object expected";
+          if (message.badges != null && message.hasOwnProperty("badges")) {
+            if (!Array.isArray(message.badges))
+              return "badges: array expected";
+            for (let i = 0; i < message.badges.length; ++i)
+              if (!$util.isString(message.badges[i]))
+                return "badges: string[] expected";
+          }
+          return null;
+        };
+        GetFileBadgesResponse.fromObject = function fromObject(object) {
+          if (object instanceof $root.tilbo.ipc.v1.GetFileBadgesResponse)
+            return object;
+          let message = new $root.tilbo.ipc.v1.GetFileBadgesResponse();
+          if (object.badges) {
+            if (!Array.isArray(object.badges))
+              throw TypeError(".tilbo.ipc.v1.GetFileBadgesResponse.badges: array expected");
+            message.badges = [];
+            for (let i = 0; i < object.badges.length; ++i)
+              message.badges[i] = String(object.badges[i]);
+          }
+          return message;
+        };
+        GetFileBadgesResponse.toObject = function toObject(message, options) {
+          if (!options)
+            options = {};
+          let object = {};
+          if (options.arrays || options.defaults)
+            object.badges = [];
+          if (message.badges && message.badges.length) {
+            object.badges = [];
+            for (let j = 0; j < message.badges.length; ++j)
+              object.badges[j] = message.badges[j];
+          }
+          return object;
+        };
+        GetFileBadgesResponse.prototype.toJSON = function toJSON() {
+          return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+        };
+        GetFileBadgesResponse.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
+          if (typeUrlPrefix === void 0) {
+            typeUrlPrefix = "type.googleapis.com";
+          }
+          return typeUrlPrefix + "/tilbo.ipc.v1.GetFileBadgesResponse";
+        };
+        return GetFileBadgesResponse;
+      })();
+      v1.FileAction = (function() {
+        function FileAction(properties) {
+          if (properties) {
+            for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+              if (properties[keys[i]] != null)
+                this[keys[i]] = properties[keys[i]];
+          }
+        }
+        FileAction.prototype.id = "";
+        FileAction.prototype.label = "";
+        FileAction.create = function create(properties) {
+          return new FileAction(properties);
+        };
+        FileAction.encode = function encode(message, writer) {
+          if (!writer)
+            writer = $Writer.create();
+          if (message.id != null && Object.hasOwnProperty.call(message, "id"))
+            writer.uint32(
+              /* id 1, wireType 2 =*/
+              10
+            ).string(message.id);
+          if (message.label != null && Object.hasOwnProperty.call(message, "label"))
+            writer.uint32(
+              /* id 2, wireType 2 =*/
+              18
+            ).string(message.label);
+          return writer;
+        };
+        FileAction.encodeDelimited = function encodeDelimited(message, writer) {
+          return this.encode(message, writer).ldelim();
+        };
+        FileAction.decode = function decode(reader, length, error) {
+          if (!(reader instanceof $Reader))
+            reader = $Reader.create(reader);
+          let end = length === void 0 ? reader.len : reader.pos + length, message = new $root.tilbo.ipc.v1.FileAction();
+          while (reader.pos < end) {
+            let tag = reader.uint32();
+            if (tag === error)
+              break;
+            switch (tag >>> 3) {
+              case 1: {
+                message.id = reader.string();
+                break;
+              }
+              case 2: {
+                message.label = reader.string();
+                break;
+              }
+              default:
+                reader.skipType(tag & 7);
+                break;
+            }
+          }
+          return message;
+        };
+        FileAction.decodeDelimited = function decodeDelimited(reader) {
+          if (!(reader instanceof $Reader))
+            reader = new $Reader(reader);
+          return this.decode(reader, reader.uint32());
+        };
+        FileAction.verify = function verify(message) {
+          if (typeof message !== "object" || message === null)
+            return "object expected";
+          if (message.id != null && message.hasOwnProperty("id")) {
+            if (!$util.isString(message.id))
+              return "id: string expected";
+          }
+          if (message.label != null && message.hasOwnProperty("label")) {
+            if (!$util.isString(message.label))
+              return "label: string expected";
+          }
+          return null;
+        };
+        FileAction.fromObject = function fromObject(object) {
+          if (object instanceof $root.tilbo.ipc.v1.FileAction)
+            return object;
+          let message = new $root.tilbo.ipc.v1.FileAction();
+          if (object.id != null)
+            message.id = String(object.id);
+          if (object.label != null)
+            message.label = String(object.label);
+          return message;
+        };
+        FileAction.toObject = function toObject(message, options) {
+          if (!options)
+            options = {};
+          let object = {};
+          if (options.defaults) {
+            object.id = "";
+            object.label = "";
+          }
+          if (message.id != null && message.hasOwnProperty("id"))
+            object.id = message.id;
+          if (message.label != null && message.hasOwnProperty("label"))
+            object.label = message.label;
+          return object;
+        };
+        FileAction.prototype.toJSON = function toJSON() {
+          return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+        };
+        FileAction.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
+          if (typeUrlPrefix === void 0) {
+            typeUrlPrefix = "type.googleapis.com";
+          }
+          return typeUrlPrefix + "/tilbo.ipc.v1.FileAction";
+        };
+        return FileAction;
+      })();
+      v1.GetFileActionsRequest = (function() {
+        function GetFileActionsRequest(properties) {
+          if (properties) {
+            for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+              if (properties[keys[i]] != null)
+                this[keys[i]] = properties[keys[i]];
+          }
+        }
+        GetFileActionsRequest.prototype.path = "";
+        GetFileActionsRequest.create = function create(properties) {
+          return new GetFileActionsRequest(properties);
+        };
+        GetFileActionsRequest.encode = function encode(message, writer) {
+          if (!writer)
+            writer = $Writer.create();
+          if (message.path != null && Object.hasOwnProperty.call(message, "path"))
+            writer.uint32(
+              /* id 1, wireType 2 =*/
+              10
+            ).string(message.path);
+          return writer;
+        };
+        GetFileActionsRequest.encodeDelimited = function encodeDelimited(message, writer) {
+          return this.encode(message, writer).ldelim();
+        };
+        GetFileActionsRequest.decode = function decode(reader, length, error) {
+          if (!(reader instanceof $Reader))
+            reader = $Reader.create(reader);
+          let end = length === void 0 ? reader.len : reader.pos + length, message = new $root.tilbo.ipc.v1.GetFileActionsRequest();
+          while (reader.pos < end) {
+            let tag = reader.uint32();
+            if (tag === error)
+              break;
+            switch (tag >>> 3) {
+              case 1: {
+                message.path = reader.string();
+                break;
+              }
+              default:
+                reader.skipType(tag & 7);
+                break;
+            }
+          }
+          return message;
+        };
+        GetFileActionsRequest.decodeDelimited = function decodeDelimited(reader) {
+          if (!(reader instanceof $Reader))
+            reader = new $Reader(reader);
+          return this.decode(reader, reader.uint32());
+        };
+        GetFileActionsRequest.verify = function verify(message) {
+          if (typeof message !== "object" || message === null)
+            return "object expected";
+          if (message.path != null && message.hasOwnProperty("path")) {
+            if (!$util.isString(message.path))
+              return "path: string expected";
+          }
+          return null;
+        };
+        GetFileActionsRequest.fromObject = function fromObject(object) {
+          if (object instanceof $root.tilbo.ipc.v1.GetFileActionsRequest)
+            return object;
+          let message = new $root.tilbo.ipc.v1.GetFileActionsRequest();
+          if (object.path != null)
+            message.path = String(object.path);
+          return message;
+        };
+        GetFileActionsRequest.toObject = function toObject(message, options) {
+          if (!options)
+            options = {};
+          let object = {};
+          if (options.defaults)
+            object.path = "";
+          if (message.path != null && message.hasOwnProperty("path"))
+            object.path = message.path;
+          return object;
+        };
+        GetFileActionsRequest.prototype.toJSON = function toJSON() {
+          return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+        };
+        GetFileActionsRequest.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
+          if (typeUrlPrefix === void 0) {
+            typeUrlPrefix = "type.googleapis.com";
+          }
+          return typeUrlPrefix + "/tilbo.ipc.v1.GetFileActionsRequest";
+        };
+        return GetFileActionsRequest;
+      })();
+      v1.GetFileActionsResponse = (function() {
+        function GetFileActionsResponse(properties) {
+          this.actions = [];
+          if (properties) {
+            for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+              if (properties[keys[i]] != null)
+                this[keys[i]] = properties[keys[i]];
+          }
+        }
+        GetFileActionsResponse.prototype.actions = $util.emptyArray;
+        GetFileActionsResponse.create = function create(properties) {
+          return new GetFileActionsResponse(properties);
+        };
+        GetFileActionsResponse.encode = function encode(message, writer) {
+          if (!writer)
+            writer = $Writer.create();
+          if (message.actions != null && message.actions.length)
+            for (let i = 0; i < message.actions.length; ++i)
+              $root.tilbo.ipc.v1.FileAction.encode(message.actions[i], writer.uint32(
+                /* id 1, wireType 2 =*/
+                10
+              ).fork()).ldelim();
+          return writer;
+        };
+        GetFileActionsResponse.encodeDelimited = function encodeDelimited(message, writer) {
+          return this.encode(message, writer).ldelim();
+        };
+        GetFileActionsResponse.decode = function decode(reader, length, error) {
+          if (!(reader instanceof $Reader))
+            reader = $Reader.create(reader);
+          let end = length === void 0 ? reader.len : reader.pos + length, message = new $root.tilbo.ipc.v1.GetFileActionsResponse();
+          while (reader.pos < end) {
+            let tag = reader.uint32();
+            if (tag === error)
+              break;
+            switch (tag >>> 3) {
+              case 1: {
+                if (!(message.actions && message.actions.length))
+                  message.actions = [];
+                message.actions.push($root.tilbo.ipc.v1.FileAction.decode(reader, reader.uint32()));
+                break;
+              }
+              default:
+                reader.skipType(tag & 7);
+                break;
+            }
+          }
+          return message;
+        };
+        GetFileActionsResponse.decodeDelimited = function decodeDelimited(reader) {
+          if (!(reader instanceof $Reader))
+            reader = new $Reader(reader);
+          return this.decode(reader, reader.uint32());
+        };
+        GetFileActionsResponse.verify = function verify(message) {
+          if (typeof message !== "object" || message === null)
+            return "object expected";
+          if (message.actions != null && message.hasOwnProperty("actions")) {
+            if (!Array.isArray(message.actions))
+              return "actions: array expected";
+            for (let i = 0; i < message.actions.length; ++i) {
+              let error = $root.tilbo.ipc.v1.FileAction.verify(message.actions[i]);
+              if (error)
+                return "actions." + error;
+            }
+          }
+          return null;
+        };
+        GetFileActionsResponse.fromObject = function fromObject(object) {
+          if (object instanceof $root.tilbo.ipc.v1.GetFileActionsResponse)
+            return object;
+          let message = new $root.tilbo.ipc.v1.GetFileActionsResponse();
+          if (object.actions) {
+            if (!Array.isArray(object.actions))
+              throw TypeError(".tilbo.ipc.v1.GetFileActionsResponse.actions: array expected");
+            message.actions = [];
+            for (let i = 0; i < object.actions.length; ++i) {
+              if (typeof object.actions[i] !== "object")
+                throw TypeError(".tilbo.ipc.v1.GetFileActionsResponse.actions: object expected");
+              message.actions[i] = $root.tilbo.ipc.v1.FileAction.fromObject(object.actions[i]);
+            }
+          }
+          return message;
+        };
+        GetFileActionsResponse.toObject = function toObject(message, options) {
+          if (!options)
+            options = {};
+          let object = {};
+          if (options.arrays || options.defaults)
+            object.actions = [];
+          if (message.actions && message.actions.length) {
+            object.actions = [];
+            for (let j = 0; j < message.actions.length; ++j)
+              object.actions[j] = $root.tilbo.ipc.v1.FileAction.toObject(message.actions[j], options);
+          }
+          return object;
+        };
+        GetFileActionsResponse.prototype.toJSON = function toJSON() {
+          return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+        };
+        GetFileActionsResponse.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
+          if (typeUrlPrefix === void 0) {
+            typeUrlPrefix = "type.googleapis.com";
+          }
+          return typeUrlPrefix + "/tilbo.ipc.v1.GetFileActionsResponse";
+        };
+        return GetFileActionsResponse;
+      })();
+      v1.RunFileActionRequest = (function() {
+        function RunFileActionRequest(properties) {
+          if (properties) {
+            for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+              if (properties[keys[i]] != null)
+                this[keys[i]] = properties[keys[i]];
+          }
+        }
+        RunFileActionRequest.prototype.path = "";
+        RunFileActionRequest.prototype.actionId = "";
+        RunFileActionRequest.create = function create(properties) {
+          return new RunFileActionRequest(properties);
+        };
+        RunFileActionRequest.encode = function encode(message, writer) {
+          if (!writer)
+            writer = $Writer.create();
+          if (message.path != null && Object.hasOwnProperty.call(message, "path"))
+            writer.uint32(
+              /* id 1, wireType 2 =*/
+              10
+            ).string(message.path);
+          if (message.actionId != null && Object.hasOwnProperty.call(message, "actionId"))
+            writer.uint32(
+              /* id 2, wireType 2 =*/
+              18
+            ).string(message.actionId);
+          return writer;
+        };
+        RunFileActionRequest.encodeDelimited = function encodeDelimited(message, writer) {
+          return this.encode(message, writer).ldelim();
+        };
+        RunFileActionRequest.decode = function decode(reader, length, error) {
+          if (!(reader instanceof $Reader))
+            reader = $Reader.create(reader);
+          let end = length === void 0 ? reader.len : reader.pos + length, message = new $root.tilbo.ipc.v1.RunFileActionRequest();
+          while (reader.pos < end) {
+            let tag = reader.uint32();
+            if (tag === error)
+              break;
+            switch (tag >>> 3) {
+              case 1: {
+                message.path = reader.string();
+                break;
+              }
+              case 2: {
+                message.actionId = reader.string();
+                break;
+              }
+              default:
+                reader.skipType(tag & 7);
+                break;
+            }
+          }
+          return message;
+        };
+        RunFileActionRequest.decodeDelimited = function decodeDelimited(reader) {
+          if (!(reader instanceof $Reader))
+            reader = new $Reader(reader);
+          return this.decode(reader, reader.uint32());
+        };
+        RunFileActionRequest.verify = function verify(message) {
+          if (typeof message !== "object" || message === null)
+            return "object expected";
+          if (message.path != null && message.hasOwnProperty("path")) {
+            if (!$util.isString(message.path))
+              return "path: string expected";
+          }
+          if (message.actionId != null && message.hasOwnProperty("actionId")) {
+            if (!$util.isString(message.actionId))
+              return "actionId: string expected";
+          }
+          return null;
+        };
+        RunFileActionRequest.fromObject = function fromObject(object) {
+          if (object instanceof $root.tilbo.ipc.v1.RunFileActionRequest)
+            return object;
+          let message = new $root.tilbo.ipc.v1.RunFileActionRequest();
+          if (object.path != null)
+            message.path = String(object.path);
+          if (object.actionId != null)
+            message.actionId = String(object.actionId);
+          return message;
+        };
+        RunFileActionRequest.toObject = function toObject(message, options) {
+          if (!options)
+            options = {};
+          let object = {};
+          if (options.defaults) {
+            object.path = "";
+            object.actionId = "";
+          }
+          if (message.path != null && message.hasOwnProperty("path"))
+            object.path = message.path;
+          if (message.actionId != null && message.hasOwnProperty("actionId"))
+            object.actionId = message.actionId;
+          return object;
+        };
+        RunFileActionRequest.prototype.toJSON = function toJSON() {
+          return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+        };
+        RunFileActionRequest.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
+          if (typeUrlPrefix === void 0) {
+            typeUrlPrefix = "type.googleapis.com";
+          }
+          return typeUrlPrefix + "/tilbo.ipc.v1.RunFileActionRequest";
+        };
+        return RunFileActionRequest;
+      })();
+      v1.RunFileActionResponse = (function() {
+        function RunFileActionResponse(properties) {
+          if (properties) {
+            for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+              if (properties[keys[i]] != null)
+                this[keys[i]] = properties[keys[i]];
+          }
+        }
+        RunFileActionResponse.create = function create(properties) {
+          return new RunFileActionResponse(properties);
+        };
+        RunFileActionResponse.encode = function encode(message, writer) {
+          if (!writer)
+            writer = $Writer.create();
+          return writer;
+        };
+        RunFileActionResponse.encodeDelimited = function encodeDelimited(message, writer) {
+          return this.encode(message, writer).ldelim();
+        };
+        RunFileActionResponse.decode = function decode(reader, length, error) {
+          if (!(reader instanceof $Reader))
+            reader = $Reader.create(reader);
+          let end = length === void 0 ? reader.len : reader.pos + length, message = new $root.tilbo.ipc.v1.RunFileActionResponse();
+          while (reader.pos < end) {
+            let tag = reader.uint32();
+            if (tag === error)
+              break;
+            switch (tag >>> 3) {
+              default:
+                reader.skipType(tag & 7);
+                break;
+            }
+          }
+          return message;
+        };
+        RunFileActionResponse.decodeDelimited = function decodeDelimited(reader) {
+          if (!(reader instanceof $Reader))
+            reader = new $Reader(reader);
+          return this.decode(reader, reader.uint32());
+        };
+        RunFileActionResponse.verify = function verify(message) {
+          if (typeof message !== "object" || message === null)
+            return "object expected";
+          return null;
+        };
+        RunFileActionResponse.fromObject = function fromObject(object) {
+          if (object instanceof $root.tilbo.ipc.v1.RunFileActionResponse)
+            return object;
+          return new $root.tilbo.ipc.v1.RunFileActionResponse();
+        };
+        RunFileActionResponse.toObject = function toObject() {
+          return {};
+        };
+        RunFileActionResponse.prototype.toJSON = function toJSON() {
+          return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+        };
+        RunFileActionResponse.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
+          if (typeUrlPrefix === void 0) {
+            typeUrlPrefix = "type.googleapis.com";
+          }
+          return typeUrlPrefix + "/tilbo.ipc.v1.RunFileActionResponse";
+        };
+        return RunFileActionResponse;
+      })();
+      v1.LaunchGUIRequest = (function() {
+        function LaunchGUIRequest(properties) {
+          if (properties) {
+            for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+              if (properties[keys[i]] != null)
+                this[keys[i]] = properties[keys[i]];
+          }
+        }
+        LaunchGUIRequest.prototype.path = "";
+        LaunchGUIRequest.create = function create(properties) {
+          return new LaunchGUIRequest(properties);
+        };
+        LaunchGUIRequest.encode = function encode(message, writer) {
+          if (!writer)
+            writer = $Writer.create();
+          if (message.path != null && Object.hasOwnProperty.call(message, "path"))
+            writer.uint32(
+              /* id 1, wireType 2 =*/
+              10
+            ).string(message.path);
+          return writer;
+        };
+        LaunchGUIRequest.encodeDelimited = function encodeDelimited(message, writer) {
+          return this.encode(message, writer).ldelim();
+        };
+        LaunchGUIRequest.decode = function decode(reader, length, error) {
+          if (!(reader instanceof $Reader))
+            reader = $Reader.create(reader);
+          let end = length === void 0 ? reader.len : reader.pos + length, message = new $root.tilbo.ipc.v1.LaunchGUIRequest();
+          while (reader.pos < end) {
+            let tag = reader.uint32();
+            if (tag === error)
+              break;
+            switch (tag >>> 3) {
+              case 1: {
+                message.path = reader.string();
+                break;
+              }
+              default:
+                reader.skipType(tag & 7);
+                break;
+            }
+          }
+          return message;
+        };
+        LaunchGUIRequest.decodeDelimited = function decodeDelimited(reader) {
+          if (!(reader instanceof $Reader))
+            reader = new $Reader(reader);
+          return this.decode(reader, reader.uint32());
+        };
+        LaunchGUIRequest.verify = function verify(message) {
+          if (typeof message !== "object" || message === null)
+            return "object expected";
+          if (message.path != null && message.hasOwnProperty("path")) {
+            if (!$util.isString(message.path))
+              return "path: string expected";
+          }
+          return null;
+        };
+        LaunchGUIRequest.fromObject = function fromObject(object) {
+          if (object instanceof $root.tilbo.ipc.v1.LaunchGUIRequest)
+            return object;
+          let message = new $root.tilbo.ipc.v1.LaunchGUIRequest();
+          if (object.path != null)
+            message.path = String(object.path);
+          return message;
+        };
+        LaunchGUIRequest.toObject = function toObject(message, options) {
+          if (!options)
+            options = {};
+          let object = {};
+          if (options.defaults)
+            object.path = "";
+          if (message.path != null && message.hasOwnProperty("path"))
+            object.path = message.path;
+          return object;
+        };
+        LaunchGUIRequest.prototype.toJSON = function toJSON() {
+          return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+        };
+        LaunchGUIRequest.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
+          if (typeUrlPrefix === void 0) {
+            typeUrlPrefix = "type.googleapis.com";
+          }
+          return typeUrlPrefix + "/tilbo.ipc.v1.LaunchGUIRequest";
+        };
+        return LaunchGUIRequest;
+      })();
+      v1.LaunchGUIResponse = (function() {
+        function LaunchGUIResponse(properties) {
+          if (properties) {
+            for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+              if (properties[keys[i]] != null)
+                this[keys[i]] = properties[keys[i]];
+          }
+        }
+        LaunchGUIResponse.prototype.alreadyRunning = false;
+        LaunchGUIResponse.create = function create(properties) {
+          return new LaunchGUIResponse(properties);
+        };
+        LaunchGUIResponse.encode = function encode(message, writer) {
+          if (!writer)
+            writer = $Writer.create();
+          if (message.alreadyRunning != null && Object.hasOwnProperty.call(message, "alreadyRunning"))
+            writer.uint32(
+              /* id 1, wireType 0 =*/
+              8
+            ).bool(message.alreadyRunning);
+          return writer;
+        };
+        LaunchGUIResponse.encodeDelimited = function encodeDelimited(message, writer) {
+          return this.encode(message, writer).ldelim();
+        };
+        LaunchGUIResponse.decode = function decode(reader, length, error) {
+          if (!(reader instanceof $Reader))
+            reader = $Reader.create(reader);
+          let end = length === void 0 ? reader.len : reader.pos + length, message = new $root.tilbo.ipc.v1.LaunchGUIResponse();
+          while (reader.pos < end) {
+            let tag = reader.uint32();
+            if (tag === error)
+              break;
+            switch (tag >>> 3) {
+              case 1: {
+                message.alreadyRunning = reader.bool();
+                break;
+              }
+              default:
+                reader.skipType(tag & 7);
+                break;
+            }
+          }
+          return message;
+        };
+        LaunchGUIResponse.decodeDelimited = function decodeDelimited(reader) {
+          if (!(reader instanceof $Reader))
+            reader = new $Reader(reader);
+          return this.decode(reader, reader.uint32());
+        };
+        LaunchGUIResponse.verify = function verify(message) {
+          if (typeof message !== "object" || message === null)
+            return "object expected";
+          if (message.alreadyRunning != null && message.hasOwnProperty("alreadyRunning")) {
+            if (typeof message.alreadyRunning !== "boolean")
+              return "alreadyRunning: boolean expected";
+          }
+          return null;
+        };
+        LaunchGUIResponse.fromObject = function fromObject(object) {
+          if (object instanceof $root.tilbo.ipc.v1.LaunchGUIResponse)
+            return object;
+          let message = new $root.tilbo.ipc.v1.LaunchGUIResponse();
+          if (object.alreadyRunning != null)
+            message.alreadyRunning = Boolean(object.alreadyRunning);
+          return message;
+        };
+        LaunchGUIResponse.toObject = function toObject(message, options) {
+          if (!options)
+            options = {};
+          let object = {};
+          if (options.defaults)
+            object.alreadyRunning = false;
+          if (message.alreadyRunning != null && message.hasOwnProperty("alreadyRunning"))
+            object.alreadyRunning = message.alreadyRunning;
+          return object;
+        };
+        LaunchGUIResponse.prototype.toJSON = function toJSON() {
+          return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+        };
+        LaunchGUIResponse.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
+          if (typeUrlPrefix === void 0) {
+            typeUrlPrefix = "type.googleapis.com";
+          }
+          return typeUrlPrefix + "/tilbo.ipc.v1.LaunchGUIResponse";
+        };
+        return LaunchGUIResponse;
+      })();
+      v1.ShowWindowEvent = (function() {
+        function ShowWindowEvent(properties) {
+          if (properties) {
+            for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+              if (properties[keys[i]] != null)
+                this[keys[i]] = properties[keys[i]];
+          }
+        }
+        ShowWindowEvent.prototype.path = "";
+        ShowWindowEvent.create = function create(properties) {
+          return new ShowWindowEvent(properties);
+        };
+        ShowWindowEvent.encode = function encode(message, writer) {
+          if (!writer)
+            writer = $Writer.create();
+          if (message.path != null && Object.hasOwnProperty.call(message, "path"))
+            writer.uint32(
+              /* id 1, wireType 2 =*/
+              10
+            ).string(message.path);
+          return writer;
+        };
+        ShowWindowEvent.encodeDelimited = function encodeDelimited(message, writer) {
+          return this.encode(message, writer).ldelim();
+        };
+        ShowWindowEvent.decode = function decode(reader, length, error) {
+          if (!(reader instanceof $Reader))
+            reader = $Reader.create(reader);
+          let end = length === void 0 ? reader.len : reader.pos + length, message = new $root.tilbo.ipc.v1.ShowWindowEvent();
+          while (reader.pos < end) {
+            let tag = reader.uint32();
+            if (tag === error)
+              break;
+            switch (tag >>> 3) {
+              case 1: {
+                message.path = reader.string();
+                break;
+              }
+              default:
+                reader.skipType(tag & 7);
+                break;
+            }
+          }
+          return message;
+        };
+        ShowWindowEvent.decodeDelimited = function decodeDelimited(reader) {
+          if (!(reader instanceof $Reader))
+            reader = new $Reader(reader);
+          return this.decode(reader, reader.uint32());
+        };
+        ShowWindowEvent.verify = function verify(message) {
+          if (typeof message !== "object" || message === null)
+            return "object expected";
+          if (message.path != null && message.hasOwnProperty("path")) {
+            if (!$util.isString(message.path))
+              return "path: string expected";
+          }
+          return null;
+        };
+        ShowWindowEvent.fromObject = function fromObject(object) {
+          if (object instanceof $root.tilbo.ipc.v1.ShowWindowEvent)
+            return object;
+          let message = new $root.tilbo.ipc.v1.ShowWindowEvent();
+          if (object.path != null)
+            message.path = String(object.path);
+          return message;
+        };
+        ShowWindowEvent.toObject = function toObject(message, options) {
+          if (!options)
+            options = {};
+          let object = {};
+          if (options.defaults)
+            object.path = "";
+          if (message.path != null && message.hasOwnProperty("path"))
+            object.path = message.path;
+          return object;
+        };
+        ShowWindowEvent.prototype.toJSON = function toJSON() {
+          return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+        };
+        ShowWindowEvent.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
+          if (typeUrlPrefix === void 0) {
+            typeUrlPrefix = "type.googleapis.com";
+          }
+          return typeUrlPrefix + "/tilbo.ipc.v1.ShowWindowEvent";
+        };
+        return ShowWindowEvent;
       })();
       return v1;
     })();

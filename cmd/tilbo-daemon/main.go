@@ -21,6 +21,7 @@ import (
 
 	"github.com/darkliquid/tilbo/internal/bookmarks"
 	"github.com/darkliquid/tilbo/internal/config"
+	"github.com/darkliquid/tilbo/internal/extension"
 	tilbofuse "github.com/darkliquid/tilbo/internal/fuse"
 	"github.com/darkliquid/tilbo/internal/graph"
 	"github.com/darkliquid/tilbo/internal/harvester"
@@ -100,16 +101,25 @@ func run(
 	engine, ruleReg := initRuleEngine(ctx, cfgPath, wasmCache)
 	defer ruleReg.Close(ctx)
 
+	extRegistry := initExtensionRegistry(ctx)
+
 	fileGraph := loadGraphState(ctx, idx)
 	embedder := initOptionalEmbedder(ctx, embedModelPath, embedModelName, embedDisabled)
 
 	proc := newProcessor(idx, tags, pipeline, engine, fileGraph, embedder)
 
+	// Load config for browser features (pinned places, keybindings, use_trash).
+	browserCfg, _ := config.Load(cfgPath)
+	browserCfgPtr := &browserCfg
+
 	uiBrowserMethods := &daemonBrowserMethods{
-		idx:       idx,
-		tags:      tags,
-		g:         fileGraph,
-		fuseMount: fuseMount,
+		idx:         idx,
+		tags:        tags,
+		g:           fileGraph,
+		fuseMount:   fuseMount,
+		cfg:         browserCfgPtr,
+		cfgPath:     cfgPath,
+		extRegistry: extRegistry,
 	}
 
 	sweeper := rules.NewSweeper(idx, tags, pipeline, engine)
@@ -120,6 +130,8 @@ func run(
 	if err := ensureParentDir(sockPath, "create socket dir"); err != nil {
 		return err
 	}
+
+	guiMgr := newGUIManager(browserCfg.Daemon.GUIShellPath, nil)
 
 	handleTagReq := func(reqCtx context.Context, req *ipcv1.TagRequest) (*ipcv1.Response, error) {
 		return handleTag(reqCtx, req, idx, tags, fileGraph, proc.OnFileTagged)
@@ -136,6 +148,7 @@ func run(
 		engine,
 		embedder,
 		uiBrowserMethods,
+		guiMgr,
 	)
 
 	ipcServer, err := startIPCServer(ctx, sockPath, handleIPCRequest)
@@ -143,6 +156,9 @@ func run(
 		return err
 	}
 	defer ipcServer.Stop()
+
+	// Wire up broadcast now that the IPC server exists.
+	guiMgr.broadcast = ipcServer.BroadcastEvent
 
 	proc.OnFileTagged = func(path string, added, removed []string) {
 		ipcServer.BroadcastEvent(&ipcv1.Event{
@@ -209,6 +225,14 @@ func initWASMCache(ctx context.Context) wazero.CompilationCache {
 		return nil
 	}
 	return wasmCache
+}
+
+func initExtensionRegistry(ctx context.Context) *extension.Registry {
+	reg := extension.NewRegistry()
+	if err := reg.Load(ctx, extension.DefaultDirs()); err != nil {
+		slog.WarnContext(ctx, "extension registry load error", "err", err)
+	}
+	return reg
 }
 
 func initHarvesterPipeline(
@@ -397,6 +421,7 @@ func buildIPCRequestHandler(
 	engine *rules.Engine,
 	embedder *vectorize.ONNXEmbedder,
 	browser *daemonBrowserMethods,
+	guiMgr *guiManager,
 ) func(context.Context, *ipcv1.Request) (*ipcv1.Response, error) {
 	return func(ctx context.Context, req *ipcv1.Request) (*ipcv1.Response, error) {
 		switch r := req.GetKind().(type) {
@@ -447,6 +472,39 @@ func buildIPCRequestHandler(
 			return handleChmodFile(r.ChmodFile, browser)
 		case *ipcv1.Request_ListPlaces:
 			return handleListPlaces(r.ListPlaces, browser)
+		case *ipcv1.Request_PinPlace:
+			return handlePinPlace(r.PinPlace, browser)
+		case *ipcv1.Request_UnpinPlace:
+			return handleUnpinPlace(r.UnpinPlace, browser)
+		case *ipcv1.Request_TrashFile:
+			return handleTrashFile(r.TrashFile, browser)
+		case *ipcv1.Request_ListTrash:
+			return handleListTrash(r.ListTrash, browser)
+		case *ipcv1.Request_RestoreTrash:
+			return handleRestoreTrash(r.RestoreTrash, browser)
+		case *ipcv1.Request_EmptyTrash:
+			return handleEmptyTrash(r.EmptyTrash, browser)
+		case *ipcv1.Request_ListAppsForFile:
+			return handleListAppsForFile(r.ListAppsForFile, browser)
+		case *ipcv1.Request_OpenWithApp:
+			return handleOpenWithApp(r.OpenWithApp, browser)
+		case *ipcv1.Request_GetBrowserConfig:
+			return handleGetBrowserConfig(r.GetBrowserConfig, browser)
+		case *ipcv1.Request_GetFileBadges:
+			return handleGetFileBadges(r.GetFileBadges, browser)
+		case *ipcv1.Request_GetFileActions:
+			return handleGetFileActions(r.GetFileActions, browser)
+		case *ipcv1.Request_RunFileAction:
+			return handleRunFileAction(r.RunFileAction, browser)
+
+		case *ipcv1.Request_LaunchGui:
+			alreadyRunning, launchErr := guiMgr.Launch(r.LaunchGui.GetPath())
+			if launchErr != nil {
+				return errResponse(daemonInternalErrCode, fmt.Sprintf("launch gui: %v", launchErr)), nil
+			}
+			return &ipcv1.Response{Kind: &ipcv1.Response_LaunchGui{
+				LaunchGui: &ipcv1.LaunchGUIResponse{AlreadyRunning: alreadyRunning},
+			}}, nil
 
 		case *ipcv1.Request_ReloadRules:
 			var reloadErrs []string

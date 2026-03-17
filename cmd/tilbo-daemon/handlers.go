@@ -332,6 +332,8 @@ func handleListDirectory(req *ipcv1.ListDirectoryRequest, browser *daemonBrowser
 			Mtime:     e.MTime,
 			Mode:      e.Mode,
 			Hidden:    e.Hidden,
+			MimeType:  e.MimeType,
+			IconName:  e.IconName,
 		}
 	}
 	return &ipcv1.Response{Kind: &ipcv1.Response_ListDirectory{
@@ -412,11 +414,132 @@ func handleListPlaces(_ *ipcv1.ListPlacesRequest, browser *daemonBrowserMethods)
 	resPlaces := make([]*ipcv1.PlaceEntry, len(places))
 	for i, p := range places {
 		resPlaces[i] = &ipcv1.PlaceEntry{
-			Name: p.Name,
-			Path: p.Path,
+			Name:     p.Name,
+			Path:     p.Path,
+			Pinned:   p.Pinned,
+			IconName: p.IconName,
 		}
 	}
 	return &ipcv1.Response{Kind: &ipcv1.Response_ListPlaces{
 		ListPlaces: &ipcv1.ListPlacesResponse{Places: resPlaces},
 	}}, nil
+}
+
+func handlePinPlace(req *ipcv1.PinPlaceRequest, browser *daemonBrowserMethods) (*ipcv1.Response, error) {
+	if err := browser.PinPlace(req.GetName(), req.GetPath(), req.GetIconName()); err != nil {
+		return errResponse(daemonInternalErrCode, err.Error()), nil
+	}
+	return &ipcv1.Response{Kind: &ipcv1.Response_PinPlace{PinPlace: &ipcv1.PinPlaceResponse{}}}, nil
+}
+
+func handleUnpinPlace(req *ipcv1.UnpinPlaceRequest, browser *daemonBrowserMethods) (*ipcv1.Response, error) {
+	if err := browser.UnpinPlace(req.GetPath()); err != nil {
+		return errResponse(daemonInternalErrCode, err.Error()), nil
+	}
+	return &ipcv1.Response{Kind: &ipcv1.Response_UnpinPlace{UnpinPlace: &ipcv1.UnpinPlaceResponse{}}}, nil
+}
+
+func handleTrashFile(req *ipcv1.TrashFileRequest, browser *daemonBrowserMethods) (*ipcv1.Response, error) {
+	if err := browser.TrashFile(req.GetPath()); err != nil {
+		return errResponse(daemonInternalErrCode, err.Error()), nil
+	}
+	return &ipcv1.Response{Kind: &ipcv1.Response_TrashFile{TrashFile: &ipcv1.TrashFileResponse{}}}, nil
+}
+
+func handleListTrash(_ *ipcv1.ListTrashRequest, browser *daemonBrowserMethods) (*ipcv1.Response, error) {
+	entries, err := browser.ListTrash()
+	if err != nil {
+		return errResponse(daemonInternalErrCode, err.Error()), nil
+	}
+	res := make([]*ipcv1.TrashEntry, len(entries))
+	for i, e := range entries {
+		res[i] = &ipcv1.TrashEntry{
+			Name:         e.Name,
+			OriginalPath: e.OriginalPath,
+			DeletionDate: e.DeletionDate,
+			SizeBytes:    e.SizeBytes,
+		}
+	}
+	return &ipcv1.Response{Kind: &ipcv1.Response_ListTrash{
+		ListTrash: &ipcv1.ListTrashResponse{Entries: res},
+	}}, nil
+}
+
+func handleRestoreTrash(req *ipcv1.RestoreTrashRequest, browser *daemonBrowserMethods) (*ipcv1.Response, error) {
+	if err := browser.RestoreTrash(req.GetTrashName()); err != nil {
+		return errResponse(daemonInternalErrCode, err.Error()), nil
+	}
+	return &ipcv1.Response{Kind: &ipcv1.Response_RestoreTrash{RestoreTrash: &ipcv1.RestoreTrashResponse{}}}, nil
+}
+
+func handleEmptyTrash(_ *ipcv1.EmptyTrashRequest, browser *daemonBrowserMethods) (*ipcv1.Response, error) {
+	if err := browser.EmptyTrash(); err != nil {
+		return errResponse(daemonInternalErrCode, err.Error()), nil
+	}
+	return &ipcv1.Response{Kind: &ipcv1.Response_EmptyTrash{EmptyTrash: &ipcv1.EmptyTrashResponse{}}}, nil
+}
+
+func handleListAppsForFile(req *ipcv1.ListAppsForFileRequest, browser *daemonBrowserMethods) (*ipcv1.Response, error) {
+	apps, err := browser.ListAppsForFile(req.GetPath())
+	if err != nil {
+		return errResponse(daemonInternalErrCode, err.Error()), nil
+	}
+	res := make([]*ipcv1.AppEntry, len(apps))
+	for i, a := range apps {
+		res[i] = &ipcv1.AppEntry{Id: a.ID, Name: a.Name, IconName: a.IconName}
+	}
+	return &ipcv1.Response{Kind: &ipcv1.Response_ListAppsForFile{
+		ListAppsForFile: &ipcv1.ListAppsForFileResponse{Apps: res},
+	}}, nil
+}
+
+func handleOpenWithApp(req *ipcv1.OpenWithAppRequest, browser *daemonBrowserMethods) (*ipcv1.Response, error) {
+	if err := browser.OpenWithApp(req.GetPath(), req.GetAppId()); err != nil {
+		return errResponse(daemonInternalErrCode, err.Error()), nil
+	}
+	return &ipcv1.Response{Kind: &ipcv1.Response_OpenWithApp{OpenWithApp: &ipcv1.OpenWithAppResponse{}}}, nil
+}
+
+func handleGetBrowserConfig(_ *ipcv1.GetBrowserConfigRequest, browser *daemonBrowserMethods) (*ipcv1.Response, error) {
+	cfg, err := browser.GetBrowserConfig()
+	if err != nil {
+		return errResponse(daemonInternalErrCode, err.Error()), nil
+	}
+	return &ipcv1.Response{Kind: &ipcv1.Response_GetBrowserConfig{
+		GetBrowserConfig: &ipcv1.GetBrowserConfigResponse{
+			Keybindings: cfg.Keybindings,
+			UseTrash:    cfg.UseTrash,
+		},
+	}}, nil
+}
+
+func handleGetFileBadges(req *ipcv1.GetFileBadgesRequest, browser *daemonBrowserMethods) (*ipcv1.Response, error) {
+	badges, err := browser.GetFileBadges(req.GetPath())
+	if err != nil {
+		return errResponse(daemonInternalErrCode, err.Error()), nil
+	}
+	return &ipcv1.Response{Kind: &ipcv1.Response_GetFileBadges{
+		GetFileBadges: &ipcv1.GetFileBadgesResponse{Badges: badges},
+	}}, nil
+}
+
+func handleGetFileActions(req *ipcv1.GetFileActionsRequest, browser *daemonBrowserMethods) (*ipcv1.Response, error) {
+	actions, err := browser.GetFileActions(req.GetPath())
+	if err != nil {
+		return errResponse(daemonInternalErrCode, err.Error()), nil
+	}
+	res := make([]*ipcv1.FileAction, len(actions))
+	for i, a := range actions {
+		res[i] = &ipcv1.FileAction{Id: a.ID, Label: a.Label}
+	}
+	return &ipcv1.Response{Kind: &ipcv1.Response_GetFileActions{
+		GetFileActions: &ipcv1.GetFileActionsResponse{Actions: res},
+	}}, nil
+}
+
+func handleRunFileAction(req *ipcv1.RunFileActionRequest, browser *daemonBrowserMethods) (*ipcv1.Response, error) {
+	if err := browser.RunFileAction(req.GetPath(), req.GetActionId()); err != nil {
+		return errResponse(daemonInternalErrCode, err.Error()), nil
+	}
+	return &ipcv1.Response{Kind: &ipcv1.Response_RunFileAction{RunFileAction: &ipcv1.RunFileActionResponse{}}}, nil
 }

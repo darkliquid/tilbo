@@ -5,7 +5,7 @@ golangci-lint = "2.11.3"
 "go:google.golang.org/protobuf/cmd/protoc-gen-go" = "latest"
 "go:github.com/planetscale/vtprotobuf/cmd/protoc-gen-go-vtproto" = "latest"
 sqlc = "latest"
-node = "20"
+node = "25"
 "npm:esbuild" = "latest"
 "npm:protobufjs-cli" = "latest"
 
@@ -107,7 +107,10 @@ rm -rf internal/ipc/gen/
 
 [tasks.run-quickshell]
 description = "Run the tilbo Quickshell frontend (daemon must be running first)"
-run = "quickshell -p cmd/tilbo-quickshell/shell.qml"
+run = """
+export QS_ICON_THEME="${QS_ICON_THEME:-$(contrib/scripts/detect-icon-theme.sh)}"
+exec quickshell -p cmd/tilbo-quickshell/shell.qml
+"""
 sources = ["cmd/tilbo-quickshell/**/*.qml"]
 
 [tasks.build-sqlite-vec]

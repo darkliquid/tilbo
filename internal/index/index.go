@@ -693,3 +693,24 @@ func saturatingInt64FromUint64(v uint64) int64 {
 	}
 	return int64(v)
 }
+
+// GetFileMime returns the MIME type stored in file_meta for the given path.
+// Returns an empty string (not an error) if the file is not indexed or has no
+// MIME type recorded.
+func (d *DB) GetFileMime(ctx context.Context, path string) (string, error) {
+	var mime string
+	err := d.db.QueryRowContext(ctx,
+		`SELECT fm.value FROM file_meta fm
+		 JOIN files f ON f.id = fm.file_id
+		 WHERE f.path = ? AND fm.key = 'mime.type'
+		 LIMIT 1`,
+		path,
+	).Scan(&mime)
+	if errors.Is(err, sql.ErrNoRows) {
+		return "", nil
+	}
+	if err != nil {
+		return "", fmt.Errorf("index: get mime for %q: %w", path, err)
+	}
+	return mime, nil
+}

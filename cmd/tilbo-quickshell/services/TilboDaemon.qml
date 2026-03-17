@@ -21,6 +21,7 @@ Singleton {
     signal fileTagged(string path, var added, var removed)
     signal indexUpdated(var filesTotal, var tagsTotal)
     signal daemonStateChanged(string state)
+    signal showWindow(string path)
 
     // ── Internal: pending call registry ──────────────────────────────────
     property var   _pending: ({})   // string(id) → callback(result, err)
@@ -69,6 +70,8 @@ Singleton {
                 root.indexUpdated(Number(ev.indexUpdated.filesTotal || 0), Number(ev.indexUpdated.tagsTotal || 0))
             } else if (ev.daemonStateChanged) {
                 root.daemonStateChanged(ev.daemonStateChanged.state || "")
+            } else if (ev.showWindow) {
+                root.showWindow(ev.showWindow.path || "")
             }
             return
         }
@@ -115,6 +118,8 @@ Singleton {
                 mtime: Number(e.mtime || 0),
                 mode: e.mode,
                 hidden: e.hidden,
+                mimeType: e.mimeType || "",
+                iconName: e.iconName || (e.isDir ? "inode-directory" : "application-x-generic"),
                 tags: []
             })), null)
         })
@@ -235,7 +240,98 @@ Singleton {
         _call({ listPlaces: {} }, function(resp, err) {
             if (err) { callback([], err); return }
             var places = (resp.listPlaces && resp.listPlaces.places) ? resp.listPlaces.places : []
-            callback(places.map(p => ({ name: p.name, path: p.path })), null)
+            callback(places.map(p => ({
+                name: p.name,
+                path: p.path,
+                pinned: !!p.pinned,
+                iconName: p.iconName || "folder"
+            })), null)
+        })
+    }
+
+    function pinPlace(name, path, iconName, callback) {
+        _call({ pinPlace: { name: name, path: path, iconName: iconName || "folder" } }, function(_resp, err) {
+            if (callback) callback(err)
+        })
+    }
+
+    function unpinPlace(path, callback) {
+        _call({ unpinPlace: { path: path } }, function(_resp, err) {
+            if (callback) callback(err)
+        })
+    }
+
+    function trashFile(path, callback) {
+        _call({ trashFile: { path: path } }, function(_resp, err) {
+            if (callback) callback(err)
+        })
+    }
+
+    function listTrash(callback) {
+        _call({ listTrash: {} }, function(resp, err) {
+            if (err) { callback([], err); return }
+            var entries = (resp.listTrash && resp.listTrash.entries) ? resp.listTrash.entries : []
+            callback(entries.map(e => ({
+                name: e.name,
+                originalPath: e.originalPath || "",
+                deletionDate: Number(e.deletionDate || 0),
+                sizeBytes: Number(e.sizeBytes || 0)
+            })), null)
+        })
+    }
+
+    function restoreTrash(trashName, callback) {
+        _call({ restoreTrash: { trashName: trashName } }, function(_resp, err) {
+            if (callback) callback(err)
+        })
+    }
+
+    function emptyTrash(callback) {
+        _call({ emptyTrash: {} }, function(_resp, err) {
+            if (callback) callback(err)
+        })
+    }
+
+    function listAppsForFile(path, callback) {
+        _call({ listAppsForFile: { path: path } }, function(resp, err) {
+            if (err) { callback([], err); return }
+            var apps = (resp.listAppsForFile && resp.listAppsForFile.apps) ? resp.listAppsForFile.apps : []
+            callback(apps.map(a => ({ id: a.id, name: a.name, iconName: a.iconName || "" })), null)
+        })
+    }
+
+    function openWithApp(path, appId, callback) {
+        _call({ openWithApp: { path: path, appId: appId } }, function(_resp, err) {
+            if (callback) callback(err)
+        })
+    }
+
+    function getBrowserConfig(callback) {
+        _call({ getBrowserConfig: {} }, function(resp, err) {
+            if (err) { callback(null, err); return }
+            var cfg = resp.getBrowserConfig || {}
+            callback({ keybindings: cfg.keybindings || {}, useTrash: !!cfg.useTrash }, null)
+        })
+    }
+
+    function getFileBadges(path, callback) {
+        _call({ getFileBadges: { path: path } }, function(resp, err) {
+            if (err) { callback([], err); return }
+            callback((resp.getFileBadges && resp.getFileBadges.badges) ? resp.getFileBadges.badges : [], null)
+        })
+    }
+
+    function getFileActions(path, callback) {
+        _call({ getFileActions: { path: path } }, function(resp, err) {
+            if (err) { callback([], err); return }
+            var actions = (resp.getFileActions && resp.getFileActions.actions) ? resp.getFileActions.actions : []
+            callback(actions.map(a => ({ id: a.id, label: a.label })), null)
+        })
+    }
+
+    function runFileAction(path, actionId, callback) {
+        _call({ runFileAction: { path: path, actionId: actionId } }, function(_resp, err) {
+            if (callback) callback(err)
         })
     }
 }

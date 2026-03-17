@@ -31,6 +31,19 @@ message Request {
     DeleteFileRequest delete_file = 14;
     ChmodFileRequest chmod_file = 15;
     ListPlacesRequest list_places = 16;
+    PinPlaceRequest pin_place = 17;
+    UnpinPlaceRequest unpin_place = 18;
+    TrashFileRequest trash_file = 19;
+    ListTrashRequest list_trash = 20;
+    RestoreTrashRequest restore_trash = 21;
+    EmptyTrashRequest empty_trash = 22;
+    ListAppsForFileRequest list_apps_for_file = 23;
+    OpenWithAppRequest open_with_app = 24;
+    GetBrowserConfigRequest get_browser_config = 25;
+    GetFileBadgesRequest get_file_badges = 26;
+    GetFileActionsRequest get_file_actions = 27;
+    RunFileActionRequest run_file_action = 28;
+    LaunchGUIRequest launch_gui = 29;
   }
 }
 
@@ -52,6 +65,19 @@ message Response {
     DeleteFileResponse delete_file = 14;
     ChmodFileResponse chmod_file = 15;
     ListPlacesResponse list_places = 16;
+    PinPlaceResponse pin_place = 17;
+    UnpinPlaceResponse unpin_place = 18;
+    TrashFileResponse trash_file = 19;
+    ListTrashResponse list_trash = 20;
+    RestoreTrashResponse restore_trash = 21;
+    EmptyTrashResponse empty_trash = 22;
+    ListAppsForFileResponse list_apps_for_file = 23;
+    OpenWithAppResponse open_with_app = 24;
+    GetBrowserConfigResponse get_browser_config = 25;
+    GetFileBadgesResponse get_file_badges = 26;
+    GetFileActionsResponse get_file_actions = 27;
+    RunFileActionResponse run_file_action = 28;
+    LaunchGUIResponse launch_gui = 29;
   }
 }
 
@@ -60,6 +86,7 @@ message Event {
     FileTaggedEvent file_tagged = 1;
     IndexUpdatedEvent index_updated = 2;
     DaemonStateChangedEvent daemon_state_changed = 3;
+    ShowWindowEvent show_window = 4;
   }
 }
 
@@ -208,6 +235,8 @@ message DirEntry {
   int64 mtime = 5;
   uint32 mode = 6;
   bool hidden = 7;
+  string mime_type = 8;
+  string icon_name = 9;
 }
 
 message ListDirectoryResponse {
@@ -265,6 +294,8 @@ message ListPlacesRequest {}
 message PlaceEntry {
   string name = 1;
   string path = 2;
+  bool pinned = 3;
+  string icon_name = 4;
 }
 
 message ListPlacesResponse {
@@ -284,4 +315,114 @@ message IndexUpdatedEvent {
 
 message DaemonStateChangedEvent {
   string state = 1;
+}
+
+// Feature 2: Custom Pinned Places
+message PinPlaceRequest {
+  string name = 1;
+  string path = 2;
+  string icon_name = 3;
+}
+message PinPlaceResponse {}
+
+message UnpinPlaceRequest {
+  string path = 1;
+}
+message UnpinPlaceResponse {}
+
+// Feature 4: Trash Support
+message TrashFileRequest {
+  string path = 1;
+}
+message TrashFileResponse {}
+
+message ListTrashRequest {}
+
+message TrashEntry {
+  string name = 1;
+  string original_path = 2;
+  int64 deletion_date = 3;
+  int64 size_bytes = 4;
+}
+
+message ListTrashResponse {
+  repeated TrashEntry entries = 1;
+}
+
+message RestoreTrashRequest {
+  string trash_name = 1;
+}
+message RestoreTrashResponse {}
+
+message EmptyTrashRequest {}
+message EmptyTrashResponse {}
+
+// Feature 5: Open With
+message AppEntry {
+  string id = 1;
+  string name = 2;
+  string icon_name = 3;
+}
+
+message ListAppsForFileRequest {
+  string path = 1;
+}
+
+message ListAppsForFileResponse {
+  repeated AppEntry apps = 1;
+}
+
+message OpenWithAppRequest {
+  string path = 1;
+  string app_id = 2;
+}
+message OpenWithAppResponse {}
+
+// Feature 6: Browser Config / Keybindings
+message GetBrowserConfigRequest {}
+
+message GetBrowserConfigResponse {
+  map<string, string> keybindings = 1;
+  bool use_trash = 2;
+}
+
+// Feature 7: Extension System
+message GetFileBadgesRequest {
+  string path = 1;
+}
+
+message GetFileBadgesResponse {
+  repeated string badges = 1;
+}
+
+message FileAction {
+  string id = 1;
+  string label = 2;
+}
+
+message GetFileActionsRequest {
+  string path = 1;
+}
+
+message GetFileActionsResponse {
+  repeated FileAction actions = 1;
+}
+
+message RunFileActionRequest {
+  string path = 1;
+  string action_id = 2;
+}
+message RunFileActionResponse {}
+
+// Feature 8: GUI Launch
+message LaunchGUIRequest {
+  string path = 1; // optional initial directory to navigate to
+}
+
+message LaunchGUIResponse {
+  bool already_running = 1;
+}
+
+message ShowWindowEvent {
+  string path = 1; // optional path to navigate to
 }

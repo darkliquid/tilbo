@@ -13,9 +13,13 @@ import (
 	"strings"
 
 	"github.com/darkliquid/tilbo/internal/browser"
+	"github.com/darkliquid/tilbo/internal/config"
+	"github.com/darkliquid/tilbo/internal/desktopfile"
+	"github.com/darkliquid/tilbo/internal/extension"
 	"github.com/darkliquid/tilbo/internal/graph"
 	"github.com/darkliquid/tilbo/internal/index"
 	ipcv1 "github.com/darkliquid/tilbo/internal/ipc/gen/tilbo/ipc/v1"
+	"github.com/darkliquid/tilbo/internal/trash"
 	"github.com/darkliquid/tilbo/internal/xattr"
 )
 
@@ -24,6 +28,30 @@ const (
 	defaultGlobLimit      = 1000
 	defaultPlacesCapacity = 6
 )
+
+// mimeToIconName maps a MIME type string to an XDG icon theme name.
+func mimeToIconName(mime string) string {
+	switch {
+	case mime == "inode/directory":
+		return "inode-directory"
+	case strings.HasPrefix(mime, "image/"):
+		return "image-x-generic"
+	case strings.HasPrefix(mime, "video/"):
+		return "video-x-generic"
+	case strings.HasPrefix(mime, "audio/"):
+		return "audio-x-generic"
+	case strings.HasPrefix(mime, "text/"):
+		return "text-x-generic"
+	case mime == "application/pdf":
+		return "application-pdf"
+	case mime == "application/zip" || mime == "application/x-tar" || mime == "application/x-gzip" || mime == "application/x-bzip2" || mime == "application/x-xz":
+		return "application-x-archive"
+	case strings.HasPrefix(mime, "application/"):
+		return "application-x-executable"
+	default:
+		return "application-x-generic"
+	}
+}
 
 // daemonBrowserMethods implements browser.Methods for the daemon process.
 // Its methods are exposed via the uisocket JSON RPC server so the Quickshell
@@ -35,6 +63,9 @@ type daemonBrowserMethods struct {
 	g            *graph.Graph
 	fuseMount    string
 	onFileTagged func(path string, added, removed []string)
+	cfg          *config.Config
+	cfgPath      string
+	extRegistry  *extension.Registry
 }
 
 // validatePath cleans and validates a filesystem path for use in uisocket RPC
@@ -97,14 +128,30 @@ func (h *daemonBrowserMethods) ListDirectory(path string, hidden bool) ([]browse
 			mode = uint32(info.Mode().Perm())
 		}
 
+		entryPath := filepath.Join(clean, name)
+		var mimeType, iconName string
+		if de.IsDir() {
+			mimeType = "inode/directory"
+			iconName = "folder"
+		} else {
+			mimeType, _ = h.idx.GetFileMime(context.Background(), entryPath)
+			if mimeType != "" {
+				iconName = mimeToIconName(mimeType)
+			} else {
+				iconName = "application-x-generic"
+			}
+		}
+
 		entries = append(entries, browser.DirEntry{
-			Name:   name,
-			Path:   filepath.Join(clean, name),
-			IsDir:  de.IsDir(),
-			Size:   size,
-			MTime:  mtime,
-			Mode:   mode,
-			Hidden: isHidden,
+			Name:     name,
+			Path:     entryPath,
+			IsDir:    de.IsDir(),
+			Size:     size,
+			MTime:    mtime,
+			Mode:     mode,
+			Hidden:   isHidden,
+			MimeType: mimeType,
+			IconName: iconName,
 		})
 	}
 	return entries, nil
@@ -391,19 +438,31 @@ func (h *daemonBrowserMethods) RenameFile(path, newName string) (string, error) 
 	return newPath, nil
 }
 
-// DeleteFile removes path (file or directory tree). The daemon's watcher
+// DeleteFile removes path (file or directory tree). When UseTrash is true in
+// config, moves to trash instead of permanent deletion. The daemon's watcher
 // handles index cleanup asynchronously.
 func (h *daemonBrowserMethods) DeleteFile(path string) error {
-	clean, err := validatePath(path)
+	realPath, isVirtual, err := h.resolveForDelete(path)
 	if err != nil {
 		return err
 	}
-	if err := os.RemoveAll(clean); err != nil {
-		return fmt.Errorf("delete: %w", err)
+	if isVirtual {
+		return errors.New("browser: cannot delete virtual directory")
+	}
+
+	useTrash := h.cfg != nil && h.cfg.Browser.UseTrash
+	if useTrash {
+		if err := trash.MoveToTrash(realPath); err != nil {
+			return fmt.Errorf("trash: %w", err)
+		}
+	} else {
+		if err := os.RemoveAll(realPath); err != nil {
+			return fmt.Errorf("delete: %w", err)
+		}
 	}
 	// Eagerly remove from index so the UI sees the change immediately.
-	if err := h.idx.DeleteFile(context.Background(), clean); err != nil {
-		slog.Warn("browser: delete: remove index entry", "path", clean, "err", err)
+	if err := h.idx.DeleteFile(context.Background(), realPath); err != nil {
+		slog.Warn("browser: delete: remove index entry", "path", realPath, "err", err)
 	}
 	return nil
 }
@@ -420,8 +479,8 @@ func (h *daemonBrowserMethods) ChmodFile(path string, mode uint32) error {
 	return nil
 }
 
-// ListPlaces returns the sidebar places: home, configured XDG dirs, and FUSE
-// virtual dirs when the tilbo FUSE mount is active.
+// ListPlaces returns the sidebar places: home, configured XDG dirs, pinned
+// places (from config), and FUSE virtual dirs when the tilbo FUSE mount is active.
 func (h *daemonBrowserMethods) ListPlaces() ([]browser.PlaceEntry, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
@@ -430,23 +489,261 @@ func (h *daemonBrowserMethods) ListPlaces() ([]browser.PlaceEntry, error) {
 
 	places := make([]browser.PlaceEntry, 0, defaultPlacesCapacity)
 	for _, p := range []browser.PlaceEntry{
-		{Name: "Home", Path: home},
-		{Name: "Documents", Path: xdgDir("XDG_DOCUMENTS_DIR", filepath.Join(home, "Documents"))},
-		{Name: "Downloads", Path: xdgDir("XDG_DOWNLOAD_DIR", filepath.Join(home, "Downloads"))},
+		{Name: "Home", Path: home, IconName: "user-home"},
+		{Name: "Documents", Path: xdgDir("XDG_DOCUMENTS_DIR", filepath.Join(home, "Documents")), IconName: "folder-documents"},
+		{Name: "Downloads", Path: xdgDir("XDG_DOWNLOAD_DIR", filepath.Join(home, "Downloads")), IconName: "folder-download"},
 	} {
 		if _, statErr := os.Stat(p.Path); statErr == nil {
 			places = append(places, p)
 		}
 	}
 
+	// Pinned places from config (icon from config, fallback to "folder")
+	if h.cfg != nil {
+		for _, pp := range h.cfg.Browser.PinnedPlaces {
+			if pp.Path != "" && pp.Name != "" {
+				icon := pp.IconName
+				if icon == "" {
+					icon = "folder"
+				}
+				places = append(places, browser.PlaceEntry{
+					Name:     pp.Name,
+					Path:     pp.Path,
+					Pinned:   true,
+					IconName: icon,
+				})
+			}
+		}
+	}
+
 	if h.fuseMount != "" && isFUSEMounted(h.fuseMount) {
 		places = append(places,
-			browser.PlaceEntry{Name: "@recent", Path: h.fuseMount + "/@recent"},
-			browser.PlaceEntry{Name: "@untagged", Path: h.fuseMount + "/@untagged"},
-			browser.PlaceEntry{Name: "@browse", Path: h.fuseMount + "/@browse"},
+			browser.PlaceEntry{Name: "@recent", Path: h.fuseMount + "/@recent", IconName: "folder-recent"},
+			browser.PlaceEntry{Name: "@untagged", Path: h.fuseMount + "/@untagged", IconName: "folder"},
+			browser.PlaceEntry{Name: "@browse", Path: h.fuseMount + "/@browse", IconName: "tag"},
 		)
 	}
 	return places, nil
+}
+
+// PinPlace adds a pinned place to the config and saves it.
+// iconName is an XDG icon theme name; if empty, defaults to "folder".
+func (h *daemonBrowserMethods) PinPlace(name, path, iconName string) error {
+	if h.cfg == nil {
+		return errors.New("browser: config not available")
+	}
+	clean, err := validatePath(path)
+	if err != nil {
+		return err
+	}
+	if iconName == "" {
+		iconName = "folder"
+	}
+	// Avoid duplicates; update icon if already pinned.
+	for i, pp := range h.cfg.Browser.PinnedPlaces {
+		if pp.Path == clean {
+			h.cfg.Browser.PinnedPlaces[i].IconName = iconName
+			return config.Save(h.cfgPath, *h.cfg)
+		}
+	}
+	h.cfg.Browser.PinnedPlaces = append(h.cfg.Browser.PinnedPlaces, config.PinnedPlace{
+		Name:     name,
+		Path:     clean,
+		IconName: iconName,
+	})
+	return config.Save(h.cfgPath, *h.cfg)
+}
+
+// UnpinPlace removes a pinned place by path from the config and saves it.
+func (h *daemonBrowserMethods) UnpinPlace(path string) error {
+	if h.cfg == nil {
+		return errors.New("browser: config not available")
+	}
+	clean, err := validatePath(path)
+	if err != nil {
+		return err
+	}
+	filtered := h.cfg.Browser.PinnedPlaces[:0]
+	for _, pp := range h.cfg.Browser.PinnedPlaces {
+		if pp.Path != clean {
+			filtered = append(filtered, pp)
+		}
+	}
+	h.cfg.Browser.PinnedPlaces = filtered
+	return config.Save(h.cfgPath, *h.cfg)
+}
+
+// resolveForDelete resolves a path for deletion/trash, following symlinks
+// inside the FUSE mount. Returns (realPath, isVirtual, err).
+func (h *daemonBrowserMethods) resolveForDelete(path string) (string, bool, error) {
+	clean, err := validatePath(path)
+	if err != nil {
+		return "", false, err
+	}
+	if h.fuseMount == "" {
+		return clean, false, nil
+	}
+	if !strings.HasPrefix(clean, h.fuseMount) {
+		return clean, false, nil
+	}
+	// Path is inside FUSE mount
+	rel, err := filepath.Rel(h.fuseMount, clean)
+	if err != nil {
+		return "", false, err
+	}
+	// Virtual directories start with @
+	parts := strings.SplitN(rel, string(filepath.Separator), 2)
+	if len(parts) > 0 && strings.HasPrefix(parts[0], "@") {
+		return "", true, nil
+	}
+	// Follow symlink to real path
+	realPath, err := filepath.EvalSymlinks(clean)
+	if err != nil {
+		return "", true, nil // can't resolve = treat as virtual
+	}
+	return realPath, false, nil
+}
+
+// TrashFile moves path to the XDG trash.
+func (h *daemonBrowserMethods) TrashFile(path string) error {
+	realPath, isVirtual, err := h.resolveForDelete(path)
+	if err != nil {
+		return err
+	}
+	if isVirtual {
+		return errors.New("browser: cannot trash virtual directory")
+	}
+	if err := trash.MoveToTrash(realPath); err != nil {
+		return fmt.Errorf("trash file: %w", err)
+	}
+	// Eagerly remove from index
+	if err := h.idx.DeleteFile(context.Background(), realPath); err != nil {
+		slog.Warn("browser: trash: remove index entry", "path", realPath, "err", err)
+	}
+	return nil
+}
+
+// ListTrash returns all entries in the home trash.
+func (h *daemonBrowserMethods) ListTrash() ([]browser.TrashEntry, error) {
+	entries, err := trash.ListTrash()
+	if err != nil {
+		return nil, err
+	}
+	result := make([]browser.TrashEntry, 0, len(entries))
+	for _, e := range entries {
+		result = append(result, browser.TrashEntry{
+			Name:         e.Name,
+			OriginalPath: e.OriginalPath,
+			DeletionDate: e.DeletionDate,
+			SizeBytes:    e.SizeBytes,
+		})
+	}
+	return result, nil
+}
+
+// RestoreTrash moves a named trash entry back to its original location.
+func (h *daemonBrowserMethods) RestoreTrash(trashName string) error {
+	return trash.RestoreFromTrash(trashName)
+}
+
+// EmptyTrash permanently removes all entries from the home trash.
+func (h *daemonBrowserMethods) EmptyTrash() error {
+	return trash.EmptyTrash()
+}
+
+// ListAppsForFile returns installed applications that can open the file.
+func (h *daemonBrowserMethods) ListAppsForFile(path string) ([]browser.AppEntry, error) {
+	clean, err := validatePath(path)
+	if err != nil {
+		return nil, err
+	}
+	mime, _ := h.idx.GetFileMime(context.Background(), clean)
+	if mime == "" {
+		return nil, nil
+	}
+	apps := desktopfile.FindAppsForMime(mime)
+	result := make([]browser.AppEntry, 0, len(apps))
+	for _, a := range apps {
+		result = append(result, browser.AppEntry{
+			ID:       a.ID,
+			Name:     a.Name,
+			IconName: a.Icon,
+		})
+	}
+	return result, nil
+}
+
+// OpenWithApp launches an application (by ID) to open path.
+func (h *daemonBrowserMethods) OpenWithApp(path, appID string) error {
+	clean, err := validatePath(path)
+	if err != nil {
+		return err
+	}
+	app := desktopfile.FindAppByID(appID)
+	if app == nil {
+		return fmt.Errorf("browser: app %q not found", appID)
+	}
+	return desktopfile.LaunchApp(*app, clean)
+}
+
+// GetBrowserConfig returns the browser configuration from daemon config.
+func (h *daemonBrowserMethods) GetBrowserConfig() (browser.BrowserConfig, error) {
+	if h.cfg == nil {
+		return browser.BrowserConfig{UseTrash: true, Keybindings: map[string]string{}}, nil
+	}
+	kb := h.cfg.Browser.Keybindings
+	if kb == nil {
+		kb = map[string]string{}
+	}
+	return browser.BrowserConfig{
+		Keybindings: kb,
+		UseTrash:    h.cfg.Browser.UseTrash,
+	}, nil
+}
+
+// GetFileBadges returns badge icon names for path from registered extensions.
+func (h *daemonBrowserMethods) GetFileBadges(path string) ([]string, error) {
+	clean, err := validatePath(path)
+	if err != nil {
+		return nil, err
+	}
+	if h.extRegistry == nil {
+		return nil, nil
+	}
+	mime, _ := h.idx.GetFileMime(context.Background(), clean)
+	badges := h.extRegistry.BadgesFor(context.Background(), clean, mime, nil)
+	return badges, nil
+}
+
+// GetFileActions returns context menu actions for path from registered extensions.
+func (h *daemonBrowserMethods) GetFileActions(path string) ([]browser.FileAction, error) {
+	clean, err := validatePath(path)
+	if err != nil {
+		return nil, err
+	}
+	if h.extRegistry == nil {
+		return nil, nil
+	}
+	info, statErr := os.Stat(clean)
+	isDir := statErr == nil && info.IsDir()
+	extActions := h.extRegistry.ActionsFor(context.Background(), clean, isDir)
+	result := make([]browser.FileAction, 0, len(extActions))
+	for _, a := range extActions {
+		result = append(result, browser.FileAction{ID: a.ID, Label: a.Label})
+	}
+	return result, nil
+}
+
+// RunFileAction executes an extension action by ID for path.
+func (h *daemonBrowserMethods) RunFileAction(path, actionID string) error {
+	clean, err := validatePath(path)
+	if err != nil {
+		return err
+	}
+	if h.extRegistry == nil {
+		return nil
+	}
+	return h.extRegistry.RunAction(context.Background(), clean, actionID)
 }
 
 func xdgDir(envVar, fallback string) string {

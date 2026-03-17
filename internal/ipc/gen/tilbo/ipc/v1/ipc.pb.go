@@ -254,6 +254,19 @@ type Request struct {
 	//	*Request_DeleteFile
 	//	*Request_ChmodFile
 	//	*Request_ListPlaces
+	//	*Request_PinPlace
+	//	*Request_UnpinPlace
+	//	*Request_TrashFile
+	//	*Request_ListTrash
+	//	*Request_RestoreTrash
+	//	*Request_EmptyTrash
+	//	*Request_ListAppsForFile
+	//	*Request_OpenWithApp
+	//	*Request_GetBrowserConfig
+	//	*Request_GetFileBadges
+	//	*Request_GetFileActions
+	//	*Request_RunFileAction
+	//	*Request_LaunchGui
 	Kind          isRequest_Kind `protobuf_oneof:"kind"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -440,6 +453,123 @@ func (x *Request) GetListPlaces() *ListPlacesRequest {
 	return nil
 }
 
+func (x *Request) GetPinPlace() *PinPlaceRequest {
+	if x != nil {
+		if x, ok := x.Kind.(*Request_PinPlace); ok {
+			return x.PinPlace
+		}
+	}
+	return nil
+}
+
+func (x *Request) GetUnpinPlace() *UnpinPlaceRequest {
+	if x != nil {
+		if x, ok := x.Kind.(*Request_UnpinPlace); ok {
+			return x.UnpinPlace
+		}
+	}
+	return nil
+}
+
+func (x *Request) GetTrashFile() *TrashFileRequest {
+	if x != nil {
+		if x, ok := x.Kind.(*Request_TrashFile); ok {
+			return x.TrashFile
+		}
+	}
+	return nil
+}
+
+func (x *Request) GetListTrash() *ListTrashRequest {
+	if x != nil {
+		if x, ok := x.Kind.(*Request_ListTrash); ok {
+			return x.ListTrash
+		}
+	}
+	return nil
+}
+
+func (x *Request) GetRestoreTrash() *RestoreTrashRequest {
+	if x != nil {
+		if x, ok := x.Kind.(*Request_RestoreTrash); ok {
+			return x.RestoreTrash
+		}
+	}
+	return nil
+}
+
+func (x *Request) GetEmptyTrash() *EmptyTrashRequest {
+	if x != nil {
+		if x, ok := x.Kind.(*Request_EmptyTrash); ok {
+			return x.EmptyTrash
+		}
+	}
+	return nil
+}
+
+func (x *Request) GetListAppsForFile() *ListAppsForFileRequest {
+	if x != nil {
+		if x, ok := x.Kind.(*Request_ListAppsForFile); ok {
+			return x.ListAppsForFile
+		}
+	}
+	return nil
+}
+
+func (x *Request) GetOpenWithApp() *OpenWithAppRequest {
+	if x != nil {
+		if x, ok := x.Kind.(*Request_OpenWithApp); ok {
+			return x.OpenWithApp
+		}
+	}
+	return nil
+}
+
+func (x *Request) GetGetBrowserConfig() *GetBrowserConfigRequest {
+	if x != nil {
+		if x, ok := x.Kind.(*Request_GetBrowserConfig); ok {
+			return x.GetBrowserConfig
+		}
+	}
+	return nil
+}
+
+func (x *Request) GetGetFileBadges() *GetFileBadgesRequest {
+	if x != nil {
+		if x, ok := x.Kind.(*Request_GetFileBadges); ok {
+			return x.GetFileBadges
+		}
+	}
+	return nil
+}
+
+func (x *Request) GetGetFileActions() *GetFileActionsRequest {
+	if x != nil {
+		if x, ok := x.Kind.(*Request_GetFileActions); ok {
+			return x.GetFileActions
+		}
+	}
+	return nil
+}
+
+func (x *Request) GetRunFileAction() *RunFileActionRequest {
+	if x != nil {
+		if x, ok := x.Kind.(*Request_RunFileAction); ok {
+			return x.RunFileAction
+		}
+	}
+	return nil
+}
+
+func (x *Request) GetLaunchGui() *LaunchGUIRequest {
+	if x != nil {
+		if x, ok := x.Kind.(*Request_LaunchGui); ok {
+			return x.LaunchGui
+		}
+	}
+	return nil
+}
+
 type isRequest_Kind interface {
 	isRequest_Kind()
 }
@@ -508,6 +638,58 @@ type Request_ListPlaces struct {
 	ListPlaces *ListPlacesRequest `protobuf:"bytes,16,opt,name=list_places,json=listPlaces,proto3,oneof"`
 }
 
+type Request_PinPlace struct {
+	PinPlace *PinPlaceRequest `protobuf:"bytes,17,opt,name=pin_place,json=pinPlace,proto3,oneof"`
+}
+
+type Request_UnpinPlace struct {
+	UnpinPlace *UnpinPlaceRequest `protobuf:"bytes,18,opt,name=unpin_place,json=unpinPlace,proto3,oneof"`
+}
+
+type Request_TrashFile struct {
+	TrashFile *TrashFileRequest `protobuf:"bytes,19,opt,name=trash_file,json=trashFile,proto3,oneof"`
+}
+
+type Request_ListTrash struct {
+	ListTrash *ListTrashRequest `protobuf:"bytes,20,opt,name=list_trash,json=listTrash,proto3,oneof"`
+}
+
+type Request_RestoreTrash struct {
+	RestoreTrash *RestoreTrashRequest `protobuf:"bytes,21,opt,name=restore_trash,json=restoreTrash,proto3,oneof"`
+}
+
+type Request_EmptyTrash struct {
+	EmptyTrash *EmptyTrashRequest `protobuf:"bytes,22,opt,name=empty_trash,json=emptyTrash,proto3,oneof"`
+}
+
+type Request_ListAppsForFile struct {
+	ListAppsForFile *ListAppsForFileRequest `protobuf:"bytes,23,opt,name=list_apps_for_file,json=listAppsForFile,proto3,oneof"`
+}
+
+type Request_OpenWithApp struct {
+	OpenWithApp *OpenWithAppRequest `protobuf:"bytes,24,opt,name=open_with_app,json=openWithApp,proto3,oneof"`
+}
+
+type Request_GetBrowserConfig struct {
+	GetBrowserConfig *GetBrowserConfigRequest `protobuf:"bytes,25,opt,name=get_browser_config,json=getBrowserConfig,proto3,oneof"`
+}
+
+type Request_GetFileBadges struct {
+	GetFileBadges *GetFileBadgesRequest `protobuf:"bytes,26,opt,name=get_file_badges,json=getFileBadges,proto3,oneof"`
+}
+
+type Request_GetFileActions struct {
+	GetFileActions *GetFileActionsRequest `protobuf:"bytes,27,opt,name=get_file_actions,json=getFileActions,proto3,oneof"`
+}
+
+type Request_RunFileAction struct {
+	RunFileAction *RunFileActionRequest `protobuf:"bytes,28,opt,name=run_file_action,json=runFileAction,proto3,oneof"`
+}
+
+type Request_LaunchGui struct {
+	LaunchGui *LaunchGUIRequest `protobuf:"bytes,29,opt,name=launch_gui,json=launchGui,proto3,oneof"`
+}
+
 func (*Request_Search) isRequest_Kind() {}
 
 func (*Request_Tag) isRequest_Kind() {}
@@ -540,6 +722,32 @@ func (*Request_ChmodFile) isRequest_Kind() {}
 
 func (*Request_ListPlaces) isRequest_Kind() {}
 
+func (*Request_PinPlace) isRequest_Kind() {}
+
+func (*Request_UnpinPlace) isRequest_Kind() {}
+
+func (*Request_TrashFile) isRequest_Kind() {}
+
+func (*Request_ListTrash) isRequest_Kind() {}
+
+func (*Request_RestoreTrash) isRequest_Kind() {}
+
+func (*Request_EmptyTrash) isRequest_Kind() {}
+
+func (*Request_ListAppsForFile) isRequest_Kind() {}
+
+func (*Request_OpenWithApp) isRequest_Kind() {}
+
+func (*Request_GetBrowserConfig) isRequest_Kind() {}
+
+func (*Request_GetFileBadges) isRequest_Kind() {}
+
+func (*Request_GetFileActions) isRequest_Kind() {}
+
+func (*Request_RunFileAction) isRequest_Kind() {}
+
+func (*Request_LaunchGui) isRequest_Kind() {}
+
 type Response struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Types that are valid to be assigned to Kind:
@@ -560,6 +768,19 @@ type Response struct {
 	//	*Response_DeleteFile
 	//	*Response_ChmodFile
 	//	*Response_ListPlaces
+	//	*Response_PinPlace
+	//	*Response_UnpinPlace
+	//	*Response_TrashFile
+	//	*Response_ListTrash
+	//	*Response_RestoreTrash
+	//	*Response_EmptyTrash
+	//	*Response_ListAppsForFile
+	//	*Response_OpenWithApp
+	//	*Response_GetBrowserConfig
+	//	*Response_GetFileBadges
+	//	*Response_GetFileActions
+	//	*Response_RunFileAction
+	//	*Response_LaunchGui
 	Kind          isResponse_Kind `protobuf_oneof:"kind"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -746,6 +967,123 @@ func (x *Response) GetListPlaces() *ListPlacesResponse {
 	return nil
 }
 
+func (x *Response) GetPinPlace() *PinPlaceResponse {
+	if x != nil {
+		if x, ok := x.Kind.(*Response_PinPlace); ok {
+			return x.PinPlace
+		}
+	}
+	return nil
+}
+
+func (x *Response) GetUnpinPlace() *UnpinPlaceResponse {
+	if x != nil {
+		if x, ok := x.Kind.(*Response_UnpinPlace); ok {
+			return x.UnpinPlace
+		}
+	}
+	return nil
+}
+
+func (x *Response) GetTrashFile() *TrashFileResponse {
+	if x != nil {
+		if x, ok := x.Kind.(*Response_TrashFile); ok {
+			return x.TrashFile
+		}
+	}
+	return nil
+}
+
+func (x *Response) GetListTrash() *ListTrashResponse {
+	if x != nil {
+		if x, ok := x.Kind.(*Response_ListTrash); ok {
+			return x.ListTrash
+		}
+	}
+	return nil
+}
+
+func (x *Response) GetRestoreTrash() *RestoreTrashResponse {
+	if x != nil {
+		if x, ok := x.Kind.(*Response_RestoreTrash); ok {
+			return x.RestoreTrash
+		}
+	}
+	return nil
+}
+
+func (x *Response) GetEmptyTrash() *EmptyTrashResponse {
+	if x != nil {
+		if x, ok := x.Kind.(*Response_EmptyTrash); ok {
+			return x.EmptyTrash
+		}
+	}
+	return nil
+}
+
+func (x *Response) GetListAppsForFile() *ListAppsForFileResponse {
+	if x != nil {
+		if x, ok := x.Kind.(*Response_ListAppsForFile); ok {
+			return x.ListAppsForFile
+		}
+	}
+	return nil
+}
+
+func (x *Response) GetOpenWithApp() *OpenWithAppResponse {
+	if x != nil {
+		if x, ok := x.Kind.(*Response_OpenWithApp); ok {
+			return x.OpenWithApp
+		}
+	}
+	return nil
+}
+
+func (x *Response) GetGetBrowserConfig() *GetBrowserConfigResponse {
+	if x != nil {
+		if x, ok := x.Kind.(*Response_GetBrowserConfig); ok {
+			return x.GetBrowserConfig
+		}
+	}
+	return nil
+}
+
+func (x *Response) GetGetFileBadges() *GetFileBadgesResponse {
+	if x != nil {
+		if x, ok := x.Kind.(*Response_GetFileBadges); ok {
+			return x.GetFileBadges
+		}
+	}
+	return nil
+}
+
+func (x *Response) GetGetFileActions() *GetFileActionsResponse {
+	if x != nil {
+		if x, ok := x.Kind.(*Response_GetFileActions); ok {
+			return x.GetFileActions
+		}
+	}
+	return nil
+}
+
+func (x *Response) GetRunFileAction() *RunFileActionResponse {
+	if x != nil {
+		if x, ok := x.Kind.(*Response_RunFileAction); ok {
+			return x.RunFileAction
+		}
+	}
+	return nil
+}
+
+func (x *Response) GetLaunchGui() *LaunchGUIResponse {
+	if x != nil {
+		if x, ok := x.Kind.(*Response_LaunchGui); ok {
+			return x.LaunchGui
+		}
+	}
+	return nil
+}
+
 type isResponse_Kind interface {
 	isResponse_Kind()
 }
@@ -814,6 +1152,58 @@ type Response_ListPlaces struct {
 	ListPlaces *ListPlacesResponse `protobuf:"bytes,16,opt,name=list_places,json=listPlaces,proto3,oneof"`
 }
 
+type Response_PinPlace struct {
+	PinPlace *PinPlaceResponse `protobuf:"bytes,17,opt,name=pin_place,json=pinPlace,proto3,oneof"`
+}
+
+type Response_UnpinPlace struct {
+	UnpinPlace *UnpinPlaceResponse `protobuf:"bytes,18,opt,name=unpin_place,json=unpinPlace,proto3,oneof"`
+}
+
+type Response_TrashFile struct {
+	TrashFile *TrashFileResponse `protobuf:"bytes,19,opt,name=trash_file,json=trashFile,proto3,oneof"`
+}
+
+type Response_ListTrash struct {
+	ListTrash *ListTrashResponse `protobuf:"bytes,20,opt,name=list_trash,json=listTrash,proto3,oneof"`
+}
+
+type Response_RestoreTrash struct {
+	RestoreTrash *RestoreTrashResponse `protobuf:"bytes,21,opt,name=restore_trash,json=restoreTrash,proto3,oneof"`
+}
+
+type Response_EmptyTrash struct {
+	EmptyTrash *EmptyTrashResponse `protobuf:"bytes,22,opt,name=empty_trash,json=emptyTrash,proto3,oneof"`
+}
+
+type Response_ListAppsForFile struct {
+	ListAppsForFile *ListAppsForFileResponse `protobuf:"bytes,23,opt,name=list_apps_for_file,json=listAppsForFile,proto3,oneof"`
+}
+
+type Response_OpenWithApp struct {
+	OpenWithApp *OpenWithAppResponse `protobuf:"bytes,24,opt,name=open_with_app,json=openWithApp,proto3,oneof"`
+}
+
+type Response_GetBrowserConfig struct {
+	GetBrowserConfig *GetBrowserConfigResponse `protobuf:"bytes,25,opt,name=get_browser_config,json=getBrowserConfig,proto3,oneof"`
+}
+
+type Response_GetFileBadges struct {
+	GetFileBadges *GetFileBadgesResponse `protobuf:"bytes,26,opt,name=get_file_badges,json=getFileBadges,proto3,oneof"`
+}
+
+type Response_GetFileActions struct {
+	GetFileActions *GetFileActionsResponse `protobuf:"bytes,27,opt,name=get_file_actions,json=getFileActions,proto3,oneof"`
+}
+
+type Response_RunFileAction struct {
+	RunFileAction *RunFileActionResponse `protobuf:"bytes,28,opt,name=run_file_action,json=runFileAction,proto3,oneof"`
+}
+
+type Response_LaunchGui struct {
+	LaunchGui *LaunchGUIResponse `protobuf:"bytes,29,opt,name=launch_gui,json=launchGui,proto3,oneof"`
+}
+
 func (*Response_Error) isResponse_Kind() {}
 
 func (*Response_Search) isResponse_Kind() {}
@@ -846,6 +1236,32 @@ func (*Response_ChmodFile) isResponse_Kind() {}
 
 func (*Response_ListPlaces) isResponse_Kind() {}
 
+func (*Response_PinPlace) isResponse_Kind() {}
+
+func (*Response_UnpinPlace) isResponse_Kind() {}
+
+func (*Response_TrashFile) isResponse_Kind() {}
+
+func (*Response_ListTrash) isResponse_Kind() {}
+
+func (*Response_RestoreTrash) isResponse_Kind() {}
+
+func (*Response_EmptyTrash) isResponse_Kind() {}
+
+func (*Response_ListAppsForFile) isResponse_Kind() {}
+
+func (*Response_OpenWithApp) isResponse_Kind() {}
+
+func (*Response_GetBrowserConfig) isResponse_Kind() {}
+
+func (*Response_GetFileBadges) isResponse_Kind() {}
+
+func (*Response_GetFileActions) isResponse_Kind() {}
+
+func (*Response_RunFileAction) isResponse_Kind() {}
+
+func (*Response_LaunchGui) isResponse_Kind() {}
+
 type Event struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Types that are valid to be assigned to Kind:
@@ -853,6 +1269,7 @@ type Event struct {
 	//	*Event_FileTagged
 	//	*Event_IndexUpdated
 	//	*Event_DaemonStateChanged
+	//	*Event_ShowWindow
 	Kind          isEvent_Kind `protobuf_oneof:"kind"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -922,6 +1339,15 @@ func (x *Event) GetDaemonStateChanged() *DaemonStateChangedEvent {
 	return nil
 }
 
+func (x *Event) GetShowWindow() *ShowWindowEvent {
+	if x != nil {
+		if x, ok := x.Kind.(*Event_ShowWindow); ok {
+			return x.ShowWindow
+		}
+	}
+	return nil
+}
+
 type isEvent_Kind interface {
 	isEvent_Kind()
 }
@@ -938,11 +1364,17 @@ type Event_DaemonStateChanged struct {
 	DaemonStateChanged *DaemonStateChangedEvent `protobuf:"bytes,3,opt,name=daemon_state_changed,json=daemonStateChanged,proto3,oneof"`
 }
 
+type Event_ShowWindow struct {
+	ShowWindow *ShowWindowEvent `protobuf:"bytes,4,opt,name=show_window,json=showWindow,proto3,oneof"`
+}
+
 func (*Event_FileTagged) isEvent_Kind() {}
 
 func (*Event_IndexUpdated) isEvent_Kind() {}
 
 func (*Event_DaemonStateChanged) isEvent_Kind() {}
+
+func (*Event_ShowWindow) isEvent_Kind() {}
 
 type ErrorResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -2209,6 +2641,8 @@ type DirEntry struct {
 	Mtime         int64                  `protobuf:"varint,5,opt,name=mtime,proto3" json:"mtime,omitempty"`
 	Mode          uint32                 `protobuf:"varint,6,opt,name=mode,proto3" json:"mode,omitempty"`
 	Hidden        bool                   `protobuf:"varint,7,opt,name=hidden,proto3" json:"hidden,omitempty"`
+	MimeType      string                 `protobuf:"bytes,8,opt,name=mime_type,json=mimeType,proto3" json:"mime_type,omitempty"`
+	IconName      string                 `protobuf:"bytes,9,opt,name=icon_name,json=iconName,proto3" json:"icon_name,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2290,6 +2724,20 @@ func (x *DirEntry) GetHidden() bool {
 		return x.Hidden
 	}
 	return false
+}
+
+func (x *DirEntry) GetMimeType() string {
+	if x != nil {
+		return x.MimeType
+	}
+	return ""
+}
+
+func (x *DirEntry) GetIconName() string {
+	if x != nil {
+		return x.IconName
+	}
+	return ""
 }
 
 type ListDirectoryResponse struct {
@@ -2892,6 +3340,8 @@ type PlaceEntry struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
 	Path          string                 `protobuf:"bytes,2,opt,name=path,proto3" json:"path,omitempty"`
+	Pinned        bool                   `protobuf:"varint,3,opt,name=pinned,proto3" json:"pinned,omitempty"`
+	IconName      string                 `protobuf:"bytes,4,opt,name=icon_name,json=iconName,proto3" json:"icon_name,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2936,6 +3386,20 @@ func (x *PlaceEntry) GetName() string {
 func (x *PlaceEntry) GetPath() string {
 	if x != nil {
 		return x.Path
+	}
+	return ""
+}
+
+func (x *PlaceEntry) GetPinned() bool {
+	if x != nil {
+		return x.Pinned
+	}
+	return false
+}
+
+func (x *PlaceEntry) GetIconName() string {
+	if x != nil {
+		return x.IconName
 	}
 	return ""
 }
@@ -3140,6 +3604,1340 @@ func (x *DaemonStateChangedEvent) GetState() string {
 	return ""
 }
 
+// Feature 2: Custom Pinned Places
+type PinPlaceRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Path          string                 `protobuf:"bytes,2,opt,name=path,proto3" json:"path,omitempty"`
+	IconName      string                 `protobuf:"bytes,3,opt,name=icon_name,json=iconName,proto3" json:"icon_name,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PinPlaceRequest) Reset() {
+	*x = PinPlaceRequest{}
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[45]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PinPlaceRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PinPlaceRequest) ProtoMessage() {}
+
+func (x *PinPlaceRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[45]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PinPlaceRequest.ProtoReflect.Descriptor instead.
+func (*PinPlaceRequest) Descriptor() ([]byte, []int) {
+	return file_tilbo_ipc_v1_ipc_proto_rawDescGZIP(), []int{45}
+}
+
+func (x *PinPlaceRequest) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *PinPlaceRequest) GetPath() string {
+	if x != nil {
+		return x.Path
+	}
+	return ""
+}
+
+func (x *PinPlaceRequest) GetIconName() string {
+	if x != nil {
+		return x.IconName
+	}
+	return ""
+}
+
+type PinPlaceResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PinPlaceResponse) Reset() {
+	*x = PinPlaceResponse{}
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[46]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PinPlaceResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PinPlaceResponse) ProtoMessage() {}
+
+func (x *PinPlaceResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[46]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PinPlaceResponse.ProtoReflect.Descriptor instead.
+func (*PinPlaceResponse) Descriptor() ([]byte, []int) {
+	return file_tilbo_ipc_v1_ipc_proto_rawDescGZIP(), []int{46}
+}
+
+type UnpinPlaceRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Path          string                 `protobuf:"bytes,1,opt,name=path,proto3" json:"path,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UnpinPlaceRequest) Reset() {
+	*x = UnpinPlaceRequest{}
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[47]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UnpinPlaceRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UnpinPlaceRequest) ProtoMessage() {}
+
+func (x *UnpinPlaceRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[47]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UnpinPlaceRequest.ProtoReflect.Descriptor instead.
+func (*UnpinPlaceRequest) Descriptor() ([]byte, []int) {
+	return file_tilbo_ipc_v1_ipc_proto_rawDescGZIP(), []int{47}
+}
+
+func (x *UnpinPlaceRequest) GetPath() string {
+	if x != nil {
+		return x.Path
+	}
+	return ""
+}
+
+type UnpinPlaceResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UnpinPlaceResponse) Reset() {
+	*x = UnpinPlaceResponse{}
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[48]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UnpinPlaceResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UnpinPlaceResponse) ProtoMessage() {}
+
+func (x *UnpinPlaceResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[48]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UnpinPlaceResponse.ProtoReflect.Descriptor instead.
+func (*UnpinPlaceResponse) Descriptor() ([]byte, []int) {
+	return file_tilbo_ipc_v1_ipc_proto_rawDescGZIP(), []int{48}
+}
+
+// Feature 4: Trash Support
+type TrashFileRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Path          string                 `protobuf:"bytes,1,opt,name=path,proto3" json:"path,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *TrashFileRequest) Reset() {
+	*x = TrashFileRequest{}
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[49]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TrashFileRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TrashFileRequest) ProtoMessage() {}
+
+func (x *TrashFileRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[49]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TrashFileRequest.ProtoReflect.Descriptor instead.
+func (*TrashFileRequest) Descriptor() ([]byte, []int) {
+	return file_tilbo_ipc_v1_ipc_proto_rawDescGZIP(), []int{49}
+}
+
+func (x *TrashFileRequest) GetPath() string {
+	if x != nil {
+		return x.Path
+	}
+	return ""
+}
+
+type TrashFileResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *TrashFileResponse) Reset() {
+	*x = TrashFileResponse{}
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[50]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TrashFileResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TrashFileResponse) ProtoMessage() {}
+
+func (x *TrashFileResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[50]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TrashFileResponse.ProtoReflect.Descriptor instead.
+func (*TrashFileResponse) Descriptor() ([]byte, []int) {
+	return file_tilbo_ipc_v1_ipc_proto_rawDescGZIP(), []int{50}
+}
+
+type ListTrashRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListTrashRequest) Reset() {
+	*x = ListTrashRequest{}
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[51]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListTrashRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListTrashRequest) ProtoMessage() {}
+
+func (x *ListTrashRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[51]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListTrashRequest.ProtoReflect.Descriptor instead.
+func (*ListTrashRequest) Descriptor() ([]byte, []int) {
+	return file_tilbo_ipc_v1_ipc_proto_rawDescGZIP(), []int{51}
+}
+
+type TrashEntry struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	OriginalPath  string                 `protobuf:"bytes,2,opt,name=original_path,json=originalPath,proto3" json:"original_path,omitempty"`
+	DeletionDate  int64                  `protobuf:"varint,3,opt,name=deletion_date,json=deletionDate,proto3" json:"deletion_date,omitempty"`
+	SizeBytes     int64                  `protobuf:"varint,4,opt,name=size_bytes,json=sizeBytes,proto3" json:"size_bytes,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *TrashEntry) Reset() {
+	*x = TrashEntry{}
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[52]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TrashEntry) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TrashEntry) ProtoMessage() {}
+
+func (x *TrashEntry) ProtoReflect() protoreflect.Message {
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[52]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TrashEntry.ProtoReflect.Descriptor instead.
+func (*TrashEntry) Descriptor() ([]byte, []int) {
+	return file_tilbo_ipc_v1_ipc_proto_rawDescGZIP(), []int{52}
+}
+
+func (x *TrashEntry) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *TrashEntry) GetOriginalPath() string {
+	if x != nil {
+		return x.OriginalPath
+	}
+	return ""
+}
+
+func (x *TrashEntry) GetDeletionDate() int64 {
+	if x != nil {
+		return x.DeletionDate
+	}
+	return 0
+}
+
+func (x *TrashEntry) GetSizeBytes() int64 {
+	if x != nil {
+		return x.SizeBytes
+	}
+	return 0
+}
+
+type ListTrashResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Entries       []*TrashEntry          `protobuf:"bytes,1,rep,name=entries,proto3" json:"entries,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListTrashResponse) Reset() {
+	*x = ListTrashResponse{}
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[53]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListTrashResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListTrashResponse) ProtoMessage() {}
+
+func (x *ListTrashResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[53]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListTrashResponse.ProtoReflect.Descriptor instead.
+func (*ListTrashResponse) Descriptor() ([]byte, []int) {
+	return file_tilbo_ipc_v1_ipc_proto_rawDescGZIP(), []int{53}
+}
+
+func (x *ListTrashResponse) GetEntries() []*TrashEntry {
+	if x != nil {
+		return x.Entries
+	}
+	return nil
+}
+
+type RestoreTrashRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	TrashName     string                 `protobuf:"bytes,1,opt,name=trash_name,json=trashName,proto3" json:"trash_name,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RestoreTrashRequest) Reset() {
+	*x = RestoreTrashRequest{}
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[54]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RestoreTrashRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RestoreTrashRequest) ProtoMessage() {}
+
+func (x *RestoreTrashRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[54]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RestoreTrashRequest.ProtoReflect.Descriptor instead.
+func (*RestoreTrashRequest) Descriptor() ([]byte, []int) {
+	return file_tilbo_ipc_v1_ipc_proto_rawDescGZIP(), []int{54}
+}
+
+func (x *RestoreTrashRequest) GetTrashName() string {
+	if x != nil {
+		return x.TrashName
+	}
+	return ""
+}
+
+type RestoreTrashResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RestoreTrashResponse) Reset() {
+	*x = RestoreTrashResponse{}
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[55]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RestoreTrashResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RestoreTrashResponse) ProtoMessage() {}
+
+func (x *RestoreTrashResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[55]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RestoreTrashResponse.ProtoReflect.Descriptor instead.
+func (*RestoreTrashResponse) Descriptor() ([]byte, []int) {
+	return file_tilbo_ipc_v1_ipc_proto_rawDescGZIP(), []int{55}
+}
+
+type EmptyTrashRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *EmptyTrashRequest) Reset() {
+	*x = EmptyTrashRequest{}
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[56]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *EmptyTrashRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*EmptyTrashRequest) ProtoMessage() {}
+
+func (x *EmptyTrashRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[56]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use EmptyTrashRequest.ProtoReflect.Descriptor instead.
+func (*EmptyTrashRequest) Descriptor() ([]byte, []int) {
+	return file_tilbo_ipc_v1_ipc_proto_rawDescGZIP(), []int{56}
+}
+
+type EmptyTrashResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *EmptyTrashResponse) Reset() {
+	*x = EmptyTrashResponse{}
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[57]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *EmptyTrashResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*EmptyTrashResponse) ProtoMessage() {}
+
+func (x *EmptyTrashResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[57]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use EmptyTrashResponse.ProtoReflect.Descriptor instead.
+func (*EmptyTrashResponse) Descriptor() ([]byte, []int) {
+	return file_tilbo_ipc_v1_ipc_proto_rawDescGZIP(), []int{57}
+}
+
+// Feature 5: Open With
+type AppEntry struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	IconName      string                 `protobuf:"bytes,3,opt,name=icon_name,json=iconName,proto3" json:"icon_name,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AppEntry) Reset() {
+	*x = AppEntry{}
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[58]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AppEntry) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AppEntry) ProtoMessage() {}
+
+func (x *AppEntry) ProtoReflect() protoreflect.Message {
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[58]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AppEntry.ProtoReflect.Descriptor instead.
+func (*AppEntry) Descriptor() ([]byte, []int) {
+	return file_tilbo_ipc_v1_ipc_proto_rawDescGZIP(), []int{58}
+}
+
+func (x *AppEntry) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *AppEntry) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *AppEntry) GetIconName() string {
+	if x != nil {
+		return x.IconName
+	}
+	return ""
+}
+
+type ListAppsForFileRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Path          string                 `protobuf:"bytes,1,opt,name=path,proto3" json:"path,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListAppsForFileRequest) Reset() {
+	*x = ListAppsForFileRequest{}
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[59]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListAppsForFileRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListAppsForFileRequest) ProtoMessage() {}
+
+func (x *ListAppsForFileRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[59]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListAppsForFileRequest.ProtoReflect.Descriptor instead.
+func (*ListAppsForFileRequest) Descriptor() ([]byte, []int) {
+	return file_tilbo_ipc_v1_ipc_proto_rawDescGZIP(), []int{59}
+}
+
+func (x *ListAppsForFileRequest) GetPath() string {
+	if x != nil {
+		return x.Path
+	}
+	return ""
+}
+
+type ListAppsForFileResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Apps          []*AppEntry            `protobuf:"bytes,1,rep,name=apps,proto3" json:"apps,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListAppsForFileResponse) Reset() {
+	*x = ListAppsForFileResponse{}
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[60]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListAppsForFileResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListAppsForFileResponse) ProtoMessage() {}
+
+func (x *ListAppsForFileResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[60]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListAppsForFileResponse.ProtoReflect.Descriptor instead.
+func (*ListAppsForFileResponse) Descriptor() ([]byte, []int) {
+	return file_tilbo_ipc_v1_ipc_proto_rawDescGZIP(), []int{60}
+}
+
+func (x *ListAppsForFileResponse) GetApps() []*AppEntry {
+	if x != nil {
+		return x.Apps
+	}
+	return nil
+}
+
+type OpenWithAppRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Path          string                 `protobuf:"bytes,1,opt,name=path,proto3" json:"path,omitempty"`
+	AppId         string                 `protobuf:"bytes,2,opt,name=app_id,json=appId,proto3" json:"app_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *OpenWithAppRequest) Reset() {
+	*x = OpenWithAppRequest{}
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[61]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *OpenWithAppRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*OpenWithAppRequest) ProtoMessage() {}
+
+func (x *OpenWithAppRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[61]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use OpenWithAppRequest.ProtoReflect.Descriptor instead.
+func (*OpenWithAppRequest) Descriptor() ([]byte, []int) {
+	return file_tilbo_ipc_v1_ipc_proto_rawDescGZIP(), []int{61}
+}
+
+func (x *OpenWithAppRequest) GetPath() string {
+	if x != nil {
+		return x.Path
+	}
+	return ""
+}
+
+func (x *OpenWithAppRequest) GetAppId() string {
+	if x != nil {
+		return x.AppId
+	}
+	return ""
+}
+
+type OpenWithAppResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *OpenWithAppResponse) Reset() {
+	*x = OpenWithAppResponse{}
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[62]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *OpenWithAppResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*OpenWithAppResponse) ProtoMessage() {}
+
+func (x *OpenWithAppResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[62]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use OpenWithAppResponse.ProtoReflect.Descriptor instead.
+func (*OpenWithAppResponse) Descriptor() ([]byte, []int) {
+	return file_tilbo_ipc_v1_ipc_proto_rawDescGZIP(), []int{62}
+}
+
+// Feature 6: Browser Config / Keybindings
+type GetBrowserConfigRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetBrowserConfigRequest) Reset() {
+	*x = GetBrowserConfigRequest{}
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[63]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetBrowserConfigRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetBrowserConfigRequest) ProtoMessage() {}
+
+func (x *GetBrowserConfigRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[63]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetBrowserConfigRequest.ProtoReflect.Descriptor instead.
+func (*GetBrowserConfigRequest) Descriptor() ([]byte, []int) {
+	return file_tilbo_ipc_v1_ipc_proto_rawDescGZIP(), []int{63}
+}
+
+type GetBrowserConfigResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Keybindings   map[string]string      `protobuf:"bytes,1,rep,name=keybindings,proto3" json:"keybindings,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	UseTrash      bool                   `protobuf:"varint,2,opt,name=use_trash,json=useTrash,proto3" json:"use_trash,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetBrowserConfigResponse) Reset() {
+	*x = GetBrowserConfigResponse{}
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[64]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetBrowserConfigResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetBrowserConfigResponse) ProtoMessage() {}
+
+func (x *GetBrowserConfigResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[64]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetBrowserConfigResponse.ProtoReflect.Descriptor instead.
+func (*GetBrowserConfigResponse) Descriptor() ([]byte, []int) {
+	return file_tilbo_ipc_v1_ipc_proto_rawDescGZIP(), []int{64}
+}
+
+func (x *GetBrowserConfigResponse) GetKeybindings() map[string]string {
+	if x != nil {
+		return x.Keybindings
+	}
+	return nil
+}
+
+func (x *GetBrowserConfigResponse) GetUseTrash() bool {
+	if x != nil {
+		return x.UseTrash
+	}
+	return false
+}
+
+// Feature 7: Extension System
+type GetFileBadgesRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Path          string                 `protobuf:"bytes,1,opt,name=path,proto3" json:"path,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetFileBadgesRequest) Reset() {
+	*x = GetFileBadgesRequest{}
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[65]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetFileBadgesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetFileBadgesRequest) ProtoMessage() {}
+
+func (x *GetFileBadgesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[65]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetFileBadgesRequest.ProtoReflect.Descriptor instead.
+func (*GetFileBadgesRequest) Descriptor() ([]byte, []int) {
+	return file_tilbo_ipc_v1_ipc_proto_rawDescGZIP(), []int{65}
+}
+
+func (x *GetFileBadgesRequest) GetPath() string {
+	if x != nil {
+		return x.Path
+	}
+	return ""
+}
+
+type GetFileBadgesResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Badges        []string               `protobuf:"bytes,1,rep,name=badges,proto3" json:"badges,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetFileBadgesResponse) Reset() {
+	*x = GetFileBadgesResponse{}
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[66]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetFileBadgesResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetFileBadgesResponse) ProtoMessage() {}
+
+func (x *GetFileBadgesResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[66]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetFileBadgesResponse.ProtoReflect.Descriptor instead.
+func (*GetFileBadgesResponse) Descriptor() ([]byte, []int) {
+	return file_tilbo_ipc_v1_ipc_proto_rawDescGZIP(), []int{66}
+}
+
+func (x *GetFileBadgesResponse) GetBadges() []string {
+	if x != nil {
+		return x.Badges
+	}
+	return nil
+}
+
+type FileAction struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Label         string                 `protobuf:"bytes,2,opt,name=label,proto3" json:"label,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *FileAction) Reset() {
+	*x = FileAction{}
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[67]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *FileAction) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FileAction) ProtoMessage() {}
+
+func (x *FileAction) ProtoReflect() protoreflect.Message {
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[67]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FileAction.ProtoReflect.Descriptor instead.
+func (*FileAction) Descriptor() ([]byte, []int) {
+	return file_tilbo_ipc_v1_ipc_proto_rawDescGZIP(), []int{67}
+}
+
+func (x *FileAction) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *FileAction) GetLabel() string {
+	if x != nil {
+		return x.Label
+	}
+	return ""
+}
+
+type GetFileActionsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Path          string                 `protobuf:"bytes,1,opt,name=path,proto3" json:"path,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetFileActionsRequest) Reset() {
+	*x = GetFileActionsRequest{}
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[68]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetFileActionsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetFileActionsRequest) ProtoMessage() {}
+
+func (x *GetFileActionsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[68]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetFileActionsRequest.ProtoReflect.Descriptor instead.
+func (*GetFileActionsRequest) Descriptor() ([]byte, []int) {
+	return file_tilbo_ipc_v1_ipc_proto_rawDescGZIP(), []int{68}
+}
+
+func (x *GetFileActionsRequest) GetPath() string {
+	if x != nil {
+		return x.Path
+	}
+	return ""
+}
+
+type GetFileActionsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Actions       []*FileAction          `protobuf:"bytes,1,rep,name=actions,proto3" json:"actions,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetFileActionsResponse) Reset() {
+	*x = GetFileActionsResponse{}
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[69]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetFileActionsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetFileActionsResponse) ProtoMessage() {}
+
+func (x *GetFileActionsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[69]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetFileActionsResponse.ProtoReflect.Descriptor instead.
+func (*GetFileActionsResponse) Descriptor() ([]byte, []int) {
+	return file_tilbo_ipc_v1_ipc_proto_rawDescGZIP(), []int{69}
+}
+
+func (x *GetFileActionsResponse) GetActions() []*FileAction {
+	if x != nil {
+		return x.Actions
+	}
+	return nil
+}
+
+type RunFileActionRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Path          string                 `protobuf:"bytes,1,opt,name=path,proto3" json:"path,omitempty"`
+	ActionId      string                 `protobuf:"bytes,2,opt,name=action_id,json=actionId,proto3" json:"action_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RunFileActionRequest) Reset() {
+	*x = RunFileActionRequest{}
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[70]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RunFileActionRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RunFileActionRequest) ProtoMessage() {}
+
+func (x *RunFileActionRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[70]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RunFileActionRequest.ProtoReflect.Descriptor instead.
+func (*RunFileActionRequest) Descriptor() ([]byte, []int) {
+	return file_tilbo_ipc_v1_ipc_proto_rawDescGZIP(), []int{70}
+}
+
+func (x *RunFileActionRequest) GetPath() string {
+	if x != nil {
+		return x.Path
+	}
+	return ""
+}
+
+func (x *RunFileActionRequest) GetActionId() string {
+	if x != nil {
+		return x.ActionId
+	}
+	return ""
+}
+
+type RunFileActionResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RunFileActionResponse) Reset() {
+	*x = RunFileActionResponse{}
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[71]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RunFileActionResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RunFileActionResponse) ProtoMessage() {}
+
+func (x *RunFileActionResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[71]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RunFileActionResponse.ProtoReflect.Descriptor instead.
+func (*RunFileActionResponse) Descriptor() ([]byte, []int) {
+	return file_tilbo_ipc_v1_ipc_proto_rawDescGZIP(), []int{71}
+}
+
+// Feature 8: GUI Launch
+type LaunchGUIRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Path          string                 `protobuf:"bytes,1,opt,name=path,proto3" json:"path,omitempty"` // optional initial directory to navigate to
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *LaunchGUIRequest) Reset() {
+	*x = LaunchGUIRequest{}
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[72]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *LaunchGUIRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*LaunchGUIRequest) ProtoMessage() {}
+
+func (x *LaunchGUIRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[72]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use LaunchGUIRequest.ProtoReflect.Descriptor instead.
+func (*LaunchGUIRequest) Descriptor() ([]byte, []int) {
+	return file_tilbo_ipc_v1_ipc_proto_rawDescGZIP(), []int{72}
+}
+
+func (x *LaunchGUIRequest) GetPath() string {
+	if x != nil {
+		return x.Path
+	}
+	return ""
+}
+
+type LaunchGUIResponse struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	AlreadyRunning bool                   `protobuf:"varint,1,opt,name=already_running,json=alreadyRunning,proto3" json:"already_running,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *LaunchGUIResponse) Reset() {
+	*x = LaunchGUIResponse{}
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[73]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *LaunchGUIResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*LaunchGUIResponse) ProtoMessage() {}
+
+func (x *LaunchGUIResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[73]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use LaunchGUIResponse.ProtoReflect.Descriptor instead.
+func (*LaunchGUIResponse) Descriptor() ([]byte, []int) {
+	return file_tilbo_ipc_v1_ipc_proto_rawDescGZIP(), []int{73}
+}
+
+func (x *LaunchGUIResponse) GetAlreadyRunning() bool {
+	if x != nil {
+		return x.AlreadyRunning
+	}
+	return false
+}
+
+type ShowWindowEvent struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Path          string                 `protobuf:"bytes,1,opt,name=path,proto3" json:"path,omitempty"` // optional path to navigate to
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ShowWindowEvent) Reset() {
+	*x = ShowWindowEvent{}
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[74]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ShowWindowEvent) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ShowWindowEvent) ProtoMessage() {}
+
+func (x *ShowWindowEvent) ProtoReflect() protoreflect.Message {
+	mi := &file_tilbo_ipc_v1_ipc_proto_msgTypes[74]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ShowWindowEvent.ProtoReflect.Descriptor instead.
+func (*ShowWindowEvent) Descriptor() ([]byte, []int) {
+	return file_tilbo_ipc_v1_ipc_proto_rawDescGZIP(), []int{74}
+}
+
+func (x *ShowWindowEvent) GetPath() string {
+	if x != nil {
+		return x.Path
+	}
+	return ""
+}
+
 var File_tilbo_ipc_v1_ipc_proto protoreflect.FileDescriptor
 
 const file_tilbo_ipc_v1_ipc_proto_rawDesc = "" +
@@ -3151,7 +4949,7 @@ const file_tilbo_ipc_v1_ipc_proto_rawDesc = "" +
 	"\arequest\x18\x02 \x01(\v2\x15.tilbo.ipc.v1.RequestH\x00R\arequest\x124\n" +
 	"\bresponse\x18\x03 \x01(\v2\x16.tilbo.ipc.v1.ResponseH\x00R\bresponse\x12+\n" +
 	"\x05event\x18\x04 \x01(\v2\x13.tilbo.ipc.v1.EventH\x00R\x05eventB\t\n" +
-	"\apayload\"\x93\b\n" +
+	"\apayload\"\xc7\x0f\n" +
 	"\aRequest\x125\n" +
 	"\x06search\x18\x01 \x01(\v2\x1b.tilbo.ipc.v1.SearchRequestH\x00R\x06search\x12,\n" +
 	"\x03tag\x18\x02 \x01(\v2\x18.tilbo.ipc.v1.TagRequestH\x00R\x03tag\x12;\n" +
@@ -3174,8 +4972,26 @@ const file_tilbo_ipc_v1_ipc_proto_rawDesc = "" +
 	"\n" +
 	"chmod_file\x18\x0f \x01(\v2\x1e.tilbo.ipc.v1.ChmodFileRequestH\x00R\tchmodFile\x12B\n" +
 	"\vlist_places\x18\x10 \x01(\v2\x1f.tilbo.ipc.v1.ListPlacesRequestH\x00R\n" +
-	"listPlacesB\x06\n" +
-	"\x04kind\"\x91\b\n" +
+	"listPlaces\x12<\n" +
+	"\tpin_place\x18\x11 \x01(\v2\x1d.tilbo.ipc.v1.PinPlaceRequestH\x00R\bpinPlace\x12B\n" +
+	"\vunpin_place\x18\x12 \x01(\v2\x1f.tilbo.ipc.v1.UnpinPlaceRequestH\x00R\n" +
+	"unpinPlace\x12?\n" +
+	"\n" +
+	"trash_file\x18\x13 \x01(\v2\x1e.tilbo.ipc.v1.TrashFileRequestH\x00R\ttrashFile\x12?\n" +
+	"\n" +
+	"list_trash\x18\x14 \x01(\v2\x1e.tilbo.ipc.v1.ListTrashRequestH\x00R\tlistTrash\x12H\n" +
+	"\rrestore_trash\x18\x15 \x01(\v2!.tilbo.ipc.v1.RestoreTrashRequestH\x00R\frestoreTrash\x12B\n" +
+	"\vempty_trash\x18\x16 \x01(\v2\x1f.tilbo.ipc.v1.EmptyTrashRequestH\x00R\n" +
+	"emptyTrash\x12S\n" +
+	"\x12list_apps_for_file\x18\x17 \x01(\v2$.tilbo.ipc.v1.ListAppsForFileRequestH\x00R\x0flistAppsForFile\x12F\n" +
+	"\ropen_with_app\x18\x18 \x01(\v2 .tilbo.ipc.v1.OpenWithAppRequestH\x00R\vopenWithApp\x12U\n" +
+	"\x12get_browser_config\x18\x19 \x01(\v2%.tilbo.ipc.v1.GetBrowserConfigRequestH\x00R\x10getBrowserConfig\x12L\n" +
+	"\x0fget_file_badges\x18\x1a \x01(\v2\".tilbo.ipc.v1.GetFileBadgesRequestH\x00R\rgetFileBadges\x12O\n" +
+	"\x10get_file_actions\x18\x1b \x01(\v2#.tilbo.ipc.v1.GetFileActionsRequestH\x00R\x0egetFileActions\x12L\n" +
+	"\x0frun_file_action\x18\x1c \x01(\v2\".tilbo.ipc.v1.RunFileActionRequestH\x00R\rrunFileAction\x12?\n" +
+	"\n" +
+	"launch_gui\x18\x1d \x01(\v2\x1e.tilbo.ipc.v1.LaunchGUIRequestH\x00R\tlaunchGuiB\x06\n" +
+	"\x04kind\"\xd2\x0f\n" +
 	"\bResponse\x123\n" +
 	"\x05error\x18\x01 \x01(\v2\x1b.tilbo.ipc.v1.ErrorResponseH\x00R\x05error\x126\n" +
 	"\x06search\x18\x02 \x01(\v2\x1c.tilbo.ipc.v1.SearchResponseH\x00R\x06search\x12-\n" +
@@ -3198,13 +5014,33 @@ const file_tilbo_ipc_v1_ipc_proto_rawDesc = "" +
 	"\n" +
 	"chmod_file\x18\x0f \x01(\v2\x1f.tilbo.ipc.v1.ChmodFileResponseH\x00R\tchmodFile\x12C\n" +
 	"\vlist_places\x18\x10 \x01(\v2 .tilbo.ipc.v1.ListPlacesResponseH\x00R\n" +
-	"listPlacesB\x06\n" +
-	"\x04kind\"\xf4\x01\n" +
+	"listPlaces\x12=\n" +
+	"\tpin_place\x18\x11 \x01(\v2\x1e.tilbo.ipc.v1.PinPlaceResponseH\x00R\bpinPlace\x12C\n" +
+	"\vunpin_place\x18\x12 \x01(\v2 .tilbo.ipc.v1.UnpinPlaceResponseH\x00R\n" +
+	"unpinPlace\x12@\n" +
+	"\n" +
+	"trash_file\x18\x13 \x01(\v2\x1f.tilbo.ipc.v1.TrashFileResponseH\x00R\ttrashFile\x12@\n" +
+	"\n" +
+	"list_trash\x18\x14 \x01(\v2\x1f.tilbo.ipc.v1.ListTrashResponseH\x00R\tlistTrash\x12I\n" +
+	"\rrestore_trash\x18\x15 \x01(\v2\".tilbo.ipc.v1.RestoreTrashResponseH\x00R\frestoreTrash\x12C\n" +
+	"\vempty_trash\x18\x16 \x01(\v2 .tilbo.ipc.v1.EmptyTrashResponseH\x00R\n" +
+	"emptyTrash\x12T\n" +
+	"\x12list_apps_for_file\x18\x17 \x01(\v2%.tilbo.ipc.v1.ListAppsForFileResponseH\x00R\x0flistAppsForFile\x12G\n" +
+	"\ropen_with_app\x18\x18 \x01(\v2!.tilbo.ipc.v1.OpenWithAppResponseH\x00R\vopenWithApp\x12V\n" +
+	"\x12get_browser_config\x18\x19 \x01(\v2&.tilbo.ipc.v1.GetBrowserConfigResponseH\x00R\x10getBrowserConfig\x12M\n" +
+	"\x0fget_file_badges\x18\x1a \x01(\v2#.tilbo.ipc.v1.GetFileBadgesResponseH\x00R\rgetFileBadges\x12P\n" +
+	"\x10get_file_actions\x18\x1b \x01(\v2$.tilbo.ipc.v1.GetFileActionsResponseH\x00R\x0egetFileActions\x12M\n" +
+	"\x0frun_file_action\x18\x1c \x01(\v2#.tilbo.ipc.v1.RunFileActionResponseH\x00R\rrunFileAction\x12@\n" +
+	"\n" +
+	"launch_gui\x18\x1d \x01(\v2\x1f.tilbo.ipc.v1.LaunchGUIResponseH\x00R\tlaunchGuiB\x06\n" +
+	"\x04kind\"\xb6\x02\n" +
 	"\x05Event\x12@\n" +
 	"\vfile_tagged\x18\x01 \x01(\v2\x1d.tilbo.ipc.v1.FileTaggedEventH\x00R\n" +
 	"fileTagged\x12F\n" +
 	"\rindex_updated\x18\x02 \x01(\v2\x1f.tilbo.ipc.v1.IndexUpdatedEventH\x00R\findexUpdated\x12Y\n" +
-	"\x14daemon_state_changed\x18\x03 \x01(\v2%.tilbo.ipc.v1.DaemonStateChangedEventH\x00R\x12daemonStateChangedB\x06\n" +
+	"\x14daemon_state_changed\x18\x03 \x01(\v2%.tilbo.ipc.v1.DaemonStateChangedEventH\x00R\x12daemonStateChanged\x12@\n" +
+	"\vshow_window\x18\x04 \x01(\v2\x1d.tilbo.ipc.v1.ShowWindowEventH\x00R\n" +
+	"showWindowB\x06\n" +
 	"\x04kind\"=\n" +
 	"\rErrorResponse\x12\x12\n" +
 	"\x04code\x18\x01 \x01(\rR\x04code\x12\x18\n" +
@@ -3310,7 +5146,7 @@ const file_tilbo_ipc_v1_ipc_proto_rawDesc = "" +
 	"\aentries\x18\x01 \x03(\v2\x1e.tilbo.ipc.v1.HydratedPathTagsR\aentries\"B\n" +
 	"\x14ListDirectoryRequest\x12\x12\n" +
 	"\x04path\x18\x01 \x01(\tR\x04path\x12\x16\n" +
-	"\x06hidden\x18\x02 \x01(\bR\x06hidden\"\xaa\x01\n" +
+	"\x06hidden\x18\x02 \x01(\bR\x06hidden\"\xe4\x01\n" +
 	"\bDirEntry\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x12\n" +
 	"\x04path\x18\x02 \x01(\tR\x04path\x12\x15\n" +
@@ -3319,7 +5155,9 @@ const file_tilbo_ipc_v1_ipc_proto_rawDesc = "" +
 	"size_bytes\x18\x04 \x01(\x03R\tsizeBytes\x12\x14\n" +
 	"\x05mtime\x18\x05 \x01(\x03R\x05mtime\x12\x12\n" +
 	"\x04mode\x18\x06 \x01(\rR\x04mode\x12\x16\n" +
-	"\x06hidden\x18\a \x01(\bR\x06hidden\"I\n" +
+	"\x06hidden\x18\a \x01(\bR\x06hidden\x12\x1b\n" +
+	"\tmime_type\x18\b \x01(\tR\bmimeType\x12\x1b\n" +
+	"\ticon_name\x18\t \x01(\tR\biconName\"I\n" +
 	"\x15ListDirectoryResponse\x120\n" +
 	"\aentries\x18\x01 \x03(\v2\x16.tilbo.ipc.v1.DirEntryR\aentries\"%\n" +
 	"\x0fStatFileRequest\x12\x12\n" +
@@ -3349,11 +5187,13 @@ const file_tilbo_ipc_v1_ipc_proto_rawDesc = "" +
 	"\x04path\x18\x01 \x01(\tR\x04path\x12\x12\n" +
 	"\x04mode\x18\x02 \x01(\rR\x04mode\"\x13\n" +
 	"\x11ChmodFileResponse\"\x13\n" +
-	"\x11ListPlacesRequest\"4\n" +
+	"\x11ListPlacesRequest\"i\n" +
 	"\n" +
 	"PlaceEntry\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x12\n" +
-	"\x04path\x18\x02 \x01(\tR\x04path\"F\n" +
+	"\x04path\x18\x02 \x01(\tR\x04path\x12\x16\n" +
+	"\x06pinned\x18\x03 \x01(\bR\x06pinned\x12\x1b\n" +
+	"\ticon_name\x18\x04 \x01(\tR\biconName\"F\n" +
 	"\x12ListPlacesResponse\x120\n" +
 	"\x06places\x18\x01 \x03(\v2\x18.tilbo.ipc.v1.PlaceEntryR\x06places\"U\n" +
 	"\x0fFileTaggedEvent\x12\x12\n" +
@@ -3366,7 +5206,75 @@ const file_tilbo_ipc_v1_ipc_proto_rawDesc = "" +
 	"\n" +
 	"tags_total\x18\x02 \x01(\x04R\ttagsTotal\"/\n" +
 	"\x17DaemonStateChangedEvent\x12\x14\n" +
-	"\x05state\x18\x01 \x01(\tR\x05state*u\n" +
+	"\x05state\x18\x01 \x01(\tR\x05state\"V\n" +
+	"\x0fPinPlaceRequest\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12\x12\n" +
+	"\x04path\x18\x02 \x01(\tR\x04path\x12\x1b\n" +
+	"\ticon_name\x18\x03 \x01(\tR\biconName\"\x12\n" +
+	"\x10PinPlaceResponse\"'\n" +
+	"\x11UnpinPlaceRequest\x12\x12\n" +
+	"\x04path\x18\x01 \x01(\tR\x04path\"\x14\n" +
+	"\x12UnpinPlaceResponse\"&\n" +
+	"\x10TrashFileRequest\x12\x12\n" +
+	"\x04path\x18\x01 \x01(\tR\x04path\"\x13\n" +
+	"\x11TrashFileResponse\"\x12\n" +
+	"\x10ListTrashRequest\"\x89\x01\n" +
+	"\n" +
+	"TrashEntry\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12#\n" +
+	"\roriginal_path\x18\x02 \x01(\tR\foriginalPath\x12#\n" +
+	"\rdeletion_date\x18\x03 \x01(\x03R\fdeletionDate\x12\x1d\n" +
+	"\n" +
+	"size_bytes\x18\x04 \x01(\x03R\tsizeBytes\"G\n" +
+	"\x11ListTrashResponse\x122\n" +
+	"\aentries\x18\x01 \x03(\v2\x18.tilbo.ipc.v1.TrashEntryR\aentries\"4\n" +
+	"\x13RestoreTrashRequest\x12\x1d\n" +
+	"\n" +
+	"trash_name\x18\x01 \x01(\tR\ttrashName\"\x16\n" +
+	"\x14RestoreTrashResponse\"\x13\n" +
+	"\x11EmptyTrashRequest\"\x14\n" +
+	"\x12EmptyTrashResponse\"K\n" +
+	"\bAppEntry\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x12\x1b\n" +
+	"\ticon_name\x18\x03 \x01(\tR\biconName\",\n" +
+	"\x16ListAppsForFileRequest\x12\x12\n" +
+	"\x04path\x18\x01 \x01(\tR\x04path\"E\n" +
+	"\x17ListAppsForFileResponse\x12*\n" +
+	"\x04apps\x18\x01 \x03(\v2\x16.tilbo.ipc.v1.AppEntryR\x04apps\"?\n" +
+	"\x12OpenWithAppRequest\x12\x12\n" +
+	"\x04path\x18\x01 \x01(\tR\x04path\x12\x15\n" +
+	"\x06app_id\x18\x02 \x01(\tR\x05appId\"\x15\n" +
+	"\x13OpenWithAppResponse\"\x19\n" +
+	"\x17GetBrowserConfigRequest\"\xd2\x01\n" +
+	"\x18GetBrowserConfigResponse\x12Y\n" +
+	"\vkeybindings\x18\x01 \x03(\v27.tilbo.ipc.v1.GetBrowserConfigResponse.KeybindingsEntryR\vkeybindings\x12\x1b\n" +
+	"\tuse_trash\x18\x02 \x01(\bR\buseTrash\x1a>\n" +
+	"\x10KeybindingsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"*\n" +
+	"\x14GetFileBadgesRequest\x12\x12\n" +
+	"\x04path\x18\x01 \x01(\tR\x04path\"/\n" +
+	"\x15GetFileBadgesResponse\x12\x16\n" +
+	"\x06badges\x18\x01 \x03(\tR\x06badges\"2\n" +
+	"\n" +
+	"FileAction\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
+	"\x05label\x18\x02 \x01(\tR\x05label\"+\n" +
+	"\x15GetFileActionsRequest\x12\x12\n" +
+	"\x04path\x18\x01 \x01(\tR\x04path\"L\n" +
+	"\x16GetFileActionsResponse\x122\n" +
+	"\aactions\x18\x01 \x03(\v2\x18.tilbo.ipc.v1.FileActionR\aactions\"G\n" +
+	"\x14RunFileActionRequest\x12\x12\n" +
+	"\x04path\x18\x01 \x01(\tR\x04path\x12\x1b\n" +
+	"\taction_id\x18\x02 \x01(\tR\bactionId\"\x17\n" +
+	"\x15RunFileActionResponse\"&\n" +
+	"\x10LaunchGUIRequest\x12\x12\n" +
+	"\x04path\x18\x01 \x01(\tR\x04path\"<\n" +
+	"\x11LaunchGUIResponse\x12'\n" +
+	"\x0falready_running\x18\x01 \x01(\bR\x0ealreadyRunning\"%\n" +
+	"\x0fShowWindowEvent\x12\x12\n" +
+	"\x04path\x18\x01 \x01(\tR\x04path*u\n" +
 	"\fTagOperation\x12\x1d\n" +
 	"\x19TAG_OPERATION_UNSPECIFIED\x10\x00\x12\x15\n" +
 	"\x11TAG_OPERATION_ADD\x10\x01\x12\x18\n" +
@@ -3393,60 +5301,91 @@ func file_tilbo_ipc_v1_ipc_proto_rawDescGZIP() []byte {
 }
 
 var file_tilbo_ipc_v1_ipc_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_tilbo_ipc_v1_ipc_proto_msgTypes = make([]protoimpl.MessageInfo, 50)
+var file_tilbo_ipc_v1_ipc_proto_msgTypes = make([]protoimpl.MessageInfo, 81)
 var file_tilbo_ipc_v1_ipc_proto_goTypes = []any{
-	(TagOperation)(0),               // 0: tilbo.ipc.v1.TagOperation
-	(DaemonState)(0),                // 1: tilbo.ipc.v1.DaemonState
-	(*Envelope)(nil),                // 2: tilbo.ipc.v1.Envelope
-	(*Request)(nil),                 // 3: tilbo.ipc.v1.Request
-	(*Response)(nil),                // 4: tilbo.ipc.v1.Response
-	(*Event)(nil),                   // 5: tilbo.ipc.v1.Event
-	(*ErrorResponse)(nil),           // 6: tilbo.ipc.v1.ErrorResponse
-	(*SearchRequest)(nil),           // 7: tilbo.ipc.v1.SearchRequest
-	(*FileResult)(nil),              // 8: tilbo.ipc.v1.FileResult
-	(*SearchResponse)(nil),          // 9: tilbo.ipc.v1.SearchResponse
-	(*TagRequest)(nil),              // 10: tilbo.ipc.v1.TagRequest
-	(*TagResponse)(nil),             // 11: tilbo.ipc.v1.TagResponse
-	(*MetadataRequest)(nil),         // 12: tilbo.ipc.v1.MetadataRequest
-	(*MetadataResponse)(nil),        // 13: tilbo.ipc.v1.MetadataResponse
-	(*MetadataSetRequest)(nil),      // 14: tilbo.ipc.v1.MetadataSetRequest
-	(*RelatedRequest)(nil),          // 15: tilbo.ipc.v1.RelatedRequest
-	(*ScoredFile)(nil),              // 16: tilbo.ipc.v1.ScoredFile
-	(*RelatedResponse)(nil),         // 17: tilbo.ipc.v1.RelatedResponse
-	(*StatusRequest)(nil),           // 18: tilbo.ipc.v1.StatusRequest
-	(*StatusResponse)(nil),          // 19: tilbo.ipc.v1.StatusResponse
-	(*ReloadRulesRequest)(nil),      // 20: tilbo.ipc.v1.ReloadRulesRequest
-	(*ReloadRulesResponse)(nil),     // 21: tilbo.ipc.v1.ReloadRulesResponse
-	(*ListTagsRequest)(nil),         // 22: tilbo.ipc.v1.ListTagsRequest
-	(*ListTagsResponse)(nil),        // 23: tilbo.ipc.v1.ListTagsResponse
-	(*HydrateTagsRequest)(nil),      // 24: tilbo.ipc.v1.HydrateTagsRequest
-	(*HydratedPathTags)(nil),        // 25: tilbo.ipc.v1.HydratedPathTags
-	(*HydrateTagsResponse)(nil),     // 26: tilbo.ipc.v1.HydrateTagsResponse
-	(*ListDirectoryRequest)(nil),    // 27: tilbo.ipc.v1.ListDirectoryRequest
-	(*DirEntry)(nil),                // 28: tilbo.ipc.v1.DirEntry
-	(*ListDirectoryResponse)(nil),   // 29: tilbo.ipc.v1.ListDirectoryResponse
-	(*StatFileRequest)(nil),         // 30: tilbo.ipc.v1.StatFileRequest
-	(*FileStat)(nil),                // 31: tilbo.ipc.v1.FileStat
-	(*StatFileResponse)(nil),        // 32: tilbo.ipc.v1.StatFileResponse
-	(*GlobSearchRequest)(nil),       // 33: tilbo.ipc.v1.GlobSearchRequest
-	(*GlobSearchResponse)(nil),      // 34: tilbo.ipc.v1.GlobSearchResponse
-	(*RenameFileRequest)(nil),       // 35: tilbo.ipc.v1.RenameFileRequest
-	(*RenameFileResponse)(nil),      // 36: tilbo.ipc.v1.RenameFileResponse
-	(*DeleteFileRequest)(nil),       // 37: tilbo.ipc.v1.DeleteFileRequest
-	(*DeleteFileResponse)(nil),      // 38: tilbo.ipc.v1.DeleteFileResponse
-	(*ChmodFileRequest)(nil),        // 39: tilbo.ipc.v1.ChmodFileRequest
-	(*ChmodFileResponse)(nil),       // 40: tilbo.ipc.v1.ChmodFileResponse
-	(*ListPlacesRequest)(nil),       // 41: tilbo.ipc.v1.ListPlacesRequest
-	(*PlaceEntry)(nil),              // 42: tilbo.ipc.v1.PlaceEntry
-	(*ListPlacesResponse)(nil),      // 43: tilbo.ipc.v1.ListPlacesResponse
-	(*FileTaggedEvent)(nil),         // 44: tilbo.ipc.v1.FileTaggedEvent
-	(*IndexUpdatedEvent)(nil),       // 45: tilbo.ipc.v1.IndexUpdatedEvent
-	(*DaemonStateChangedEvent)(nil), // 46: tilbo.ipc.v1.DaemonStateChangedEvent
-	nil,                             // 47: tilbo.ipc.v1.SearchRequest.MetaFiltersEntry
-	nil,                             // 48: tilbo.ipc.v1.FileResult.MetadataEntry
-	nil,                             // 49: tilbo.ipc.v1.TagResponse.ErrorsEntry
-	nil,                             // 50: tilbo.ipc.v1.MetadataResponse.MetadataEntry
-	nil,                             // 51: tilbo.ipc.v1.MetadataResponse.SourcesEntry
+	(TagOperation)(0),                // 0: tilbo.ipc.v1.TagOperation
+	(DaemonState)(0),                 // 1: tilbo.ipc.v1.DaemonState
+	(*Envelope)(nil),                 // 2: tilbo.ipc.v1.Envelope
+	(*Request)(nil),                  // 3: tilbo.ipc.v1.Request
+	(*Response)(nil),                 // 4: tilbo.ipc.v1.Response
+	(*Event)(nil),                    // 5: tilbo.ipc.v1.Event
+	(*ErrorResponse)(nil),            // 6: tilbo.ipc.v1.ErrorResponse
+	(*SearchRequest)(nil),            // 7: tilbo.ipc.v1.SearchRequest
+	(*FileResult)(nil),               // 8: tilbo.ipc.v1.FileResult
+	(*SearchResponse)(nil),           // 9: tilbo.ipc.v1.SearchResponse
+	(*TagRequest)(nil),               // 10: tilbo.ipc.v1.TagRequest
+	(*TagResponse)(nil),              // 11: tilbo.ipc.v1.TagResponse
+	(*MetadataRequest)(nil),          // 12: tilbo.ipc.v1.MetadataRequest
+	(*MetadataResponse)(nil),         // 13: tilbo.ipc.v1.MetadataResponse
+	(*MetadataSetRequest)(nil),       // 14: tilbo.ipc.v1.MetadataSetRequest
+	(*RelatedRequest)(nil),           // 15: tilbo.ipc.v1.RelatedRequest
+	(*ScoredFile)(nil),               // 16: tilbo.ipc.v1.ScoredFile
+	(*RelatedResponse)(nil),          // 17: tilbo.ipc.v1.RelatedResponse
+	(*StatusRequest)(nil),            // 18: tilbo.ipc.v1.StatusRequest
+	(*StatusResponse)(nil),           // 19: tilbo.ipc.v1.StatusResponse
+	(*ReloadRulesRequest)(nil),       // 20: tilbo.ipc.v1.ReloadRulesRequest
+	(*ReloadRulesResponse)(nil),      // 21: tilbo.ipc.v1.ReloadRulesResponse
+	(*ListTagsRequest)(nil),          // 22: tilbo.ipc.v1.ListTagsRequest
+	(*ListTagsResponse)(nil),         // 23: tilbo.ipc.v1.ListTagsResponse
+	(*HydrateTagsRequest)(nil),       // 24: tilbo.ipc.v1.HydrateTagsRequest
+	(*HydratedPathTags)(nil),         // 25: tilbo.ipc.v1.HydratedPathTags
+	(*HydrateTagsResponse)(nil),      // 26: tilbo.ipc.v1.HydrateTagsResponse
+	(*ListDirectoryRequest)(nil),     // 27: tilbo.ipc.v1.ListDirectoryRequest
+	(*DirEntry)(nil),                 // 28: tilbo.ipc.v1.DirEntry
+	(*ListDirectoryResponse)(nil),    // 29: tilbo.ipc.v1.ListDirectoryResponse
+	(*StatFileRequest)(nil),          // 30: tilbo.ipc.v1.StatFileRequest
+	(*FileStat)(nil),                 // 31: tilbo.ipc.v1.FileStat
+	(*StatFileResponse)(nil),         // 32: tilbo.ipc.v1.StatFileResponse
+	(*GlobSearchRequest)(nil),        // 33: tilbo.ipc.v1.GlobSearchRequest
+	(*GlobSearchResponse)(nil),       // 34: tilbo.ipc.v1.GlobSearchResponse
+	(*RenameFileRequest)(nil),        // 35: tilbo.ipc.v1.RenameFileRequest
+	(*RenameFileResponse)(nil),       // 36: tilbo.ipc.v1.RenameFileResponse
+	(*DeleteFileRequest)(nil),        // 37: tilbo.ipc.v1.DeleteFileRequest
+	(*DeleteFileResponse)(nil),       // 38: tilbo.ipc.v1.DeleteFileResponse
+	(*ChmodFileRequest)(nil),         // 39: tilbo.ipc.v1.ChmodFileRequest
+	(*ChmodFileResponse)(nil),        // 40: tilbo.ipc.v1.ChmodFileResponse
+	(*ListPlacesRequest)(nil),        // 41: tilbo.ipc.v1.ListPlacesRequest
+	(*PlaceEntry)(nil),               // 42: tilbo.ipc.v1.PlaceEntry
+	(*ListPlacesResponse)(nil),       // 43: tilbo.ipc.v1.ListPlacesResponse
+	(*FileTaggedEvent)(nil),          // 44: tilbo.ipc.v1.FileTaggedEvent
+	(*IndexUpdatedEvent)(nil),        // 45: tilbo.ipc.v1.IndexUpdatedEvent
+	(*DaemonStateChangedEvent)(nil),  // 46: tilbo.ipc.v1.DaemonStateChangedEvent
+	(*PinPlaceRequest)(nil),          // 47: tilbo.ipc.v1.PinPlaceRequest
+	(*PinPlaceResponse)(nil),         // 48: tilbo.ipc.v1.PinPlaceResponse
+	(*UnpinPlaceRequest)(nil),        // 49: tilbo.ipc.v1.UnpinPlaceRequest
+	(*UnpinPlaceResponse)(nil),       // 50: tilbo.ipc.v1.UnpinPlaceResponse
+	(*TrashFileRequest)(nil),         // 51: tilbo.ipc.v1.TrashFileRequest
+	(*TrashFileResponse)(nil),        // 52: tilbo.ipc.v1.TrashFileResponse
+	(*ListTrashRequest)(nil),         // 53: tilbo.ipc.v1.ListTrashRequest
+	(*TrashEntry)(nil),               // 54: tilbo.ipc.v1.TrashEntry
+	(*ListTrashResponse)(nil),        // 55: tilbo.ipc.v1.ListTrashResponse
+	(*RestoreTrashRequest)(nil),      // 56: tilbo.ipc.v1.RestoreTrashRequest
+	(*RestoreTrashResponse)(nil),     // 57: tilbo.ipc.v1.RestoreTrashResponse
+	(*EmptyTrashRequest)(nil),        // 58: tilbo.ipc.v1.EmptyTrashRequest
+	(*EmptyTrashResponse)(nil),       // 59: tilbo.ipc.v1.EmptyTrashResponse
+	(*AppEntry)(nil),                 // 60: tilbo.ipc.v1.AppEntry
+	(*ListAppsForFileRequest)(nil),   // 61: tilbo.ipc.v1.ListAppsForFileRequest
+	(*ListAppsForFileResponse)(nil),  // 62: tilbo.ipc.v1.ListAppsForFileResponse
+	(*OpenWithAppRequest)(nil),       // 63: tilbo.ipc.v1.OpenWithAppRequest
+	(*OpenWithAppResponse)(nil),      // 64: tilbo.ipc.v1.OpenWithAppResponse
+	(*GetBrowserConfigRequest)(nil),  // 65: tilbo.ipc.v1.GetBrowserConfigRequest
+	(*GetBrowserConfigResponse)(nil), // 66: tilbo.ipc.v1.GetBrowserConfigResponse
+	(*GetFileBadgesRequest)(nil),     // 67: tilbo.ipc.v1.GetFileBadgesRequest
+	(*GetFileBadgesResponse)(nil),    // 68: tilbo.ipc.v1.GetFileBadgesResponse
+	(*FileAction)(nil),               // 69: tilbo.ipc.v1.FileAction
+	(*GetFileActionsRequest)(nil),    // 70: tilbo.ipc.v1.GetFileActionsRequest
+	(*GetFileActionsResponse)(nil),   // 71: tilbo.ipc.v1.GetFileActionsResponse
+	(*RunFileActionRequest)(nil),     // 72: tilbo.ipc.v1.RunFileActionRequest
+	(*RunFileActionResponse)(nil),    // 73: tilbo.ipc.v1.RunFileActionResponse
+	(*LaunchGUIRequest)(nil),         // 74: tilbo.ipc.v1.LaunchGUIRequest
+	(*LaunchGUIResponse)(nil),        // 75: tilbo.ipc.v1.LaunchGUIResponse
+	(*ShowWindowEvent)(nil),          // 76: tilbo.ipc.v1.ShowWindowEvent
+	nil,                              // 77: tilbo.ipc.v1.SearchRequest.MetaFiltersEntry
+	nil,                              // 78: tilbo.ipc.v1.FileResult.MetadataEntry
+	nil,                              // 79: tilbo.ipc.v1.TagResponse.ErrorsEntry
+	nil,                              // 80: tilbo.ipc.v1.MetadataResponse.MetadataEntry
+	nil,                              // 81: tilbo.ipc.v1.MetadataResponse.SourcesEntry
+	nil,                              // 82: tilbo.ipc.v1.GetBrowserConfigResponse.KeybindingsEntry
 }
 var file_tilbo_ipc_v1_ipc_proto_depIdxs = []int32{
 	3,  // 0: tilbo.ipc.v1.Envelope.request:type_name -> tilbo.ipc.v1.Request
@@ -3468,45 +5407,76 @@ var file_tilbo_ipc_v1_ipc_proto_depIdxs = []int32{
 	37, // 16: tilbo.ipc.v1.Request.delete_file:type_name -> tilbo.ipc.v1.DeleteFileRequest
 	39, // 17: tilbo.ipc.v1.Request.chmod_file:type_name -> tilbo.ipc.v1.ChmodFileRequest
 	41, // 18: tilbo.ipc.v1.Request.list_places:type_name -> tilbo.ipc.v1.ListPlacesRequest
-	6,  // 19: tilbo.ipc.v1.Response.error:type_name -> tilbo.ipc.v1.ErrorResponse
-	9,  // 20: tilbo.ipc.v1.Response.search:type_name -> tilbo.ipc.v1.SearchResponse
-	11, // 21: tilbo.ipc.v1.Response.tag:type_name -> tilbo.ipc.v1.TagResponse
-	13, // 22: tilbo.ipc.v1.Response.metadata:type_name -> tilbo.ipc.v1.MetadataResponse
-	17, // 23: tilbo.ipc.v1.Response.related:type_name -> tilbo.ipc.v1.RelatedResponse
-	19, // 24: tilbo.ipc.v1.Response.status:type_name -> tilbo.ipc.v1.StatusResponse
-	21, // 25: tilbo.ipc.v1.Response.reload_rules:type_name -> tilbo.ipc.v1.ReloadRulesResponse
-	23, // 26: tilbo.ipc.v1.Response.list_tags:type_name -> tilbo.ipc.v1.ListTagsResponse
-	26, // 27: tilbo.ipc.v1.Response.hydrate_tags:type_name -> tilbo.ipc.v1.HydrateTagsResponse
-	29, // 28: tilbo.ipc.v1.Response.list_directory:type_name -> tilbo.ipc.v1.ListDirectoryResponse
-	32, // 29: tilbo.ipc.v1.Response.stat_file:type_name -> tilbo.ipc.v1.StatFileResponse
-	34, // 30: tilbo.ipc.v1.Response.glob_search:type_name -> tilbo.ipc.v1.GlobSearchResponse
-	36, // 31: tilbo.ipc.v1.Response.rename_file:type_name -> tilbo.ipc.v1.RenameFileResponse
-	38, // 32: tilbo.ipc.v1.Response.delete_file:type_name -> tilbo.ipc.v1.DeleteFileResponse
-	40, // 33: tilbo.ipc.v1.Response.chmod_file:type_name -> tilbo.ipc.v1.ChmodFileResponse
-	43, // 34: tilbo.ipc.v1.Response.list_places:type_name -> tilbo.ipc.v1.ListPlacesResponse
-	44, // 35: tilbo.ipc.v1.Event.file_tagged:type_name -> tilbo.ipc.v1.FileTaggedEvent
-	45, // 36: tilbo.ipc.v1.Event.index_updated:type_name -> tilbo.ipc.v1.IndexUpdatedEvent
-	46, // 37: tilbo.ipc.v1.Event.daemon_state_changed:type_name -> tilbo.ipc.v1.DaemonStateChangedEvent
-	47, // 38: tilbo.ipc.v1.SearchRequest.meta_filters:type_name -> tilbo.ipc.v1.SearchRequest.MetaFiltersEntry
-	48, // 39: tilbo.ipc.v1.FileResult.metadata:type_name -> tilbo.ipc.v1.FileResult.MetadataEntry
-	8,  // 40: tilbo.ipc.v1.SearchResponse.files:type_name -> tilbo.ipc.v1.FileResult
-	0,  // 41: tilbo.ipc.v1.TagRequest.operation:type_name -> tilbo.ipc.v1.TagOperation
-	49, // 42: tilbo.ipc.v1.TagResponse.errors:type_name -> tilbo.ipc.v1.TagResponse.ErrorsEntry
-	50, // 43: tilbo.ipc.v1.MetadataResponse.metadata:type_name -> tilbo.ipc.v1.MetadataResponse.MetadataEntry
-	51, // 44: tilbo.ipc.v1.MetadataResponse.sources:type_name -> tilbo.ipc.v1.MetadataResponse.SourcesEntry
-	8,  // 45: tilbo.ipc.v1.ScoredFile.file:type_name -> tilbo.ipc.v1.FileResult
-	16, // 46: tilbo.ipc.v1.RelatedResponse.files:type_name -> tilbo.ipc.v1.ScoredFile
-	1,  // 47: tilbo.ipc.v1.StatusResponse.state:type_name -> tilbo.ipc.v1.DaemonState
-	25, // 48: tilbo.ipc.v1.HydrateTagsResponse.entries:type_name -> tilbo.ipc.v1.HydratedPathTags
-	28, // 49: tilbo.ipc.v1.ListDirectoryResponse.entries:type_name -> tilbo.ipc.v1.DirEntry
-	31, // 50: tilbo.ipc.v1.StatFileResponse.stat:type_name -> tilbo.ipc.v1.FileStat
-	8,  // 51: tilbo.ipc.v1.GlobSearchResponse.files:type_name -> tilbo.ipc.v1.FileResult
-	42, // 52: tilbo.ipc.v1.ListPlacesResponse.places:type_name -> tilbo.ipc.v1.PlaceEntry
-	53, // [53:53] is the sub-list for method output_type
-	53, // [53:53] is the sub-list for method input_type
-	53, // [53:53] is the sub-list for extension type_name
-	53, // [53:53] is the sub-list for extension extendee
-	0,  // [0:53] is the sub-list for field type_name
+	47, // 19: tilbo.ipc.v1.Request.pin_place:type_name -> tilbo.ipc.v1.PinPlaceRequest
+	49, // 20: tilbo.ipc.v1.Request.unpin_place:type_name -> tilbo.ipc.v1.UnpinPlaceRequest
+	51, // 21: tilbo.ipc.v1.Request.trash_file:type_name -> tilbo.ipc.v1.TrashFileRequest
+	53, // 22: tilbo.ipc.v1.Request.list_trash:type_name -> tilbo.ipc.v1.ListTrashRequest
+	56, // 23: tilbo.ipc.v1.Request.restore_trash:type_name -> tilbo.ipc.v1.RestoreTrashRequest
+	58, // 24: tilbo.ipc.v1.Request.empty_trash:type_name -> tilbo.ipc.v1.EmptyTrashRequest
+	61, // 25: tilbo.ipc.v1.Request.list_apps_for_file:type_name -> tilbo.ipc.v1.ListAppsForFileRequest
+	63, // 26: tilbo.ipc.v1.Request.open_with_app:type_name -> tilbo.ipc.v1.OpenWithAppRequest
+	65, // 27: tilbo.ipc.v1.Request.get_browser_config:type_name -> tilbo.ipc.v1.GetBrowserConfigRequest
+	67, // 28: tilbo.ipc.v1.Request.get_file_badges:type_name -> tilbo.ipc.v1.GetFileBadgesRequest
+	70, // 29: tilbo.ipc.v1.Request.get_file_actions:type_name -> tilbo.ipc.v1.GetFileActionsRequest
+	72, // 30: tilbo.ipc.v1.Request.run_file_action:type_name -> tilbo.ipc.v1.RunFileActionRequest
+	74, // 31: tilbo.ipc.v1.Request.launch_gui:type_name -> tilbo.ipc.v1.LaunchGUIRequest
+	6,  // 32: tilbo.ipc.v1.Response.error:type_name -> tilbo.ipc.v1.ErrorResponse
+	9,  // 33: tilbo.ipc.v1.Response.search:type_name -> tilbo.ipc.v1.SearchResponse
+	11, // 34: tilbo.ipc.v1.Response.tag:type_name -> tilbo.ipc.v1.TagResponse
+	13, // 35: tilbo.ipc.v1.Response.metadata:type_name -> tilbo.ipc.v1.MetadataResponse
+	17, // 36: tilbo.ipc.v1.Response.related:type_name -> tilbo.ipc.v1.RelatedResponse
+	19, // 37: tilbo.ipc.v1.Response.status:type_name -> tilbo.ipc.v1.StatusResponse
+	21, // 38: tilbo.ipc.v1.Response.reload_rules:type_name -> tilbo.ipc.v1.ReloadRulesResponse
+	23, // 39: tilbo.ipc.v1.Response.list_tags:type_name -> tilbo.ipc.v1.ListTagsResponse
+	26, // 40: tilbo.ipc.v1.Response.hydrate_tags:type_name -> tilbo.ipc.v1.HydrateTagsResponse
+	29, // 41: tilbo.ipc.v1.Response.list_directory:type_name -> tilbo.ipc.v1.ListDirectoryResponse
+	32, // 42: tilbo.ipc.v1.Response.stat_file:type_name -> tilbo.ipc.v1.StatFileResponse
+	34, // 43: tilbo.ipc.v1.Response.glob_search:type_name -> tilbo.ipc.v1.GlobSearchResponse
+	36, // 44: tilbo.ipc.v1.Response.rename_file:type_name -> tilbo.ipc.v1.RenameFileResponse
+	38, // 45: tilbo.ipc.v1.Response.delete_file:type_name -> tilbo.ipc.v1.DeleteFileResponse
+	40, // 46: tilbo.ipc.v1.Response.chmod_file:type_name -> tilbo.ipc.v1.ChmodFileResponse
+	43, // 47: tilbo.ipc.v1.Response.list_places:type_name -> tilbo.ipc.v1.ListPlacesResponse
+	48, // 48: tilbo.ipc.v1.Response.pin_place:type_name -> tilbo.ipc.v1.PinPlaceResponse
+	50, // 49: tilbo.ipc.v1.Response.unpin_place:type_name -> tilbo.ipc.v1.UnpinPlaceResponse
+	52, // 50: tilbo.ipc.v1.Response.trash_file:type_name -> tilbo.ipc.v1.TrashFileResponse
+	55, // 51: tilbo.ipc.v1.Response.list_trash:type_name -> tilbo.ipc.v1.ListTrashResponse
+	57, // 52: tilbo.ipc.v1.Response.restore_trash:type_name -> tilbo.ipc.v1.RestoreTrashResponse
+	59, // 53: tilbo.ipc.v1.Response.empty_trash:type_name -> tilbo.ipc.v1.EmptyTrashResponse
+	62, // 54: tilbo.ipc.v1.Response.list_apps_for_file:type_name -> tilbo.ipc.v1.ListAppsForFileResponse
+	64, // 55: tilbo.ipc.v1.Response.open_with_app:type_name -> tilbo.ipc.v1.OpenWithAppResponse
+	66, // 56: tilbo.ipc.v1.Response.get_browser_config:type_name -> tilbo.ipc.v1.GetBrowserConfigResponse
+	68, // 57: tilbo.ipc.v1.Response.get_file_badges:type_name -> tilbo.ipc.v1.GetFileBadgesResponse
+	71, // 58: tilbo.ipc.v1.Response.get_file_actions:type_name -> tilbo.ipc.v1.GetFileActionsResponse
+	73, // 59: tilbo.ipc.v1.Response.run_file_action:type_name -> tilbo.ipc.v1.RunFileActionResponse
+	75, // 60: tilbo.ipc.v1.Response.launch_gui:type_name -> tilbo.ipc.v1.LaunchGUIResponse
+	44, // 61: tilbo.ipc.v1.Event.file_tagged:type_name -> tilbo.ipc.v1.FileTaggedEvent
+	45, // 62: tilbo.ipc.v1.Event.index_updated:type_name -> tilbo.ipc.v1.IndexUpdatedEvent
+	46, // 63: tilbo.ipc.v1.Event.daemon_state_changed:type_name -> tilbo.ipc.v1.DaemonStateChangedEvent
+	76, // 64: tilbo.ipc.v1.Event.show_window:type_name -> tilbo.ipc.v1.ShowWindowEvent
+	77, // 65: tilbo.ipc.v1.SearchRequest.meta_filters:type_name -> tilbo.ipc.v1.SearchRequest.MetaFiltersEntry
+	78, // 66: tilbo.ipc.v1.FileResult.metadata:type_name -> tilbo.ipc.v1.FileResult.MetadataEntry
+	8,  // 67: tilbo.ipc.v1.SearchResponse.files:type_name -> tilbo.ipc.v1.FileResult
+	0,  // 68: tilbo.ipc.v1.TagRequest.operation:type_name -> tilbo.ipc.v1.TagOperation
+	79, // 69: tilbo.ipc.v1.TagResponse.errors:type_name -> tilbo.ipc.v1.TagResponse.ErrorsEntry
+	80, // 70: tilbo.ipc.v1.MetadataResponse.metadata:type_name -> tilbo.ipc.v1.MetadataResponse.MetadataEntry
+	81, // 71: tilbo.ipc.v1.MetadataResponse.sources:type_name -> tilbo.ipc.v1.MetadataResponse.SourcesEntry
+	8,  // 72: tilbo.ipc.v1.ScoredFile.file:type_name -> tilbo.ipc.v1.FileResult
+	16, // 73: tilbo.ipc.v1.RelatedResponse.files:type_name -> tilbo.ipc.v1.ScoredFile
+	1,  // 74: tilbo.ipc.v1.StatusResponse.state:type_name -> tilbo.ipc.v1.DaemonState
+	25, // 75: tilbo.ipc.v1.HydrateTagsResponse.entries:type_name -> tilbo.ipc.v1.HydratedPathTags
+	28, // 76: tilbo.ipc.v1.ListDirectoryResponse.entries:type_name -> tilbo.ipc.v1.DirEntry
+	31, // 77: tilbo.ipc.v1.StatFileResponse.stat:type_name -> tilbo.ipc.v1.FileStat
+	8,  // 78: tilbo.ipc.v1.GlobSearchResponse.files:type_name -> tilbo.ipc.v1.FileResult
+	42, // 79: tilbo.ipc.v1.ListPlacesResponse.places:type_name -> tilbo.ipc.v1.PlaceEntry
+	54, // 80: tilbo.ipc.v1.ListTrashResponse.entries:type_name -> tilbo.ipc.v1.TrashEntry
+	60, // 81: tilbo.ipc.v1.ListAppsForFileResponse.apps:type_name -> tilbo.ipc.v1.AppEntry
+	82, // 82: tilbo.ipc.v1.GetBrowserConfigResponse.keybindings:type_name -> tilbo.ipc.v1.GetBrowserConfigResponse.KeybindingsEntry
+	69, // 83: tilbo.ipc.v1.GetFileActionsResponse.actions:type_name -> tilbo.ipc.v1.FileAction
+	84, // [84:84] is the sub-list for method output_type
+	84, // [84:84] is the sub-list for method input_type
+	84, // [84:84] is the sub-list for extension type_name
+	84, // [84:84] is the sub-list for extension extendee
+	0,  // [0:84] is the sub-list for field type_name
 }
 
 func init() { file_tilbo_ipc_v1_ipc_proto_init() }
@@ -3536,6 +5506,19 @@ func file_tilbo_ipc_v1_ipc_proto_init() {
 		(*Request_DeleteFile)(nil),
 		(*Request_ChmodFile)(nil),
 		(*Request_ListPlaces)(nil),
+		(*Request_PinPlace)(nil),
+		(*Request_UnpinPlace)(nil),
+		(*Request_TrashFile)(nil),
+		(*Request_ListTrash)(nil),
+		(*Request_RestoreTrash)(nil),
+		(*Request_EmptyTrash)(nil),
+		(*Request_ListAppsForFile)(nil),
+		(*Request_OpenWithApp)(nil),
+		(*Request_GetBrowserConfig)(nil),
+		(*Request_GetFileBadges)(nil),
+		(*Request_GetFileActions)(nil),
+		(*Request_RunFileAction)(nil),
+		(*Request_LaunchGui)(nil),
 	}
 	file_tilbo_ipc_v1_ipc_proto_msgTypes[2].OneofWrappers = []any{
 		(*Response_Error)(nil),
@@ -3554,11 +5537,25 @@ func file_tilbo_ipc_v1_ipc_proto_init() {
 		(*Response_DeleteFile)(nil),
 		(*Response_ChmodFile)(nil),
 		(*Response_ListPlaces)(nil),
+		(*Response_PinPlace)(nil),
+		(*Response_UnpinPlace)(nil),
+		(*Response_TrashFile)(nil),
+		(*Response_ListTrash)(nil),
+		(*Response_RestoreTrash)(nil),
+		(*Response_EmptyTrash)(nil),
+		(*Response_ListAppsForFile)(nil),
+		(*Response_OpenWithApp)(nil),
+		(*Response_GetBrowserConfig)(nil),
+		(*Response_GetFileBadges)(nil),
+		(*Response_GetFileActions)(nil),
+		(*Response_RunFileAction)(nil),
+		(*Response_LaunchGui)(nil),
 	}
 	file_tilbo_ipc_v1_ipc_proto_msgTypes[3].OneofWrappers = []any{
 		(*Event_FileTagged)(nil),
 		(*Event_IndexUpdated)(nil),
 		(*Event_DaemonStateChanged)(nil),
+		(*Event_ShowWindow)(nil),
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -3566,7 +5563,7 @@ func file_tilbo_ipc_v1_ipc_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_tilbo_ipc_v1_ipc_proto_rawDesc), len(file_tilbo_ipc_v1_ipc_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   50,
+			NumMessages:   81,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

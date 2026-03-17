@@ -393,6 +393,19 @@ export const tilbo = $root.tilbo = (() => {
                  * @property {tilbo.ipc.v1.IDeleteFileRequest|null} [deleteFile] Request deleteFile
                  * @property {tilbo.ipc.v1.IChmodFileRequest|null} [chmodFile] Request chmodFile
                  * @property {tilbo.ipc.v1.IListPlacesRequest|null} [listPlaces] Request listPlaces
+                 * @property {tilbo.ipc.v1.IPinPlaceRequest|null} [pinPlace] Request pinPlace
+                 * @property {tilbo.ipc.v1.IUnpinPlaceRequest|null} [unpinPlace] Request unpinPlace
+                 * @property {tilbo.ipc.v1.ITrashFileRequest|null} [trashFile] Request trashFile
+                 * @property {tilbo.ipc.v1.IListTrashRequest|null} [listTrash] Request listTrash
+                 * @property {tilbo.ipc.v1.IRestoreTrashRequest|null} [restoreTrash] Request restoreTrash
+                 * @property {tilbo.ipc.v1.IEmptyTrashRequest|null} [emptyTrash] Request emptyTrash
+                 * @property {tilbo.ipc.v1.IListAppsForFileRequest|null} [listAppsForFile] Request listAppsForFile
+                 * @property {tilbo.ipc.v1.IOpenWithAppRequest|null} [openWithApp] Request openWithApp
+                 * @property {tilbo.ipc.v1.IGetBrowserConfigRequest|null} [getBrowserConfig] Request getBrowserConfig
+                 * @property {tilbo.ipc.v1.IGetFileBadgesRequest|null} [getFileBadges] Request getFileBadges
+                 * @property {tilbo.ipc.v1.IGetFileActionsRequest|null} [getFileActions] Request getFileActions
+                 * @property {tilbo.ipc.v1.IRunFileActionRequest|null} [runFileAction] Request runFileAction
+                 * @property {tilbo.ipc.v1.ILaunchGUIRequest|null} [launchGui] Request launchGui
                  */
 
                 /**
@@ -538,17 +551,121 @@ export const tilbo = $root.tilbo = (() => {
                  */
                 Request.prototype.listPlaces = null;
 
+                /**
+                 * Request pinPlace.
+                 * @member {tilbo.ipc.v1.IPinPlaceRequest|null|undefined} pinPlace
+                 * @memberof tilbo.ipc.v1.Request
+                 * @instance
+                 */
+                Request.prototype.pinPlace = null;
+
+                /**
+                 * Request unpinPlace.
+                 * @member {tilbo.ipc.v1.IUnpinPlaceRequest|null|undefined} unpinPlace
+                 * @memberof tilbo.ipc.v1.Request
+                 * @instance
+                 */
+                Request.prototype.unpinPlace = null;
+
+                /**
+                 * Request trashFile.
+                 * @member {tilbo.ipc.v1.ITrashFileRequest|null|undefined} trashFile
+                 * @memberof tilbo.ipc.v1.Request
+                 * @instance
+                 */
+                Request.prototype.trashFile = null;
+
+                /**
+                 * Request listTrash.
+                 * @member {tilbo.ipc.v1.IListTrashRequest|null|undefined} listTrash
+                 * @memberof tilbo.ipc.v1.Request
+                 * @instance
+                 */
+                Request.prototype.listTrash = null;
+
+                /**
+                 * Request restoreTrash.
+                 * @member {tilbo.ipc.v1.IRestoreTrashRequest|null|undefined} restoreTrash
+                 * @memberof tilbo.ipc.v1.Request
+                 * @instance
+                 */
+                Request.prototype.restoreTrash = null;
+
+                /**
+                 * Request emptyTrash.
+                 * @member {tilbo.ipc.v1.IEmptyTrashRequest|null|undefined} emptyTrash
+                 * @memberof tilbo.ipc.v1.Request
+                 * @instance
+                 */
+                Request.prototype.emptyTrash = null;
+
+                /**
+                 * Request listAppsForFile.
+                 * @member {tilbo.ipc.v1.IListAppsForFileRequest|null|undefined} listAppsForFile
+                 * @memberof tilbo.ipc.v1.Request
+                 * @instance
+                 */
+                Request.prototype.listAppsForFile = null;
+
+                /**
+                 * Request openWithApp.
+                 * @member {tilbo.ipc.v1.IOpenWithAppRequest|null|undefined} openWithApp
+                 * @memberof tilbo.ipc.v1.Request
+                 * @instance
+                 */
+                Request.prototype.openWithApp = null;
+
+                /**
+                 * Request getBrowserConfig.
+                 * @member {tilbo.ipc.v1.IGetBrowserConfigRequest|null|undefined} getBrowserConfig
+                 * @memberof tilbo.ipc.v1.Request
+                 * @instance
+                 */
+                Request.prototype.getBrowserConfig = null;
+
+                /**
+                 * Request getFileBadges.
+                 * @member {tilbo.ipc.v1.IGetFileBadgesRequest|null|undefined} getFileBadges
+                 * @memberof tilbo.ipc.v1.Request
+                 * @instance
+                 */
+                Request.prototype.getFileBadges = null;
+
+                /**
+                 * Request getFileActions.
+                 * @member {tilbo.ipc.v1.IGetFileActionsRequest|null|undefined} getFileActions
+                 * @memberof tilbo.ipc.v1.Request
+                 * @instance
+                 */
+                Request.prototype.getFileActions = null;
+
+                /**
+                 * Request runFileAction.
+                 * @member {tilbo.ipc.v1.IRunFileActionRequest|null|undefined} runFileAction
+                 * @memberof tilbo.ipc.v1.Request
+                 * @instance
+                 */
+                Request.prototype.runFileAction = null;
+
+                /**
+                 * Request launchGui.
+                 * @member {tilbo.ipc.v1.ILaunchGUIRequest|null|undefined} launchGui
+                 * @memberof tilbo.ipc.v1.Request
+                 * @instance
+                 */
+                Request.prototype.launchGui = null;
+
                 // OneOf field names bound to virtual getters and setters
                 let $oneOfFields;
 
                 /**
                  * Request kind.
-                 * @member {"search"|"tag"|"metadata"|"metadataSet"|"related"|"status"|"reloadRules"|"listTags"|"hydrateTags"|"listDirectory"|"statFile"|"globSearch"|"renameFile"|"deleteFile"|"chmodFile"|"listPlaces"|undefined} kind
+                 * @member {"search"|"tag"|"metadata"|"metadataSet"|"related"|"status"|"reloadRules"|"listTags"|"hydrateTags"|"listDirectory"|"statFile"|"globSearch"|"renameFile"|"deleteFile"|"chmodFile"|"listPlaces"|"pinPlace"|"unpinPlace"|"trashFile"|"listTrash"|"restoreTrash"|"emptyTrash"|"listAppsForFile"|"openWithApp"|"getBrowserConfig"|"getFileBadges"|"getFileActions"|"runFileAction"|"launchGui"|undefined} kind
                  * @memberof tilbo.ipc.v1.Request
                  * @instance
                  */
                 Object.defineProperty(Request.prototype, "kind", {
-                    get: $util.oneOfGetter($oneOfFields = ["search", "tag", "metadata", "metadataSet", "related", "status", "reloadRules", "listTags", "hydrateTags", "listDirectory", "statFile", "globSearch", "renameFile", "deleteFile", "chmodFile", "listPlaces"]),
+                    get: $util.oneOfGetter($oneOfFields = ["search", "tag", "metadata", "metadataSet", "related", "status", "reloadRules", "listTags", "hydrateTags", "listDirectory", "statFile", "globSearch", "renameFile", "deleteFile", "chmodFile", "listPlaces", "pinPlace", "unpinPlace", "trashFile", "listTrash", "restoreTrash", "emptyTrash", "listAppsForFile", "openWithApp", "getBrowserConfig", "getFileBadges", "getFileActions", "runFileAction", "launchGui"]),
                     set: $util.oneOfSetter($oneOfFields)
                 });
 
@@ -608,6 +725,32 @@ export const tilbo = $root.tilbo = (() => {
                         $root.tilbo.ipc.v1.ChmodFileRequest.encode(message.chmodFile, writer.uint32(/* id 15, wireType 2 =*/122).fork()).ldelim();
                     if (message.listPlaces != null && Object.hasOwnProperty.call(message, "listPlaces"))
                         $root.tilbo.ipc.v1.ListPlacesRequest.encode(message.listPlaces, writer.uint32(/* id 16, wireType 2 =*/130).fork()).ldelim();
+                    if (message.pinPlace != null && Object.hasOwnProperty.call(message, "pinPlace"))
+                        $root.tilbo.ipc.v1.PinPlaceRequest.encode(message.pinPlace, writer.uint32(/* id 17, wireType 2 =*/138).fork()).ldelim();
+                    if (message.unpinPlace != null && Object.hasOwnProperty.call(message, "unpinPlace"))
+                        $root.tilbo.ipc.v1.UnpinPlaceRequest.encode(message.unpinPlace, writer.uint32(/* id 18, wireType 2 =*/146).fork()).ldelim();
+                    if (message.trashFile != null && Object.hasOwnProperty.call(message, "trashFile"))
+                        $root.tilbo.ipc.v1.TrashFileRequest.encode(message.trashFile, writer.uint32(/* id 19, wireType 2 =*/154).fork()).ldelim();
+                    if (message.listTrash != null && Object.hasOwnProperty.call(message, "listTrash"))
+                        $root.tilbo.ipc.v1.ListTrashRequest.encode(message.listTrash, writer.uint32(/* id 20, wireType 2 =*/162).fork()).ldelim();
+                    if (message.restoreTrash != null && Object.hasOwnProperty.call(message, "restoreTrash"))
+                        $root.tilbo.ipc.v1.RestoreTrashRequest.encode(message.restoreTrash, writer.uint32(/* id 21, wireType 2 =*/170).fork()).ldelim();
+                    if (message.emptyTrash != null && Object.hasOwnProperty.call(message, "emptyTrash"))
+                        $root.tilbo.ipc.v1.EmptyTrashRequest.encode(message.emptyTrash, writer.uint32(/* id 22, wireType 2 =*/178).fork()).ldelim();
+                    if (message.listAppsForFile != null && Object.hasOwnProperty.call(message, "listAppsForFile"))
+                        $root.tilbo.ipc.v1.ListAppsForFileRequest.encode(message.listAppsForFile, writer.uint32(/* id 23, wireType 2 =*/186).fork()).ldelim();
+                    if (message.openWithApp != null && Object.hasOwnProperty.call(message, "openWithApp"))
+                        $root.tilbo.ipc.v1.OpenWithAppRequest.encode(message.openWithApp, writer.uint32(/* id 24, wireType 2 =*/194).fork()).ldelim();
+                    if (message.getBrowserConfig != null && Object.hasOwnProperty.call(message, "getBrowserConfig"))
+                        $root.tilbo.ipc.v1.GetBrowserConfigRequest.encode(message.getBrowserConfig, writer.uint32(/* id 25, wireType 2 =*/202).fork()).ldelim();
+                    if (message.getFileBadges != null && Object.hasOwnProperty.call(message, "getFileBadges"))
+                        $root.tilbo.ipc.v1.GetFileBadgesRequest.encode(message.getFileBadges, writer.uint32(/* id 26, wireType 2 =*/210).fork()).ldelim();
+                    if (message.getFileActions != null && Object.hasOwnProperty.call(message, "getFileActions"))
+                        $root.tilbo.ipc.v1.GetFileActionsRequest.encode(message.getFileActions, writer.uint32(/* id 27, wireType 2 =*/218).fork()).ldelim();
+                    if (message.runFileAction != null && Object.hasOwnProperty.call(message, "runFileAction"))
+                        $root.tilbo.ipc.v1.RunFileActionRequest.encode(message.runFileAction, writer.uint32(/* id 28, wireType 2 =*/226).fork()).ldelim();
+                    if (message.launchGui != null && Object.hasOwnProperty.call(message, "launchGui"))
+                        $root.tilbo.ipc.v1.LaunchGUIRequest.encode(message.launchGui, writer.uint32(/* id 29, wireType 2 =*/234).fork()).ldelim();
                     return writer;
                 };
 
@@ -706,6 +849,58 @@ export const tilbo = $root.tilbo = (() => {
                             }
                         case 16: {
                                 message.listPlaces = $root.tilbo.ipc.v1.ListPlacesRequest.decode(reader, reader.uint32());
+                                break;
+                            }
+                        case 17: {
+                                message.pinPlace = $root.tilbo.ipc.v1.PinPlaceRequest.decode(reader, reader.uint32());
+                                break;
+                            }
+                        case 18: {
+                                message.unpinPlace = $root.tilbo.ipc.v1.UnpinPlaceRequest.decode(reader, reader.uint32());
+                                break;
+                            }
+                        case 19: {
+                                message.trashFile = $root.tilbo.ipc.v1.TrashFileRequest.decode(reader, reader.uint32());
+                                break;
+                            }
+                        case 20: {
+                                message.listTrash = $root.tilbo.ipc.v1.ListTrashRequest.decode(reader, reader.uint32());
+                                break;
+                            }
+                        case 21: {
+                                message.restoreTrash = $root.tilbo.ipc.v1.RestoreTrashRequest.decode(reader, reader.uint32());
+                                break;
+                            }
+                        case 22: {
+                                message.emptyTrash = $root.tilbo.ipc.v1.EmptyTrashRequest.decode(reader, reader.uint32());
+                                break;
+                            }
+                        case 23: {
+                                message.listAppsForFile = $root.tilbo.ipc.v1.ListAppsForFileRequest.decode(reader, reader.uint32());
+                                break;
+                            }
+                        case 24: {
+                                message.openWithApp = $root.tilbo.ipc.v1.OpenWithAppRequest.decode(reader, reader.uint32());
+                                break;
+                            }
+                        case 25: {
+                                message.getBrowserConfig = $root.tilbo.ipc.v1.GetBrowserConfigRequest.decode(reader, reader.uint32());
+                                break;
+                            }
+                        case 26: {
+                                message.getFileBadges = $root.tilbo.ipc.v1.GetFileBadgesRequest.decode(reader, reader.uint32());
+                                break;
+                            }
+                        case 27: {
+                                message.getFileActions = $root.tilbo.ipc.v1.GetFileActionsRequest.decode(reader, reader.uint32());
+                                break;
+                            }
+                        case 28: {
+                                message.runFileAction = $root.tilbo.ipc.v1.RunFileActionRequest.decode(reader, reader.uint32());
+                                break;
+                            }
+                        case 29: {
+                                message.launchGui = $root.tilbo.ipc.v1.LaunchGUIRequest.decode(reader, reader.uint32());
                                 break;
                             }
                         default:
@@ -902,6 +1097,136 @@ export const tilbo = $root.tilbo = (() => {
                                 return "listPlaces." + error;
                         }
                     }
+                    if (message.pinPlace != null && message.hasOwnProperty("pinPlace")) {
+                        if (properties.kind === 1)
+                            return "kind: multiple values";
+                        properties.kind = 1;
+                        {
+                            let error = $root.tilbo.ipc.v1.PinPlaceRequest.verify(message.pinPlace);
+                            if (error)
+                                return "pinPlace." + error;
+                        }
+                    }
+                    if (message.unpinPlace != null && message.hasOwnProperty("unpinPlace")) {
+                        if (properties.kind === 1)
+                            return "kind: multiple values";
+                        properties.kind = 1;
+                        {
+                            let error = $root.tilbo.ipc.v1.UnpinPlaceRequest.verify(message.unpinPlace);
+                            if (error)
+                                return "unpinPlace." + error;
+                        }
+                    }
+                    if (message.trashFile != null && message.hasOwnProperty("trashFile")) {
+                        if (properties.kind === 1)
+                            return "kind: multiple values";
+                        properties.kind = 1;
+                        {
+                            let error = $root.tilbo.ipc.v1.TrashFileRequest.verify(message.trashFile);
+                            if (error)
+                                return "trashFile." + error;
+                        }
+                    }
+                    if (message.listTrash != null && message.hasOwnProperty("listTrash")) {
+                        if (properties.kind === 1)
+                            return "kind: multiple values";
+                        properties.kind = 1;
+                        {
+                            let error = $root.tilbo.ipc.v1.ListTrashRequest.verify(message.listTrash);
+                            if (error)
+                                return "listTrash." + error;
+                        }
+                    }
+                    if (message.restoreTrash != null && message.hasOwnProperty("restoreTrash")) {
+                        if (properties.kind === 1)
+                            return "kind: multiple values";
+                        properties.kind = 1;
+                        {
+                            let error = $root.tilbo.ipc.v1.RestoreTrashRequest.verify(message.restoreTrash);
+                            if (error)
+                                return "restoreTrash." + error;
+                        }
+                    }
+                    if (message.emptyTrash != null && message.hasOwnProperty("emptyTrash")) {
+                        if (properties.kind === 1)
+                            return "kind: multiple values";
+                        properties.kind = 1;
+                        {
+                            let error = $root.tilbo.ipc.v1.EmptyTrashRequest.verify(message.emptyTrash);
+                            if (error)
+                                return "emptyTrash." + error;
+                        }
+                    }
+                    if (message.listAppsForFile != null && message.hasOwnProperty("listAppsForFile")) {
+                        if (properties.kind === 1)
+                            return "kind: multiple values";
+                        properties.kind = 1;
+                        {
+                            let error = $root.tilbo.ipc.v1.ListAppsForFileRequest.verify(message.listAppsForFile);
+                            if (error)
+                                return "listAppsForFile." + error;
+                        }
+                    }
+                    if (message.openWithApp != null && message.hasOwnProperty("openWithApp")) {
+                        if (properties.kind === 1)
+                            return "kind: multiple values";
+                        properties.kind = 1;
+                        {
+                            let error = $root.tilbo.ipc.v1.OpenWithAppRequest.verify(message.openWithApp);
+                            if (error)
+                                return "openWithApp." + error;
+                        }
+                    }
+                    if (message.getBrowserConfig != null && message.hasOwnProperty("getBrowserConfig")) {
+                        if (properties.kind === 1)
+                            return "kind: multiple values";
+                        properties.kind = 1;
+                        {
+                            let error = $root.tilbo.ipc.v1.GetBrowserConfigRequest.verify(message.getBrowserConfig);
+                            if (error)
+                                return "getBrowserConfig." + error;
+                        }
+                    }
+                    if (message.getFileBadges != null && message.hasOwnProperty("getFileBadges")) {
+                        if (properties.kind === 1)
+                            return "kind: multiple values";
+                        properties.kind = 1;
+                        {
+                            let error = $root.tilbo.ipc.v1.GetFileBadgesRequest.verify(message.getFileBadges);
+                            if (error)
+                                return "getFileBadges." + error;
+                        }
+                    }
+                    if (message.getFileActions != null && message.hasOwnProperty("getFileActions")) {
+                        if (properties.kind === 1)
+                            return "kind: multiple values";
+                        properties.kind = 1;
+                        {
+                            let error = $root.tilbo.ipc.v1.GetFileActionsRequest.verify(message.getFileActions);
+                            if (error)
+                                return "getFileActions." + error;
+                        }
+                    }
+                    if (message.runFileAction != null && message.hasOwnProperty("runFileAction")) {
+                        if (properties.kind === 1)
+                            return "kind: multiple values";
+                        properties.kind = 1;
+                        {
+                            let error = $root.tilbo.ipc.v1.RunFileActionRequest.verify(message.runFileAction);
+                            if (error)
+                                return "runFileAction." + error;
+                        }
+                    }
+                    if (message.launchGui != null && message.hasOwnProperty("launchGui")) {
+                        if (properties.kind === 1)
+                            return "kind: multiple values";
+                        properties.kind = 1;
+                        {
+                            let error = $root.tilbo.ipc.v1.LaunchGUIRequest.verify(message.launchGui);
+                            if (error)
+                                return "launchGui." + error;
+                        }
+                    }
                     return null;
                 };
 
@@ -996,6 +1321,71 @@ export const tilbo = $root.tilbo = (() => {
                         if (typeof object.listPlaces !== "object")
                             throw TypeError(".tilbo.ipc.v1.Request.listPlaces: object expected");
                         message.listPlaces = $root.tilbo.ipc.v1.ListPlacesRequest.fromObject(object.listPlaces);
+                    }
+                    if (object.pinPlace != null) {
+                        if (typeof object.pinPlace !== "object")
+                            throw TypeError(".tilbo.ipc.v1.Request.pinPlace: object expected");
+                        message.pinPlace = $root.tilbo.ipc.v1.PinPlaceRequest.fromObject(object.pinPlace);
+                    }
+                    if (object.unpinPlace != null) {
+                        if (typeof object.unpinPlace !== "object")
+                            throw TypeError(".tilbo.ipc.v1.Request.unpinPlace: object expected");
+                        message.unpinPlace = $root.tilbo.ipc.v1.UnpinPlaceRequest.fromObject(object.unpinPlace);
+                    }
+                    if (object.trashFile != null) {
+                        if (typeof object.trashFile !== "object")
+                            throw TypeError(".tilbo.ipc.v1.Request.trashFile: object expected");
+                        message.trashFile = $root.tilbo.ipc.v1.TrashFileRequest.fromObject(object.trashFile);
+                    }
+                    if (object.listTrash != null) {
+                        if (typeof object.listTrash !== "object")
+                            throw TypeError(".tilbo.ipc.v1.Request.listTrash: object expected");
+                        message.listTrash = $root.tilbo.ipc.v1.ListTrashRequest.fromObject(object.listTrash);
+                    }
+                    if (object.restoreTrash != null) {
+                        if (typeof object.restoreTrash !== "object")
+                            throw TypeError(".tilbo.ipc.v1.Request.restoreTrash: object expected");
+                        message.restoreTrash = $root.tilbo.ipc.v1.RestoreTrashRequest.fromObject(object.restoreTrash);
+                    }
+                    if (object.emptyTrash != null) {
+                        if (typeof object.emptyTrash !== "object")
+                            throw TypeError(".tilbo.ipc.v1.Request.emptyTrash: object expected");
+                        message.emptyTrash = $root.tilbo.ipc.v1.EmptyTrashRequest.fromObject(object.emptyTrash);
+                    }
+                    if (object.listAppsForFile != null) {
+                        if (typeof object.listAppsForFile !== "object")
+                            throw TypeError(".tilbo.ipc.v1.Request.listAppsForFile: object expected");
+                        message.listAppsForFile = $root.tilbo.ipc.v1.ListAppsForFileRequest.fromObject(object.listAppsForFile);
+                    }
+                    if (object.openWithApp != null) {
+                        if (typeof object.openWithApp !== "object")
+                            throw TypeError(".tilbo.ipc.v1.Request.openWithApp: object expected");
+                        message.openWithApp = $root.tilbo.ipc.v1.OpenWithAppRequest.fromObject(object.openWithApp);
+                    }
+                    if (object.getBrowserConfig != null) {
+                        if (typeof object.getBrowserConfig !== "object")
+                            throw TypeError(".tilbo.ipc.v1.Request.getBrowserConfig: object expected");
+                        message.getBrowserConfig = $root.tilbo.ipc.v1.GetBrowserConfigRequest.fromObject(object.getBrowserConfig);
+                    }
+                    if (object.getFileBadges != null) {
+                        if (typeof object.getFileBadges !== "object")
+                            throw TypeError(".tilbo.ipc.v1.Request.getFileBadges: object expected");
+                        message.getFileBadges = $root.tilbo.ipc.v1.GetFileBadgesRequest.fromObject(object.getFileBadges);
+                    }
+                    if (object.getFileActions != null) {
+                        if (typeof object.getFileActions !== "object")
+                            throw TypeError(".tilbo.ipc.v1.Request.getFileActions: object expected");
+                        message.getFileActions = $root.tilbo.ipc.v1.GetFileActionsRequest.fromObject(object.getFileActions);
+                    }
+                    if (object.runFileAction != null) {
+                        if (typeof object.runFileAction !== "object")
+                            throw TypeError(".tilbo.ipc.v1.Request.runFileAction: object expected");
+                        message.runFileAction = $root.tilbo.ipc.v1.RunFileActionRequest.fromObject(object.runFileAction);
+                    }
+                    if (object.launchGui != null) {
+                        if (typeof object.launchGui !== "object")
+                            throw TypeError(".tilbo.ipc.v1.Request.launchGui: object expected");
+                        message.launchGui = $root.tilbo.ipc.v1.LaunchGUIRequest.fromObject(object.launchGui);
                     }
                     return message;
                 };
@@ -1093,6 +1483,71 @@ export const tilbo = $root.tilbo = (() => {
                         if (options.oneofs)
                             object.kind = "listPlaces";
                     }
+                    if (message.pinPlace != null && message.hasOwnProperty("pinPlace")) {
+                        object.pinPlace = $root.tilbo.ipc.v1.PinPlaceRequest.toObject(message.pinPlace, options);
+                        if (options.oneofs)
+                            object.kind = "pinPlace";
+                    }
+                    if (message.unpinPlace != null && message.hasOwnProperty("unpinPlace")) {
+                        object.unpinPlace = $root.tilbo.ipc.v1.UnpinPlaceRequest.toObject(message.unpinPlace, options);
+                        if (options.oneofs)
+                            object.kind = "unpinPlace";
+                    }
+                    if (message.trashFile != null && message.hasOwnProperty("trashFile")) {
+                        object.trashFile = $root.tilbo.ipc.v1.TrashFileRequest.toObject(message.trashFile, options);
+                        if (options.oneofs)
+                            object.kind = "trashFile";
+                    }
+                    if (message.listTrash != null && message.hasOwnProperty("listTrash")) {
+                        object.listTrash = $root.tilbo.ipc.v1.ListTrashRequest.toObject(message.listTrash, options);
+                        if (options.oneofs)
+                            object.kind = "listTrash";
+                    }
+                    if (message.restoreTrash != null && message.hasOwnProperty("restoreTrash")) {
+                        object.restoreTrash = $root.tilbo.ipc.v1.RestoreTrashRequest.toObject(message.restoreTrash, options);
+                        if (options.oneofs)
+                            object.kind = "restoreTrash";
+                    }
+                    if (message.emptyTrash != null && message.hasOwnProperty("emptyTrash")) {
+                        object.emptyTrash = $root.tilbo.ipc.v1.EmptyTrashRequest.toObject(message.emptyTrash, options);
+                        if (options.oneofs)
+                            object.kind = "emptyTrash";
+                    }
+                    if (message.listAppsForFile != null && message.hasOwnProperty("listAppsForFile")) {
+                        object.listAppsForFile = $root.tilbo.ipc.v1.ListAppsForFileRequest.toObject(message.listAppsForFile, options);
+                        if (options.oneofs)
+                            object.kind = "listAppsForFile";
+                    }
+                    if (message.openWithApp != null && message.hasOwnProperty("openWithApp")) {
+                        object.openWithApp = $root.tilbo.ipc.v1.OpenWithAppRequest.toObject(message.openWithApp, options);
+                        if (options.oneofs)
+                            object.kind = "openWithApp";
+                    }
+                    if (message.getBrowserConfig != null && message.hasOwnProperty("getBrowserConfig")) {
+                        object.getBrowserConfig = $root.tilbo.ipc.v1.GetBrowserConfigRequest.toObject(message.getBrowserConfig, options);
+                        if (options.oneofs)
+                            object.kind = "getBrowserConfig";
+                    }
+                    if (message.getFileBadges != null && message.hasOwnProperty("getFileBadges")) {
+                        object.getFileBadges = $root.tilbo.ipc.v1.GetFileBadgesRequest.toObject(message.getFileBadges, options);
+                        if (options.oneofs)
+                            object.kind = "getFileBadges";
+                    }
+                    if (message.getFileActions != null && message.hasOwnProperty("getFileActions")) {
+                        object.getFileActions = $root.tilbo.ipc.v1.GetFileActionsRequest.toObject(message.getFileActions, options);
+                        if (options.oneofs)
+                            object.kind = "getFileActions";
+                    }
+                    if (message.runFileAction != null && message.hasOwnProperty("runFileAction")) {
+                        object.runFileAction = $root.tilbo.ipc.v1.RunFileActionRequest.toObject(message.runFileAction, options);
+                        if (options.oneofs)
+                            object.kind = "runFileAction";
+                    }
+                    if (message.launchGui != null && message.hasOwnProperty("launchGui")) {
+                        object.launchGui = $root.tilbo.ipc.v1.LaunchGUIRequest.toObject(message.launchGui, options);
+                        if (options.oneofs)
+                            object.kind = "launchGui";
+                    }
                     return object;
                 };
 
@@ -1147,6 +1602,19 @@ export const tilbo = $root.tilbo = (() => {
                  * @property {tilbo.ipc.v1.IDeleteFileResponse|null} [deleteFile] Response deleteFile
                  * @property {tilbo.ipc.v1.IChmodFileResponse|null} [chmodFile] Response chmodFile
                  * @property {tilbo.ipc.v1.IListPlacesResponse|null} [listPlaces] Response listPlaces
+                 * @property {tilbo.ipc.v1.IPinPlaceResponse|null} [pinPlace] Response pinPlace
+                 * @property {tilbo.ipc.v1.IUnpinPlaceResponse|null} [unpinPlace] Response unpinPlace
+                 * @property {tilbo.ipc.v1.ITrashFileResponse|null} [trashFile] Response trashFile
+                 * @property {tilbo.ipc.v1.IListTrashResponse|null} [listTrash] Response listTrash
+                 * @property {tilbo.ipc.v1.IRestoreTrashResponse|null} [restoreTrash] Response restoreTrash
+                 * @property {tilbo.ipc.v1.IEmptyTrashResponse|null} [emptyTrash] Response emptyTrash
+                 * @property {tilbo.ipc.v1.IListAppsForFileResponse|null} [listAppsForFile] Response listAppsForFile
+                 * @property {tilbo.ipc.v1.IOpenWithAppResponse|null} [openWithApp] Response openWithApp
+                 * @property {tilbo.ipc.v1.IGetBrowserConfigResponse|null} [getBrowserConfig] Response getBrowserConfig
+                 * @property {tilbo.ipc.v1.IGetFileBadgesResponse|null} [getFileBadges] Response getFileBadges
+                 * @property {tilbo.ipc.v1.IGetFileActionsResponse|null} [getFileActions] Response getFileActions
+                 * @property {tilbo.ipc.v1.IRunFileActionResponse|null} [runFileAction] Response runFileAction
+                 * @property {tilbo.ipc.v1.ILaunchGUIResponse|null} [launchGui] Response launchGui
                  */
 
                 /**
@@ -1292,17 +1760,121 @@ export const tilbo = $root.tilbo = (() => {
                  */
                 Response.prototype.listPlaces = null;
 
+                /**
+                 * Response pinPlace.
+                 * @member {tilbo.ipc.v1.IPinPlaceResponse|null|undefined} pinPlace
+                 * @memberof tilbo.ipc.v1.Response
+                 * @instance
+                 */
+                Response.prototype.pinPlace = null;
+
+                /**
+                 * Response unpinPlace.
+                 * @member {tilbo.ipc.v1.IUnpinPlaceResponse|null|undefined} unpinPlace
+                 * @memberof tilbo.ipc.v1.Response
+                 * @instance
+                 */
+                Response.prototype.unpinPlace = null;
+
+                /**
+                 * Response trashFile.
+                 * @member {tilbo.ipc.v1.ITrashFileResponse|null|undefined} trashFile
+                 * @memberof tilbo.ipc.v1.Response
+                 * @instance
+                 */
+                Response.prototype.trashFile = null;
+
+                /**
+                 * Response listTrash.
+                 * @member {tilbo.ipc.v1.IListTrashResponse|null|undefined} listTrash
+                 * @memberof tilbo.ipc.v1.Response
+                 * @instance
+                 */
+                Response.prototype.listTrash = null;
+
+                /**
+                 * Response restoreTrash.
+                 * @member {tilbo.ipc.v1.IRestoreTrashResponse|null|undefined} restoreTrash
+                 * @memberof tilbo.ipc.v1.Response
+                 * @instance
+                 */
+                Response.prototype.restoreTrash = null;
+
+                /**
+                 * Response emptyTrash.
+                 * @member {tilbo.ipc.v1.IEmptyTrashResponse|null|undefined} emptyTrash
+                 * @memberof tilbo.ipc.v1.Response
+                 * @instance
+                 */
+                Response.prototype.emptyTrash = null;
+
+                /**
+                 * Response listAppsForFile.
+                 * @member {tilbo.ipc.v1.IListAppsForFileResponse|null|undefined} listAppsForFile
+                 * @memberof tilbo.ipc.v1.Response
+                 * @instance
+                 */
+                Response.prototype.listAppsForFile = null;
+
+                /**
+                 * Response openWithApp.
+                 * @member {tilbo.ipc.v1.IOpenWithAppResponse|null|undefined} openWithApp
+                 * @memberof tilbo.ipc.v1.Response
+                 * @instance
+                 */
+                Response.prototype.openWithApp = null;
+
+                /**
+                 * Response getBrowserConfig.
+                 * @member {tilbo.ipc.v1.IGetBrowserConfigResponse|null|undefined} getBrowserConfig
+                 * @memberof tilbo.ipc.v1.Response
+                 * @instance
+                 */
+                Response.prototype.getBrowserConfig = null;
+
+                /**
+                 * Response getFileBadges.
+                 * @member {tilbo.ipc.v1.IGetFileBadgesResponse|null|undefined} getFileBadges
+                 * @memberof tilbo.ipc.v1.Response
+                 * @instance
+                 */
+                Response.prototype.getFileBadges = null;
+
+                /**
+                 * Response getFileActions.
+                 * @member {tilbo.ipc.v1.IGetFileActionsResponse|null|undefined} getFileActions
+                 * @memberof tilbo.ipc.v1.Response
+                 * @instance
+                 */
+                Response.prototype.getFileActions = null;
+
+                /**
+                 * Response runFileAction.
+                 * @member {tilbo.ipc.v1.IRunFileActionResponse|null|undefined} runFileAction
+                 * @memberof tilbo.ipc.v1.Response
+                 * @instance
+                 */
+                Response.prototype.runFileAction = null;
+
+                /**
+                 * Response launchGui.
+                 * @member {tilbo.ipc.v1.ILaunchGUIResponse|null|undefined} launchGui
+                 * @memberof tilbo.ipc.v1.Response
+                 * @instance
+                 */
+                Response.prototype.launchGui = null;
+
                 // OneOf field names bound to virtual getters and setters
                 let $oneOfFields;
 
                 /**
                  * Response kind.
-                 * @member {"error"|"search"|"tag"|"metadata"|"related"|"status"|"reloadRules"|"listTags"|"hydrateTags"|"listDirectory"|"statFile"|"globSearch"|"renameFile"|"deleteFile"|"chmodFile"|"listPlaces"|undefined} kind
+                 * @member {"error"|"search"|"tag"|"metadata"|"related"|"status"|"reloadRules"|"listTags"|"hydrateTags"|"listDirectory"|"statFile"|"globSearch"|"renameFile"|"deleteFile"|"chmodFile"|"listPlaces"|"pinPlace"|"unpinPlace"|"trashFile"|"listTrash"|"restoreTrash"|"emptyTrash"|"listAppsForFile"|"openWithApp"|"getBrowserConfig"|"getFileBadges"|"getFileActions"|"runFileAction"|"launchGui"|undefined} kind
                  * @memberof tilbo.ipc.v1.Response
                  * @instance
                  */
                 Object.defineProperty(Response.prototype, "kind", {
-                    get: $util.oneOfGetter($oneOfFields = ["error", "search", "tag", "metadata", "related", "status", "reloadRules", "listTags", "hydrateTags", "listDirectory", "statFile", "globSearch", "renameFile", "deleteFile", "chmodFile", "listPlaces"]),
+                    get: $util.oneOfGetter($oneOfFields = ["error", "search", "tag", "metadata", "related", "status", "reloadRules", "listTags", "hydrateTags", "listDirectory", "statFile", "globSearch", "renameFile", "deleteFile", "chmodFile", "listPlaces", "pinPlace", "unpinPlace", "trashFile", "listTrash", "restoreTrash", "emptyTrash", "listAppsForFile", "openWithApp", "getBrowserConfig", "getFileBadges", "getFileActions", "runFileAction", "launchGui"]),
                     set: $util.oneOfSetter($oneOfFields)
                 });
 
@@ -1362,6 +1934,32 @@ export const tilbo = $root.tilbo = (() => {
                         $root.tilbo.ipc.v1.ChmodFileResponse.encode(message.chmodFile, writer.uint32(/* id 15, wireType 2 =*/122).fork()).ldelim();
                     if (message.listPlaces != null && Object.hasOwnProperty.call(message, "listPlaces"))
                         $root.tilbo.ipc.v1.ListPlacesResponse.encode(message.listPlaces, writer.uint32(/* id 16, wireType 2 =*/130).fork()).ldelim();
+                    if (message.pinPlace != null && Object.hasOwnProperty.call(message, "pinPlace"))
+                        $root.tilbo.ipc.v1.PinPlaceResponse.encode(message.pinPlace, writer.uint32(/* id 17, wireType 2 =*/138).fork()).ldelim();
+                    if (message.unpinPlace != null && Object.hasOwnProperty.call(message, "unpinPlace"))
+                        $root.tilbo.ipc.v1.UnpinPlaceResponse.encode(message.unpinPlace, writer.uint32(/* id 18, wireType 2 =*/146).fork()).ldelim();
+                    if (message.trashFile != null && Object.hasOwnProperty.call(message, "trashFile"))
+                        $root.tilbo.ipc.v1.TrashFileResponse.encode(message.trashFile, writer.uint32(/* id 19, wireType 2 =*/154).fork()).ldelim();
+                    if (message.listTrash != null && Object.hasOwnProperty.call(message, "listTrash"))
+                        $root.tilbo.ipc.v1.ListTrashResponse.encode(message.listTrash, writer.uint32(/* id 20, wireType 2 =*/162).fork()).ldelim();
+                    if (message.restoreTrash != null && Object.hasOwnProperty.call(message, "restoreTrash"))
+                        $root.tilbo.ipc.v1.RestoreTrashResponse.encode(message.restoreTrash, writer.uint32(/* id 21, wireType 2 =*/170).fork()).ldelim();
+                    if (message.emptyTrash != null && Object.hasOwnProperty.call(message, "emptyTrash"))
+                        $root.tilbo.ipc.v1.EmptyTrashResponse.encode(message.emptyTrash, writer.uint32(/* id 22, wireType 2 =*/178).fork()).ldelim();
+                    if (message.listAppsForFile != null && Object.hasOwnProperty.call(message, "listAppsForFile"))
+                        $root.tilbo.ipc.v1.ListAppsForFileResponse.encode(message.listAppsForFile, writer.uint32(/* id 23, wireType 2 =*/186).fork()).ldelim();
+                    if (message.openWithApp != null && Object.hasOwnProperty.call(message, "openWithApp"))
+                        $root.tilbo.ipc.v1.OpenWithAppResponse.encode(message.openWithApp, writer.uint32(/* id 24, wireType 2 =*/194).fork()).ldelim();
+                    if (message.getBrowserConfig != null && Object.hasOwnProperty.call(message, "getBrowserConfig"))
+                        $root.tilbo.ipc.v1.GetBrowserConfigResponse.encode(message.getBrowserConfig, writer.uint32(/* id 25, wireType 2 =*/202).fork()).ldelim();
+                    if (message.getFileBadges != null && Object.hasOwnProperty.call(message, "getFileBadges"))
+                        $root.tilbo.ipc.v1.GetFileBadgesResponse.encode(message.getFileBadges, writer.uint32(/* id 26, wireType 2 =*/210).fork()).ldelim();
+                    if (message.getFileActions != null && Object.hasOwnProperty.call(message, "getFileActions"))
+                        $root.tilbo.ipc.v1.GetFileActionsResponse.encode(message.getFileActions, writer.uint32(/* id 27, wireType 2 =*/218).fork()).ldelim();
+                    if (message.runFileAction != null && Object.hasOwnProperty.call(message, "runFileAction"))
+                        $root.tilbo.ipc.v1.RunFileActionResponse.encode(message.runFileAction, writer.uint32(/* id 28, wireType 2 =*/226).fork()).ldelim();
+                    if (message.launchGui != null && Object.hasOwnProperty.call(message, "launchGui"))
+                        $root.tilbo.ipc.v1.LaunchGUIResponse.encode(message.launchGui, writer.uint32(/* id 29, wireType 2 =*/234).fork()).ldelim();
                     return writer;
                 };
 
@@ -1460,6 +2058,58 @@ export const tilbo = $root.tilbo = (() => {
                             }
                         case 16: {
                                 message.listPlaces = $root.tilbo.ipc.v1.ListPlacesResponse.decode(reader, reader.uint32());
+                                break;
+                            }
+                        case 17: {
+                                message.pinPlace = $root.tilbo.ipc.v1.PinPlaceResponse.decode(reader, reader.uint32());
+                                break;
+                            }
+                        case 18: {
+                                message.unpinPlace = $root.tilbo.ipc.v1.UnpinPlaceResponse.decode(reader, reader.uint32());
+                                break;
+                            }
+                        case 19: {
+                                message.trashFile = $root.tilbo.ipc.v1.TrashFileResponse.decode(reader, reader.uint32());
+                                break;
+                            }
+                        case 20: {
+                                message.listTrash = $root.tilbo.ipc.v1.ListTrashResponse.decode(reader, reader.uint32());
+                                break;
+                            }
+                        case 21: {
+                                message.restoreTrash = $root.tilbo.ipc.v1.RestoreTrashResponse.decode(reader, reader.uint32());
+                                break;
+                            }
+                        case 22: {
+                                message.emptyTrash = $root.tilbo.ipc.v1.EmptyTrashResponse.decode(reader, reader.uint32());
+                                break;
+                            }
+                        case 23: {
+                                message.listAppsForFile = $root.tilbo.ipc.v1.ListAppsForFileResponse.decode(reader, reader.uint32());
+                                break;
+                            }
+                        case 24: {
+                                message.openWithApp = $root.tilbo.ipc.v1.OpenWithAppResponse.decode(reader, reader.uint32());
+                                break;
+                            }
+                        case 25: {
+                                message.getBrowserConfig = $root.tilbo.ipc.v1.GetBrowserConfigResponse.decode(reader, reader.uint32());
+                                break;
+                            }
+                        case 26: {
+                                message.getFileBadges = $root.tilbo.ipc.v1.GetFileBadgesResponse.decode(reader, reader.uint32());
+                                break;
+                            }
+                        case 27: {
+                                message.getFileActions = $root.tilbo.ipc.v1.GetFileActionsResponse.decode(reader, reader.uint32());
+                                break;
+                            }
+                        case 28: {
+                                message.runFileAction = $root.tilbo.ipc.v1.RunFileActionResponse.decode(reader, reader.uint32());
+                                break;
+                            }
+                        case 29: {
+                                message.launchGui = $root.tilbo.ipc.v1.LaunchGUIResponse.decode(reader, reader.uint32());
                                 break;
                             }
                         default:
@@ -1656,6 +2306,136 @@ export const tilbo = $root.tilbo = (() => {
                                 return "listPlaces." + error;
                         }
                     }
+                    if (message.pinPlace != null && message.hasOwnProperty("pinPlace")) {
+                        if (properties.kind === 1)
+                            return "kind: multiple values";
+                        properties.kind = 1;
+                        {
+                            let error = $root.tilbo.ipc.v1.PinPlaceResponse.verify(message.pinPlace);
+                            if (error)
+                                return "pinPlace." + error;
+                        }
+                    }
+                    if (message.unpinPlace != null && message.hasOwnProperty("unpinPlace")) {
+                        if (properties.kind === 1)
+                            return "kind: multiple values";
+                        properties.kind = 1;
+                        {
+                            let error = $root.tilbo.ipc.v1.UnpinPlaceResponse.verify(message.unpinPlace);
+                            if (error)
+                                return "unpinPlace." + error;
+                        }
+                    }
+                    if (message.trashFile != null && message.hasOwnProperty("trashFile")) {
+                        if (properties.kind === 1)
+                            return "kind: multiple values";
+                        properties.kind = 1;
+                        {
+                            let error = $root.tilbo.ipc.v1.TrashFileResponse.verify(message.trashFile);
+                            if (error)
+                                return "trashFile." + error;
+                        }
+                    }
+                    if (message.listTrash != null && message.hasOwnProperty("listTrash")) {
+                        if (properties.kind === 1)
+                            return "kind: multiple values";
+                        properties.kind = 1;
+                        {
+                            let error = $root.tilbo.ipc.v1.ListTrashResponse.verify(message.listTrash);
+                            if (error)
+                                return "listTrash." + error;
+                        }
+                    }
+                    if (message.restoreTrash != null && message.hasOwnProperty("restoreTrash")) {
+                        if (properties.kind === 1)
+                            return "kind: multiple values";
+                        properties.kind = 1;
+                        {
+                            let error = $root.tilbo.ipc.v1.RestoreTrashResponse.verify(message.restoreTrash);
+                            if (error)
+                                return "restoreTrash." + error;
+                        }
+                    }
+                    if (message.emptyTrash != null && message.hasOwnProperty("emptyTrash")) {
+                        if (properties.kind === 1)
+                            return "kind: multiple values";
+                        properties.kind = 1;
+                        {
+                            let error = $root.tilbo.ipc.v1.EmptyTrashResponse.verify(message.emptyTrash);
+                            if (error)
+                                return "emptyTrash." + error;
+                        }
+                    }
+                    if (message.listAppsForFile != null && message.hasOwnProperty("listAppsForFile")) {
+                        if (properties.kind === 1)
+                            return "kind: multiple values";
+                        properties.kind = 1;
+                        {
+                            let error = $root.tilbo.ipc.v1.ListAppsForFileResponse.verify(message.listAppsForFile);
+                            if (error)
+                                return "listAppsForFile." + error;
+                        }
+                    }
+                    if (message.openWithApp != null && message.hasOwnProperty("openWithApp")) {
+                        if (properties.kind === 1)
+                            return "kind: multiple values";
+                        properties.kind = 1;
+                        {
+                            let error = $root.tilbo.ipc.v1.OpenWithAppResponse.verify(message.openWithApp);
+                            if (error)
+                                return "openWithApp." + error;
+                        }
+                    }
+                    if (message.getBrowserConfig != null && message.hasOwnProperty("getBrowserConfig")) {
+                        if (properties.kind === 1)
+                            return "kind: multiple values";
+                        properties.kind = 1;
+                        {
+                            let error = $root.tilbo.ipc.v1.GetBrowserConfigResponse.verify(message.getBrowserConfig);
+                            if (error)
+                                return "getBrowserConfig." + error;
+                        }
+                    }
+                    if (message.getFileBadges != null && message.hasOwnProperty("getFileBadges")) {
+                        if (properties.kind === 1)
+                            return "kind: multiple values";
+                        properties.kind = 1;
+                        {
+                            let error = $root.tilbo.ipc.v1.GetFileBadgesResponse.verify(message.getFileBadges);
+                            if (error)
+                                return "getFileBadges." + error;
+                        }
+                    }
+                    if (message.getFileActions != null && message.hasOwnProperty("getFileActions")) {
+                        if (properties.kind === 1)
+                            return "kind: multiple values";
+                        properties.kind = 1;
+                        {
+                            let error = $root.tilbo.ipc.v1.GetFileActionsResponse.verify(message.getFileActions);
+                            if (error)
+                                return "getFileActions." + error;
+                        }
+                    }
+                    if (message.runFileAction != null && message.hasOwnProperty("runFileAction")) {
+                        if (properties.kind === 1)
+                            return "kind: multiple values";
+                        properties.kind = 1;
+                        {
+                            let error = $root.tilbo.ipc.v1.RunFileActionResponse.verify(message.runFileAction);
+                            if (error)
+                                return "runFileAction." + error;
+                        }
+                    }
+                    if (message.launchGui != null && message.hasOwnProperty("launchGui")) {
+                        if (properties.kind === 1)
+                            return "kind: multiple values";
+                        properties.kind = 1;
+                        {
+                            let error = $root.tilbo.ipc.v1.LaunchGUIResponse.verify(message.launchGui);
+                            if (error)
+                                return "launchGui." + error;
+                        }
+                    }
                     return null;
                 };
 
@@ -1750,6 +2530,71 @@ export const tilbo = $root.tilbo = (() => {
                         if (typeof object.listPlaces !== "object")
                             throw TypeError(".tilbo.ipc.v1.Response.listPlaces: object expected");
                         message.listPlaces = $root.tilbo.ipc.v1.ListPlacesResponse.fromObject(object.listPlaces);
+                    }
+                    if (object.pinPlace != null) {
+                        if (typeof object.pinPlace !== "object")
+                            throw TypeError(".tilbo.ipc.v1.Response.pinPlace: object expected");
+                        message.pinPlace = $root.tilbo.ipc.v1.PinPlaceResponse.fromObject(object.pinPlace);
+                    }
+                    if (object.unpinPlace != null) {
+                        if (typeof object.unpinPlace !== "object")
+                            throw TypeError(".tilbo.ipc.v1.Response.unpinPlace: object expected");
+                        message.unpinPlace = $root.tilbo.ipc.v1.UnpinPlaceResponse.fromObject(object.unpinPlace);
+                    }
+                    if (object.trashFile != null) {
+                        if (typeof object.trashFile !== "object")
+                            throw TypeError(".tilbo.ipc.v1.Response.trashFile: object expected");
+                        message.trashFile = $root.tilbo.ipc.v1.TrashFileResponse.fromObject(object.trashFile);
+                    }
+                    if (object.listTrash != null) {
+                        if (typeof object.listTrash !== "object")
+                            throw TypeError(".tilbo.ipc.v1.Response.listTrash: object expected");
+                        message.listTrash = $root.tilbo.ipc.v1.ListTrashResponse.fromObject(object.listTrash);
+                    }
+                    if (object.restoreTrash != null) {
+                        if (typeof object.restoreTrash !== "object")
+                            throw TypeError(".tilbo.ipc.v1.Response.restoreTrash: object expected");
+                        message.restoreTrash = $root.tilbo.ipc.v1.RestoreTrashResponse.fromObject(object.restoreTrash);
+                    }
+                    if (object.emptyTrash != null) {
+                        if (typeof object.emptyTrash !== "object")
+                            throw TypeError(".tilbo.ipc.v1.Response.emptyTrash: object expected");
+                        message.emptyTrash = $root.tilbo.ipc.v1.EmptyTrashResponse.fromObject(object.emptyTrash);
+                    }
+                    if (object.listAppsForFile != null) {
+                        if (typeof object.listAppsForFile !== "object")
+                            throw TypeError(".tilbo.ipc.v1.Response.listAppsForFile: object expected");
+                        message.listAppsForFile = $root.tilbo.ipc.v1.ListAppsForFileResponse.fromObject(object.listAppsForFile);
+                    }
+                    if (object.openWithApp != null) {
+                        if (typeof object.openWithApp !== "object")
+                            throw TypeError(".tilbo.ipc.v1.Response.openWithApp: object expected");
+                        message.openWithApp = $root.tilbo.ipc.v1.OpenWithAppResponse.fromObject(object.openWithApp);
+                    }
+                    if (object.getBrowserConfig != null) {
+                        if (typeof object.getBrowserConfig !== "object")
+                            throw TypeError(".tilbo.ipc.v1.Response.getBrowserConfig: object expected");
+                        message.getBrowserConfig = $root.tilbo.ipc.v1.GetBrowserConfigResponse.fromObject(object.getBrowserConfig);
+                    }
+                    if (object.getFileBadges != null) {
+                        if (typeof object.getFileBadges !== "object")
+                            throw TypeError(".tilbo.ipc.v1.Response.getFileBadges: object expected");
+                        message.getFileBadges = $root.tilbo.ipc.v1.GetFileBadgesResponse.fromObject(object.getFileBadges);
+                    }
+                    if (object.getFileActions != null) {
+                        if (typeof object.getFileActions !== "object")
+                            throw TypeError(".tilbo.ipc.v1.Response.getFileActions: object expected");
+                        message.getFileActions = $root.tilbo.ipc.v1.GetFileActionsResponse.fromObject(object.getFileActions);
+                    }
+                    if (object.runFileAction != null) {
+                        if (typeof object.runFileAction !== "object")
+                            throw TypeError(".tilbo.ipc.v1.Response.runFileAction: object expected");
+                        message.runFileAction = $root.tilbo.ipc.v1.RunFileActionResponse.fromObject(object.runFileAction);
+                    }
+                    if (object.launchGui != null) {
+                        if (typeof object.launchGui !== "object")
+                            throw TypeError(".tilbo.ipc.v1.Response.launchGui: object expected");
+                        message.launchGui = $root.tilbo.ipc.v1.LaunchGUIResponse.fromObject(object.launchGui);
                     }
                     return message;
                 };
@@ -1847,6 +2692,71 @@ export const tilbo = $root.tilbo = (() => {
                         if (options.oneofs)
                             object.kind = "listPlaces";
                     }
+                    if (message.pinPlace != null && message.hasOwnProperty("pinPlace")) {
+                        object.pinPlace = $root.tilbo.ipc.v1.PinPlaceResponse.toObject(message.pinPlace, options);
+                        if (options.oneofs)
+                            object.kind = "pinPlace";
+                    }
+                    if (message.unpinPlace != null && message.hasOwnProperty("unpinPlace")) {
+                        object.unpinPlace = $root.tilbo.ipc.v1.UnpinPlaceResponse.toObject(message.unpinPlace, options);
+                        if (options.oneofs)
+                            object.kind = "unpinPlace";
+                    }
+                    if (message.trashFile != null && message.hasOwnProperty("trashFile")) {
+                        object.trashFile = $root.tilbo.ipc.v1.TrashFileResponse.toObject(message.trashFile, options);
+                        if (options.oneofs)
+                            object.kind = "trashFile";
+                    }
+                    if (message.listTrash != null && message.hasOwnProperty("listTrash")) {
+                        object.listTrash = $root.tilbo.ipc.v1.ListTrashResponse.toObject(message.listTrash, options);
+                        if (options.oneofs)
+                            object.kind = "listTrash";
+                    }
+                    if (message.restoreTrash != null && message.hasOwnProperty("restoreTrash")) {
+                        object.restoreTrash = $root.tilbo.ipc.v1.RestoreTrashResponse.toObject(message.restoreTrash, options);
+                        if (options.oneofs)
+                            object.kind = "restoreTrash";
+                    }
+                    if (message.emptyTrash != null && message.hasOwnProperty("emptyTrash")) {
+                        object.emptyTrash = $root.tilbo.ipc.v1.EmptyTrashResponse.toObject(message.emptyTrash, options);
+                        if (options.oneofs)
+                            object.kind = "emptyTrash";
+                    }
+                    if (message.listAppsForFile != null && message.hasOwnProperty("listAppsForFile")) {
+                        object.listAppsForFile = $root.tilbo.ipc.v1.ListAppsForFileResponse.toObject(message.listAppsForFile, options);
+                        if (options.oneofs)
+                            object.kind = "listAppsForFile";
+                    }
+                    if (message.openWithApp != null && message.hasOwnProperty("openWithApp")) {
+                        object.openWithApp = $root.tilbo.ipc.v1.OpenWithAppResponse.toObject(message.openWithApp, options);
+                        if (options.oneofs)
+                            object.kind = "openWithApp";
+                    }
+                    if (message.getBrowserConfig != null && message.hasOwnProperty("getBrowserConfig")) {
+                        object.getBrowserConfig = $root.tilbo.ipc.v1.GetBrowserConfigResponse.toObject(message.getBrowserConfig, options);
+                        if (options.oneofs)
+                            object.kind = "getBrowserConfig";
+                    }
+                    if (message.getFileBadges != null && message.hasOwnProperty("getFileBadges")) {
+                        object.getFileBadges = $root.tilbo.ipc.v1.GetFileBadgesResponse.toObject(message.getFileBadges, options);
+                        if (options.oneofs)
+                            object.kind = "getFileBadges";
+                    }
+                    if (message.getFileActions != null && message.hasOwnProperty("getFileActions")) {
+                        object.getFileActions = $root.tilbo.ipc.v1.GetFileActionsResponse.toObject(message.getFileActions, options);
+                        if (options.oneofs)
+                            object.kind = "getFileActions";
+                    }
+                    if (message.runFileAction != null && message.hasOwnProperty("runFileAction")) {
+                        object.runFileAction = $root.tilbo.ipc.v1.RunFileActionResponse.toObject(message.runFileAction, options);
+                        if (options.oneofs)
+                            object.kind = "runFileAction";
+                    }
+                    if (message.launchGui != null && message.hasOwnProperty("launchGui")) {
+                        object.launchGui = $root.tilbo.ipc.v1.LaunchGUIResponse.toObject(message.launchGui, options);
+                        if (options.oneofs)
+                            object.kind = "launchGui";
+                    }
                     return object;
                 };
 
@@ -1888,6 +2798,7 @@ export const tilbo = $root.tilbo = (() => {
                  * @property {tilbo.ipc.v1.IFileTaggedEvent|null} [fileTagged] Event fileTagged
                  * @property {tilbo.ipc.v1.IIndexUpdatedEvent|null} [indexUpdated] Event indexUpdated
                  * @property {tilbo.ipc.v1.IDaemonStateChangedEvent|null} [daemonStateChanged] Event daemonStateChanged
+                 * @property {tilbo.ipc.v1.IShowWindowEvent|null} [showWindow] Event showWindow
                  */
 
                 /**
@@ -1929,17 +2840,25 @@ export const tilbo = $root.tilbo = (() => {
                  */
                 Event.prototype.daemonStateChanged = null;
 
+                /**
+                 * Event showWindow.
+                 * @member {tilbo.ipc.v1.IShowWindowEvent|null|undefined} showWindow
+                 * @memberof tilbo.ipc.v1.Event
+                 * @instance
+                 */
+                Event.prototype.showWindow = null;
+
                 // OneOf field names bound to virtual getters and setters
                 let $oneOfFields;
 
                 /**
                  * Event kind.
-                 * @member {"fileTagged"|"indexUpdated"|"daemonStateChanged"|undefined} kind
+                 * @member {"fileTagged"|"indexUpdated"|"daemonStateChanged"|"showWindow"|undefined} kind
                  * @memberof tilbo.ipc.v1.Event
                  * @instance
                  */
                 Object.defineProperty(Event.prototype, "kind", {
-                    get: $util.oneOfGetter($oneOfFields = ["fileTagged", "indexUpdated", "daemonStateChanged"]),
+                    get: $util.oneOfGetter($oneOfFields = ["fileTagged", "indexUpdated", "daemonStateChanged", "showWindow"]),
                     set: $util.oneOfSetter($oneOfFields)
                 });
 
@@ -1973,6 +2892,8 @@ export const tilbo = $root.tilbo = (() => {
                         $root.tilbo.ipc.v1.IndexUpdatedEvent.encode(message.indexUpdated, writer.uint32(/* id 2, wireType 2 =*/18).fork()).ldelim();
                     if (message.daemonStateChanged != null && Object.hasOwnProperty.call(message, "daemonStateChanged"))
                         $root.tilbo.ipc.v1.DaemonStateChangedEvent.encode(message.daemonStateChanged, writer.uint32(/* id 3, wireType 2 =*/26).fork()).ldelim();
+                    if (message.showWindow != null && Object.hasOwnProperty.call(message, "showWindow"))
+                        $root.tilbo.ipc.v1.ShowWindowEvent.encode(message.showWindow, writer.uint32(/* id 4, wireType 2 =*/34).fork()).ldelim();
                     return writer;
                 };
 
@@ -2019,6 +2940,10 @@ export const tilbo = $root.tilbo = (() => {
                             }
                         case 3: {
                                 message.daemonStateChanged = $root.tilbo.ipc.v1.DaemonStateChangedEvent.decode(reader, reader.uint32());
+                                break;
+                            }
+                        case 4: {
+                                message.showWindow = $root.tilbo.ipc.v1.ShowWindowEvent.decode(reader, reader.uint32());
                                 break;
                             }
                         default:
@@ -2085,6 +3010,16 @@ export const tilbo = $root.tilbo = (() => {
                                 return "daemonStateChanged." + error;
                         }
                     }
+                    if (message.showWindow != null && message.hasOwnProperty("showWindow")) {
+                        if (properties.kind === 1)
+                            return "kind: multiple values";
+                        properties.kind = 1;
+                        {
+                            let error = $root.tilbo.ipc.v1.ShowWindowEvent.verify(message.showWindow);
+                            if (error)
+                                return "showWindow." + error;
+                        }
+                    }
                     return null;
                 };
 
@@ -2114,6 +3049,11 @@ export const tilbo = $root.tilbo = (() => {
                         if (typeof object.daemonStateChanged !== "object")
                             throw TypeError(".tilbo.ipc.v1.Event.daemonStateChanged: object expected");
                         message.daemonStateChanged = $root.tilbo.ipc.v1.DaemonStateChangedEvent.fromObject(object.daemonStateChanged);
+                    }
+                    if (object.showWindow != null) {
+                        if (typeof object.showWindow !== "object")
+                            throw TypeError(".tilbo.ipc.v1.Event.showWindow: object expected");
+                        message.showWindow = $root.tilbo.ipc.v1.ShowWindowEvent.fromObject(object.showWindow);
                     }
                     return message;
                 };
@@ -2145,6 +3085,11 @@ export const tilbo = $root.tilbo = (() => {
                         object.daemonStateChanged = $root.tilbo.ipc.v1.DaemonStateChangedEvent.toObject(message.daemonStateChanged, options);
                         if (options.oneofs)
                             object.kind = "daemonStateChanged";
+                    }
+                    if (message.showWindow != null && message.hasOwnProperty("showWindow")) {
+                        object.showWindow = $root.tilbo.ipc.v1.ShowWindowEvent.toObject(message.showWindow, options);
+                        if (options.oneofs)
+                            object.kind = "showWindow";
                     }
                     return object;
                 };
@@ -8163,6 +9108,8 @@ export const tilbo = $root.tilbo = (() => {
                  * @property {number|Long|null} [mtime] DirEntry mtime
                  * @property {number|null} [mode] DirEntry mode
                  * @property {boolean|null} [hidden] DirEntry hidden
+                 * @property {string|null} [mimeType] DirEntry mimeType
+                 * @property {string|null} [iconName] DirEntry iconName
                  */
 
                 /**
@@ -8237,6 +9184,22 @@ export const tilbo = $root.tilbo = (() => {
                 DirEntry.prototype.hidden = false;
 
                 /**
+                 * DirEntry mimeType.
+                 * @member {string} mimeType
+                 * @memberof tilbo.ipc.v1.DirEntry
+                 * @instance
+                 */
+                DirEntry.prototype.mimeType = "";
+
+                /**
+                 * DirEntry iconName.
+                 * @member {string} iconName
+                 * @memberof tilbo.ipc.v1.DirEntry
+                 * @instance
+                 */
+                DirEntry.prototype.iconName = "";
+
+                /**
                  * Creates a new DirEntry instance using the specified properties.
                  * @function create
                  * @memberof tilbo.ipc.v1.DirEntry
@@ -8274,6 +9237,10 @@ export const tilbo = $root.tilbo = (() => {
                         writer.uint32(/* id 6, wireType 0 =*/48).uint32(message.mode);
                     if (message.hidden != null && Object.hasOwnProperty.call(message, "hidden"))
                         writer.uint32(/* id 7, wireType 0 =*/56).bool(message.hidden);
+                    if (message.mimeType != null && Object.hasOwnProperty.call(message, "mimeType"))
+                        writer.uint32(/* id 8, wireType 2 =*/66).string(message.mimeType);
+                    if (message.iconName != null && Object.hasOwnProperty.call(message, "iconName"))
+                        writer.uint32(/* id 9, wireType 2 =*/74).string(message.iconName);
                     return writer;
                 };
 
@@ -8338,6 +9305,14 @@ export const tilbo = $root.tilbo = (() => {
                                 message.hidden = reader.bool();
                                 break;
                             }
+                        case 8: {
+                                message.mimeType = reader.string();
+                                break;
+                            }
+                        case 9: {
+                                message.iconName = reader.string();
+                                break;
+                            }
                         default:
                             reader.skipType(tag & 7);
                             break;
@@ -8394,6 +9369,12 @@ export const tilbo = $root.tilbo = (() => {
                     if (message.hidden != null && message.hasOwnProperty("hidden"))
                         if (typeof message.hidden !== "boolean")
                             return "hidden: boolean expected";
+                    if (message.mimeType != null && message.hasOwnProperty("mimeType"))
+                        if (!$util.isString(message.mimeType))
+                            return "mimeType: string expected";
+                    if (message.iconName != null && message.hasOwnProperty("iconName"))
+                        if (!$util.isString(message.iconName))
+                            return "iconName: string expected";
                     return null;
                 };
 
@@ -8437,6 +9418,10 @@ export const tilbo = $root.tilbo = (() => {
                         message.mode = object.mode >>> 0;
                     if (object.hidden != null)
                         message.hidden = Boolean(object.hidden);
+                    if (object.mimeType != null)
+                        message.mimeType = String(object.mimeType);
+                    if (object.iconName != null)
+                        message.iconName = String(object.iconName);
                     return message;
                 };
 
@@ -8469,6 +9454,8 @@ export const tilbo = $root.tilbo = (() => {
                             object.mtime = options.longs === String ? "0" : 0;
                         object.mode = 0;
                         object.hidden = false;
+                        object.mimeType = "";
+                        object.iconName = "";
                     }
                     if (message.name != null && message.hasOwnProperty("name"))
                         object.name = message.name;
@@ -8490,6 +9477,10 @@ export const tilbo = $root.tilbo = (() => {
                         object.mode = message.mode;
                     if (message.hidden != null && message.hasOwnProperty("hidden"))
                         object.hidden = message.hidden;
+                    if (message.mimeType != null && message.hasOwnProperty("mimeType"))
+                        object.mimeType = message.mimeType;
+                    if (message.iconName != null && message.hasOwnProperty("iconName"))
+                        object.iconName = message.iconName;
                     return object;
                 };
 
@@ -11345,6 +12336,8 @@ export const tilbo = $root.tilbo = (() => {
                  * @interface IPlaceEntry
                  * @property {string|null} [name] PlaceEntry name
                  * @property {string|null} [path] PlaceEntry path
+                 * @property {boolean|null} [pinned] PlaceEntry pinned
+                 * @property {string|null} [iconName] PlaceEntry iconName
                  */
 
                 /**
@@ -11379,6 +12372,22 @@ export const tilbo = $root.tilbo = (() => {
                 PlaceEntry.prototype.path = "";
 
                 /**
+                 * PlaceEntry pinned.
+                 * @member {boolean} pinned
+                 * @memberof tilbo.ipc.v1.PlaceEntry
+                 * @instance
+                 */
+                PlaceEntry.prototype.pinned = false;
+
+                /**
+                 * PlaceEntry iconName.
+                 * @member {string} iconName
+                 * @memberof tilbo.ipc.v1.PlaceEntry
+                 * @instance
+                 */
+                PlaceEntry.prototype.iconName = "";
+
+                /**
                  * Creates a new PlaceEntry instance using the specified properties.
                  * @function create
                  * @memberof tilbo.ipc.v1.PlaceEntry
@@ -11406,6 +12415,10 @@ export const tilbo = $root.tilbo = (() => {
                         writer.uint32(/* id 1, wireType 2 =*/10).string(message.name);
                     if (message.path != null && Object.hasOwnProperty.call(message, "path"))
                         writer.uint32(/* id 2, wireType 2 =*/18).string(message.path);
+                    if (message.pinned != null && Object.hasOwnProperty.call(message, "pinned"))
+                        writer.uint32(/* id 3, wireType 0 =*/24).bool(message.pinned);
+                    if (message.iconName != null && Object.hasOwnProperty.call(message, "iconName"))
+                        writer.uint32(/* id 4, wireType 2 =*/34).string(message.iconName);
                     return writer;
                 };
 
@@ -11450,6 +12463,14 @@ export const tilbo = $root.tilbo = (() => {
                                 message.path = reader.string();
                                 break;
                             }
+                        case 3: {
+                                message.pinned = reader.bool();
+                                break;
+                            }
+                        case 4: {
+                                message.iconName = reader.string();
+                                break;
+                            }
                         default:
                             reader.skipType(tag & 7);
                             break;
@@ -11491,6 +12512,12 @@ export const tilbo = $root.tilbo = (() => {
                     if (message.path != null && message.hasOwnProperty("path"))
                         if (!$util.isString(message.path))
                             return "path: string expected";
+                    if (message.pinned != null && message.hasOwnProperty("pinned"))
+                        if (typeof message.pinned !== "boolean")
+                            return "pinned: boolean expected";
+                    if (message.iconName != null && message.hasOwnProperty("iconName"))
+                        if (!$util.isString(message.iconName))
+                            return "iconName: string expected";
                     return null;
                 };
 
@@ -11510,6 +12537,10 @@ export const tilbo = $root.tilbo = (() => {
                         message.name = String(object.name);
                     if (object.path != null)
                         message.path = String(object.path);
+                    if (object.pinned != null)
+                        message.pinned = Boolean(object.pinned);
+                    if (object.iconName != null)
+                        message.iconName = String(object.iconName);
                     return message;
                 };
 
@@ -11529,11 +12560,17 @@ export const tilbo = $root.tilbo = (() => {
                     if (options.defaults) {
                         object.name = "";
                         object.path = "";
+                        object.pinned = false;
+                        object.iconName = "";
                     }
                     if (message.name != null && message.hasOwnProperty("name"))
                         object.name = message.name;
                     if (message.path != null && message.hasOwnProperty("path"))
                         object.path = message.path;
+                    if (message.pinned != null && message.hasOwnProperty("pinned"))
+                        object.pinned = message.pinned;
+                    if (message.iconName != null && message.hasOwnProperty("iconName"))
+                        object.iconName = message.iconName;
                     return object;
                 };
 
@@ -12537,6 +13574,6278 @@ export const tilbo = $root.tilbo = (() => {
                 };
 
                 return DaemonStateChangedEvent;
+            })();
+
+            v1.PinPlaceRequest = (function() {
+
+                /**
+                 * Properties of a PinPlaceRequest.
+                 * @memberof tilbo.ipc.v1
+                 * @interface IPinPlaceRequest
+                 * @property {string|null} [name] PinPlaceRequest name
+                 * @property {string|null} [path] PinPlaceRequest path
+                 * @property {string|null} [iconName] PinPlaceRequest iconName
+                 */
+
+                /**
+                 * Constructs a new PinPlaceRequest.
+                 * @memberof tilbo.ipc.v1
+                 * @classdesc Represents a PinPlaceRequest.
+                 * @implements IPinPlaceRequest
+                 * @constructor
+                 * @param {tilbo.ipc.v1.IPinPlaceRequest=} [properties] Properties to set
+                 */
+                function PinPlaceRequest(properties) {
+                    if (properties)
+                        for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+                            if (properties[keys[i]] != null)
+                                this[keys[i]] = properties[keys[i]];
+                }
+
+                /**
+                 * PinPlaceRequest name.
+                 * @member {string} name
+                 * @memberof tilbo.ipc.v1.PinPlaceRequest
+                 * @instance
+                 */
+                PinPlaceRequest.prototype.name = "";
+
+                /**
+                 * PinPlaceRequest path.
+                 * @member {string} path
+                 * @memberof tilbo.ipc.v1.PinPlaceRequest
+                 * @instance
+                 */
+                PinPlaceRequest.prototype.path = "";
+
+                /**
+                 * PinPlaceRequest iconName.
+                 * @member {string} iconName
+                 * @memberof tilbo.ipc.v1.PinPlaceRequest
+                 * @instance
+                 */
+                PinPlaceRequest.prototype.iconName = "";
+
+                /**
+                 * Creates a new PinPlaceRequest instance using the specified properties.
+                 * @function create
+                 * @memberof tilbo.ipc.v1.PinPlaceRequest
+                 * @static
+                 * @param {tilbo.ipc.v1.IPinPlaceRequest=} [properties] Properties to set
+                 * @returns {tilbo.ipc.v1.PinPlaceRequest} PinPlaceRequest instance
+                 */
+                PinPlaceRequest.create = function create(properties) {
+                    return new PinPlaceRequest(properties);
+                };
+
+                /**
+                 * Encodes the specified PinPlaceRequest message. Does not implicitly {@link tilbo.ipc.v1.PinPlaceRequest.verify|verify} messages.
+                 * @function encode
+                 * @memberof tilbo.ipc.v1.PinPlaceRequest
+                 * @static
+                 * @param {tilbo.ipc.v1.IPinPlaceRequest} message PinPlaceRequest message or plain object to encode
+                 * @param {$protobuf.Writer} [writer] Writer to encode to
+                 * @returns {$protobuf.Writer} Writer
+                 */
+                PinPlaceRequest.encode = function encode(message, writer) {
+                    if (!writer)
+                        writer = $Writer.create();
+                    if (message.name != null && Object.hasOwnProperty.call(message, "name"))
+                        writer.uint32(/* id 1, wireType 2 =*/10).string(message.name);
+                    if (message.path != null && Object.hasOwnProperty.call(message, "path"))
+                        writer.uint32(/* id 2, wireType 2 =*/18).string(message.path);
+                    if (message.iconName != null && Object.hasOwnProperty.call(message, "iconName"))
+                        writer.uint32(/* id 3, wireType 2 =*/26).string(message.iconName);
+                    return writer;
+                };
+
+                /**
+                 * Encodes the specified PinPlaceRequest message, length delimited. Does not implicitly {@link tilbo.ipc.v1.PinPlaceRequest.verify|verify} messages.
+                 * @function encodeDelimited
+                 * @memberof tilbo.ipc.v1.PinPlaceRequest
+                 * @static
+                 * @param {tilbo.ipc.v1.IPinPlaceRequest} message PinPlaceRequest message or plain object to encode
+                 * @param {$protobuf.Writer} [writer] Writer to encode to
+                 * @returns {$protobuf.Writer} Writer
+                 */
+                PinPlaceRequest.encodeDelimited = function encodeDelimited(message, writer) {
+                    return this.encode(message, writer).ldelim();
+                };
+
+                /**
+                 * Decodes a PinPlaceRequest message from the specified reader or buffer.
+                 * @function decode
+                 * @memberof tilbo.ipc.v1.PinPlaceRequest
+                 * @static
+                 * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+                 * @param {number} [length] Message length if known beforehand
+                 * @returns {tilbo.ipc.v1.PinPlaceRequest} PinPlaceRequest
+                 * @throws {Error} If the payload is not a reader or valid buffer
+                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                 */
+                PinPlaceRequest.decode = function decode(reader, length, error) {
+                    if (!(reader instanceof $Reader))
+                        reader = $Reader.create(reader);
+                    let end = length === undefined ? reader.len : reader.pos + length, message = new $root.tilbo.ipc.v1.PinPlaceRequest();
+                    while (reader.pos < end) {
+                        let tag = reader.uint32();
+                        if (tag === error)
+                            break;
+                        switch (tag >>> 3) {
+                        case 1: {
+                                message.name = reader.string();
+                                break;
+                            }
+                        case 2: {
+                                message.path = reader.string();
+                                break;
+                            }
+                        case 3: {
+                                message.iconName = reader.string();
+                                break;
+                            }
+                        default:
+                            reader.skipType(tag & 7);
+                            break;
+                        }
+                    }
+                    return message;
+                };
+
+                /**
+                 * Decodes a PinPlaceRequest message from the specified reader or buffer, length delimited.
+                 * @function decodeDelimited
+                 * @memberof tilbo.ipc.v1.PinPlaceRequest
+                 * @static
+                 * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+                 * @returns {tilbo.ipc.v1.PinPlaceRequest} PinPlaceRequest
+                 * @throws {Error} If the payload is not a reader or valid buffer
+                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                 */
+                PinPlaceRequest.decodeDelimited = function decodeDelimited(reader) {
+                    if (!(reader instanceof $Reader))
+                        reader = new $Reader(reader);
+                    return this.decode(reader, reader.uint32());
+                };
+
+                /**
+                 * Verifies a PinPlaceRequest message.
+                 * @function verify
+                 * @memberof tilbo.ipc.v1.PinPlaceRequest
+                 * @static
+                 * @param {Object.<string,*>} message Plain object to verify
+                 * @returns {string|null} `null` if valid, otherwise the reason why it is not
+                 */
+                PinPlaceRequest.verify = function verify(message) {
+                    if (typeof message !== "object" || message === null)
+                        return "object expected";
+                    if (message.name != null && message.hasOwnProperty("name"))
+                        if (!$util.isString(message.name))
+                            return "name: string expected";
+                    if (message.path != null && message.hasOwnProperty("path"))
+                        if (!$util.isString(message.path))
+                            return "path: string expected";
+                    if (message.iconName != null && message.hasOwnProperty("iconName"))
+                        if (!$util.isString(message.iconName))
+                            return "iconName: string expected";
+                    return null;
+                };
+
+                /**
+                 * Creates a PinPlaceRequest message from a plain object. Also converts values to their respective internal types.
+                 * @function fromObject
+                 * @memberof tilbo.ipc.v1.PinPlaceRequest
+                 * @static
+                 * @param {Object.<string,*>} object Plain object
+                 * @returns {tilbo.ipc.v1.PinPlaceRequest} PinPlaceRequest
+                 */
+                PinPlaceRequest.fromObject = function fromObject(object) {
+                    if (object instanceof $root.tilbo.ipc.v1.PinPlaceRequest)
+                        return object;
+                    let message = new $root.tilbo.ipc.v1.PinPlaceRequest();
+                    if (object.name != null)
+                        message.name = String(object.name);
+                    if (object.path != null)
+                        message.path = String(object.path);
+                    if (object.iconName != null)
+                        message.iconName = String(object.iconName);
+                    return message;
+                };
+
+                /**
+                 * Creates a plain object from a PinPlaceRequest message. Also converts values to other types if specified.
+                 * @function toObject
+                 * @memberof tilbo.ipc.v1.PinPlaceRequest
+                 * @static
+                 * @param {tilbo.ipc.v1.PinPlaceRequest} message PinPlaceRequest
+                 * @param {$protobuf.IConversionOptions} [options] Conversion options
+                 * @returns {Object.<string,*>} Plain object
+                 */
+                PinPlaceRequest.toObject = function toObject(message, options) {
+                    if (!options)
+                        options = {};
+                    let object = {};
+                    if (options.defaults) {
+                        object.name = "";
+                        object.path = "";
+                        object.iconName = "";
+                    }
+                    if (message.name != null && message.hasOwnProperty("name"))
+                        object.name = message.name;
+                    if (message.path != null && message.hasOwnProperty("path"))
+                        object.path = message.path;
+                    if (message.iconName != null && message.hasOwnProperty("iconName"))
+                        object.iconName = message.iconName;
+                    return object;
+                };
+
+                /**
+                 * Converts this PinPlaceRequest to JSON.
+                 * @function toJSON
+                 * @memberof tilbo.ipc.v1.PinPlaceRequest
+                 * @instance
+                 * @returns {Object.<string,*>} JSON object
+                 */
+                PinPlaceRequest.prototype.toJSON = function toJSON() {
+                    return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+                };
+
+                /**
+                 * Gets the default type url for PinPlaceRequest
+                 * @function getTypeUrl
+                 * @memberof tilbo.ipc.v1.PinPlaceRequest
+                 * @static
+                 * @param {string} [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+                 * @returns {string} The default type url
+                 */
+                PinPlaceRequest.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
+                    if (typeUrlPrefix === undefined) {
+                        typeUrlPrefix = "type.googleapis.com";
+                    }
+                    return typeUrlPrefix + "/tilbo.ipc.v1.PinPlaceRequest";
+                };
+
+                return PinPlaceRequest;
+            })();
+
+            v1.PinPlaceResponse = (function() {
+
+                /**
+                 * Properties of a PinPlaceResponse.
+                 * @memberof tilbo.ipc.v1
+                 * @interface IPinPlaceResponse
+                 */
+
+                /**
+                 * Constructs a new PinPlaceResponse.
+                 * @memberof tilbo.ipc.v1
+                 * @classdesc Represents a PinPlaceResponse.
+                 * @implements IPinPlaceResponse
+                 * @constructor
+                 * @param {tilbo.ipc.v1.IPinPlaceResponse=} [properties] Properties to set
+                 */
+                function PinPlaceResponse(properties) {
+                    if (properties)
+                        for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+                            if (properties[keys[i]] != null)
+                                this[keys[i]] = properties[keys[i]];
+                }
+
+                /**
+                 * Creates a new PinPlaceResponse instance using the specified properties.
+                 * @function create
+                 * @memberof tilbo.ipc.v1.PinPlaceResponse
+                 * @static
+                 * @param {tilbo.ipc.v1.IPinPlaceResponse=} [properties] Properties to set
+                 * @returns {tilbo.ipc.v1.PinPlaceResponse} PinPlaceResponse instance
+                 */
+                PinPlaceResponse.create = function create(properties) {
+                    return new PinPlaceResponse(properties);
+                };
+
+                /**
+                 * Encodes the specified PinPlaceResponse message. Does not implicitly {@link tilbo.ipc.v1.PinPlaceResponse.verify|verify} messages.
+                 * @function encode
+                 * @memberof tilbo.ipc.v1.PinPlaceResponse
+                 * @static
+                 * @param {tilbo.ipc.v1.IPinPlaceResponse} message PinPlaceResponse message or plain object to encode
+                 * @param {$protobuf.Writer} [writer] Writer to encode to
+                 * @returns {$protobuf.Writer} Writer
+                 */
+                PinPlaceResponse.encode = function encode(message, writer) {
+                    if (!writer)
+                        writer = $Writer.create();
+                    return writer;
+                };
+
+                /**
+                 * Encodes the specified PinPlaceResponse message, length delimited. Does not implicitly {@link tilbo.ipc.v1.PinPlaceResponse.verify|verify} messages.
+                 * @function encodeDelimited
+                 * @memberof tilbo.ipc.v1.PinPlaceResponse
+                 * @static
+                 * @param {tilbo.ipc.v1.IPinPlaceResponse} message PinPlaceResponse message or plain object to encode
+                 * @param {$protobuf.Writer} [writer] Writer to encode to
+                 * @returns {$protobuf.Writer} Writer
+                 */
+                PinPlaceResponse.encodeDelimited = function encodeDelimited(message, writer) {
+                    return this.encode(message, writer).ldelim();
+                };
+
+                /**
+                 * Decodes a PinPlaceResponse message from the specified reader or buffer.
+                 * @function decode
+                 * @memberof tilbo.ipc.v1.PinPlaceResponse
+                 * @static
+                 * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+                 * @param {number} [length] Message length if known beforehand
+                 * @returns {tilbo.ipc.v1.PinPlaceResponse} PinPlaceResponse
+                 * @throws {Error} If the payload is not a reader or valid buffer
+                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                 */
+                PinPlaceResponse.decode = function decode(reader, length, error) {
+                    if (!(reader instanceof $Reader))
+                        reader = $Reader.create(reader);
+                    let end = length === undefined ? reader.len : reader.pos + length, message = new $root.tilbo.ipc.v1.PinPlaceResponse();
+                    while (reader.pos < end) {
+                        let tag = reader.uint32();
+                        if (tag === error)
+                            break;
+                        switch (tag >>> 3) {
+                        default:
+                            reader.skipType(tag & 7);
+                            break;
+                        }
+                    }
+                    return message;
+                };
+
+                /**
+                 * Decodes a PinPlaceResponse message from the specified reader or buffer, length delimited.
+                 * @function decodeDelimited
+                 * @memberof tilbo.ipc.v1.PinPlaceResponse
+                 * @static
+                 * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+                 * @returns {tilbo.ipc.v1.PinPlaceResponse} PinPlaceResponse
+                 * @throws {Error} If the payload is not a reader or valid buffer
+                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                 */
+                PinPlaceResponse.decodeDelimited = function decodeDelimited(reader) {
+                    if (!(reader instanceof $Reader))
+                        reader = new $Reader(reader);
+                    return this.decode(reader, reader.uint32());
+                };
+
+                /**
+                 * Verifies a PinPlaceResponse message.
+                 * @function verify
+                 * @memberof tilbo.ipc.v1.PinPlaceResponse
+                 * @static
+                 * @param {Object.<string,*>} message Plain object to verify
+                 * @returns {string|null} `null` if valid, otherwise the reason why it is not
+                 */
+                PinPlaceResponse.verify = function verify(message) {
+                    if (typeof message !== "object" || message === null)
+                        return "object expected";
+                    return null;
+                };
+
+                /**
+                 * Creates a PinPlaceResponse message from a plain object. Also converts values to their respective internal types.
+                 * @function fromObject
+                 * @memberof tilbo.ipc.v1.PinPlaceResponse
+                 * @static
+                 * @param {Object.<string,*>} object Plain object
+                 * @returns {tilbo.ipc.v1.PinPlaceResponse} PinPlaceResponse
+                 */
+                PinPlaceResponse.fromObject = function fromObject(object) {
+                    if (object instanceof $root.tilbo.ipc.v1.PinPlaceResponse)
+                        return object;
+                    return new $root.tilbo.ipc.v1.PinPlaceResponse();
+                };
+
+                /**
+                 * Creates a plain object from a PinPlaceResponse message. Also converts values to other types if specified.
+                 * @function toObject
+                 * @memberof tilbo.ipc.v1.PinPlaceResponse
+                 * @static
+                 * @param {tilbo.ipc.v1.PinPlaceResponse} message PinPlaceResponse
+                 * @param {$protobuf.IConversionOptions} [options] Conversion options
+                 * @returns {Object.<string,*>} Plain object
+                 */
+                PinPlaceResponse.toObject = function toObject() {
+                    return {};
+                };
+
+                /**
+                 * Converts this PinPlaceResponse to JSON.
+                 * @function toJSON
+                 * @memberof tilbo.ipc.v1.PinPlaceResponse
+                 * @instance
+                 * @returns {Object.<string,*>} JSON object
+                 */
+                PinPlaceResponse.prototype.toJSON = function toJSON() {
+                    return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+                };
+
+                /**
+                 * Gets the default type url for PinPlaceResponse
+                 * @function getTypeUrl
+                 * @memberof tilbo.ipc.v1.PinPlaceResponse
+                 * @static
+                 * @param {string} [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+                 * @returns {string} The default type url
+                 */
+                PinPlaceResponse.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
+                    if (typeUrlPrefix === undefined) {
+                        typeUrlPrefix = "type.googleapis.com";
+                    }
+                    return typeUrlPrefix + "/tilbo.ipc.v1.PinPlaceResponse";
+                };
+
+                return PinPlaceResponse;
+            })();
+
+            v1.UnpinPlaceRequest = (function() {
+
+                /**
+                 * Properties of an UnpinPlaceRequest.
+                 * @memberof tilbo.ipc.v1
+                 * @interface IUnpinPlaceRequest
+                 * @property {string|null} [path] UnpinPlaceRequest path
+                 */
+
+                /**
+                 * Constructs a new UnpinPlaceRequest.
+                 * @memberof tilbo.ipc.v1
+                 * @classdesc Represents an UnpinPlaceRequest.
+                 * @implements IUnpinPlaceRequest
+                 * @constructor
+                 * @param {tilbo.ipc.v1.IUnpinPlaceRequest=} [properties] Properties to set
+                 */
+                function UnpinPlaceRequest(properties) {
+                    if (properties)
+                        for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+                            if (properties[keys[i]] != null)
+                                this[keys[i]] = properties[keys[i]];
+                }
+
+                /**
+                 * UnpinPlaceRequest path.
+                 * @member {string} path
+                 * @memberof tilbo.ipc.v1.UnpinPlaceRequest
+                 * @instance
+                 */
+                UnpinPlaceRequest.prototype.path = "";
+
+                /**
+                 * Creates a new UnpinPlaceRequest instance using the specified properties.
+                 * @function create
+                 * @memberof tilbo.ipc.v1.UnpinPlaceRequest
+                 * @static
+                 * @param {tilbo.ipc.v1.IUnpinPlaceRequest=} [properties] Properties to set
+                 * @returns {tilbo.ipc.v1.UnpinPlaceRequest} UnpinPlaceRequest instance
+                 */
+                UnpinPlaceRequest.create = function create(properties) {
+                    return new UnpinPlaceRequest(properties);
+                };
+
+                /**
+                 * Encodes the specified UnpinPlaceRequest message. Does not implicitly {@link tilbo.ipc.v1.UnpinPlaceRequest.verify|verify} messages.
+                 * @function encode
+                 * @memberof tilbo.ipc.v1.UnpinPlaceRequest
+                 * @static
+                 * @param {tilbo.ipc.v1.IUnpinPlaceRequest} message UnpinPlaceRequest message or plain object to encode
+                 * @param {$protobuf.Writer} [writer] Writer to encode to
+                 * @returns {$protobuf.Writer} Writer
+                 */
+                UnpinPlaceRequest.encode = function encode(message, writer) {
+                    if (!writer)
+                        writer = $Writer.create();
+                    if (message.path != null && Object.hasOwnProperty.call(message, "path"))
+                        writer.uint32(/* id 1, wireType 2 =*/10).string(message.path);
+                    return writer;
+                };
+
+                /**
+                 * Encodes the specified UnpinPlaceRequest message, length delimited. Does not implicitly {@link tilbo.ipc.v1.UnpinPlaceRequest.verify|verify} messages.
+                 * @function encodeDelimited
+                 * @memberof tilbo.ipc.v1.UnpinPlaceRequest
+                 * @static
+                 * @param {tilbo.ipc.v1.IUnpinPlaceRequest} message UnpinPlaceRequest message or plain object to encode
+                 * @param {$protobuf.Writer} [writer] Writer to encode to
+                 * @returns {$protobuf.Writer} Writer
+                 */
+                UnpinPlaceRequest.encodeDelimited = function encodeDelimited(message, writer) {
+                    return this.encode(message, writer).ldelim();
+                };
+
+                /**
+                 * Decodes an UnpinPlaceRequest message from the specified reader or buffer.
+                 * @function decode
+                 * @memberof tilbo.ipc.v1.UnpinPlaceRequest
+                 * @static
+                 * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+                 * @param {number} [length] Message length if known beforehand
+                 * @returns {tilbo.ipc.v1.UnpinPlaceRequest} UnpinPlaceRequest
+                 * @throws {Error} If the payload is not a reader or valid buffer
+                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                 */
+                UnpinPlaceRequest.decode = function decode(reader, length, error) {
+                    if (!(reader instanceof $Reader))
+                        reader = $Reader.create(reader);
+                    let end = length === undefined ? reader.len : reader.pos + length, message = new $root.tilbo.ipc.v1.UnpinPlaceRequest();
+                    while (reader.pos < end) {
+                        let tag = reader.uint32();
+                        if (tag === error)
+                            break;
+                        switch (tag >>> 3) {
+                        case 1: {
+                                message.path = reader.string();
+                                break;
+                            }
+                        default:
+                            reader.skipType(tag & 7);
+                            break;
+                        }
+                    }
+                    return message;
+                };
+
+                /**
+                 * Decodes an UnpinPlaceRequest message from the specified reader or buffer, length delimited.
+                 * @function decodeDelimited
+                 * @memberof tilbo.ipc.v1.UnpinPlaceRequest
+                 * @static
+                 * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+                 * @returns {tilbo.ipc.v1.UnpinPlaceRequest} UnpinPlaceRequest
+                 * @throws {Error} If the payload is not a reader or valid buffer
+                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                 */
+                UnpinPlaceRequest.decodeDelimited = function decodeDelimited(reader) {
+                    if (!(reader instanceof $Reader))
+                        reader = new $Reader(reader);
+                    return this.decode(reader, reader.uint32());
+                };
+
+                /**
+                 * Verifies an UnpinPlaceRequest message.
+                 * @function verify
+                 * @memberof tilbo.ipc.v1.UnpinPlaceRequest
+                 * @static
+                 * @param {Object.<string,*>} message Plain object to verify
+                 * @returns {string|null} `null` if valid, otherwise the reason why it is not
+                 */
+                UnpinPlaceRequest.verify = function verify(message) {
+                    if (typeof message !== "object" || message === null)
+                        return "object expected";
+                    if (message.path != null && message.hasOwnProperty("path"))
+                        if (!$util.isString(message.path))
+                            return "path: string expected";
+                    return null;
+                };
+
+                /**
+                 * Creates an UnpinPlaceRequest message from a plain object. Also converts values to their respective internal types.
+                 * @function fromObject
+                 * @memberof tilbo.ipc.v1.UnpinPlaceRequest
+                 * @static
+                 * @param {Object.<string,*>} object Plain object
+                 * @returns {tilbo.ipc.v1.UnpinPlaceRequest} UnpinPlaceRequest
+                 */
+                UnpinPlaceRequest.fromObject = function fromObject(object) {
+                    if (object instanceof $root.tilbo.ipc.v1.UnpinPlaceRequest)
+                        return object;
+                    let message = new $root.tilbo.ipc.v1.UnpinPlaceRequest();
+                    if (object.path != null)
+                        message.path = String(object.path);
+                    return message;
+                };
+
+                /**
+                 * Creates a plain object from an UnpinPlaceRequest message. Also converts values to other types if specified.
+                 * @function toObject
+                 * @memberof tilbo.ipc.v1.UnpinPlaceRequest
+                 * @static
+                 * @param {tilbo.ipc.v1.UnpinPlaceRequest} message UnpinPlaceRequest
+                 * @param {$protobuf.IConversionOptions} [options] Conversion options
+                 * @returns {Object.<string,*>} Plain object
+                 */
+                UnpinPlaceRequest.toObject = function toObject(message, options) {
+                    if (!options)
+                        options = {};
+                    let object = {};
+                    if (options.defaults)
+                        object.path = "";
+                    if (message.path != null && message.hasOwnProperty("path"))
+                        object.path = message.path;
+                    return object;
+                };
+
+                /**
+                 * Converts this UnpinPlaceRequest to JSON.
+                 * @function toJSON
+                 * @memberof tilbo.ipc.v1.UnpinPlaceRequest
+                 * @instance
+                 * @returns {Object.<string,*>} JSON object
+                 */
+                UnpinPlaceRequest.prototype.toJSON = function toJSON() {
+                    return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+                };
+
+                /**
+                 * Gets the default type url for UnpinPlaceRequest
+                 * @function getTypeUrl
+                 * @memberof tilbo.ipc.v1.UnpinPlaceRequest
+                 * @static
+                 * @param {string} [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+                 * @returns {string} The default type url
+                 */
+                UnpinPlaceRequest.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
+                    if (typeUrlPrefix === undefined) {
+                        typeUrlPrefix = "type.googleapis.com";
+                    }
+                    return typeUrlPrefix + "/tilbo.ipc.v1.UnpinPlaceRequest";
+                };
+
+                return UnpinPlaceRequest;
+            })();
+
+            v1.UnpinPlaceResponse = (function() {
+
+                /**
+                 * Properties of an UnpinPlaceResponse.
+                 * @memberof tilbo.ipc.v1
+                 * @interface IUnpinPlaceResponse
+                 */
+
+                /**
+                 * Constructs a new UnpinPlaceResponse.
+                 * @memberof tilbo.ipc.v1
+                 * @classdesc Represents an UnpinPlaceResponse.
+                 * @implements IUnpinPlaceResponse
+                 * @constructor
+                 * @param {tilbo.ipc.v1.IUnpinPlaceResponse=} [properties] Properties to set
+                 */
+                function UnpinPlaceResponse(properties) {
+                    if (properties)
+                        for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+                            if (properties[keys[i]] != null)
+                                this[keys[i]] = properties[keys[i]];
+                }
+
+                /**
+                 * Creates a new UnpinPlaceResponse instance using the specified properties.
+                 * @function create
+                 * @memberof tilbo.ipc.v1.UnpinPlaceResponse
+                 * @static
+                 * @param {tilbo.ipc.v1.IUnpinPlaceResponse=} [properties] Properties to set
+                 * @returns {tilbo.ipc.v1.UnpinPlaceResponse} UnpinPlaceResponse instance
+                 */
+                UnpinPlaceResponse.create = function create(properties) {
+                    return new UnpinPlaceResponse(properties);
+                };
+
+                /**
+                 * Encodes the specified UnpinPlaceResponse message. Does not implicitly {@link tilbo.ipc.v1.UnpinPlaceResponse.verify|verify} messages.
+                 * @function encode
+                 * @memberof tilbo.ipc.v1.UnpinPlaceResponse
+                 * @static
+                 * @param {tilbo.ipc.v1.IUnpinPlaceResponse} message UnpinPlaceResponse message or plain object to encode
+                 * @param {$protobuf.Writer} [writer] Writer to encode to
+                 * @returns {$protobuf.Writer} Writer
+                 */
+                UnpinPlaceResponse.encode = function encode(message, writer) {
+                    if (!writer)
+                        writer = $Writer.create();
+                    return writer;
+                };
+
+                /**
+                 * Encodes the specified UnpinPlaceResponse message, length delimited. Does not implicitly {@link tilbo.ipc.v1.UnpinPlaceResponse.verify|verify} messages.
+                 * @function encodeDelimited
+                 * @memberof tilbo.ipc.v1.UnpinPlaceResponse
+                 * @static
+                 * @param {tilbo.ipc.v1.IUnpinPlaceResponse} message UnpinPlaceResponse message or plain object to encode
+                 * @param {$protobuf.Writer} [writer] Writer to encode to
+                 * @returns {$protobuf.Writer} Writer
+                 */
+                UnpinPlaceResponse.encodeDelimited = function encodeDelimited(message, writer) {
+                    return this.encode(message, writer).ldelim();
+                };
+
+                /**
+                 * Decodes an UnpinPlaceResponse message from the specified reader or buffer.
+                 * @function decode
+                 * @memberof tilbo.ipc.v1.UnpinPlaceResponse
+                 * @static
+                 * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+                 * @param {number} [length] Message length if known beforehand
+                 * @returns {tilbo.ipc.v1.UnpinPlaceResponse} UnpinPlaceResponse
+                 * @throws {Error} If the payload is not a reader or valid buffer
+                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                 */
+                UnpinPlaceResponse.decode = function decode(reader, length, error) {
+                    if (!(reader instanceof $Reader))
+                        reader = $Reader.create(reader);
+                    let end = length === undefined ? reader.len : reader.pos + length, message = new $root.tilbo.ipc.v1.UnpinPlaceResponse();
+                    while (reader.pos < end) {
+                        let tag = reader.uint32();
+                        if (tag === error)
+                            break;
+                        switch (tag >>> 3) {
+                        default:
+                            reader.skipType(tag & 7);
+                            break;
+                        }
+                    }
+                    return message;
+                };
+
+                /**
+                 * Decodes an UnpinPlaceResponse message from the specified reader or buffer, length delimited.
+                 * @function decodeDelimited
+                 * @memberof tilbo.ipc.v1.UnpinPlaceResponse
+                 * @static
+                 * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+                 * @returns {tilbo.ipc.v1.UnpinPlaceResponse} UnpinPlaceResponse
+                 * @throws {Error} If the payload is not a reader or valid buffer
+                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                 */
+                UnpinPlaceResponse.decodeDelimited = function decodeDelimited(reader) {
+                    if (!(reader instanceof $Reader))
+                        reader = new $Reader(reader);
+                    return this.decode(reader, reader.uint32());
+                };
+
+                /**
+                 * Verifies an UnpinPlaceResponse message.
+                 * @function verify
+                 * @memberof tilbo.ipc.v1.UnpinPlaceResponse
+                 * @static
+                 * @param {Object.<string,*>} message Plain object to verify
+                 * @returns {string|null} `null` if valid, otherwise the reason why it is not
+                 */
+                UnpinPlaceResponse.verify = function verify(message) {
+                    if (typeof message !== "object" || message === null)
+                        return "object expected";
+                    return null;
+                };
+
+                /**
+                 * Creates an UnpinPlaceResponse message from a plain object. Also converts values to their respective internal types.
+                 * @function fromObject
+                 * @memberof tilbo.ipc.v1.UnpinPlaceResponse
+                 * @static
+                 * @param {Object.<string,*>} object Plain object
+                 * @returns {tilbo.ipc.v1.UnpinPlaceResponse} UnpinPlaceResponse
+                 */
+                UnpinPlaceResponse.fromObject = function fromObject(object) {
+                    if (object instanceof $root.tilbo.ipc.v1.UnpinPlaceResponse)
+                        return object;
+                    return new $root.tilbo.ipc.v1.UnpinPlaceResponse();
+                };
+
+                /**
+                 * Creates a plain object from an UnpinPlaceResponse message. Also converts values to other types if specified.
+                 * @function toObject
+                 * @memberof tilbo.ipc.v1.UnpinPlaceResponse
+                 * @static
+                 * @param {tilbo.ipc.v1.UnpinPlaceResponse} message UnpinPlaceResponse
+                 * @param {$protobuf.IConversionOptions} [options] Conversion options
+                 * @returns {Object.<string,*>} Plain object
+                 */
+                UnpinPlaceResponse.toObject = function toObject() {
+                    return {};
+                };
+
+                /**
+                 * Converts this UnpinPlaceResponse to JSON.
+                 * @function toJSON
+                 * @memberof tilbo.ipc.v1.UnpinPlaceResponse
+                 * @instance
+                 * @returns {Object.<string,*>} JSON object
+                 */
+                UnpinPlaceResponse.prototype.toJSON = function toJSON() {
+                    return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+                };
+
+                /**
+                 * Gets the default type url for UnpinPlaceResponse
+                 * @function getTypeUrl
+                 * @memberof tilbo.ipc.v1.UnpinPlaceResponse
+                 * @static
+                 * @param {string} [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+                 * @returns {string} The default type url
+                 */
+                UnpinPlaceResponse.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
+                    if (typeUrlPrefix === undefined) {
+                        typeUrlPrefix = "type.googleapis.com";
+                    }
+                    return typeUrlPrefix + "/tilbo.ipc.v1.UnpinPlaceResponse";
+                };
+
+                return UnpinPlaceResponse;
+            })();
+
+            v1.TrashFileRequest = (function() {
+
+                /**
+                 * Properties of a TrashFileRequest.
+                 * @memberof tilbo.ipc.v1
+                 * @interface ITrashFileRequest
+                 * @property {string|null} [path] TrashFileRequest path
+                 */
+
+                /**
+                 * Constructs a new TrashFileRequest.
+                 * @memberof tilbo.ipc.v1
+                 * @classdesc Represents a TrashFileRequest.
+                 * @implements ITrashFileRequest
+                 * @constructor
+                 * @param {tilbo.ipc.v1.ITrashFileRequest=} [properties] Properties to set
+                 */
+                function TrashFileRequest(properties) {
+                    if (properties)
+                        for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+                            if (properties[keys[i]] != null)
+                                this[keys[i]] = properties[keys[i]];
+                }
+
+                /**
+                 * TrashFileRequest path.
+                 * @member {string} path
+                 * @memberof tilbo.ipc.v1.TrashFileRequest
+                 * @instance
+                 */
+                TrashFileRequest.prototype.path = "";
+
+                /**
+                 * Creates a new TrashFileRequest instance using the specified properties.
+                 * @function create
+                 * @memberof tilbo.ipc.v1.TrashFileRequest
+                 * @static
+                 * @param {tilbo.ipc.v1.ITrashFileRequest=} [properties] Properties to set
+                 * @returns {tilbo.ipc.v1.TrashFileRequest} TrashFileRequest instance
+                 */
+                TrashFileRequest.create = function create(properties) {
+                    return new TrashFileRequest(properties);
+                };
+
+                /**
+                 * Encodes the specified TrashFileRequest message. Does not implicitly {@link tilbo.ipc.v1.TrashFileRequest.verify|verify} messages.
+                 * @function encode
+                 * @memberof tilbo.ipc.v1.TrashFileRequest
+                 * @static
+                 * @param {tilbo.ipc.v1.ITrashFileRequest} message TrashFileRequest message or plain object to encode
+                 * @param {$protobuf.Writer} [writer] Writer to encode to
+                 * @returns {$protobuf.Writer} Writer
+                 */
+                TrashFileRequest.encode = function encode(message, writer) {
+                    if (!writer)
+                        writer = $Writer.create();
+                    if (message.path != null && Object.hasOwnProperty.call(message, "path"))
+                        writer.uint32(/* id 1, wireType 2 =*/10).string(message.path);
+                    return writer;
+                };
+
+                /**
+                 * Encodes the specified TrashFileRequest message, length delimited. Does not implicitly {@link tilbo.ipc.v1.TrashFileRequest.verify|verify} messages.
+                 * @function encodeDelimited
+                 * @memberof tilbo.ipc.v1.TrashFileRequest
+                 * @static
+                 * @param {tilbo.ipc.v1.ITrashFileRequest} message TrashFileRequest message or plain object to encode
+                 * @param {$protobuf.Writer} [writer] Writer to encode to
+                 * @returns {$protobuf.Writer} Writer
+                 */
+                TrashFileRequest.encodeDelimited = function encodeDelimited(message, writer) {
+                    return this.encode(message, writer).ldelim();
+                };
+
+                /**
+                 * Decodes a TrashFileRequest message from the specified reader or buffer.
+                 * @function decode
+                 * @memberof tilbo.ipc.v1.TrashFileRequest
+                 * @static
+                 * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+                 * @param {number} [length] Message length if known beforehand
+                 * @returns {tilbo.ipc.v1.TrashFileRequest} TrashFileRequest
+                 * @throws {Error} If the payload is not a reader or valid buffer
+                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                 */
+                TrashFileRequest.decode = function decode(reader, length, error) {
+                    if (!(reader instanceof $Reader))
+                        reader = $Reader.create(reader);
+                    let end = length === undefined ? reader.len : reader.pos + length, message = new $root.tilbo.ipc.v1.TrashFileRequest();
+                    while (reader.pos < end) {
+                        let tag = reader.uint32();
+                        if (tag === error)
+                            break;
+                        switch (tag >>> 3) {
+                        case 1: {
+                                message.path = reader.string();
+                                break;
+                            }
+                        default:
+                            reader.skipType(tag & 7);
+                            break;
+                        }
+                    }
+                    return message;
+                };
+
+                /**
+                 * Decodes a TrashFileRequest message from the specified reader or buffer, length delimited.
+                 * @function decodeDelimited
+                 * @memberof tilbo.ipc.v1.TrashFileRequest
+                 * @static
+                 * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+                 * @returns {tilbo.ipc.v1.TrashFileRequest} TrashFileRequest
+                 * @throws {Error} If the payload is not a reader or valid buffer
+                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                 */
+                TrashFileRequest.decodeDelimited = function decodeDelimited(reader) {
+                    if (!(reader instanceof $Reader))
+                        reader = new $Reader(reader);
+                    return this.decode(reader, reader.uint32());
+                };
+
+                /**
+                 * Verifies a TrashFileRequest message.
+                 * @function verify
+                 * @memberof tilbo.ipc.v1.TrashFileRequest
+                 * @static
+                 * @param {Object.<string,*>} message Plain object to verify
+                 * @returns {string|null} `null` if valid, otherwise the reason why it is not
+                 */
+                TrashFileRequest.verify = function verify(message) {
+                    if (typeof message !== "object" || message === null)
+                        return "object expected";
+                    if (message.path != null && message.hasOwnProperty("path"))
+                        if (!$util.isString(message.path))
+                            return "path: string expected";
+                    return null;
+                };
+
+                /**
+                 * Creates a TrashFileRequest message from a plain object. Also converts values to their respective internal types.
+                 * @function fromObject
+                 * @memberof tilbo.ipc.v1.TrashFileRequest
+                 * @static
+                 * @param {Object.<string,*>} object Plain object
+                 * @returns {tilbo.ipc.v1.TrashFileRequest} TrashFileRequest
+                 */
+                TrashFileRequest.fromObject = function fromObject(object) {
+                    if (object instanceof $root.tilbo.ipc.v1.TrashFileRequest)
+                        return object;
+                    let message = new $root.tilbo.ipc.v1.TrashFileRequest();
+                    if (object.path != null)
+                        message.path = String(object.path);
+                    return message;
+                };
+
+                /**
+                 * Creates a plain object from a TrashFileRequest message. Also converts values to other types if specified.
+                 * @function toObject
+                 * @memberof tilbo.ipc.v1.TrashFileRequest
+                 * @static
+                 * @param {tilbo.ipc.v1.TrashFileRequest} message TrashFileRequest
+                 * @param {$protobuf.IConversionOptions} [options] Conversion options
+                 * @returns {Object.<string,*>} Plain object
+                 */
+                TrashFileRequest.toObject = function toObject(message, options) {
+                    if (!options)
+                        options = {};
+                    let object = {};
+                    if (options.defaults)
+                        object.path = "";
+                    if (message.path != null && message.hasOwnProperty("path"))
+                        object.path = message.path;
+                    return object;
+                };
+
+                /**
+                 * Converts this TrashFileRequest to JSON.
+                 * @function toJSON
+                 * @memberof tilbo.ipc.v1.TrashFileRequest
+                 * @instance
+                 * @returns {Object.<string,*>} JSON object
+                 */
+                TrashFileRequest.prototype.toJSON = function toJSON() {
+                    return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+                };
+
+                /**
+                 * Gets the default type url for TrashFileRequest
+                 * @function getTypeUrl
+                 * @memberof tilbo.ipc.v1.TrashFileRequest
+                 * @static
+                 * @param {string} [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+                 * @returns {string} The default type url
+                 */
+                TrashFileRequest.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
+                    if (typeUrlPrefix === undefined) {
+                        typeUrlPrefix = "type.googleapis.com";
+                    }
+                    return typeUrlPrefix + "/tilbo.ipc.v1.TrashFileRequest";
+                };
+
+                return TrashFileRequest;
+            })();
+
+            v1.TrashFileResponse = (function() {
+
+                /**
+                 * Properties of a TrashFileResponse.
+                 * @memberof tilbo.ipc.v1
+                 * @interface ITrashFileResponse
+                 */
+
+                /**
+                 * Constructs a new TrashFileResponse.
+                 * @memberof tilbo.ipc.v1
+                 * @classdesc Represents a TrashFileResponse.
+                 * @implements ITrashFileResponse
+                 * @constructor
+                 * @param {tilbo.ipc.v1.ITrashFileResponse=} [properties] Properties to set
+                 */
+                function TrashFileResponse(properties) {
+                    if (properties)
+                        for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+                            if (properties[keys[i]] != null)
+                                this[keys[i]] = properties[keys[i]];
+                }
+
+                /**
+                 * Creates a new TrashFileResponse instance using the specified properties.
+                 * @function create
+                 * @memberof tilbo.ipc.v1.TrashFileResponse
+                 * @static
+                 * @param {tilbo.ipc.v1.ITrashFileResponse=} [properties] Properties to set
+                 * @returns {tilbo.ipc.v1.TrashFileResponse} TrashFileResponse instance
+                 */
+                TrashFileResponse.create = function create(properties) {
+                    return new TrashFileResponse(properties);
+                };
+
+                /**
+                 * Encodes the specified TrashFileResponse message. Does not implicitly {@link tilbo.ipc.v1.TrashFileResponse.verify|verify} messages.
+                 * @function encode
+                 * @memberof tilbo.ipc.v1.TrashFileResponse
+                 * @static
+                 * @param {tilbo.ipc.v1.ITrashFileResponse} message TrashFileResponse message or plain object to encode
+                 * @param {$protobuf.Writer} [writer] Writer to encode to
+                 * @returns {$protobuf.Writer} Writer
+                 */
+                TrashFileResponse.encode = function encode(message, writer) {
+                    if (!writer)
+                        writer = $Writer.create();
+                    return writer;
+                };
+
+                /**
+                 * Encodes the specified TrashFileResponse message, length delimited. Does not implicitly {@link tilbo.ipc.v1.TrashFileResponse.verify|verify} messages.
+                 * @function encodeDelimited
+                 * @memberof tilbo.ipc.v1.TrashFileResponse
+                 * @static
+                 * @param {tilbo.ipc.v1.ITrashFileResponse} message TrashFileResponse message or plain object to encode
+                 * @param {$protobuf.Writer} [writer] Writer to encode to
+                 * @returns {$protobuf.Writer} Writer
+                 */
+                TrashFileResponse.encodeDelimited = function encodeDelimited(message, writer) {
+                    return this.encode(message, writer).ldelim();
+                };
+
+                /**
+                 * Decodes a TrashFileResponse message from the specified reader or buffer.
+                 * @function decode
+                 * @memberof tilbo.ipc.v1.TrashFileResponse
+                 * @static
+                 * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+                 * @param {number} [length] Message length if known beforehand
+                 * @returns {tilbo.ipc.v1.TrashFileResponse} TrashFileResponse
+                 * @throws {Error} If the payload is not a reader or valid buffer
+                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                 */
+                TrashFileResponse.decode = function decode(reader, length, error) {
+                    if (!(reader instanceof $Reader))
+                        reader = $Reader.create(reader);
+                    let end = length === undefined ? reader.len : reader.pos + length, message = new $root.tilbo.ipc.v1.TrashFileResponse();
+                    while (reader.pos < end) {
+                        let tag = reader.uint32();
+                        if (tag === error)
+                            break;
+                        switch (tag >>> 3) {
+                        default:
+                            reader.skipType(tag & 7);
+                            break;
+                        }
+                    }
+                    return message;
+                };
+
+                /**
+                 * Decodes a TrashFileResponse message from the specified reader or buffer, length delimited.
+                 * @function decodeDelimited
+                 * @memberof tilbo.ipc.v1.TrashFileResponse
+                 * @static
+                 * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+                 * @returns {tilbo.ipc.v1.TrashFileResponse} TrashFileResponse
+                 * @throws {Error} If the payload is not a reader or valid buffer
+                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                 */
+                TrashFileResponse.decodeDelimited = function decodeDelimited(reader) {
+                    if (!(reader instanceof $Reader))
+                        reader = new $Reader(reader);
+                    return this.decode(reader, reader.uint32());
+                };
+
+                /**
+                 * Verifies a TrashFileResponse message.
+                 * @function verify
+                 * @memberof tilbo.ipc.v1.TrashFileResponse
+                 * @static
+                 * @param {Object.<string,*>} message Plain object to verify
+                 * @returns {string|null} `null` if valid, otherwise the reason why it is not
+                 */
+                TrashFileResponse.verify = function verify(message) {
+                    if (typeof message !== "object" || message === null)
+                        return "object expected";
+                    return null;
+                };
+
+                /**
+                 * Creates a TrashFileResponse message from a plain object. Also converts values to their respective internal types.
+                 * @function fromObject
+                 * @memberof tilbo.ipc.v1.TrashFileResponse
+                 * @static
+                 * @param {Object.<string,*>} object Plain object
+                 * @returns {tilbo.ipc.v1.TrashFileResponse} TrashFileResponse
+                 */
+                TrashFileResponse.fromObject = function fromObject(object) {
+                    if (object instanceof $root.tilbo.ipc.v1.TrashFileResponse)
+                        return object;
+                    return new $root.tilbo.ipc.v1.TrashFileResponse();
+                };
+
+                /**
+                 * Creates a plain object from a TrashFileResponse message. Also converts values to other types if specified.
+                 * @function toObject
+                 * @memberof tilbo.ipc.v1.TrashFileResponse
+                 * @static
+                 * @param {tilbo.ipc.v1.TrashFileResponse} message TrashFileResponse
+                 * @param {$protobuf.IConversionOptions} [options] Conversion options
+                 * @returns {Object.<string,*>} Plain object
+                 */
+                TrashFileResponse.toObject = function toObject() {
+                    return {};
+                };
+
+                /**
+                 * Converts this TrashFileResponse to JSON.
+                 * @function toJSON
+                 * @memberof tilbo.ipc.v1.TrashFileResponse
+                 * @instance
+                 * @returns {Object.<string,*>} JSON object
+                 */
+                TrashFileResponse.prototype.toJSON = function toJSON() {
+                    return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+                };
+
+                /**
+                 * Gets the default type url for TrashFileResponse
+                 * @function getTypeUrl
+                 * @memberof tilbo.ipc.v1.TrashFileResponse
+                 * @static
+                 * @param {string} [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+                 * @returns {string} The default type url
+                 */
+                TrashFileResponse.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
+                    if (typeUrlPrefix === undefined) {
+                        typeUrlPrefix = "type.googleapis.com";
+                    }
+                    return typeUrlPrefix + "/tilbo.ipc.v1.TrashFileResponse";
+                };
+
+                return TrashFileResponse;
+            })();
+
+            v1.ListTrashRequest = (function() {
+
+                /**
+                 * Properties of a ListTrashRequest.
+                 * @memberof tilbo.ipc.v1
+                 * @interface IListTrashRequest
+                 */
+
+                /**
+                 * Constructs a new ListTrashRequest.
+                 * @memberof tilbo.ipc.v1
+                 * @classdesc Represents a ListTrashRequest.
+                 * @implements IListTrashRequest
+                 * @constructor
+                 * @param {tilbo.ipc.v1.IListTrashRequest=} [properties] Properties to set
+                 */
+                function ListTrashRequest(properties) {
+                    if (properties)
+                        for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+                            if (properties[keys[i]] != null)
+                                this[keys[i]] = properties[keys[i]];
+                }
+
+                /**
+                 * Creates a new ListTrashRequest instance using the specified properties.
+                 * @function create
+                 * @memberof tilbo.ipc.v1.ListTrashRequest
+                 * @static
+                 * @param {tilbo.ipc.v1.IListTrashRequest=} [properties] Properties to set
+                 * @returns {tilbo.ipc.v1.ListTrashRequest} ListTrashRequest instance
+                 */
+                ListTrashRequest.create = function create(properties) {
+                    return new ListTrashRequest(properties);
+                };
+
+                /**
+                 * Encodes the specified ListTrashRequest message. Does not implicitly {@link tilbo.ipc.v1.ListTrashRequest.verify|verify} messages.
+                 * @function encode
+                 * @memberof tilbo.ipc.v1.ListTrashRequest
+                 * @static
+                 * @param {tilbo.ipc.v1.IListTrashRequest} message ListTrashRequest message or plain object to encode
+                 * @param {$protobuf.Writer} [writer] Writer to encode to
+                 * @returns {$protobuf.Writer} Writer
+                 */
+                ListTrashRequest.encode = function encode(message, writer) {
+                    if (!writer)
+                        writer = $Writer.create();
+                    return writer;
+                };
+
+                /**
+                 * Encodes the specified ListTrashRequest message, length delimited. Does not implicitly {@link tilbo.ipc.v1.ListTrashRequest.verify|verify} messages.
+                 * @function encodeDelimited
+                 * @memberof tilbo.ipc.v1.ListTrashRequest
+                 * @static
+                 * @param {tilbo.ipc.v1.IListTrashRequest} message ListTrashRequest message or plain object to encode
+                 * @param {$protobuf.Writer} [writer] Writer to encode to
+                 * @returns {$protobuf.Writer} Writer
+                 */
+                ListTrashRequest.encodeDelimited = function encodeDelimited(message, writer) {
+                    return this.encode(message, writer).ldelim();
+                };
+
+                /**
+                 * Decodes a ListTrashRequest message from the specified reader or buffer.
+                 * @function decode
+                 * @memberof tilbo.ipc.v1.ListTrashRequest
+                 * @static
+                 * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+                 * @param {number} [length] Message length if known beforehand
+                 * @returns {tilbo.ipc.v1.ListTrashRequest} ListTrashRequest
+                 * @throws {Error} If the payload is not a reader or valid buffer
+                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                 */
+                ListTrashRequest.decode = function decode(reader, length, error) {
+                    if (!(reader instanceof $Reader))
+                        reader = $Reader.create(reader);
+                    let end = length === undefined ? reader.len : reader.pos + length, message = new $root.tilbo.ipc.v1.ListTrashRequest();
+                    while (reader.pos < end) {
+                        let tag = reader.uint32();
+                        if (tag === error)
+                            break;
+                        switch (tag >>> 3) {
+                        default:
+                            reader.skipType(tag & 7);
+                            break;
+                        }
+                    }
+                    return message;
+                };
+
+                /**
+                 * Decodes a ListTrashRequest message from the specified reader or buffer, length delimited.
+                 * @function decodeDelimited
+                 * @memberof tilbo.ipc.v1.ListTrashRequest
+                 * @static
+                 * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+                 * @returns {tilbo.ipc.v1.ListTrashRequest} ListTrashRequest
+                 * @throws {Error} If the payload is not a reader or valid buffer
+                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                 */
+                ListTrashRequest.decodeDelimited = function decodeDelimited(reader) {
+                    if (!(reader instanceof $Reader))
+                        reader = new $Reader(reader);
+                    return this.decode(reader, reader.uint32());
+                };
+
+                /**
+                 * Verifies a ListTrashRequest message.
+                 * @function verify
+                 * @memberof tilbo.ipc.v1.ListTrashRequest
+                 * @static
+                 * @param {Object.<string,*>} message Plain object to verify
+                 * @returns {string|null} `null` if valid, otherwise the reason why it is not
+                 */
+                ListTrashRequest.verify = function verify(message) {
+                    if (typeof message !== "object" || message === null)
+                        return "object expected";
+                    return null;
+                };
+
+                /**
+                 * Creates a ListTrashRequest message from a plain object. Also converts values to their respective internal types.
+                 * @function fromObject
+                 * @memberof tilbo.ipc.v1.ListTrashRequest
+                 * @static
+                 * @param {Object.<string,*>} object Plain object
+                 * @returns {tilbo.ipc.v1.ListTrashRequest} ListTrashRequest
+                 */
+                ListTrashRequest.fromObject = function fromObject(object) {
+                    if (object instanceof $root.tilbo.ipc.v1.ListTrashRequest)
+                        return object;
+                    return new $root.tilbo.ipc.v1.ListTrashRequest();
+                };
+
+                /**
+                 * Creates a plain object from a ListTrashRequest message. Also converts values to other types if specified.
+                 * @function toObject
+                 * @memberof tilbo.ipc.v1.ListTrashRequest
+                 * @static
+                 * @param {tilbo.ipc.v1.ListTrashRequest} message ListTrashRequest
+                 * @param {$protobuf.IConversionOptions} [options] Conversion options
+                 * @returns {Object.<string,*>} Plain object
+                 */
+                ListTrashRequest.toObject = function toObject() {
+                    return {};
+                };
+
+                /**
+                 * Converts this ListTrashRequest to JSON.
+                 * @function toJSON
+                 * @memberof tilbo.ipc.v1.ListTrashRequest
+                 * @instance
+                 * @returns {Object.<string,*>} JSON object
+                 */
+                ListTrashRequest.prototype.toJSON = function toJSON() {
+                    return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+                };
+
+                /**
+                 * Gets the default type url for ListTrashRequest
+                 * @function getTypeUrl
+                 * @memberof tilbo.ipc.v1.ListTrashRequest
+                 * @static
+                 * @param {string} [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+                 * @returns {string} The default type url
+                 */
+                ListTrashRequest.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
+                    if (typeUrlPrefix === undefined) {
+                        typeUrlPrefix = "type.googleapis.com";
+                    }
+                    return typeUrlPrefix + "/tilbo.ipc.v1.ListTrashRequest";
+                };
+
+                return ListTrashRequest;
+            })();
+
+            v1.TrashEntry = (function() {
+
+                /**
+                 * Properties of a TrashEntry.
+                 * @memberof tilbo.ipc.v1
+                 * @interface ITrashEntry
+                 * @property {string|null} [name] TrashEntry name
+                 * @property {string|null} [originalPath] TrashEntry originalPath
+                 * @property {number|Long|null} [deletionDate] TrashEntry deletionDate
+                 * @property {number|Long|null} [sizeBytes] TrashEntry sizeBytes
+                 */
+
+                /**
+                 * Constructs a new TrashEntry.
+                 * @memberof tilbo.ipc.v1
+                 * @classdesc Represents a TrashEntry.
+                 * @implements ITrashEntry
+                 * @constructor
+                 * @param {tilbo.ipc.v1.ITrashEntry=} [properties] Properties to set
+                 */
+                function TrashEntry(properties) {
+                    if (properties)
+                        for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+                            if (properties[keys[i]] != null)
+                                this[keys[i]] = properties[keys[i]];
+                }
+
+                /**
+                 * TrashEntry name.
+                 * @member {string} name
+                 * @memberof tilbo.ipc.v1.TrashEntry
+                 * @instance
+                 */
+                TrashEntry.prototype.name = "";
+
+                /**
+                 * TrashEntry originalPath.
+                 * @member {string} originalPath
+                 * @memberof tilbo.ipc.v1.TrashEntry
+                 * @instance
+                 */
+                TrashEntry.prototype.originalPath = "";
+
+                /**
+                 * TrashEntry deletionDate.
+                 * @member {number|Long} deletionDate
+                 * @memberof tilbo.ipc.v1.TrashEntry
+                 * @instance
+                 */
+                TrashEntry.prototype.deletionDate = $util.Long ? $util.Long.fromBits(0,0,false) : 0;
+
+                /**
+                 * TrashEntry sizeBytes.
+                 * @member {number|Long} sizeBytes
+                 * @memberof tilbo.ipc.v1.TrashEntry
+                 * @instance
+                 */
+                TrashEntry.prototype.sizeBytes = $util.Long ? $util.Long.fromBits(0,0,false) : 0;
+
+                /**
+                 * Creates a new TrashEntry instance using the specified properties.
+                 * @function create
+                 * @memberof tilbo.ipc.v1.TrashEntry
+                 * @static
+                 * @param {tilbo.ipc.v1.ITrashEntry=} [properties] Properties to set
+                 * @returns {tilbo.ipc.v1.TrashEntry} TrashEntry instance
+                 */
+                TrashEntry.create = function create(properties) {
+                    return new TrashEntry(properties);
+                };
+
+                /**
+                 * Encodes the specified TrashEntry message. Does not implicitly {@link tilbo.ipc.v1.TrashEntry.verify|verify} messages.
+                 * @function encode
+                 * @memberof tilbo.ipc.v1.TrashEntry
+                 * @static
+                 * @param {tilbo.ipc.v1.ITrashEntry} message TrashEntry message or plain object to encode
+                 * @param {$protobuf.Writer} [writer] Writer to encode to
+                 * @returns {$protobuf.Writer} Writer
+                 */
+                TrashEntry.encode = function encode(message, writer) {
+                    if (!writer)
+                        writer = $Writer.create();
+                    if (message.name != null && Object.hasOwnProperty.call(message, "name"))
+                        writer.uint32(/* id 1, wireType 2 =*/10).string(message.name);
+                    if (message.originalPath != null && Object.hasOwnProperty.call(message, "originalPath"))
+                        writer.uint32(/* id 2, wireType 2 =*/18).string(message.originalPath);
+                    if (message.deletionDate != null && Object.hasOwnProperty.call(message, "deletionDate"))
+                        writer.uint32(/* id 3, wireType 0 =*/24).int64(message.deletionDate);
+                    if (message.sizeBytes != null && Object.hasOwnProperty.call(message, "sizeBytes"))
+                        writer.uint32(/* id 4, wireType 0 =*/32).int64(message.sizeBytes);
+                    return writer;
+                };
+
+                /**
+                 * Encodes the specified TrashEntry message, length delimited. Does not implicitly {@link tilbo.ipc.v1.TrashEntry.verify|verify} messages.
+                 * @function encodeDelimited
+                 * @memberof tilbo.ipc.v1.TrashEntry
+                 * @static
+                 * @param {tilbo.ipc.v1.ITrashEntry} message TrashEntry message or plain object to encode
+                 * @param {$protobuf.Writer} [writer] Writer to encode to
+                 * @returns {$protobuf.Writer} Writer
+                 */
+                TrashEntry.encodeDelimited = function encodeDelimited(message, writer) {
+                    return this.encode(message, writer).ldelim();
+                };
+
+                /**
+                 * Decodes a TrashEntry message from the specified reader or buffer.
+                 * @function decode
+                 * @memberof tilbo.ipc.v1.TrashEntry
+                 * @static
+                 * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+                 * @param {number} [length] Message length if known beforehand
+                 * @returns {tilbo.ipc.v1.TrashEntry} TrashEntry
+                 * @throws {Error} If the payload is not a reader or valid buffer
+                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                 */
+                TrashEntry.decode = function decode(reader, length, error) {
+                    if (!(reader instanceof $Reader))
+                        reader = $Reader.create(reader);
+                    let end = length === undefined ? reader.len : reader.pos + length, message = new $root.tilbo.ipc.v1.TrashEntry();
+                    while (reader.pos < end) {
+                        let tag = reader.uint32();
+                        if (tag === error)
+                            break;
+                        switch (tag >>> 3) {
+                        case 1: {
+                                message.name = reader.string();
+                                break;
+                            }
+                        case 2: {
+                                message.originalPath = reader.string();
+                                break;
+                            }
+                        case 3: {
+                                message.deletionDate = reader.int64();
+                                break;
+                            }
+                        case 4: {
+                                message.sizeBytes = reader.int64();
+                                break;
+                            }
+                        default:
+                            reader.skipType(tag & 7);
+                            break;
+                        }
+                    }
+                    return message;
+                };
+
+                /**
+                 * Decodes a TrashEntry message from the specified reader or buffer, length delimited.
+                 * @function decodeDelimited
+                 * @memberof tilbo.ipc.v1.TrashEntry
+                 * @static
+                 * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+                 * @returns {tilbo.ipc.v1.TrashEntry} TrashEntry
+                 * @throws {Error} If the payload is not a reader or valid buffer
+                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                 */
+                TrashEntry.decodeDelimited = function decodeDelimited(reader) {
+                    if (!(reader instanceof $Reader))
+                        reader = new $Reader(reader);
+                    return this.decode(reader, reader.uint32());
+                };
+
+                /**
+                 * Verifies a TrashEntry message.
+                 * @function verify
+                 * @memberof tilbo.ipc.v1.TrashEntry
+                 * @static
+                 * @param {Object.<string,*>} message Plain object to verify
+                 * @returns {string|null} `null` if valid, otherwise the reason why it is not
+                 */
+                TrashEntry.verify = function verify(message) {
+                    if (typeof message !== "object" || message === null)
+                        return "object expected";
+                    if (message.name != null && message.hasOwnProperty("name"))
+                        if (!$util.isString(message.name))
+                            return "name: string expected";
+                    if (message.originalPath != null && message.hasOwnProperty("originalPath"))
+                        if (!$util.isString(message.originalPath))
+                            return "originalPath: string expected";
+                    if (message.deletionDate != null && message.hasOwnProperty("deletionDate"))
+                        if (!$util.isInteger(message.deletionDate) && !(message.deletionDate && $util.isInteger(message.deletionDate.low) && $util.isInteger(message.deletionDate.high)))
+                            return "deletionDate: integer|Long expected";
+                    if (message.sizeBytes != null && message.hasOwnProperty("sizeBytes"))
+                        if (!$util.isInteger(message.sizeBytes) && !(message.sizeBytes && $util.isInteger(message.sizeBytes.low) && $util.isInteger(message.sizeBytes.high)))
+                            return "sizeBytes: integer|Long expected";
+                    return null;
+                };
+
+                /**
+                 * Creates a TrashEntry message from a plain object. Also converts values to their respective internal types.
+                 * @function fromObject
+                 * @memberof tilbo.ipc.v1.TrashEntry
+                 * @static
+                 * @param {Object.<string,*>} object Plain object
+                 * @returns {tilbo.ipc.v1.TrashEntry} TrashEntry
+                 */
+                TrashEntry.fromObject = function fromObject(object) {
+                    if (object instanceof $root.tilbo.ipc.v1.TrashEntry)
+                        return object;
+                    let message = new $root.tilbo.ipc.v1.TrashEntry();
+                    if (object.name != null)
+                        message.name = String(object.name);
+                    if (object.originalPath != null)
+                        message.originalPath = String(object.originalPath);
+                    if (object.deletionDate != null)
+                        if ($util.Long)
+                            (message.deletionDate = $util.Long.fromValue(object.deletionDate)).unsigned = false;
+                        else if (typeof object.deletionDate === "string")
+                            message.deletionDate = parseInt(object.deletionDate, 10);
+                        else if (typeof object.deletionDate === "number")
+                            message.deletionDate = object.deletionDate;
+                        else if (typeof object.deletionDate === "object")
+                            message.deletionDate = new $util.LongBits(object.deletionDate.low >>> 0, object.deletionDate.high >>> 0).toNumber();
+                    if (object.sizeBytes != null)
+                        if ($util.Long)
+                            (message.sizeBytes = $util.Long.fromValue(object.sizeBytes)).unsigned = false;
+                        else if (typeof object.sizeBytes === "string")
+                            message.sizeBytes = parseInt(object.sizeBytes, 10);
+                        else if (typeof object.sizeBytes === "number")
+                            message.sizeBytes = object.sizeBytes;
+                        else if (typeof object.sizeBytes === "object")
+                            message.sizeBytes = new $util.LongBits(object.sizeBytes.low >>> 0, object.sizeBytes.high >>> 0).toNumber();
+                    return message;
+                };
+
+                /**
+                 * Creates a plain object from a TrashEntry message. Also converts values to other types if specified.
+                 * @function toObject
+                 * @memberof tilbo.ipc.v1.TrashEntry
+                 * @static
+                 * @param {tilbo.ipc.v1.TrashEntry} message TrashEntry
+                 * @param {$protobuf.IConversionOptions} [options] Conversion options
+                 * @returns {Object.<string,*>} Plain object
+                 */
+                TrashEntry.toObject = function toObject(message, options) {
+                    if (!options)
+                        options = {};
+                    let object = {};
+                    if (options.defaults) {
+                        object.name = "";
+                        object.originalPath = "";
+                        if ($util.Long) {
+                            let long = new $util.Long(0, 0, false);
+                            object.deletionDate = options.longs === String ? long.toString() : options.longs === Number ? long.toNumber() : long;
+                        } else
+                            object.deletionDate = options.longs === String ? "0" : 0;
+                        if ($util.Long) {
+                            let long = new $util.Long(0, 0, false);
+                            object.sizeBytes = options.longs === String ? long.toString() : options.longs === Number ? long.toNumber() : long;
+                        } else
+                            object.sizeBytes = options.longs === String ? "0" : 0;
+                    }
+                    if (message.name != null && message.hasOwnProperty("name"))
+                        object.name = message.name;
+                    if (message.originalPath != null && message.hasOwnProperty("originalPath"))
+                        object.originalPath = message.originalPath;
+                    if (message.deletionDate != null && message.hasOwnProperty("deletionDate"))
+                        if (typeof message.deletionDate === "number")
+                            object.deletionDate = options.longs === String ? String(message.deletionDate) : message.deletionDate;
+                        else
+                            object.deletionDate = options.longs === String ? $util.Long.prototype.toString.call(message.deletionDate) : options.longs === Number ? new $util.LongBits(message.deletionDate.low >>> 0, message.deletionDate.high >>> 0).toNumber() : message.deletionDate;
+                    if (message.sizeBytes != null && message.hasOwnProperty("sizeBytes"))
+                        if (typeof message.sizeBytes === "number")
+                            object.sizeBytes = options.longs === String ? String(message.sizeBytes) : message.sizeBytes;
+                        else
+                            object.sizeBytes = options.longs === String ? $util.Long.prototype.toString.call(message.sizeBytes) : options.longs === Number ? new $util.LongBits(message.sizeBytes.low >>> 0, message.sizeBytes.high >>> 0).toNumber() : message.sizeBytes;
+                    return object;
+                };
+
+                /**
+                 * Converts this TrashEntry to JSON.
+                 * @function toJSON
+                 * @memberof tilbo.ipc.v1.TrashEntry
+                 * @instance
+                 * @returns {Object.<string,*>} JSON object
+                 */
+                TrashEntry.prototype.toJSON = function toJSON() {
+                    return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+                };
+
+                /**
+                 * Gets the default type url for TrashEntry
+                 * @function getTypeUrl
+                 * @memberof tilbo.ipc.v1.TrashEntry
+                 * @static
+                 * @param {string} [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+                 * @returns {string} The default type url
+                 */
+                TrashEntry.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
+                    if (typeUrlPrefix === undefined) {
+                        typeUrlPrefix = "type.googleapis.com";
+                    }
+                    return typeUrlPrefix + "/tilbo.ipc.v1.TrashEntry";
+                };
+
+                return TrashEntry;
+            })();
+
+            v1.ListTrashResponse = (function() {
+
+                /**
+                 * Properties of a ListTrashResponse.
+                 * @memberof tilbo.ipc.v1
+                 * @interface IListTrashResponse
+                 * @property {Array.<tilbo.ipc.v1.ITrashEntry>|null} [entries] ListTrashResponse entries
+                 */
+
+                /**
+                 * Constructs a new ListTrashResponse.
+                 * @memberof tilbo.ipc.v1
+                 * @classdesc Represents a ListTrashResponse.
+                 * @implements IListTrashResponse
+                 * @constructor
+                 * @param {tilbo.ipc.v1.IListTrashResponse=} [properties] Properties to set
+                 */
+                function ListTrashResponse(properties) {
+                    this.entries = [];
+                    if (properties)
+                        for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+                            if (properties[keys[i]] != null)
+                                this[keys[i]] = properties[keys[i]];
+                }
+
+                /**
+                 * ListTrashResponse entries.
+                 * @member {Array.<tilbo.ipc.v1.ITrashEntry>} entries
+                 * @memberof tilbo.ipc.v1.ListTrashResponse
+                 * @instance
+                 */
+                ListTrashResponse.prototype.entries = $util.emptyArray;
+
+                /**
+                 * Creates a new ListTrashResponse instance using the specified properties.
+                 * @function create
+                 * @memberof tilbo.ipc.v1.ListTrashResponse
+                 * @static
+                 * @param {tilbo.ipc.v1.IListTrashResponse=} [properties] Properties to set
+                 * @returns {tilbo.ipc.v1.ListTrashResponse} ListTrashResponse instance
+                 */
+                ListTrashResponse.create = function create(properties) {
+                    return new ListTrashResponse(properties);
+                };
+
+                /**
+                 * Encodes the specified ListTrashResponse message. Does not implicitly {@link tilbo.ipc.v1.ListTrashResponse.verify|verify} messages.
+                 * @function encode
+                 * @memberof tilbo.ipc.v1.ListTrashResponse
+                 * @static
+                 * @param {tilbo.ipc.v1.IListTrashResponse} message ListTrashResponse message or plain object to encode
+                 * @param {$protobuf.Writer} [writer] Writer to encode to
+                 * @returns {$protobuf.Writer} Writer
+                 */
+                ListTrashResponse.encode = function encode(message, writer) {
+                    if (!writer)
+                        writer = $Writer.create();
+                    if (message.entries != null && message.entries.length)
+                        for (let i = 0; i < message.entries.length; ++i)
+                            $root.tilbo.ipc.v1.TrashEntry.encode(message.entries[i], writer.uint32(/* id 1, wireType 2 =*/10).fork()).ldelim();
+                    return writer;
+                };
+
+                /**
+                 * Encodes the specified ListTrashResponse message, length delimited. Does not implicitly {@link tilbo.ipc.v1.ListTrashResponse.verify|verify} messages.
+                 * @function encodeDelimited
+                 * @memberof tilbo.ipc.v1.ListTrashResponse
+                 * @static
+                 * @param {tilbo.ipc.v1.IListTrashResponse} message ListTrashResponse message or plain object to encode
+                 * @param {$protobuf.Writer} [writer] Writer to encode to
+                 * @returns {$protobuf.Writer} Writer
+                 */
+                ListTrashResponse.encodeDelimited = function encodeDelimited(message, writer) {
+                    return this.encode(message, writer).ldelim();
+                };
+
+                /**
+                 * Decodes a ListTrashResponse message from the specified reader or buffer.
+                 * @function decode
+                 * @memberof tilbo.ipc.v1.ListTrashResponse
+                 * @static
+                 * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+                 * @param {number} [length] Message length if known beforehand
+                 * @returns {tilbo.ipc.v1.ListTrashResponse} ListTrashResponse
+                 * @throws {Error} If the payload is not a reader or valid buffer
+                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                 */
+                ListTrashResponse.decode = function decode(reader, length, error) {
+                    if (!(reader instanceof $Reader))
+                        reader = $Reader.create(reader);
+                    let end = length === undefined ? reader.len : reader.pos + length, message = new $root.tilbo.ipc.v1.ListTrashResponse();
+                    while (reader.pos < end) {
+                        let tag = reader.uint32();
+                        if (tag === error)
+                            break;
+                        switch (tag >>> 3) {
+                        case 1: {
+                                if (!(message.entries && message.entries.length))
+                                    message.entries = [];
+                                message.entries.push($root.tilbo.ipc.v1.TrashEntry.decode(reader, reader.uint32()));
+                                break;
+                            }
+                        default:
+                            reader.skipType(tag & 7);
+                            break;
+                        }
+                    }
+                    return message;
+                };
+
+                /**
+                 * Decodes a ListTrashResponse message from the specified reader or buffer, length delimited.
+                 * @function decodeDelimited
+                 * @memberof tilbo.ipc.v1.ListTrashResponse
+                 * @static
+                 * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+                 * @returns {tilbo.ipc.v1.ListTrashResponse} ListTrashResponse
+                 * @throws {Error} If the payload is not a reader or valid buffer
+                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                 */
+                ListTrashResponse.decodeDelimited = function decodeDelimited(reader) {
+                    if (!(reader instanceof $Reader))
+                        reader = new $Reader(reader);
+                    return this.decode(reader, reader.uint32());
+                };
+
+                /**
+                 * Verifies a ListTrashResponse message.
+                 * @function verify
+                 * @memberof tilbo.ipc.v1.ListTrashResponse
+                 * @static
+                 * @param {Object.<string,*>} message Plain object to verify
+                 * @returns {string|null} `null` if valid, otherwise the reason why it is not
+                 */
+                ListTrashResponse.verify = function verify(message) {
+                    if (typeof message !== "object" || message === null)
+                        return "object expected";
+                    if (message.entries != null && message.hasOwnProperty("entries")) {
+                        if (!Array.isArray(message.entries))
+                            return "entries: array expected";
+                        for (let i = 0; i < message.entries.length; ++i) {
+                            let error = $root.tilbo.ipc.v1.TrashEntry.verify(message.entries[i]);
+                            if (error)
+                                return "entries." + error;
+                        }
+                    }
+                    return null;
+                };
+
+                /**
+                 * Creates a ListTrashResponse message from a plain object. Also converts values to their respective internal types.
+                 * @function fromObject
+                 * @memberof tilbo.ipc.v1.ListTrashResponse
+                 * @static
+                 * @param {Object.<string,*>} object Plain object
+                 * @returns {tilbo.ipc.v1.ListTrashResponse} ListTrashResponse
+                 */
+                ListTrashResponse.fromObject = function fromObject(object) {
+                    if (object instanceof $root.tilbo.ipc.v1.ListTrashResponse)
+                        return object;
+                    let message = new $root.tilbo.ipc.v1.ListTrashResponse();
+                    if (object.entries) {
+                        if (!Array.isArray(object.entries))
+                            throw TypeError(".tilbo.ipc.v1.ListTrashResponse.entries: array expected");
+                        message.entries = [];
+                        for (let i = 0; i < object.entries.length; ++i) {
+                            if (typeof object.entries[i] !== "object")
+                                throw TypeError(".tilbo.ipc.v1.ListTrashResponse.entries: object expected");
+                            message.entries[i] = $root.tilbo.ipc.v1.TrashEntry.fromObject(object.entries[i]);
+                        }
+                    }
+                    return message;
+                };
+
+                /**
+                 * Creates a plain object from a ListTrashResponse message. Also converts values to other types if specified.
+                 * @function toObject
+                 * @memberof tilbo.ipc.v1.ListTrashResponse
+                 * @static
+                 * @param {tilbo.ipc.v1.ListTrashResponse} message ListTrashResponse
+                 * @param {$protobuf.IConversionOptions} [options] Conversion options
+                 * @returns {Object.<string,*>} Plain object
+                 */
+                ListTrashResponse.toObject = function toObject(message, options) {
+                    if (!options)
+                        options = {};
+                    let object = {};
+                    if (options.arrays || options.defaults)
+                        object.entries = [];
+                    if (message.entries && message.entries.length) {
+                        object.entries = [];
+                        for (let j = 0; j < message.entries.length; ++j)
+                            object.entries[j] = $root.tilbo.ipc.v1.TrashEntry.toObject(message.entries[j], options);
+                    }
+                    return object;
+                };
+
+                /**
+                 * Converts this ListTrashResponse to JSON.
+                 * @function toJSON
+                 * @memberof tilbo.ipc.v1.ListTrashResponse
+                 * @instance
+                 * @returns {Object.<string,*>} JSON object
+                 */
+                ListTrashResponse.prototype.toJSON = function toJSON() {
+                    return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+                };
+
+                /**
+                 * Gets the default type url for ListTrashResponse
+                 * @function getTypeUrl
+                 * @memberof tilbo.ipc.v1.ListTrashResponse
+                 * @static
+                 * @param {string} [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+                 * @returns {string} The default type url
+                 */
+                ListTrashResponse.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
+                    if (typeUrlPrefix === undefined) {
+                        typeUrlPrefix = "type.googleapis.com";
+                    }
+                    return typeUrlPrefix + "/tilbo.ipc.v1.ListTrashResponse";
+                };
+
+                return ListTrashResponse;
+            })();
+
+            v1.RestoreTrashRequest = (function() {
+
+                /**
+                 * Properties of a RestoreTrashRequest.
+                 * @memberof tilbo.ipc.v1
+                 * @interface IRestoreTrashRequest
+                 * @property {string|null} [trashName] RestoreTrashRequest trashName
+                 */
+
+                /**
+                 * Constructs a new RestoreTrashRequest.
+                 * @memberof tilbo.ipc.v1
+                 * @classdesc Represents a RestoreTrashRequest.
+                 * @implements IRestoreTrashRequest
+                 * @constructor
+                 * @param {tilbo.ipc.v1.IRestoreTrashRequest=} [properties] Properties to set
+                 */
+                function RestoreTrashRequest(properties) {
+                    if (properties)
+                        for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+                            if (properties[keys[i]] != null)
+                                this[keys[i]] = properties[keys[i]];
+                }
+
+                /**
+                 * RestoreTrashRequest trashName.
+                 * @member {string} trashName
+                 * @memberof tilbo.ipc.v1.RestoreTrashRequest
+                 * @instance
+                 */
+                RestoreTrashRequest.prototype.trashName = "";
+
+                /**
+                 * Creates a new RestoreTrashRequest instance using the specified properties.
+                 * @function create
+                 * @memberof tilbo.ipc.v1.RestoreTrashRequest
+                 * @static
+                 * @param {tilbo.ipc.v1.IRestoreTrashRequest=} [properties] Properties to set
+                 * @returns {tilbo.ipc.v1.RestoreTrashRequest} RestoreTrashRequest instance
+                 */
+                RestoreTrashRequest.create = function create(properties) {
+                    return new RestoreTrashRequest(properties);
+                };
+
+                /**
+                 * Encodes the specified RestoreTrashRequest message. Does not implicitly {@link tilbo.ipc.v1.RestoreTrashRequest.verify|verify} messages.
+                 * @function encode
+                 * @memberof tilbo.ipc.v1.RestoreTrashRequest
+                 * @static
+                 * @param {tilbo.ipc.v1.IRestoreTrashRequest} message RestoreTrashRequest message or plain object to encode
+                 * @param {$protobuf.Writer} [writer] Writer to encode to
+                 * @returns {$protobuf.Writer} Writer
+                 */
+                RestoreTrashRequest.encode = function encode(message, writer) {
+                    if (!writer)
+                        writer = $Writer.create();
+                    if (message.trashName != null && Object.hasOwnProperty.call(message, "trashName"))
+                        writer.uint32(/* id 1, wireType 2 =*/10).string(message.trashName);
+                    return writer;
+                };
+
+                /**
+                 * Encodes the specified RestoreTrashRequest message, length delimited. Does not implicitly {@link tilbo.ipc.v1.RestoreTrashRequest.verify|verify} messages.
+                 * @function encodeDelimited
+                 * @memberof tilbo.ipc.v1.RestoreTrashRequest
+                 * @static
+                 * @param {tilbo.ipc.v1.IRestoreTrashRequest} message RestoreTrashRequest message or plain object to encode
+                 * @param {$protobuf.Writer} [writer] Writer to encode to
+                 * @returns {$protobuf.Writer} Writer
+                 */
+                RestoreTrashRequest.encodeDelimited = function encodeDelimited(message, writer) {
+                    return this.encode(message, writer).ldelim();
+                };
+
+                /**
+                 * Decodes a RestoreTrashRequest message from the specified reader or buffer.
+                 * @function decode
+                 * @memberof tilbo.ipc.v1.RestoreTrashRequest
+                 * @static
+                 * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+                 * @param {number} [length] Message length if known beforehand
+                 * @returns {tilbo.ipc.v1.RestoreTrashRequest} RestoreTrashRequest
+                 * @throws {Error} If the payload is not a reader or valid buffer
+                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                 */
+                RestoreTrashRequest.decode = function decode(reader, length, error) {
+                    if (!(reader instanceof $Reader))
+                        reader = $Reader.create(reader);
+                    let end = length === undefined ? reader.len : reader.pos + length, message = new $root.tilbo.ipc.v1.RestoreTrashRequest();
+                    while (reader.pos < end) {
+                        let tag = reader.uint32();
+                        if (tag === error)
+                            break;
+                        switch (tag >>> 3) {
+                        case 1: {
+                                message.trashName = reader.string();
+                                break;
+                            }
+                        default:
+                            reader.skipType(tag & 7);
+                            break;
+                        }
+                    }
+                    return message;
+                };
+
+                /**
+                 * Decodes a RestoreTrashRequest message from the specified reader or buffer, length delimited.
+                 * @function decodeDelimited
+                 * @memberof tilbo.ipc.v1.RestoreTrashRequest
+                 * @static
+                 * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+                 * @returns {tilbo.ipc.v1.RestoreTrashRequest} RestoreTrashRequest
+                 * @throws {Error} If the payload is not a reader or valid buffer
+                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                 */
+                RestoreTrashRequest.decodeDelimited = function decodeDelimited(reader) {
+                    if (!(reader instanceof $Reader))
+                        reader = new $Reader(reader);
+                    return this.decode(reader, reader.uint32());
+                };
+
+                /**
+                 * Verifies a RestoreTrashRequest message.
+                 * @function verify
+                 * @memberof tilbo.ipc.v1.RestoreTrashRequest
+                 * @static
+                 * @param {Object.<string,*>} message Plain object to verify
+                 * @returns {string|null} `null` if valid, otherwise the reason why it is not
+                 */
+                RestoreTrashRequest.verify = function verify(message) {
+                    if (typeof message !== "object" || message === null)
+                        return "object expected";
+                    if (message.trashName != null && message.hasOwnProperty("trashName"))
+                        if (!$util.isString(message.trashName))
+                            return "trashName: string expected";
+                    return null;
+                };
+
+                /**
+                 * Creates a RestoreTrashRequest message from a plain object. Also converts values to their respective internal types.
+                 * @function fromObject
+                 * @memberof tilbo.ipc.v1.RestoreTrashRequest
+                 * @static
+                 * @param {Object.<string,*>} object Plain object
+                 * @returns {tilbo.ipc.v1.RestoreTrashRequest} RestoreTrashRequest
+                 */
+                RestoreTrashRequest.fromObject = function fromObject(object) {
+                    if (object instanceof $root.tilbo.ipc.v1.RestoreTrashRequest)
+                        return object;
+                    let message = new $root.tilbo.ipc.v1.RestoreTrashRequest();
+                    if (object.trashName != null)
+                        message.trashName = String(object.trashName);
+                    return message;
+                };
+
+                /**
+                 * Creates a plain object from a RestoreTrashRequest message. Also converts values to other types if specified.
+                 * @function toObject
+                 * @memberof tilbo.ipc.v1.RestoreTrashRequest
+                 * @static
+                 * @param {tilbo.ipc.v1.RestoreTrashRequest} message RestoreTrashRequest
+                 * @param {$protobuf.IConversionOptions} [options] Conversion options
+                 * @returns {Object.<string,*>} Plain object
+                 */
+                RestoreTrashRequest.toObject = function toObject(message, options) {
+                    if (!options)
+                        options = {};
+                    let object = {};
+                    if (options.defaults)
+                        object.trashName = "";
+                    if (message.trashName != null && message.hasOwnProperty("trashName"))
+                        object.trashName = message.trashName;
+                    return object;
+                };
+
+                /**
+                 * Converts this RestoreTrashRequest to JSON.
+                 * @function toJSON
+                 * @memberof tilbo.ipc.v1.RestoreTrashRequest
+                 * @instance
+                 * @returns {Object.<string,*>} JSON object
+                 */
+                RestoreTrashRequest.prototype.toJSON = function toJSON() {
+                    return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+                };
+
+                /**
+                 * Gets the default type url for RestoreTrashRequest
+                 * @function getTypeUrl
+                 * @memberof tilbo.ipc.v1.RestoreTrashRequest
+                 * @static
+                 * @param {string} [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+                 * @returns {string} The default type url
+                 */
+                RestoreTrashRequest.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
+                    if (typeUrlPrefix === undefined) {
+                        typeUrlPrefix = "type.googleapis.com";
+                    }
+                    return typeUrlPrefix + "/tilbo.ipc.v1.RestoreTrashRequest";
+                };
+
+                return RestoreTrashRequest;
+            })();
+
+            v1.RestoreTrashResponse = (function() {
+
+                /**
+                 * Properties of a RestoreTrashResponse.
+                 * @memberof tilbo.ipc.v1
+                 * @interface IRestoreTrashResponse
+                 */
+
+                /**
+                 * Constructs a new RestoreTrashResponse.
+                 * @memberof tilbo.ipc.v1
+                 * @classdesc Represents a RestoreTrashResponse.
+                 * @implements IRestoreTrashResponse
+                 * @constructor
+                 * @param {tilbo.ipc.v1.IRestoreTrashResponse=} [properties] Properties to set
+                 */
+                function RestoreTrashResponse(properties) {
+                    if (properties)
+                        for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+                            if (properties[keys[i]] != null)
+                                this[keys[i]] = properties[keys[i]];
+                }
+
+                /**
+                 * Creates a new RestoreTrashResponse instance using the specified properties.
+                 * @function create
+                 * @memberof tilbo.ipc.v1.RestoreTrashResponse
+                 * @static
+                 * @param {tilbo.ipc.v1.IRestoreTrashResponse=} [properties] Properties to set
+                 * @returns {tilbo.ipc.v1.RestoreTrashResponse} RestoreTrashResponse instance
+                 */
+                RestoreTrashResponse.create = function create(properties) {
+                    return new RestoreTrashResponse(properties);
+                };
+
+                /**
+                 * Encodes the specified RestoreTrashResponse message. Does not implicitly {@link tilbo.ipc.v1.RestoreTrashResponse.verify|verify} messages.
+                 * @function encode
+                 * @memberof tilbo.ipc.v1.RestoreTrashResponse
+                 * @static
+                 * @param {tilbo.ipc.v1.IRestoreTrashResponse} message RestoreTrashResponse message or plain object to encode
+                 * @param {$protobuf.Writer} [writer] Writer to encode to
+                 * @returns {$protobuf.Writer} Writer
+                 */
+                RestoreTrashResponse.encode = function encode(message, writer) {
+                    if (!writer)
+                        writer = $Writer.create();
+                    return writer;
+                };
+
+                /**
+                 * Encodes the specified RestoreTrashResponse message, length delimited. Does not implicitly {@link tilbo.ipc.v1.RestoreTrashResponse.verify|verify} messages.
+                 * @function encodeDelimited
+                 * @memberof tilbo.ipc.v1.RestoreTrashResponse
+                 * @static
+                 * @param {tilbo.ipc.v1.IRestoreTrashResponse} message RestoreTrashResponse message or plain object to encode
+                 * @param {$protobuf.Writer} [writer] Writer to encode to
+                 * @returns {$protobuf.Writer} Writer
+                 */
+                RestoreTrashResponse.encodeDelimited = function encodeDelimited(message, writer) {
+                    return this.encode(message, writer).ldelim();
+                };
+
+                /**
+                 * Decodes a RestoreTrashResponse message from the specified reader or buffer.
+                 * @function decode
+                 * @memberof tilbo.ipc.v1.RestoreTrashResponse
+                 * @static
+                 * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+                 * @param {number} [length] Message length if known beforehand
+                 * @returns {tilbo.ipc.v1.RestoreTrashResponse} RestoreTrashResponse
+                 * @throws {Error} If the payload is not a reader or valid buffer
+                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                 */
+                RestoreTrashResponse.decode = function decode(reader, length, error) {
+                    if (!(reader instanceof $Reader))
+                        reader = $Reader.create(reader);
+                    let end = length === undefined ? reader.len : reader.pos + length, message = new $root.tilbo.ipc.v1.RestoreTrashResponse();
+                    while (reader.pos < end) {
+                        let tag = reader.uint32();
+                        if (tag === error)
+                            break;
+                        switch (tag >>> 3) {
+                        default:
+                            reader.skipType(tag & 7);
+                            break;
+                        }
+                    }
+                    return message;
+                };
+
+                /**
+                 * Decodes a RestoreTrashResponse message from the specified reader or buffer, length delimited.
+                 * @function decodeDelimited
+                 * @memberof tilbo.ipc.v1.RestoreTrashResponse
+                 * @static
+                 * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+                 * @returns {tilbo.ipc.v1.RestoreTrashResponse} RestoreTrashResponse
+                 * @throws {Error} If the payload is not a reader or valid buffer
+                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                 */
+                RestoreTrashResponse.decodeDelimited = function decodeDelimited(reader) {
+                    if (!(reader instanceof $Reader))
+                        reader = new $Reader(reader);
+                    return this.decode(reader, reader.uint32());
+                };
+
+                /**
+                 * Verifies a RestoreTrashResponse message.
+                 * @function verify
+                 * @memberof tilbo.ipc.v1.RestoreTrashResponse
+                 * @static
+                 * @param {Object.<string,*>} message Plain object to verify
+                 * @returns {string|null} `null` if valid, otherwise the reason why it is not
+                 */
+                RestoreTrashResponse.verify = function verify(message) {
+                    if (typeof message !== "object" || message === null)
+                        return "object expected";
+                    return null;
+                };
+
+                /**
+                 * Creates a RestoreTrashResponse message from a plain object. Also converts values to their respective internal types.
+                 * @function fromObject
+                 * @memberof tilbo.ipc.v1.RestoreTrashResponse
+                 * @static
+                 * @param {Object.<string,*>} object Plain object
+                 * @returns {tilbo.ipc.v1.RestoreTrashResponse} RestoreTrashResponse
+                 */
+                RestoreTrashResponse.fromObject = function fromObject(object) {
+                    if (object instanceof $root.tilbo.ipc.v1.RestoreTrashResponse)
+                        return object;
+                    return new $root.tilbo.ipc.v1.RestoreTrashResponse();
+                };
+
+                /**
+                 * Creates a plain object from a RestoreTrashResponse message. Also converts values to other types if specified.
+                 * @function toObject
+                 * @memberof tilbo.ipc.v1.RestoreTrashResponse
+                 * @static
+                 * @param {tilbo.ipc.v1.RestoreTrashResponse} message RestoreTrashResponse
+                 * @param {$protobuf.IConversionOptions} [options] Conversion options
+                 * @returns {Object.<string,*>} Plain object
+                 */
+                RestoreTrashResponse.toObject = function toObject() {
+                    return {};
+                };
+
+                /**
+                 * Converts this RestoreTrashResponse to JSON.
+                 * @function toJSON
+                 * @memberof tilbo.ipc.v1.RestoreTrashResponse
+                 * @instance
+                 * @returns {Object.<string,*>} JSON object
+                 */
+                RestoreTrashResponse.prototype.toJSON = function toJSON() {
+                    return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+                };
+
+                /**
+                 * Gets the default type url for RestoreTrashResponse
+                 * @function getTypeUrl
+                 * @memberof tilbo.ipc.v1.RestoreTrashResponse
+                 * @static
+                 * @param {string} [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+                 * @returns {string} The default type url
+                 */
+                RestoreTrashResponse.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
+                    if (typeUrlPrefix === undefined) {
+                        typeUrlPrefix = "type.googleapis.com";
+                    }
+                    return typeUrlPrefix + "/tilbo.ipc.v1.RestoreTrashResponse";
+                };
+
+                return RestoreTrashResponse;
+            })();
+
+            v1.EmptyTrashRequest = (function() {
+
+                /**
+                 * Properties of an EmptyTrashRequest.
+                 * @memberof tilbo.ipc.v1
+                 * @interface IEmptyTrashRequest
+                 */
+
+                /**
+                 * Constructs a new EmptyTrashRequest.
+                 * @memberof tilbo.ipc.v1
+                 * @classdesc Represents an EmptyTrashRequest.
+                 * @implements IEmptyTrashRequest
+                 * @constructor
+                 * @param {tilbo.ipc.v1.IEmptyTrashRequest=} [properties] Properties to set
+                 */
+                function EmptyTrashRequest(properties) {
+                    if (properties)
+                        for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+                            if (properties[keys[i]] != null)
+                                this[keys[i]] = properties[keys[i]];
+                }
+
+                /**
+                 * Creates a new EmptyTrashRequest instance using the specified properties.
+                 * @function create
+                 * @memberof tilbo.ipc.v1.EmptyTrashRequest
+                 * @static
+                 * @param {tilbo.ipc.v1.IEmptyTrashRequest=} [properties] Properties to set
+                 * @returns {tilbo.ipc.v1.EmptyTrashRequest} EmptyTrashRequest instance
+                 */
+                EmptyTrashRequest.create = function create(properties) {
+                    return new EmptyTrashRequest(properties);
+                };
+
+                /**
+                 * Encodes the specified EmptyTrashRequest message. Does not implicitly {@link tilbo.ipc.v1.EmptyTrashRequest.verify|verify} messages.
+                 * @function encode
+                 * @memberof tilbo.ipc.v1.EmptyTrashRequest
+                 * @static
+                 * @param {tilbo.ipc.v1.IEmptyTrashRequest} message EmptyTrashRequest message or plain object to encode
+                 * @param {$protobuf.Writer} [writer] Writer to encode to
+                 * @returns {$protobuf.Writer} Writer
+                 */
+                EmptyTrashRequest.encode = function encode(message, writer) {
+                    if (!writer)
+                        writer = $Writer.create();
+                    return writer;
+                };
+
+                /**
+                 * Encodes the specified EmptyTrashRequest message, length delimited. Does not implicitly {@link tilbo.ipc.v1.EmptyTrashRequest.verify|verify} messages.
+                 * @function encodeDelimited
+                 * @memberof tilbo.ipc.v1.EmptyTrashRequest
+                 * @static
+                 * @param {tilbo.ipc.v1.IEmptyTrashRequest} message EmptyTrashRequest message or plain object to encode
+                 * @param {$protobuf.Writer} [writer] Writer to encode to
+                 * @returns {$protobuf.Writer} Writer
+                 */
+                EmptyTrashRequest.encodeDelimited = function encodeDelimited(message, writer) {
+                    return this.encode(message, writer).ldelim();
+                };
+
+                /**
+                 * Decodes an EmptyTrashRequest message from the specified reader or buffer.
+                 * @function decode
+                 * @memberof tilbo.ipc.v1.EmptyTrashRequest
+                 * @static
+                 * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+                 * @param {number} [length] Message length if known beforehand
+                 * @returns {tilbo.ipc.v1.EmptyTrashRequest} EmptyTrashRequest
+                 * @throws {Error} If the payload is not a reader or valid buffer
+                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                 */
+                EmptyTrashRequest.decode = function decode(reader, length, error) {
+                    if (!(reader instanceof $Reader))
+                        reader = $Reader.create(reader);
+                    let end = length === undefined ? reader.len : reader.pos + length, message = new $root.tilbo.ipc.v1.EmptyTrashRequest();
+                    while (reader.pos < end) {
+                        let tag = reader.uint32();
+                        if (tag === error)
+                            break;
+                        switch (tag >>> 3) {
+                        default:
+                            reader.skipType(tag & 7);
+                            break;
+                        }
+                    }
+                    return message;
+                };
+
+                /**
+                 * Decodes an EmptyTrashRequest message from the specified reader or buffer, length delimited.
+                 * @function decodeDelimited
+                 * @memberof tilbo.ipc.v1.EmptyTrashRequest
+                 * @static
+                 * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+                 * @returns {tilbo.ipc.v1.EmptyTrashRequest} EmptyTrashRequest
+                 * @throws {Error} If the payload is not a reader or valid buffer
+                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                 */
+                EmptyTrashRequest.decodeDelimited = function decodeDelimited(reader) {
+                    if (!(reader instanceof $Reader))
+                        reader = new $Reader(reader);
+                    return this.decode(reader, reader.uint32());
+                };
+
+                /**
+                 * Verifies an EmptyTrashRequest message.
+                 * @function verify
+                 * @memberof tilbo.ipc.v1.EmptyTrashRequest
+                 * @static
+                 * @param {Object.<string,*>} message Plain object to verify
+                 * @returns {string|null} `null` if valid, otherwise the reason why it is not
+                 */
+                EmptyTrashRequest.verify = function verify(message) {
+                    if (typeof message !== "object" || message === null)
+                        return "object expected";
+                    return null;
+                };
+
+                /**
+                 * Creates an EmptyTrashRequest message from a plain object. Also converts values to their respective internal types.
+                 * @function fromObject
+                 * @memberof tilbo.ipc.v1.EmptyTrashRequest
+                 * @static
+                 * @param {Object.<string,*>} object Plain object
+                 * @returns {tilbo.ipc.v1.EmptyTrashRequest} EmptyTrashRequest
+                 */
+                EmptyTrashRequest.fromObject = function fromObject(object) {
+                    if (object instanceof $root.tilbo.ipc.v1.EmptyTrashRequest)
+                        return object;
+                    return new $root.tilbo.ipc.v1.EmptyTrashRequest();
+                };
+
+                /**
+                 * Creates a plain object from an EmptyTrashRequest message. Also converts values to other types if specified.
+                 * @function toObject
+                 * @memberof tilbo.ipc.v1.EmptyTrashRequest
+                 * @static
+                 * @param {tilbo.ipc.v1.EmptyTrashRequest} message EmptyTrashRequest
+                 * @param {$protobuf.IConversionOptions} [options] Conversion options
+                 * @returns {Object.<string,*>} Plain object
+                 */
+                EmptyTrashRequest.toObject = function toObject() {
+                    return {};
+                };
+
+                /**
+                 * Converts this EmptyTrashRequest to JSON.
+                 * @function toJSON
+                 * @memberof tilbo.ipc.v1.EmptyTrashRequest
+                 * @instance
+                 * @returns {Object.<string,*>} JSON object
+                 */
+                EmptyTrashRequest.prototype.toJSON = function toJSON() {
+                    return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+                };
+
+                /**
+                 * Gets the default type url for EmptyTrashRequest
+                 * @function getTypeUrl
+                 * @memberof tilbo.ipc.v1.EmptyTrashRequest
+                 * @static
+                 * @param {string} [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+                 * @returns {string} The default type url
+                 */
+                EmptyTrashRequest.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
+                    if (typeUrlPrefix === undefined) {
+                        typeUrlPrefix = "type.googleapis.com";
+                    }
+                    return typeUrlPrefix + "/tilbo.ipc.v1.EmptyTrashRequest";
+                };
+
+                return EmptyTrashRequest;
+            })();
+
+            v1.EmptyTrashResponse = (function() {
+
+                /**
+                 * Properties of an EmptyTrashResponse.
+                 * @memberof tilbo.ipc.v1
+                 * @interface IEmptyTrashResponse
+                 */
+
+                /**
+                 * Constructs a new EmptyTrashResponse.
+                 * @memberof tilbo.ipc.v1
+                 * @classdesc Represents an EmptyTrashResponse.
+                 * @implements IEmptyTrashResponse
+                 * @constructor
+                 * @param {tilbo.ipc.v1.IEmptyTrashResponse=} [properties] Properties to set
+                 */
+                function EmptyTrashResponse(properties) {
+                    if (properties)
+                        for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+                            if (properties[keys[i]] != null)
+                                this[keys[i]] = properties[keys[i]];
+                }
+
+                /**
+                 * Creates a new EmptyTrashResponse instance using the specified properties.
+                 * @function create
+                 * @memberof tilbo.ipc.v1.EmptyTrashResponse
+                 * @static
+                 * @param {tilbo.ipc.v1.IEmptyTrashResponse=} [properties] Properties to set
+                 * @returns {tilbo.ipc.v1.EmptyTrashResponse} EmptyTrashResponse instance
+                 */
+                EmptyTrashResponse.create = function create(properties) {
+                    return new EmptyTrashResponse(properties);
+                };
+
+                /**
+                 * Encodes the specified EmptyTrashResponse message. Does not implicitly {@link tilbo.ipc.v1.EmptyTrashResponse.verify|verify} messages.
+                 * @function encode
+                 * @memberof tilbo.ipc.v1.EmptyTrashResponse
+                 * @static
+                 * @param {tilbo.ipc.v1.IEmptyTrashResponse} message EmptyTrashResponse message or plain object to encode
+                 * @param {$protobuf.Writer} [writer] Writer to encode to
+                 * @returns {$protobuf.Writer} Writer
+                 */
+                EmptyTrashResponse.encode = function encode(message, writer) {
+                    if (!writer)
+                        writer = $Writer.create();
+                    return writer;
+                };
+
+                /**
+                 * Encodes the specified EmptyTrashResponse message, length delimited. Does not implicitly {@link tilbo.ipc.v1.EmptyTrashResponse.verify|verify} messages.
+                 * @function encodeDelimited
+                 * @memberof tilbo.ipc.v1.EmptyTrashResponse
+                 * @static
+                 * @param {tilbo.ipc.v1.IEmptyTrashResponse} message EmptyTrashResponse message or plain object to encode
+                 * @param {$protobuf.Writer} [writer] Writer to encode to
+                 * @returns {$protobuf.Writer} Writer
+                 */
+                EmptyTrashResponse.encodeDelimited = function encodeDelimited(message, writer) {
+                    return this.encode(message, writer).ldelim();
+                };
+
+                /**
+                 * Decodes an EmptyTrashResponse message from the specified reader or buffer.
+                 * @function decode
+                 * @memberof tilbo.ipc.v1.EmptyTrashResponse
+                 * @static
+                 * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+                 * @param {number} [length] Message length if known beforehand
+                 * @returns {tilbo.ipc.v1.EmptyTrashResponse} EmptyTrashResponse
+                 * @throws {Error} If the payload is not a reader or valid buffer
+                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                 */
+                EmptyTrashResponse.decode = function decode(reader, length, error) {
+                    if (!(reader instanceof $Reader))
+                        reader = $Reader.create(reader);
+                    let end = length === undefined ? reader.len : reader.pos + length, message = new $root.tilbo.ipc.v1.EmptyTrashResponse();
+                    while (reader.pos < end) {
+                        let tag = reader.uint32();
+                        if (tag === error)
+                            break;
+                        switch (tag >>> 3) {
+                        default:
+                            reader.skipType(tag & 7);
+                            break;
+                        }
+                    }
+                    return message;
+                };
+
+                /**
+                 * Decodes an EmptyTrashResponse message from the specified reader or buffer, length delimited.
+                 * @function decodeDelimited
+                 * @memberof tilbo.ipc.v1.EmptyTrashResponse
+                 * @static
+                 * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+                 * @returns {tilbo.ipc.v1.EmptyTrashResponse} EmptyTrashResponse
+                 * @throws {Error} If the payload is not a reader or valid buffer
+                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                 */
+                EmptyTrashResponse.decodeDelimited = function decodeDelimited(reader) {
+                    if (!(reader instanceof $Reader))
+                        reader = new $Reader(reader);
+                    return this.decode(reader, reader.uint32());
+                };
+
+                /**
+                 * Verifies an EmptyTrashResponse message.
+                 * @function verify
+                 * @memberof tilbo.ipc.v1.EmptyTrashResponse
+                 * @static
+                 * @param {Object.<string,*>} message Plain object to verify
+                 * @returns {string|null} `null` if valid, otherwise the reason why it is not
+                 */
+                EmptyTrashResponse.verify = function verify(message) {
+                    if (typeof message !== "object" || message === null)
+                        return "object expected";
+                    return null;
+                };
+
+                /**
+                 * Creates an EmptyTrashResponse message from a plain object. Also converts values to their respective internal types.
+                 * @function fromObject
+                 * @memberof tilbo.ipc.v1.EmptyTrashResponse
+                 * @static
+                 * @param {Object.<string,*>} object Plain object
+                 * @returns {tilbo.ipc.v1.EmptyTrashResponse} EmptyTrashResponse
+                 */
+                EmptyTrashResponse.fromObject = function fromObject(object) {
+                    if (object instanceof $root.tilbo.ipc.v1.EmptyTrashResponse)
+                        return object;
+                    return new $root.tilbo.ipc.v1.EmptyTrashResponse();
+                };
+
+                /**
+                 * Creates a plain object from an EmptyTrashResponse message. Also converts values to other types if specified.
+                 * @function toObject
+                 * @memberof tilbo.ipc.v1.EmptyTrashResponse
+                 * @static
+                 * @param {tilbo.ipc.v1.EmptyTrashResponse} message EmptyTrashResponse
+                 * @param {$protobuf.IConversionOptions} [options] Conversion options
+                 * @returns {Object.<string,*>} Plain object
+                 */
+                EmptyTrashResponse.toObject = function toObject() {
+                    return {};
+                };
+
+                /**
+                 * Converts this EmptyTrashResponse to JSON.
+                 * @function toJSON
+                 * @memberof tilbo.ipc.v1.EmptyTrashResponse
+                 * @instance
+                 * @returns {Object.<string,*>} JSON object
+                 */
+                EmptyTrashResponse.prototype.toJSON = function toJSON() {
+                    return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+                };
+
+                /**
+                 * Gets the default type url for EmptyTrashResponse
+                 * @function getTypeUrl
+                 * @memberof tilbo.ipc.v1.EmptyTrashResponse
+                 * @static
+                 * @param {string} [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+                 * @returns {string} The default type url
+                 */
+                EmptyTrashResponse.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
+                    if (typeUrlPrefix === undefined) {
+                        typeUrlPrefix = "type.googleapis.com";
+                    }
+                    return typeUrlPrefix + "/tilbo.ipc.v1.EmptyTrashResponse";
+                };
+
+                return EmptyTrashResponse;
+            })();
+
+            v1.AppEntry = (function() {
+
+                /**
+                 * Properties of an AppEntry.
+                 * @memberof tilbo.ipc.v1
+                 * @interface IAppEntry
+                 * @property {string|null} [id] AppEntry id
+                 * @property {string|null} [name] AppEntry name
+                 * @property {string|null} [iconName] AppEntry iconName
+                 */
+
+                /**
+                 * Constructs a new AppEntry.
+                 * @memberof tilbo.ipc.v1
+                 * @classdesc Represents an AppEntry.
+                 * @implements IAppEntry
+                 * @constructor
+                 * @param {tilbo.ipc.v1.IAppEntry=} [properties] Properties to set
+                 */
+                function AppEntry(properties) {
+                    if (properties)
+                        for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+                            if (properties[keys[i]] != null)
+                                this[keys[i]] = properties[keys[i]];
+                }
+
+                /**
+                 * AppEntry id.
+                 * @member {string} id
+                 * @memberof tilbo.ipc.v1.AppEntry
+                 * @instance
+                 */
+                AppEntry.prototype.id = "";
+
+                /**
+                 * AppEntry name.
+                 * @member {string} name
+                 * @memberof tilbo.ipc.v1.AppEntry
+                 * @instance
+                 */
+                AppEntry.prototype.name = "";
+
+                /**
+                 * AppEntry iconName.
+                 * @member {string} iconName
+                 * @memberof tilbo.ipc.v1.AppEntry
+                 * @instance
+                 */
+                AppEntry.prototype.iconName = "";
+
+                /**
+                 * Creates a new AppEntry instance using the specified properties.
+                 * @function create
+                 * @memberof tilbo.ipc.v1.AppEntry
+                 * @static
+                 * @param {tilbo.ipc.v1.IAppEntry=} [properties] Properties to set
+                 * @returns {tilbo.ipc.v1.AppEntry} AppEntry instance
+                 */
+                AppEntry.create = function create(properties) {
+                    return new AppEntry(properties);
+                };
+
+                /**
+                 * Encodes the specified AppEntry message. Does not implicitly {@link tilbo.ipc.v1.AppEntry.verify|verify} messages.
+                 * @function encode
+                 * @memberof tilbo.ipc.v1.AppEntry
+                 * @static
+                 * @param {tilbo.ipc.v1.IAppEntry} message AppEntry message or plain object to encode
+                 * @param {$protobuf.Writer} [writer] Writer to encode to
+                 * @returns {$protobuf.Writer} Writer
+                 */
+                AppEntry.encode = function encode(message, writer) {
+                    if (!writer)
+                        writer = $Writer.create();
+                    if (message.id != null && Object.hasOwnProperty.call(message, "id"))
+                        writer.uint32(/* id 1, wireType 2 =*/10).string(message.id);
+                    if (message.name != null && Object.hasOwnProperty.call(message, "name"))
+                        writer.uint32(/* id 2, wireType 2 =*/18).string(message.name);
+                    if (message.iconName != null && Object.hasOwnProperty.call(message, "iconName"))
+                        writer.uint32(/* id 3, wireType 2 =*/26).string(message.iconName);
+                    return writer;
+                };
+
+                /**
+                 * Encodes the specified AppEntry message, length delimited. Does not implicitly {@link tilbo.ipc.v1.AppEntry.verify|verify} messages.
+                 * @function encodeDelimited
+                 * @memberof tilbo.ipc.v1.AppEntry
+                 * @static
+                 * @param {tilbo.ipc.v1.IAppEntry} message AppEntry message or plain object to encode
+                 * @param {$protobuf.Writer} [writer] Writer to encode to
+                 * @returns {$protobuf.Writer} Writer
+                 */
+                AppEntry.encodeDelimited = function encodeDelimited(message, writer) {
+                    return this.encode(message, writer).ldelim();
+                };
+
+                /**
+                 * Decodes an AppEntry message from the specified reader or buffer.
+                 * @function decode
+                 * @memberof tilbo.ipc.v1.AppEntry
+                 * @static
+                 * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+                 * @param {number} [length] Message length if known beforehand
+                 * @returns {tilbo.ipc.v1.AppEntry} AppEntry
+                 * @throws {Error} If the payload is not a reader or valid buffer
+                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                 */
+                AppEntry.decode = function decode(reader, length, error) {
+                    if (!(reader instanceof $Reader))
+                        reader = $Reader.create(reader);
+                    let end = length === undefined ? reader.len : reader.pos + length, message = new $root.tilbo.ipc.v1.AppEntry();
+                    while (reader.pos < end) {
+                        let tag = reader.uint32();
+                        if (tag === error)
+                            break;
+                        switch (tag >>> 3) {
+                        case 1: {
+                                message.id = reader.string();
+                                break;
+                            }
+                        case 2: {
+                                message.name = reader.string();
+                                break;
+                            }
+                        case 3: {
+                                message.iconName = reader.string();
+                                break;
+                            }
+                        default:
+                            reader.skipType(tag & 7);
+                            break;
+                        }
+                    }
+                    return message;
+                };
+
+                /**
+                 * Decodes an AppEntry message from the specified reader or buffer, length delimited.
+                 * @function decodeDelimited
+                 * @memberof tilbo.ipc.v1.AppEntry
+                 * @static
+                 * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+                 * @returns {tilbo.ipc.v1.AppEntry} AppEntry
+                 * @throws {Error} If the payload is not a reader or valid buffer
+                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                 */
+                AppEntry.decodeDelimited = function decodeDelimited(reader) {
+                    if (!(reader instanceof $Reader))
+                        reader = new $Reader(reader);
+                    return this.decode(reader, reader.uint32());
+                };
+
+                /**
+                 * Verifies an AppEntry message.
+                 * @function verify
+                 * @memberof tilbo.ipc.v1.AppEntry
+                 * @static
+                 * @param {Object.<string,*>} message Plain object to verify
+                 * @returns {string|null} `null` if valid, otherwise the reason why it is not
+                 */
+                AppEntry.verify = function verify(message) {
+                    if (typeof message !== "object" || message === null)
+                        return "object expected";
+                    if (message.id != null && message.hasOwnProperty("id"))
+                        if (!$util.isString(message.id))
+                            return "id: string expected";
+                    if (message.name != null && message.hasOwnProperty("name"))
+                        if (!$util.isString(message.name))
+                            return "name: string expected";
+                    if (message.iconName != null && message.hasOwnProperty("iconName"))
+                        if (!$util.isString(message.iconName))
+                            return "iconName: string expected";
+                    return null;
+                };
+
+                /**
+                 * Creates an AppEntry message from a plain object. Also converts values to their respective internal types.
+                 * @function fromObject
+                 * @memberof tilbo.ipc.v1.AppEntry
+                 * @static
+                 * @param {Object.<string,*>} object Plain object
+                 * @returns {tilbo.ipc.v1.AppEntry} AppEntry
+                 */
+                AppEntry.fromObject = function fromObject(object) {
+                    if (object instanceof $root.tilbo.ipc.v1.AppEntry)
+                        return object;
+                    let message = new $root.tilbo.ipc.v1.AppEntry();
+                    if (object.id != null)
+                        message.id = String(object.id);
+                    if (object.name != null)
+                        message.name = String(object.name);
+                    if (object.iconName != null)
+                        message.iconName = String(object.iconName);
+                    return message;
+                };
+
+                /**
+                 * Creates a plain object from an AppEntry message. Also converts values to other types if specified.
+                 * @function toObject
+                 * @memberof tilbo.ipc.v1.AppEntry
+                 * @static
+                 * @param {tilbo.ipc.v1.AppEntry} message AppEntry
+                 * @param {$protobuf.IConversionOptions} [options] Conversion options
+                 * @returns {Object.<string,*>} Plain object
+                 */
+                AppEntry.toObject = function toObject(message, options) {
+                    if (!options)
+                        options = {};
+                    let object = {};
+                    if (options.defaults) {
+                        object.id = "";
+                        object.name = "";
+                        object.iconName = "";
+                    }
+                    if (message.id != null && message.hasOwnProperty("id"))
+                        object.id = message.id;
+                    if (message.name != null && message.hasOwnProperty("name"))
+                        object.name = message.name;
+                    if (message.iconName != null && message.hasOwnProperty("iconName"))
+                        object.iconName = message.iconName;
+                    return object;
+                };
+
+                /**
+                 * Converts this AppEntry to JSON.
+                 * @function toJSON
+                 * @memberof tilbo.ipc.v1.AppEntry
+                 * @instance
+                 * @returns {Object.<string,*>} JSON object
+                 */
+                AppEntry.prototype.toJSON = function toJSON() {
+                    return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+                };
+
+                /**
+                 * Gets the default type url for AppEntry
+                 * @function getTypeUrl
+                 * @memberof tilbo.ipc.v1.AppEntry
+                 * @static
+                 * @param {string} [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+                 * @returns {string} The default type url
+                 */
+                AppEntry.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
+                    if (typeUrlPrefix === undefined) {
+                        typeUrlPrefix = "type.googleapis.com";
+                    }
+                    return typeUrlPrefix + "/tilbo.ipc.v1.AppEntry";
+                };
+
+                return AppEntry;
+            })();
+
+            v1.ListAppsForFileRequest = (function() {
+
+                /**
+                 * Properties of a ListAppsForFileRequest.
+                 * @memberof tilbo.ipc.v1
+                 * @interface IListAppsForFileRequest
+                 * @property {string|null} [path] ListAppsForFileRequest path
+                 */
+
+                /**
+                 * Constructs a new ListAppsForFileRequest.
+                 * @memberof tilbo.ipc.v1
+                 * @classdesc Represents a ListAppsForFileRequest.
+                 * @implements IListAppsForFileRequest
+                 * @constructor
+                 * @param {tilbo.ipc.v1.IListAppsForFileRequest=} [properties] Properties to set
+                 */
+                function ListAppsForFileRequest(properties) {
+                    if (properties)
+                        for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+                            if (properties[keys[i]] != null)
+                                this[keys[i]] = properties[keys[i]];
+                }
+
+                /**
+                 * ListAppsForFileRequest path.
+                 * @member {string} path
+                 * @memberof tilbo.ipc.v1.ListAppsForFileRequest
+                 * @instance
+                 */
+                ListAppsForFileRequest.prototype.path = "";
+
+                /**
+                 * Creates a new ListAppsForFileRequest instance using the specified properties.
+                 * @function create
+                 * @memberof tilbo.ipc.v1.ListAppsForFileRequest
+                 * @static
+                 * @param {tilbo.ipc.v1.IListAppsForFileRequest=} [properties] Properties to set
+                 * @returns {tilbo.ipc.v1.ListAppsForFileRequest} ListAppsForFileRequest instance
+                 */
+                ListAppsForFileRequest.create = function create(properties) {
+                    return new ListAppsForFileRequest(properties);
+                };
+
+                /**
+                 * Encodes the specified ListAppsForFileRequest message. Does not implicitly {@link tilbo.ipc.v1.ListAppsForFileRequest.verify|verify} messages.
+                 * @function encode
+                 * @memberof tilbo.ipc.v1.ListAppsForFileRequest
+                 * @static
+                 * @param {tilbo.ipc.v1.IListAppsForFileRequest} message ListAppsForFileRequest message or plain object to encode
+                 * @param {$protobuf.Writer} [writer] Writer to encode to
+                 * @returns {$protobuf.Writer} Writer
+                 */
+                ListAppsForFileRequest.encode = function encode(message, writer) {
+                    if (!writer)
+                        writer = $Writer.create();
+                    if (message.path != null && Object.hasOwnProperty.call(message, "path"))
+                        writer.uint32(/* id 1, wireType 2 =*/10).string(message.path);
+                    return writer;
+                };
+
+                /**
+                 * Encodes the specified ListAppsForFileRequest message, length delimited. Does not implicitly {@link tilbo.ipc.v1.ListAppsForFileRequest.verify|verify} messages.
+                 * @function encodeDelimited
+                 * @memberof tilbo.ipc.v1.ListAppsForFileRequest
+                 * @static
+                 * @param {tilbo.ipc.v1.IListAppsForFileRequest} message ListAppsForFileRequest message or plain object to encode
+                 * @param {$protobuf.Writer} [writer] Writer to encode to
+                 * @returns {$protobuf.Writer} Writer
+                 */
+                ListAppsForFileRequest.encodeDelimited = function encodeDelimited(message, writer) {
+                    return this.encode(message, writer).ldelim();
+                };
+
+                /**
+                 * Decodes a ListAppsForFileRequest message from the specified reader or buffer.
+                 * @function decode
+                 * @memberof tilbo.ipc.v1.ListAppsForFileRequest
+                 * @static
+                 * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+                 * @param {number} [length] Message length if known beforehand
+                 * @returns {tilbo.ipc.v1.ListAppsForFileRequest} ListAppsForFileRequest
+                 * @throws {Error} If the payload is not a reader or valid buffer
+                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                 */
+                ListAppsForFileRequest.decode = function decode(reader, length, error) {
+                    if (!(reader instanceof $Reader))
+                        reader = $Reader.create(reader);
+                    let end = length === undefined ? reader.len : reader.pos + length, message = new $root.tilbo.ipc.v1.ListAppsForFileRequest();
+                    while (reader.pos < end) {
+                        let tag = reader.uint32();
+                        if (tag === error)
+                            break;
+                        switch (tag >>> 3) {
+                        case 1: {
+                                message.path = reader.string();
+                                break;
+                            }
+                        default:
+                            reader.skipType(tag & 7);
+                            break;
+                        }
+                    }
+                    return message;
+                };
+
+                /**
+                 * Decodes a ListAppsForFileRequest message from the specified reader or buffer, length delimited.
+                 * @function decodeDelimited
+                 * @memberof tilbo.ipc.v1.ListAppsForFileRequest
+                 * @static
+                 * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+                 * @returns {tilbo.ipc.v1.ListAppsForFileRequest} ListAppsForFileRequest
+                 * @throws {Error} If the payload is not a reader or valid buffer
+                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                 */
+                ListAppsForFileRequest.decodeDelimited = function decodeDelimited(reader) {
+                    if (!(reader instanceof $Reader))
+                        reader = new $Reader(reader);
+                    return this.decode(reader, reader.uint32());
+                };
+
+                /**
+                 * Verifies a ListAppsForFileRequest message.
+                 * @function verify
+                 * @memberof tilbo.ipc.v1.ListAppsForFileRequest
+                 * @static
+                 * @param {Object.<string,*>} message Plain object to verify
+                 * @returns {string|null} `null` if valid, otherwise the reason why it is not
+                 */
+                ListAppsForFileRequest.verify = function verify(message) {
+                    if (typeof message !== "object" || message === null)
+                        return "object expected";
+                    if (message.path != null && message.hasOwnProperty("path"))
+                        if (!$util.isString(message.path))
+                            return "path: string expected";
+                    return null;
+                };
+
+                /**
+                 * Creates a ListAppsForFileRequest message from a plain object. Also converts values to their respective internal types.
+                 * @function fromObject
+                 * @memberof tilbo.ipc.v1.ListAppsForFileRequest
+                 * @static
+                 * @param {Object.<string,*>} object Plain object
+                 * @returns {tilbo.ipc.v1.ListAppsForFileRequest} ListAppsForFileRequest
+                 */
+                ListAppsForFileRequest.fromObject = function fromObject(object) {
+                    if (object instanceof $root.tilbo.ipc.v1.ListAppsForFileRequest)
+                        return object;
+                    let message = new $root.tilbo.ipc.v1.ListAppsForFileRequest();
+                    if (object.path != null)
+                        message.path = String(object.path);
+                    return message;
+                };
+
+                /**
+                 * Creates a plain object from a ListAppsForFileRequest message. Also converts values to other types if specified.
+                 * @function toObject
+                 * @memberof tilbo.ipc.v1.ListAppsForFileRequest
+                 * @static
+                 * @param {tilbo.ipc.v1.ListAppsForFileRequest} message ListAppsForFileRequest
+                 * @param {$protobuf.IConversionOptions} [options] Conversion options
+                 * @returns {Object.<string,*>} Plain object
+                 */
+                ListAppsForFileRequest.toObject = function toObject(message, options) {
+                    if (!options)
+                        options = {};
+                    let object = {};
+                    if (options.defaults)
+                        object.path = "";
+                    if (message.path != null && message.hasOwnProperty("path"))
+                        object.path = message.path;
+                    return object;
+                };
+
+                /**
+                 * Converts this ListAppsForFileRequest to JSON.
+                 * @function toJSON
+                 * @memberof tilbo.ipc.v1.ListAppsForFileRequest
+                 * @instance
+                 * @returns {Object.<string,*>} JSON object
+                 */
+                ListAppsForFileRequest.prototype.toJSON = function toJSON() {
+                    return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+                };
+
+                /**
+                 * Gets the default type url for ListAppsForFileRequest
+                 * @function getTypeUrl
+                 * @memberof tilbo.ipc.v1.ListAppsForFileRequest
+                 * @static
+                 * @param {string} [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+                 * @returns {string} The default type url
+                 */
+                ListAppsForFileRequest.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
+                    if (typeUrlPrefix === undefined) {
+                        typeUrlPrefix = "type.googleapis.com";
+                    }
+                    return typeUrlPrefix + "/tilbo.ipc.v1.ListAppsForFileRequest";
+                };
+
+                return ListAppsForFileRequest;
+            })();
+
+            v1.ListAppsForFileResponse = (function() {
+
+                /**
+                 * Properties of a ListAppsForFileResponse.
+                 * @memberof tilbo.ipc.v1
+                 * @interface IListAppsForFileResponse
+                 * @property {Array.<tilbo.ipc.v1.IAppEntry>|null} [apps] ListAppsForFileResponse apps
+                 */
+
+                /**
+                 * Constructs a new ListAppsForFileResponse.
+                 * @memberof tilbo.ipc.v1
+                 * @classdesc Represents a ListAppsForFileResponse.
+                 * @implements IListAppsForFileResponse
+                 * @constructor
+                 * @param {tilbo.ipc.v1.IListAppsForFileResponse=} [properties] Properties to set
+                 */
+                function ListAppsForFileResponse(properties) {
+                    this.apps = [];
+                    if (properties)
+                        for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+                            if (properties[keys[i]] != null)
+                                this[keys[i]] = properties[keys[i]];
+                }
+
+                /**
+                 * ListAppsForFileResponse apps.
+                 * @member {Array.<tilbo.ipc.v1.IAppEntry>} apps
+                 * @memberof tilbo.ipc.v1.ListAppsForFileResponse
+                 * @instance
+                 */
+                ListAppsForFileResponse.prototype.apps = $util.emptyArray;
+
+                /**
+                 * Creates a new ListAppsForFileResponse instance using the specified properties.
+                 * @function create
+                 * @memberof tilbo.ipc.v1.ListAppsForFileResponse
+                 * @static
+                 * @param {tilbo.ipc.v1.IListAppsForFileResponse=} [properties] Properties to set
+                 * @returns {tilbo.ipc.v1.ListAppsForFileResponse} ListAppsForFileResponse instance
+                 */
+                ListAppsForFileResponse.create = function create(properties) {
+                    return new ListAppsForFileResponse(properties);
+                };
+
+                /**
+                 * Encodes the specified ListAppsForFileResponse message. Does not implicitly {@link tilbo.ipc.v1.ListAppsForFileResponse.verify|verify} messages.
+                 * @function encode
+                 * @memberof tilbo.ipc.v1.ListAppsForFileResponse
+                 * @static
+                 * @param {tilbo.ipc.v1.IListAppsForFileResponse} message ListAppsForFileResponse message or plain object to encode
+                 * @param {$protobuf.Writer} [writer] Writer to encode to
+                 * @returns {$protobuf.Writer} Writer
+                 */
+                ListAppsForFileResponse.encode = function encode(message, writer) {
+                    if (!writer)
+                        writer = $Writer.create();
+                    if (message.apps != null && message.apps.length)
+                        for (let i = 0; i < message.apps.length; ++i)
+                            $root.tilbo.ipc.v1.AppEntry.encode(message.apps[i], writer.uint32(/* id 1, wireType 2 =*/10).fork()).ldelim();
+                    return writer;
+                };
+
+                /**
+                 * Encodes the specified ListAppsForFileResponse message, length delimited. Does not implicitly {@link tilbo.ipc.v1.ListAppsForFileResponse.verify|verify} messages.
+                 * @function encodeDelimited
+                 * @memberof tilbo.ipc.v1.ListAppsForFileResponse
+                 * @static
+                 * @param {tilbo.ipc.v1.IListAppsForFileResponse} message ListAppsForFileResponse message or plain object to encode
+                 * @param {$protobuf.Writer} [writer] Writer to encode to
+                 * @returns {$protobuf.Writer} Writer
+                 */
+                ListAppsForFileResponse.encodeDelimited = function encodeDelimited(message, writer) {
+                    return this.encode(message, writer).ldelim();
+                };
+
+                /**
+                 * Decodes a ListAppsForFileResponse message from the specified reader or buffer.
+                 * @function decode
+                 * @memberof tilbo.ipc.v1.ListAppsForFileResponse
+                 * @static
+                 * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+                 * @param {number} [length] Message length if known beforehand
+                 * @returns {tilbo.ipc.v1.ListAppsForFileResponse} ListAppsForFileResponse
+                 * @throws {Error} If the payload is not a reader or valid buffer
+                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                 */
+                ListAppsForFileResponse.decode = function decode(reader, length, error) {
+                    if (!(reader instanceof $Reader))
+                        reader = $Reader.create(reader);
+                    let end = length === undefined ? reader.len : reader.pos + length, message = new $root.tilbo.ipc.v1.ListAppsForFileResponse();
+                    while (reader.pos < end) {
+                        let tag = reader.uint32();
+                        if (tag === error)
+                            break;
+                        switch (tag >>> 3) {
+                        case 1: {
+                                if (!(message.apps && message.apps.length))
+                                    message.apps = [];
+                                message.apps.push($root.tilbo.ipc.v1.AppEntry.decode(reader, reader.uint32()));
+                                break;
+                            }
+                        default:
+                            reader.skipType(tag & 7);
+                            break;
+                        }
+                    }
+                    return message;
+                };
+
+                /**
+                 * Decodes a ListAppsForFileResponse message from the specified reader or buffer, length delimited.
+                 * @function decodeDelimited
+                 * @memberof tilbo.ipc.v1.ListAppsForFileResponse
+                 * @static
+                 * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+                 * @returns {tilbo.ipc.v1.ListAppsForFileResponse} ListAppsForFileResponse
+                 * @throws {Error} If the payload is not a reader or valid buffer
+                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                 */
+                ListAppsForFileResponse.decodeDelimited = function decodeDelimited(reader) {
+                    if (!(reader instanceof $Reader))
+                        reader = new $Reader(reader);
+                    return this.decode(reader, reader.uint32());
+                };
+
+                /**
+                 * Verifies a ListAppsForFileResponse message.
+                 * @function verify
+                 * @memberof tilbo.ipc.v1.ListAppsForFileResponse
+                 * @static
+                 * @param {Object.<string,*>} message Plain object to verify
+                 * @returns {string|null} `null` if valid, otherwise the reason why it is not
+                 */
+                ListAppsForFileResponse.verify = function verify(message) {
+                    if (typeof message !== "object" || message === null)
+                        return "object expected";
+                    if (message.apps != null && message.hasOwnProperty("apps")) {
+                        if (!Array.isArray(message.apps))
+                            return "apps: array expected";
+                        for (let i = 0; i < message.apps.length; ++i) {
+                            let error = $root.tilbo.ipc.v1.AppEntry.verify(message.apps[i]);
+                            if (error)
+                                return "apps." + error;
+                        }
+                    }
+                    return null;
+                };
+
+                /**
+                 * Creates a ListAppsForFileResponse message from a plain object. Also converts values to their respective internal types.
+                 * @function fromObject
+                 * @memberof tilbo.ipc.v1.ListAppsForFileResponse
+                 * @static
+                 * @param {Object.<string,*>} object Plain object
+                 * @returns {tilbo.ipc.v1.ListAppsForFileResponse} ListAppsForFileResponse
+                 */
+                ListAppsForFileResponse.fromObject = function fromObject(object) {
+                    if (object instanceof $root.tilbo.ipc.v1.ListAppsForFileResponse)
+                        return object;
+                    let message = new $root.tilbo.ipc.v1.ListAppsForFileResponse();
+                    if (object.apps) {
+                        if (!Array.isArray(object.apps))
+                            throw TypeError(".tilbo.ipc.v1.ListAppsForFileResponse.apps: array expected");
+                        message.apps = [];
+                        for (let i = 0; i < object.apps.length; ++i) {
+                            if (typeof object.apps[i] !== "object")
+                                throw TypeError(".tilbo.ipc.v1.ListAppsForFileResponse.apps: object expected");
+                            message.apps[i] = $root.tilbo.ipc.v1.AppEntry.fromObject(object.apps[i]);
+                        }
+                    }
+                    return message;
+                };
+
+                /**
+                 * Creates a plain object from a ListAppsForFileResponse message. Also converts values to other types if specified.
+                 * @function toObject
+                 * @memberof tilbo.ipc.v1.ListAppsForFileResponse
+                 * @static
+                 * @param {tilbo.ipc.v1.ListAppsForFileResponse} message ListAppsForFileResponse
+                 * @param {$protobuf.IConversionOptions} [options] Conversion options
+                 * @returns {Object.<string,*>} Plain object
+                 */
+                ListAppsForFileResponse.toObject = function toObject(message, options) {
+                    if (!options)
+                        options = {};
+                    let object = {};
+                    if (options.arrays || options.defaults)
+                        object.apps = [];
+                    if (message.apps && message.apps.length) {
+                        object.apps = [];
+                        for (let j = 0; j < message.apps.length; ++j)
+                            object.apps[j] = $root.tilbo.ipc.v1.AppEntry.toObject(message.apps[j], options);
+                    }
+                    return object;
+                };
+
+                /**
+                 * Converts this ListAppsForFileResponse to JSON.
+                 * @function toJSON
+                 * @memberof tilbo.ipc.v1.ListAppsForFileResponse
+                 * @instance
+                 * @returns {Object.<string,*>} JSON object
+                 */
+                ListAppsForFileResponse.prototype.toJSON = function toJSON() {
+                    return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+                };
+
+                /**
+                 * Gets the default type url for ListAppsForFileResponse
+                 * @function getTypeUrl
+                 * @memberof tilbo.ipc.v1.ListAppsForFileResponse
+                 * @static
+                 * @param {string} [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+                 * @returns {string} The default type url
+                 */
+                ListAppsForFileResponse.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
+                    if (typeUrlPrefix === undefined) {
+                        typeUrlPrefix = "type.googleapis.com";
+                    }
+                    return typeUrlPrefix + "/tilbo.ipc.v1.ListAppsForFileResponse";
+                };
+
+                return ListAppsForFileResponse;
+            })();
+
+            v1.OpenWithAppRequest = (function() {
+
+                /**
+                 * Properties of an OpenWithAppRequest.
+                 * @memberof tilbo.ipc.v1
+                 * @interface IOpenWithAppRequest
+                 * @property {string|null} [path] OpenWithAppRequest path
+                 * @property {string|null} [appId] OpenWithAppRequest appId
+                 */
+
+                /**
+                 * Constructs a new OpenWithAppRequest.
+                 * @memberof tilbo.ipc.v1
+                 * @classdesc Represents an OpenWithAppRequest.
+                 * @implements IOpenWithAppRequest
+                 * @constructor
+                 * @param {tilbo.ipc.v1.IOpenWithAppRequest=} [properties] Properties to set
+                 */
+                function OpenWithAppRequest(properties) {
+                    if (properties)
+                        for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+                            if (properties[keys[i]] != null)
+                                this[keys[i]] = properties[keys[i]];
+                }
+
+                /**
+                 * OpenWithAppRequest path.
+                 * @member {string} path
+                 * @memberof tilbo.ipc.v1.OpenWithAppRequest
+                 * @instance
+                 */
+                OpenWithAppRequest.prototype.path = "";
+
+                /**
+                 * OpenWithAppRequest appId.
+                 * @member {string} appId
+                 * @memberof tilbo.ipc.v1.OpenWithAppRequest
+                 * @instance
+                 */
+                OpenWithAppRequest.prototype.appId = "";
+
+                /**
+                 * Creates a new OpenWithAppRequest instance using the specified properties.
+                 * @function create
+                 * @memberof tilbo.ipc.v1.OpenWithAppRequest
+                 * @static
+                 * @param {tilbo.ipc.v1.IOpenWithAppRequest=} [properties] Properties to set
+                 * @returns {tilbo.ipc.v1.OpenWithAppRequest} OpenWithAppRequest instance
+                 */
+                OpenWithAppRequest.create = function create(properties) {
+                    return new OpenWithAppRequest(properties);
+                };
+
+                /**
+                 * Encodes the specified OpenWithAppRequest message. Does not implicitly {@link tilbo.ipc.v1.OpenWithAppRequest.verify|verify} messages.
+                 * @function encode
+                 * @memberof tilbo.ipc.v1.OpenWithAppRequest
+                 * @static
+                 * @param {tilbo.ipc.v1.IOpenWithAppRequest} message OpenWithAppRequest message or plain object to encode
+                 * @param {$protobuf.Writer} [writer] Writer to encode to
+                 * @returns {$protobuf.Writer} Writer
+                 */
+                OpenWithAppRequest.encode = function encode(message, writer) {
+                    if (!writer)
+                        writer = $Writer.create();
+                    if (message.path != null && Object.hasOwnProperty.call(message, "path"))
+                        writer.uint32(/* id 1, wireType 2 =*/10).string(message.path);
+                    if (message.appId != null && Object.hasOwnProperty.call(message, "appId"))
+                        writer.uint32(/* id 2, wireType 2 =*/18).string(message.appId);
+                    return writer;
+                };
+
+                /**
+                 * Encodes the specified OpenWithAppRequest message, length delimited. Does not implicitly {@link tilbo.ipc.v1.OpenWithAppRequest.verify|verify} messages.
+                 * @function encodeDelimited
+                 * @memberof tilbo.ipc.v1.OpenWithAppRequest
+                 * @static
+                 * @param {tilbo.ipc.v1.IOpenWithAppRequest} message OpenWithAppRequest message or plain object to encode
+                 * @param {$protobuf.Writer} [writer] Writer to encode to
+                 * @returns {$protobuf.Writer} Writer
+                 */
+                OpenWithAppRequest.encodeDelimited = function encodeDelimited(message, writer) {
+                    return this.encode(message, writer).ldelim();
+                };
+
+                /**
+                 * Decodes an OpenWithAppRequest message from the specified reader or buffer.
+                 * @function decode
+                 * @memberof tilbo.ipc.v1.OpenWithAppRequest
+                 * @static
+                 * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+                 * @param {number} [length] Message length if known beforehand
+                 * @returns {tilbo.ipc.v1.OpenWithAppRequest} OpenWithAppRequest
+                 * @throws {Error} If the payload is not a reader or valid buffer
+                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                 */
+                OpenWithAppRequest.decode = function decode(reader, length, error) {
+                    if (!(reader instanceof $Reader))
+                        reader = $Reader.create(reader);
+                    let end = length === undefined ? reader.len : reader.pos + length, message = new $root.tilbo.ipc.v1.OpenWithAppRequest();
+                    while (reader.pos < end) {
+                        let tag = reader.uint32();
+                        if (tag === error)
+                            break;
+                        switch (tag >>> 3) {
+                        case 1: {
+                                message.path = reader.string();
+                                break;
+                            }
+                        case 2: {
+                                message.appId = reader.string();
+                                break;
+                            }
+                        default:
+                            reader.skipType(tag & 7);
+                            break;
+                        }
+                    }
+                    return message;
+                };
+
+                /**
+                 * Decodes an OpenWithAppRequest message from the specified reader or buffer, length delimited.
+                 * @function decodeDelimited
+                 * @memberof tilbo.ipc.v1.OpenWithAppRequest
+                 * @static
+                 * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+                 * @returns {tilbo.ipc.v1.OpenWithAppRequest} OpenWithAppRequest
+                 * @throws {Error} If the payload is not a reader or valid buffer
+                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                 */
+                OpenWithAppRequest.decodeDelimited = function decodeDelimited(reader) {
+                    if (!(reader instanceof $Reader))
+                        reader = new $Reader(reader);
+                    return this.decode(reader, reader.uint32());
+                };
+
+                /**
+                 * Verifies an OpenWithAppRequest message.
+                 * @function verify
+                 * @memberof tilbo.ipc.v1.OpenWithAppRequest
+                 * @static
+                 * @param {Object.<string,*>} message Plain object to verify
+                 * @returns {string|null} `null` if valid, otherwise the reason why it is not
+                 */
+                OpenWithAppRequest.verify = function verify(message) {
+                    if (typeof message !== "object" || message === null)
+                        return "object expected";
+                    if (message.path != null && message.hasOwnProperty("path"))
+                        if (!$util.isString(message.path))
+                            return "path: string expected";
+                    if (message.appId != null && message.hasOwnProperty("appId"))
+                        if (!$util.isString(message.appId))
+                            return "appId: string expected";
+                    return null;
+                };
+
+                /**
+                 * Creates an OpenWithAppRequest message from a plain object. Also converts values to their respective internal types.
+                 * @function fromObject
+                 * @memberof tilbo.ipc.v1.OpenWithAppRequest
+                 * @static
+                 * @param {Object.<string,*>} object Plain object
+                 * @returns {tilbo.ipc.v1.OpenWithAppRequest} OpenWithAppRequest
+                 */
+                OpenWithAppRequest.fromObject = function fromObject(object) {
+                    if (object instanceof $root.tilbo.ipc.v1.OpenWithAppRequest)
+                        return object;
+                    let message = new $root.tilbo.ipc.v1.OpenWithAppRequest();
+                    if (object.path != null)
+                        message.path = String(object.path);
+                    if (object.appId != null)
+                        message.appId = String(object.appId);
+                    return message;
+                };
+
+                /**
+                 * Creates a plain object from an OpenWithAppRequest message. Also converts values to other types if specified.
+                 * @function toObject
+                 * @memberof tilbo.ipc.v1.OpenWithAppRequest
+                 * @static
+                 * @param {tilbo.ipc.v1.OpenWithAppRequest} message OpenWithAppRequest
+                 * @param {$protobuf.IConversionOptions} [options] Conversion options
+                 * @returns {Object.<string,*>} Plain object
+                 */
+                OpenWithAppRequest.toObject = function toObject(message, options) {
+                    if (!options)
+                        options = {};
+                    let object = {};
+                    if (options.defaults) {
+                        object.path = "";
+                        object.appId = "";
+                    }
+                    if (message.path != null && message.hasOwnProperty("path"))
+                        object.path = message.path;
+                    if (message.appId != null && message.hasOwnProperty("appId"))
+                        object.appId = message.appId;
+                    return object;
+                };
+
+                /**
+                 * Converts this OpenWithAppRequest to JSON.
+                 * @function toJSON
+                 * @memberof tilbo.ipc.v1.OpenWithAppRequest
+                 * @instance
+                 * @returns {Object.<string,*>} JSON object
+                 */
+                OpenWithAppRequest.prototype.toJSON = function toJSON() {
+                    return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+                };
+
+                /**
+                 * Gets the default type url for OpenWithAppRequest
+                 * @function getTypeUrl
+                 * @memberof tilbo.ipc.v1.OpenWithAppRequest
+                 * @static
+                 * @param {string} [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+                 * @returns {string} The default type url
+                 */
+                OpenWithAppRequest.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
+                    if (typeUrlPrefix === undefined) {
+                        typeUrlPrefix = "type.googleapis.com";
+                    }
+                    return typeUrlPrefix + "/tilbo.ipc.v1.OpenWithAppRequest";
+                };
+
+                return OpenWithAppRequest;
+            })();
+
+            v1.OpenWithAppResponse = (function() {
+
+                /**
+                 * Properties of an OpenWithAppResponse.
+                 * @memberof tilbo.ipc.v1
+                 * @interface IOpenWithAppResponse
+                 */
+
+                /**
+                 * Constructs a new OpenWithAppResponse.
+                 * @memberof tilbo.ipc.v1
+                 * @classdesc Represents an OpenWithAppResponse.
+                 * @implements IOpenWithAppResponse
+                 * @constructor
+                 * @param {tilbo.ipc.v1.IOpenWithAppResponse=} [properties] Properties to set
+                 */
+                function OpenWithAppResponse(properties) {
+                    if (properties)
+                        for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+                            if (properties[keys[i]] != null)
+                                this[keys[i]] = properties[keys[i]];
+                }
+
+                /**
+                 * Creates a new OpenWithAppResponse instance using the specified properties.
+                 * @function create
+                 * @memberof tilbo.ipc.v1.OpenWithAppResponse
+                 * @static
+                 * @param {tilbo.ipc.v1.IOpenWithAppResponse=} [properties] Properties to set
+                 * @returns {tilbo.ipc.v1.OpenWithAppResponse} OpenWithAppResponse instance
+                 */
+                OpenWithAppResponse.create = function create(properties) {
+                    return new OpenWithAppResponse(properties);
+                };
+
+                /**
+                 * Encodes the specified OpenWithAppResponse message. Does not implicitly {@link tilbo.ipc.v1.OpenWithAppResponse.verify|verify} messages.
+                 * @function encode
+                 * @memberof tilbo.ipc.v1.OpenWithAppResponse
+                 * @static
+                 * @param {tilbo.ipc.v1.IOpenWithAppResponse} message OpenWithAppResponse message or plain object to encode
+                 * @param {$protobuf.Writer} [writer] Writer to encode to
+                 * @returns {$protobuf.Writer} Writer
+                 */
+                OpenWithAppResponse.encode = function encode(message, writer) {
+                    if (!writer)
+                        writer = $Writer.create();
+                    return writer;
+                };
+
+                /**
+                 * Encodes the specified OpenWithAppResponse message, length delimited. Does not implicitly {@link tilbo.ipc.v1.OpenWithAppResponse.verify|verify} messages.
+                 * @function encodeDelimited
+                 * @memberof tilbo.ipc.v1.OpenWithAppResponse
+                 * @static
+                 * @param {tilbo.ipc.v1.IOpenWithAppResponse} message OpenWithAppResponse message or plain object to encode
+                 * @param {$protobuf.Writer} [writer] Writer to encode to
+                 * @returns {$protobuf.Writer} Writer
+                 */
+                OpenWithAppResponse.encodeDelimited = function encodeDelimited(message, writer) {
+                    return this.encode(message, writer).ldelim();
+                };
+
+                /**
+                 * Decodes an OpenWithAppResponse message from the specified reader or buffer.
+                 * @function decode
+                 * @memberof tilbo.ipc.v1.OpenWithAppResponse
+                 * @static
+                 * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+                 * @param {number} [length] Message length if known beforehand
+                 * @returns {tilbo.ipc.v1.OpenWithAppResponse} OpenWithAppResponse
+                 * @throws {Error} If the payload is not a reader or valid buffer
+                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                 */
+                OpenWithAppResponse.decode = function decode(reader, length, error) {
+                    if (!(reader instanceof $Reader))
+                        reader = $Reader.create(reader);
+                    let end = length === undefined ? reader.len : reader.pos + length, message = new $root.tilbo.ipc.v1.OpenWithAppResponse();
+                    while (reader.pos < end) {
+                        let tag = reader.uint32();
+                        if (tag === error)
+                            break;
+                        switch (tag >>> 3) {
+                        default:
+                            reader.skipType(tag & 7);
+                            break;
+                        }
+                    }
+                    return message;
+                };
+
+                /**
+                 * Decodes an OpenWithAppResponse message from the specified reader or buffer, length delimited.
+                 * @function decodeDelimited
+                 * @memberof tilbo.ipc.v1.OpenWithAppResponse
+                 * @static
+                 * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+                 * @returns {tilbo.ipc.v1.OpenWithAppResponse} OpenWithAppResponse
+                 * @throws {Error} If the payload is not a reader or valid buffer
+                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                 */
+                OpenWithAppResponse.decodeDelimited = function decodeDelimited(reader) {
+                    if (!(reader instanceof $Reader))
+                        reader = new $Reader(reader);
+                    return this.decode(reader, reader.uint32());
+                };
+
+                /**
+                 * Verifies an OpenWithAppResponse message.
+                 * @function verify
+                 * @memberof tilbo.ipc.v1.OpenWithAppResponse
+                 * @static
+                 * @param {Object.<string,*>} message Plain object to verify
+                 * @returns {string|null} `null` if valid, otherwise the reason why it is not
+                 */
+                OpenWithAppResponse.verify = function verify(message) {
+                    if (typeof message !== "object" || message === null)
+                        return "object expected";
+                    return null;
+                };
+
+                /**
+                 * Creates an OpenWithAppResponse message from a plain object. Also converts values to their respective internal types.
+                 * @function fromObject
+                 * @memberof tilbo.ipc.v1.OpenWithAppResponse
+                 * @static
+                 * @param {Object.<string,*>} object Plain object
+                 * @returns {tilbo.ipc.v1.OpenWithAppResponse} OpenWithAppResponse
+                 */
+                OpenWithAppResponse.fromObject = function fromObject(object) {
+                    if (object instanceof $root.tilbo.ipc.v1.OpenWithAppResponse)
+                        return object;
+                    return new $root.tilbo.ipc.v1.OpenWithAppResponse();
+                };
+
+                /**
+                 * Creates a plain object from an OpenWithAppResponse message. Also converts values to other types if specified.
+                 * @function toObject
+                 * @memberof tilbo.ipc.v1.OpenWithAppResponse
+                 * @static
+                 * @param {tilbo.ipc.v1.OpenWithAppResponse} message OpenWithAppResponse
+                 * @param {$protobuf.IConversionOptions} [options] Conversion options
+                 * @returns {Object.<string,*>} Plain object
+                 */
+                OpenWithAppResponse.toObject = function toObject() {
+                    return {};
+                };
+
+                /**
+                 * Converts this OpenWithAppResponse to JSON.
+                 * @function toJSON
+                 * @memberof tilbo.ipc.v1.OpenWithAppResponse
+                 * @instance
+                 * @returns {Object.<string,*>} JSON object
+                 */
+                OpenWithAppResponse.prototype.toJSON = function toJSON() {
+                    return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+                };
+
+                /**
+                 * Gets the default type url for OpenWithAppResponse
+                 * @function getTypeUrl
+                 * @memberof tilbo.ipc.v1.OpenWithAppResponse
+                 * @static
+                 * @param {string} [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+                 * @returns {string} The default type url
+                 */
+                OpenWithAppResponse.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
+                    if (typeUrlPrefix === undefined) {
+                        typeUrlPrefix = "type.googleapis.com";
+                    }
+                    return typeUrlPrefix + "/tilbo.ipc.v1.OpenWithAppResponse";
+                };
+
+                return OpenWithAppResponse;
+            })();
+
+            v1.GetBrowserConfigRequest = (function() {
+
+                /**
+                 * Properties of a GetBrowserConfigRequest.
+                 * @memberof tilbo.ipc.v1
+                 * @interface IGetBrowserConfigRequest
+                 */
+
+                /**
+                 * Constructs a new GetBrowserConfigRequest.
+                 * @memberof tilbo.ipc.v1
+                 * @classdesc Represents a GetBrowserConfigRequest.
+                 * @implements IGetBrowserConfigRequest
+                 * @constructor
+                 * @param {tilbo.ipc.v1.IGetBrowserConfigRequest=} [properties] Properties to set
+                 */
+                function GetBrowserConfigRequest(properties) {
+                    if (properties)
+                        for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+                            if (properties[keys[i]] != null)
+                                this[keys[i]] = properties[keys[i]];
+                }
+
+                /**
+                 * Creates a new GetBrowserConfigRequest instance using the specified properties.
+                 * @function create
+                 * @memberof tilbo.ipc.v1.GetBrowserConfigRequest
+                 * @static
+                 * @param {tilbo.ipc.v1.IGetBrowserConfigRequest=} [properties] Properties to set
+                 * @returns {tilbo.ipc.v1.GetBrowserConfigRequest} GetBrowserConfigRequest instance
+                 */
+                GetBrowserConfigRequest.create = function create(properties) {
+                    return new GetBrowserConfigRequest(properties);
+                };
+
+                /**
+                 * Encodes the specified GetBrowserConfigRequest message. Does not implicitly {@link tilbo.ipc.v1.GetBrowserConfigRequest.verify|verify} messages.
+                 * @function encode
+                 * @memberof tilbo.ipc.v1.GetBrowserConfigRequest
+                 * @static
+                 * @param {tilbo.ipc.v1.IGetBrowserConfigRequest} message GetBrowserConfigRequest message or plain object to encode
+                 * @param {$protobuf.Writer} [writer] Writer to encode to
+                 * @returns {$protobuf.Writer} Writer
+                 */
+                GetBrowserConfigRequest.encode = function encode(message, writer) {
+                    if (!writer)
+                        writer = $Writer.create();
+                    return writer;
+                };
+
+                /**
+                 * Encodes the specified GetBrowserConfigRequest message, length delimited. Does not implicitly {@link tilbo.ipc.v1.GetBrowserConfigRequest.verify|verify} messages.
+                 * @function encodeDelimited
+                 * @memberof tilbo.ipc.v1.GetBrowserConfigRequest
+                 * @static
+                 * @param {tilbo.ipc.v1.IGetBrowserConfigRequest} message GetBrowserConfigRequest message or plain object to encode
+                 * @param {$protobuf.Writer} [writer] Writer to encode to
+                 * @returns {$protobuf.Writer} Writer
+                 */
+                GetBrowserConfigRequest.encodeDelimited = function encodeDelimited(message, writer) {
+                    return this.encode(message, writer).ldelim();
+                };
+
+                /**
+                 * Decodes a GetBrowserConfigRequest message from the specified reader or buffer.
+                 * @function decode
+                 * @memberof tilbo.ipc.v1.GetBrowserConfigRequest
+                 * @static
+                 * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+                 * @param {number} [length] Message length if known beforehand
+                 * @returns {tilbo.ipc.v1.GetBrowserConfigRequest} GetBrowserConfigRequest
+                 * @throws {Error} If the payload is not a reader or valid buffer
+                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                 */
+                GetBrowserConfigRequest.decode = function decode(reader, length, error) {
+                    if (!(reader instanceof $Reader))
+                        reader = $Reader.create(reader);
+                    let end = length === undefined ? reader.len : reader.pos + length, message = new $root.tilbo.ipc.v1.GetBrowserConfigRequest();
+                    while (reader.pos < end) {
+                        let tag = reader.uint32();
+                        if (tag === error)
+                            break;
+                        switch (tag >>> 3) {
+                        default:
+                            reader.skipType(tag & 7);
+                            break;
+                        }
+                    }
+                    return message;
+                };
+
+                /**
+                 * Decodes a GetBrowserConfigRequest message from the specified reader or buffer, length delimited.
+                 * @function decodeDelimited
+                 * @memberof tilbo.ipc.v1.GetBrowserConfigRequest
+                 * @static
+                 * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+                 * @returns {tilbo.ipc.v1.GetBrowserConfigRequest} GetBrowserConfigRequest
+                 * @throws {Error} If the payload is not a reader or valid buffer
+                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                 */
+                GetBrowserConfigRequest.decodeDelimited = function decodeDelimited(reader) {
+                    if (!(reader instanceof $Reader))
+                        reader = new $Reader(reader);
+                    return this.decode(reader, reader.uint32());
+                };
+
+                /**
+                 * Verifies a GetBrowserConfigRequest message.
+                 * @function verify
+                 * @memberof tilbo.ipc.v1.GetBrowserConfigRequest
+                 * @static
+                 * @param {Object.<string,*>} message Plain object to verify
+                 * @returns {string|null} `null` if valid, otherwise the reason why it is not
+                 */
+                GetBrowserConfigRequest.verify = function verify(message) {
+                    if (typeof message !== "object" || message === null)
+                        return "object expected";
+                    return null;
+                };
+
+                /**
+                 * Creates a GetBrowserConfigRequest message from a plain object. Also converts values to their respective internal types.
+                 * @function fromObject
+                 * @memberof tilbo.ipc.v1.GetBrowserConfigRequest
+                 * @static
+                 * @param {Object.<string,*>} object Plain object
+                 * @returns {tilbo.ipc.v1.GetBrowserConfigRequest} GetBrowserConfigRequest
+                 */
+                GetBrowserConfigRequest.fromObject = function fromObject(object) {
+                    if (object instanceof $root.tilbo.ipc.v1.GetBrowserConfigRequest)
+                        return object;
+                    return new $root.tilbo.ipc.v1.GetBrowserConfigRequest();
+                };
+
+                /**
+                 * Creates a plain object from a GetBrowserConfigRequest message. Also converts values to other types if specified.
+                 * @function toObject
+                 * @memberof tilbo.ipc.v1.GetBrowserConfigRequest
+                 * @static
+                 * @param {tilbo.ipc.v1.GetBrowserConfigRequest} message GetBrowserConfigRequest
+                 * @param {$protobuf.IConversionOptions} [options] Conversion options
+                 * @returns {Object.<string,*>} Plain object
+                 */
+                GetBrowserConfigRequest.toObject = function toObject() {
+                    return {};
+                };
+
+                /**
+                 * Converts this GetBrowserConfigRequest to JSON.
+                 * @function toJSON
+                 * @memberof tilbo.ipc.v1.GetBrowserConfigRequest
+                 * @instance
+                 * @returns {Object.<string,*>} JSON object
+                 */
+                GetBrowserConfigRequest.prototype.toJSON = function toJSON() {
+                    return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+                };
+
+                /**
+                 * Gets the default type url for GetBrowserConfigRequest
+                 * @function getTypeUrl
+                 * @memberof tilbo.ipc.v1.GetBrowserConfigRequest
+                 * @static
+                 * @param {string} [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+                 * @returns {string} The default type url
+                 */
+                GetBrowserConfigRequest.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
+                    if (typeUrlPrefix === undefined) {
+                        typeUrlPrefix = "type.googleapis.com";
+                    }
+                    return typeUrlPrefix + "/tilbo.ipc.v1.GetBrowserConfigRequest";
+                };
+
+                return GetBrowserConfigRequest;
+            })();
+
+            v1.GetBrowserConfigResponse = (function() {
+
+                /**
+                 * Properties of a GetBrowserConfigResponse.
+                 * @memberof tilbo.ipc.v1
+                 * @interface IGetBrowserConfigResponse
+                 * @property {Object.<string,string>|null} [keybindings] GetBrowserConfigResponse keybindings
+                 * @property {boolean|null} [useTrash] GetBrowserConfigResponse useTrash
+                 */
+
+                /**
+                 * Constructs a new GetBrowserConfigResponse.
+                 * @memberof tilbo.ipc.v1
+                 * @classdesc Represents a GetBrowserConfigResponse.
+                 * @implements IGetBrowserConfigResponse
+                 * @constructor
+                 * @param {tilbo.ipc.v1.IGetBrowserConfigResponse=} [properties] Properties to set
+                 */
+                function GetBrowserConfigResponse(properties) {
+                    this.keybindings = {};
+                    if (properties)
+                        for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+                            if (properties[keys[i]] != null)
+                                this[keys[i]] = properties[keys[i]];
+                }
+
+                /**
+                 * GetBrowserConfigResponse keybindings.
+                 * @member {Object.<string,string>} keybindings
+                 * @memberof tilbo.ipc.v1.GetBrowserConfigResponse
+                 * @instance
+                 */
+                GetBrowserConfigResponse.prototype.keybindings = $util.emptyObject;
+
+                /**
+                 * GetBrowserConfigResponse useTrash.
+                 * @member {boolean} useTrash
+                 * @memberof tilbo.ipc.v1.GetBrowserConfigResponse
+                 * @instance
+                 */
+                GetBrowserConfigResponse.prototype.useTrash = false;
+
+                /**
+                 * Creates a new GetBrowserConfigResponse instance using the specified properties.
+                 * @function create
+                 * @memberof tilbo.ipc.v1.GetBrowserConfigResponse
+                 * @static
+                 * @param {tilbo.ipc.v1.IGetBrowserConfigResponse=} [properties] Properties to set
+                 * @returns {tilbo.ipc.v1.GetBrowserConfigResponse} GetBrowserConfigResponse instance
+                 */
+                GetBrowserConfigResponse.create = function create(properties) {
+                    return new GetBrowserConfigResponse(properties);
+                };
+
+                /**
+                 * Encodes the specified GetBrowserConfigResponse message. Does not implicitly {@link tilbo.ipc.v1.GetBrowserConfigResponse.verify|verify} messages.
+                 * @function encode
+                 * @memberof tilbo.ipc.v1.GetBrowserConfigResponse
+                 * @static
+                 * @param {tilbo.ipc.v1.IGetBrowserConfigResponse} message GetBrowserConfigResponse message or plain object to encode
+                 * @param {$protobuf.Writer} [writer] Writer to encode to
+                 * @returns {$protobuf.Writer} Writer
+                 */
+                GetBrowserConfigResponse.encode = function encode(message, writer) {
+                    if (!writer)
+                        writer = $Writer.create();
+                    if (message.keybindings != null && Object.hasOwnProperty.call(message, "keybindings"))
+                        for (let keys = Object.keys(message.keybindings), i = 0; i < keys.length; ++i)
+                            writer.uint32(/* id 1, wireType 2 =*/10).fork().uint32(/* id 1, wireType 2 =*/10).string(keys[i]).uint32(/* id 2, wireType 2 =*/18).string(message.keybindings[keys[i]]).ldelim();
+                    if (message.useTrash != null && Object.hasOwnProperty.call(message, "useTrash"))
+                        writer.uint32(/* id 2, wireType 0 =*/16).bool(message.useTrash);
+                    return writer;
+                };
+
+                /**
+                 * Encodes the specified GetBrowserConfigResponse message, length delimited. Does not implicitly {@link tilbo.ipc.v1.GetBrowserConfigResponse.verify|verify} messages.
+                 * @function encodeDelimited
+                 * @memberof tilbo.ipc.v1.GetBrowserConfigResponse
+                 * @static
+                 * @param {tilbo.ipc.v1.IGetBrowserConfigResponse} message GetBrowserConfigResponse message or plain object to encode
+                 * @param {$protobuf.Writer} [writer] Writer to encode to
+                 * @returns {$protobuf.Writer} Writer
+                 */
+                GetBrowserConfigResponse.encodeDelimited = function encodeDelimited(message, writer) {
+                    return this.encode(message, writer).ldelim();
+                };
+
+                /**
+                 * Decodes a GetBrowserConfigResponse message from the specified reader or buffer.
+                 * @function decode
+                 * @memberof tilbo.ipc.v1.GetBrowserConfigResponse
+                 * @static
+                 * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+                 * @param {number} [length] Message length if known beforehand
+                 * @returns {tilbo.ipc.v1.GetBrowserConfigResponse} GetBrowserConfigResponse
+                 * @throws {Error} If the payload is not a reader or valid buffer
+                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                 */
+                GetBrowserConfigResponse.decode = function decode(reader, length, error) {
+                    if (!(reader instanceof $Reader))
+                        reader = $Reader.create(reader);
+                    let end = length === undefined ? reader.len : reader.pos + length, message = new $root.tilbo.ipc.v1.GetBrowserConfigResponse(), key, value;
+                    while (reader.pos < end) {
+                        let tag = reader.uint32();
+                        if (tag === error)
+                            break;
+                        switch (tag >>> 3) {
+                        case 1: {
+                                if (message.keybindings === $util.emptyObject)
+                                    message.keybindings = {};
+                                let end2 = reader.uint32() + reader.pos;
+                                key = "";
+                                value = "";
+                                while (reader.pos < end2) {
+                                    let tag2 = reader.uint32();
+                                    switch (tag2 >>> 3) {
+                                    case 1:
+                                        key = reader.string();
+                                        break;
+                                    case 2:
+                                        value = reader.string();
+                                        break;
+                                    default:
+                                        reader.skipType(tag2 & 7);
+                                        break;
+                                    }
+                                }
+                                message.keybindings[key] = value;
+                                break;
+                            }
+                        case 2: {
+                                message.useTrash = reader.bool();
+                                break;
+                            }
+                        default:
+                            reader.skipType(tag & 7);
+                            break;
+                        }
+                    }
+                    return message;
+                };
+
+                /**
+                 * Decodes a GetBrowserConfigResponse message from the specified reader or buffer, length delimited.
+                 * @function decodeDelimited
+                 * @memberof tilbo.ipc.v1.GetBrowserConfigResponse
+                 * @static
+                 * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+                 * @returns {tilbo.ipc.v1.GetBrowserConfigResponse} GetBrowserConfigResponse
+                 * @throws {Error} If the payload is not a reader or valid buffer
+                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                 */
+                GetBrowserConfigResponse.decodeDelimited = function decodeDelimited(reader) {
+                    if (!(reader instanceof $Reader))
+                        reader = new $Reader(reader);
+                    return this.decode(reader, reader.uint32());
+                };
+
+                /**
+                 * Verifies a GetBrowserConfigResponse message.
+                 * @function verify
+                 * @memberof tilbo.ipc.v1.GetBrowserConfigResponse
+                 * @static
+                 * @param {Object.<string,*>} message Plain object to verify
+                 * @returns {string|null} `null` if valid, otherwise the reason why it is not
+                 */
+                GetBrowserConfigResponse.verify = function verify(message) {
+                    if (typeof message !== "object" || message === null)
+                        return "object expected";
+                    if (message.keybindings != null && message.hasOwnProperty("keybindings")) {
+                        if (!$util.isObject(message.keybindings))
+                            return "keybindings: object expected";
+                        let key = Object.keys(message.keybindings);
+                        for (let i = 0; i < key.length; ++i)
+                            if (!$util.isString(message.keybindings[key[i]]))
+                                return "keybindings: string{k:string} expected";
+                    }
+                    if (message.useTrash != null && message.hasOwnProperty("useTrash"))
+                        if (typeof message.useTrash !== "boolean")
+                            return "useTrash: boolean expected";
+                    return null;
+                };
+
+                /**
+                 * Creates a GetBrowserConfigResponse message from a plain object. Also converts values to their respective internal types.
+                 * @function fromObject
+                 * @memberof tilbo.ipc.v1.GetBrowserConfigResponse
+                 * @static
+                 * @param {Object.<string,*>} object Plain object
+                 * @returns {tilbo.ipc.v1.GetBrowserConfigResponse} GetBrowserConfigResponse
+                 */
+                GetBrowserConfigResponse.fromObject = function fromObject(object) {
+                    if (object instanceof $root.tilbo.ipc.v1.GetBrowserConfigResponse)
+                        return object;
+                    let message = new $root.tilbo.ipc.v1.GetBrowserConfigResponse();
+                    if (object.keybindings) {
+                        if (typeof object.keybindings !== "object")
+                            throw TypeError(".tilbo.ipc.v1.GetBrowserConfigResponse.keybindings: object expected");
+                        message.keybindings = {};
+                        for (let keys = Object.keys(object.keybindings), i = 0; i < keys.length; ++i)
+                            message.keybindings[keys[i]] = String(object.keybindings[keys[i]]);
+                    }
+                    if (object.useTrash != null)
+                        message.useTrash = Boolean(object.useTrash);
+                    return message;
+                };
+
+                /**
+                 * Creates a plain object from a GetBrowserConfigResponse message. Also converts values to other types if specified.
+                 * @function toObject
+                 * @memberof tilbo.ipc.v1.GetBrowserConfigResponse
+                 * @static
+                 * @param {tilbo.ipc.v1.GetBrowserConfigResponse} message GetBrowserConfigResponse
+                 * @param {$protobuf.IConversionOptions} [options] Conversion options
+                 * @returns {Object.<string,*>} Plain object
+                 */
+                GetBrowserConfigResponse.toObject = function toObject(message, options) {
+                    if (!options)
+                        options = {};
+                    let object = {};
+                    if (options.objects || options.defaults)
+                        object.keybindings = {};
+                    if (options.defaults)
+                        object.useTrash = false;
+                    let keys2;
+                    if (message.keybindings && (keys2 = Object.keys(message.keybindings)).length) {
+                        object.keybindings = {};
+                        for (let j = 0; j < keys2.length; ++j)
+                            object.keybindings[keys2[j]] = message.keybindings[keys2[j]];
+                    }
+                    if (message.useTrash != null && message.hasOwnProperty("useTrash"))
+                        object.useTrash = message.useTrash;
+                    return object;
+                };
+
+                /**
+                 * Converts this GetBrowserConfigResponse to JSON.
+                 * @function toJSON
+                 * @memberof tilbo.ipc.v1.GetBrowserConfigResponse
+                 * @instance
+                 * @returns {Object.<string,*>} JSON object
+                 */
+                GetBrowserConfigResponse.prototype.toJSON = function toJSON() {
+                    return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+                };
+
+                /**
+                 * Gets the default type url for GetBrowserConfigResponse
+                 * @function getTypeUrl
+                 * @memberof tilbo.ipc.v1.GetBrowserConfigResponse
+                 * @static
+                 * @param {string} [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+                 * @returns {string} The default type url
+                 */
+                GetBrowserConfigResponse.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
+                    if (typeUrlPrefix === undefined) {
+                        typeUrlPrefix = "type.googleapis.com";
+                    }
+                    return typeUrlPrefix + "/tilbo.ipc.v1.GetBrowserConfigResponse";
+                };
+
+                return GetBrowserConfigResponse;
+            })();
+
+            v1.GetFileBadgesRequest = (function() {
+
+                /**
+                 * Properties of a GetFileBadgesRequest.
+                 * @memberof tilbo.ipc.v1
+                 * @interface IGetFileBadgesRequest
+                 * @property {string|null} [path] GetFileBadgesRequest path
+                 */
+
+                /**
+                 * Constructs a new GetFileBadgesRequest.
+                 * @memberof tilbo.ipc.v1
+                 * @classdesc Represents a GetFileBadgesRequest.
+                 * @implements IGetFileBadgesRequest
+                 * @constructor
+                 * @param {tilbo.ipc.v1.IGetFileBadgesRequest=} [properties] Properties to set
+                 */
+                function GetFileBadgesRequest(properties) {
+                    if (properties)
+                        for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+                            if (properties[keys[i]] != null)
+                                this[keys[i]] = properties[keys[i]];
+                }
+
+                /**
+                 * GetFileBadgesRequest path.
+                 * @member {string} path
+                 * @memberof tilbo.ipc.v1.GetFileBadgesRequest
+                 * @instance
+                 */
+                GetFileBadgesRequest.prototype.path = "";
+
+                /**
+                 * Creates a new GetFileBadgesRequest instance using the specified properties.
+                 * @function create
+                 * @memberof tilbo.ipc.v1.GetFileBadgesRequest
+                 * @static
+                 * @param {tilbo.ipc.v1.IGetFileBadgesRequest=} [properties] Properties to set
+                 * @returns {tilbo.ipc.v1.GetFileBadgesRequest} GetFileBadgesRequest instance
+                 */
+                GetFileBadgesRequest.create = function create(properties) {
+                    return new GetFileBadgesRequest(properties);
+                };
+
+                /**
+                 * Encodes the specified GetFileBadgesRequest message. Does not implicitly {@link tilbo.ipc.v1.GetFileBadgesRequest.verify|verify} messages.
+                 * @function encode
+                 * @memberof tilbo.ipc.v1.GetFileBadgesRequest
+                 * @static
+                 * @param {tilbo.ipc.v1.IGetFileBadgesRequest} message GetFileBadgesRequest message or plain object to encode
+                 * @param {$protobuf.Writer} [writer] Writer to encode to
+                 * @returns {$protobuf.Writer} Writer
+                 */
+                GetFileBadgesRequest.encode = function encode(message, writer) {
+                    if (!writer)
+                        writer = $Writer.create();
+                    if (message.path != null && Object.hasOwnProperty.call(message, "path"))
+                        writer.uint32(/* id 1, wireType 2 =*/10).string(message.path);
+                    return writer;
+                };
+
+                /**
+                 * Encodes the specified GetFileBadgesRequest message, length delimited. Does not implicitly {@link tilbo.ipc.v1.GetFileBadgesRequest.verify|verify} messages.
+                 * @function encodeDelimited
+                 * @memberof tilbo.ipc.v1.GetFileBadgesRequest
+                 * @static
+                 * @param {tilbo.ipc.v1.IGetFileBadgesRequest} message GetFileBadgesRequest message or plain object to encode
+                 * @param {$protobuf.Writer} [writer] Writer to encode to
+                 * @returns {$protobuf.Writer} Writer
+                 */
+                GetFileBadgesRequest.encodeDelimited = function encodeDelimited(message, writer) {
+                    return this.encode(message, writer).ldelim();
+                };
+
+                /**
+                 * Decodes a GetFileBadgesRequest message from the specified reader or buffer.
+                 * @function decode
+                 * @memberof tilbo.ipc.v1.GetFileBadgesRequest
+                 * @static
+                 * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+                 * @param {number} [length] Message length if known beforehand
+                 * @returns {tilbo.ipc.v1.GetFileBadgesRequest} GetFileBadgesRequest
+                 * @throws {Error} If the payload is not a reader or valid buffer
+                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                 */
+                GetFileBadgesRequest.decode = function decode(reader, length, error) {
+                    if (!(reader instanceof $Reader))
+                        reader = $Reader.create(reader);
+                    let end = length === undefined ? reader.len : reader.pos + length, message = new $root.tilbo.ipc.v1.GetFileBadgesRequest();
+                    while (reader.pos < end) {
+                        let tag = reader.uint32();
+                        if (tag === error)
+                            break;
+                        switch (tag >>> 3) {
+                        case 1: {
+                                message.path = reader.string();
+                                break;
+                            }
+                        default:
+                            reader.skipType(tag & 7);
+                            break;
+                        }
+                    }
+                    return message;
+                };
+
+                /**
+                 * Decodes a GetFileBadgesRequest message from the specified reader or buffer, length delimited.
+                 * @function decodeDelimited
+                 * @memberof tilbo.ipc.v1.GetFileBadgesRequest
+                 * @static
+                 * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+                 * @returns {tilbo.ipc.v1.GetFileBadgesRequest} GetFileBadgesRequest
+                 * @throws {Error} If the payload is not a reader or valid buffer
+                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                 */
+                GetFileBadgesRequest.decodeDelimited = function decodeDelimited(reader) {
+                    if (!(reader instanceof $Reader))
+                        reader = new $Reader(reader);
+                    return this.decode(reader, reader.uint32());
+                };
+
+                /**
+                 * Verifies a GetFileBadgesRequest message.
+                 * @function verify
+                 * @memberof tilbo.ipc.v1.GetFileBadgesRequest
+                 * @static
+                 * @param {Object.<string,*>} message Plain object to verify
+                 * @returns {string|null} `null` if valid, otherwise the reason why it is not
+                 */
+                GetFileBadgesRequest.verify = function verify(message) {
+                    if (typeof message !== "object" || message === null)
+                        return "object expected";
+                    if (message.path != null && message.hasOwnProperty("path"))
+                        if (!$util.isString(message.path))
+                            return "path: string expected";
+                    return null;
+                };
+
+                /**
+                 * Creates a GetFileBadgesRequest message from a plain object. Also converts values to their respective internal types.
+                 * @function fromObject
+                 * @memberof tilbo.ipc.v1.GetFileBadgesRequest
+                 * @static
+                 * @param {Object.<string,*>} object Plain object
+                 * @returns {tilbo.ipc.v1.GetFileBadgesRequest} GetFileBadgesRequest
+                 */
+                GetFileBadgesRequest.fromObject = function fromObject(object) {
+                    if (object instanceof $root.tilbo.ipc.v1.GetFileBadgesRequest)
+                        return object;
+                    let message = new $root.tilbo.ipc.v1.GetFileBadgesRequest();
+                    if (object.path != null)
+                        message.path = String(object.path);
+                    return message;
+                };
+
+                /**
+                 * Creates a plain object from a GetFileBadgesRequest message. Also converts values to other types if specified.
+                 * @function toObject
+                 * @memberof tilbo.ipc.v1.GetFileBadgesRequest
+                 * @static
+                 * @param {tilbo.ipc.v1.GetFileBadgesRequest} message GetFileBadgesRequest
+                 * @param {$protobuf.IConversionOptions} [options] Conversion options
+                 * @returns {Object.<string,*>} Plain object
+                 */
+                GetFileBadgesRequest.toObject = function toObject(message, options) {
+                    if (!options)
+                        options = {};
+                    let object = {};
+                    if (options.defaults)
+                        object.path = "";
+                    if (message.path != null && message.hasOwnProperty("path"))
+                        object.path = message.path;
+                    return object;
+                };
+
+                /**
+                 * Converts this GetFileBadgesRequest to JSON.
+                 * @function toJSON
+                 * @memberof tilbo.ipc.v1.GetFileBadgesRequest
+                 * @instance
+                 * @returns {Object.<string,*>} JSON object
+                 */
+                GetFileBadgesRequest.prototype.toJSON = function toJSON() {
+                    return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+                };
+
+                /**
+                 * Gets the default type url for GetFileBadgesRequest
+                 * @function getTypeUrl
+                 * @memberof tilbo.ipc.v1.GetFileBadgesRequest
+                 * @static
+                 * @param {string} [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+                 * @returns {string} The default type url
+                 */
+                GetFileBadgesRequest.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
+                    if (typeUrlPrefix === undefined) {
+                        typeUrlPrefix = "type.googleapis.com";
+                    }
+                    return typeUrlPrefix + "/tilbo.ipc.v1.GetFileBadgesRequest";
+                };
+
+                return GetFileBadgesRequest;
+            })();
+
+            v1.GetFileBadgesResponse = (function() {
+
+                /**
+                 * Properties of a GetFileBadgesResponse.
+                 * @memberof tilbo.ipc.v1
+                 * @interface IGetFileBadgesResponse
+                 * @property {Array.<string>|null} [badges] GetFileBadgesResponse badges
+                 */
+
+                /**
+                 * Constructs a new GetFileBadgesResponse.
+                 * @memberof tilbo.ipc.v1
+                 * @classdesc Represents a GetFileBadgesResponse.
+                 * @implements IGetFileBadgesResponse
+                 * @constructor
+                 * @param {tilbo.ipc.v1.IGetFileBadgesResponse=} [properties] Properties to set
+                 */
+                function GetFileBadgesResponse(properties) {
+                    this.badges = [];
+                    if (properties)
+                        for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+                            if (properties[keys[i]] != null)
+                                this[keys[i]] = properties[keys[i]];
+                }
+
+                /**
+                 * GetFileBadgesResponse badges.
+                 * @member {Array.<string>} badges
+                 * @memberof tilbo.ipc.v1.GetFileBadgesResponse
+                 * @instance
+                 */
+                GetFileBadgesResponse.prototype.badges = $util.emptyArray;
+
+                /**
+                 * Creates a new GetFileBadgesResponse instance using the specified properties.
+                 * @function create
+                 * @memberof tilbo.ipc.v1.GetFileBadgesResponse
+                 * @static
+                 * @param {tilbo.ipc.v1.IGetFileBadgesResponse=} [properties] Properties to set
+                 * @returns {tilbo.ipc.v1.GetFileBadgesResponse} GetFileBadgesResponse instance
+                 */
+                GetFileBadgesResponse.create = function create(properties) {
+                    return new GetFileBadgesResponse(properties);
+                };
+
+                /**
+                 * Encodes the specified GetFileBadgesResponse message. Does not implicitly {@link tilbo.ipc.v1.GetFileBadgesResponse.verify|verify} messages.
+                 * @function encode
+                 * @memberof tilbo.ipc.v1.GetFileBadgesResponse
+                 * @static
+                 * @param {tilbo.ipc.v1.IGetFileBadgesResponse} message GetFileBadgesResponse message or plain object to encode
+                 * @param {$protobuf.Writer} [writer] Writer to encode to
+                 * @returns {$protobuf.Writer} Writer
+                 */
+                GetFileBadgesResponse.encode = function encode(message, writer) {
+                    if (!writer)
+                        writer = $Writer.create();
+                    if (message.badges != null && message.badges.length)
+                        for (let i = 0; i < message.badges.length; ++i)
+                            writer.uint32(/* id 1, wireType 2 =*/10).string(message.badges[i]);
+                    return writer;
+                };
+
+                /**
+                 * Encodes the specified GetFileBadgesResponse message, length delimited. Does not implicitly {@link tilbo.ipc.v1.GetFileBadgesResponse.verify|verify} messages.
+                 * @function encodeDelimited
+                 * @memberof tilbo.ipc.v1.GetFileBadgesResponse
+                 * @static
+                 * @param {tilbo.ipc.v1.IGetFileBadgesResponse} message GetFileBadgesResponse message or plain object to encode
+                 * @param {$protobuf.Writer} [writer] Writer to encode to
+                 * @returns {$protobuf.Writer} Writer
+                 */
+                GetFileBadgesResponse.encodeDelimited = function encodeDelimited(message, writer) {
+                    return this.encode(message, writer).ldelim();
+                };
+
+                /**
+                 * Decodes a GetFileBadgesResponse message from the specified reader or buffer.
+                 * @function decode
+                 * @memberof tilbo.ipc.v1.GetFileBadgesResponse
+                 * @static
+                 * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+                 * @param {number} [length] Message length if known beforehand
+                 * @returns {tilbo.ipc.v1.GetFileBadgesResponse} GetFileBadgesResponse
+                 * @throws {Error} If the payload is not a reader or valid buffer
+                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                 */
+                GetFileBadgesResponse.decode = function decode(reader, length, error) {
+                    if (!(reader instanceof $Reader))
+                        reader = $Reader.create(reader);
+                    let end = length === undefined ? reader.len : reader.pos + length, message = new $root.tilbo.ipc.v1.GetFileBadgesResponse();
+                    while (reader.pos < end) {
+                        let tag = reader.uint32();
+                        if (tag === error)
+                            break;
+                        switch (tag >>> 3) {
+                        case 1: {
+                                if (!(message.badges && message.badges.length))
+                                    message.badges = [];
+                                message.badges.push(reader.string());
+                                break;
+                            }
+                        default:
+                            reader.skipType(tag & 7);
+                            break;
+                        }
+                    }
+                    return message;
+                };
+
+                /**
+                 * Decodes a GetFileBadgesResponse message from the specified reader or buffer, length delimited.
+                 * @function decodeDelimited
+                 * @memberof tilbo.ipc.v1.GetFileBadgesResponse
+                 * @static
+                 * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+                 * @returns {tilbo.ipc.v1.GetFileBadgesResponse} GetFileBadgesResponse
+                 * @throws {Error} If the payload is not a reader or valid buffer
+                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                 */
+                GetFileBadgesResponse.decodeDelimited = function decodeDelimited(reader) {
+                    if (!(reader instanceof $Reader))
+                        reader = new $Reader(reader);
+                    return this.decode(reader, reader.uint32());
+                };
+
+                /**
+                 * Verifies a GetFileBadgesResponse message.
+                 * @function verify
+                 * @memberof tilbo.ipc.v1.GetFileBadgesResponse
+                 * @static
+                 * @param {Object.<string,*>} message Plain object to verify
+                 * @returns {string|null} `null` if valid, otherwise the reason why it is not
+                 */
+                GetFileBadgesResponse.verify = function verify(message) {
+                    if (typeof message !== "object" || message === null)
+                        return "object expected";
+                    if (message.badges != null && message.hasOwnProperty("badges")) {
+                        if (!Array.isArray(message.badges))
+                            return "badges: array expected";
+                        for (let i = 0; i < message.badges.length; ++i)
+                            if (!$util.isString(message.badges[i]))
+                                return "badges: string[] expected";
+                    }
+                    return null;
+                };
+
+                /**
+                 * Creates a GetFileBadgesResponse message from a plain object. Also converts values to their respective internal types.
+                 * @function fromObject
+                 * @memberof tilbo.ipc.v1.GetFileBadgesResponse
+                 * @static
+                 * @param {Object.<string,*>} object Plain object
+                 * @returns {tilbo.ipc.v1.GetFileBadgesResponse} GetFileBadgesResponse
+                 */
+                GetFileBadgesResponse.fromObject = function fromObject(object) {
+                    if (object instanceof $root.tilbo.ipc.v1.GetFileBadgesResponse)
+                        return object;
+                    let message = new $root.tilbo.ipc.v1.GetFileBadgesResponse();
+                    if (object.badges) {
+                        if (!Array.isArray(object.badges))
+                            throw TypeError(".tilbo.ipc.v1.GetFileBadgesResponse.badges: array expected");
+                        message.badges = [];
+                        for (let i = 0; i < object.badges.length; ++i)
+                            message.badges[i] = String(object.badges[i]);
+                    }
+                    return message;
+                };
+
+                /**
+                 * Creates a plain object from a GetFileBadgesResponse message. Also converts values to other types if specified.
+                 * @function toObject
+                 * @memberof tilbo.ipc.v1.GetFileBadgesResponse
+                 * @static
+                 * @param {tilbo.ipc.v1.GetFileBadgesResponse} message GetFileBadgesResponse
+                 * @param {$protobuf.IConversionOptions} [options] Conversion options
+                 * @returns {Object.<string,*>} Plain object
+                 */
+                GetFileBadgesResponse.toObject = function toObject(message, options) {
+                    if (!options)
+                        options = {};
+                    let object = {};
+                    if (options.arrays || options.defaults)
+                        object.badges = [];
+                    if (message.badges && message.badges.length) {
+                        object.badges = [];
+                        for (let j = 0; j < message.badges.length; ++j)
+                            object.badges[j] = message.badges[j];
+                    }
+                    return object;
+                };
+
+                /**
+                 * Converts this GetFileBadgesResponse to JSON.
+                 * @function toJSON
+                 * @memberof tilbo.ipc.v1.GetFileBadgesResponse
+                 * @instance
+                 * @returns {Object.<string,*>} JSON object
+                 */
+                GetFileBadgesResponse.prototype.toJSON = function toJSON() {
+                    return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+                };
+
+                /**
+                 * Gets the default type url for GetFileBadgesResponse
+                 * @function getTypeUrl
+                 * @memberof tilbo.ipc.v1.GetFileBadgesResponse
+                 * @static
+                 * @param {string} [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+                 * @returns {string} The default type url
+                 */
+                GetFileBadgesResponse.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
+                    if (typeUrlPrefix === undefined) {
+                        typeUrlPrefix = "type.googleapis.com";
+                    }
+                    return typeUrlPrefix + "/tilbo.ipc.v1.GetFileBadgesResponse";
+                };
+
+                return GetFileBadgesResponse;
+            })();
+
+            v1.FileAction = (function() {
+
+                /**
+                 * Properties of a FileAction.
+                 * @memberof tilbo.ipc.v1
+                 * @interface IFileAction
+                 * @property {string|null} [id] FileAction id
+                 * @property {string|null} [label] FileAction label
+                 */
+
+                /**
+                 * Constructs a new FileAction.
+                 * @memberof tilbo.ipc.v1
+                 * @classdesc Represents a FileAction.
+                 * @implements IFileAction
+                 * @constructor
+                 * @param {tilbo.ipc.v1.IFileAction=} [properties] Properties to set
+                 */
+                function FileAction(properties) {
+                    if (properties)
+                        for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+                            if (properties[keys[i]] != null)
+                                this[keys[i]] = properties[keys[i]];
+                }
+
+                /**
+                 * FileAction id.
+                 * @member {string} id
+                 * @memberof tilbo.ipc.v1.FileAction
+                 * @instance
+                 */
+                FileAction.prototype.id = "";
+
+                /**
+                 * FileAction label.
+                 * @member {string} label
+                 * @memberof tilbo.ipc.v1.FileAction
+                 * @instance
+                 */
+                FileAction.prototype.label = "";
+
+                /**
+                 * Creates a new FileAction instance using the specified properties.
+                 * @function create
+                 * @memberof tilbo.ipc.v1.FileAction
+                 * @static
+                 * @param {tilbo.ipc.v1.IFileAction=} [properties] Properties to set
+                 * @returns {tilbo.ipc.v1.FileAction} FileAction instance
+                 */
+                FileAction.create = function create(properties) {
+                    return new FileAction(properties);
+                };
+
+                /**
+                 * Encodes the specified FileAction message. Does not implicitly {@link tilbo.ipc.v1.FileAction.verify|verify} messages.
+                 * @function encode
+                 * @memberof tilbo.ipc.v1.FileAction
+                 * @static
+                 * @param {tilbo.ipc.v1.IFileAction} message FileAction message or plain object to encode
+                 * @param {$protobuf.Writer} [writer] Writer to encode to
+                 * @returns {$protobuf.Writer} Writer
+                 */
+                FileAction.encode = function encode(message, writer) {
+                    if (!writer)
+                        writer = $Writer.create();
+                    if (message.id != null && Object.hasOwnProperty.call(message, "id"))
+                        writer.uint32(/* id 1, wireType 2 =*/10).string(message.id);
+                    if (message.label != null && Object.hasOwnProperty.call(message, "label"))
+                        writer.uint32(/* id 2, wireType 2 =*/18).string(message.label);
+                    return writer;
+                };
+
+                /**
+                 * Encodes the specified FileAction message, length delimited. Does not implicitly {@link tilbo.ipc.v1.FileAction.verify|verify} messages.
+                 * @function encodeDelimited
+                 * @memberof tilbo.ipc.v1.FileAction
+                 * @static
+                 * @param {tilbo.ipc.v1.IFileAction} message FileAction message or plain object to encode
+                 * @param {$protobuf.Writer} [writer] Writer to encode to
+                 * @returns {$protobuf.Writer} Writer
+                 */
+                FileAction.encodeDelimited = function encodeDelimited(message, writer) {
+                    return this.encode(message, writer).ldelim();
+                };
+
+                /**
+                 * Decodes a FileAction message from the specified reader or buffer.
+                 * @function decode
+                 * @memberof tilbo.ipc.v1.FileAction
+                 * @static
+                 * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+                 * @param {number} [length] Message length if known beforehand
+                 * @returns {tilbo.ipc.v1.FileAction} FileAction
+                 * @throws {Error} If the payload is not a reader or valid buffer
+                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                 */
+                FileAction.decode = function decode(reader, length, error) {
+                    if (!(reader instanceof $Reader))
+                        reader = $Reader.create(reader);
+                    let end = length === undefined ? reader.len : reader.pos + length, message = new $root.tilbo.ipc.v1.FileAction();
+                    while (reader.pos < end) {
+                        let tag = reader.uint32();
+                        if (tag === error)
+                            break;
+                        switch (tag >>> 3) {
+                        case 1: {
+                                message.id = reader.string();
+                                break;
+                            }
+                        case 2: {
+                                message.label = reader.string();
+                                break;
+                            }
+                        default:
+                            reader.skipType(tag & 7);
+                            break;
+                        }
+                    }
+                    return message;
+                };
+
+                /**
+                 * Decodes a FileAction message from the specified reader or buffer, length delimited.
+                 * @function decodeDelimited
+                 * @memberof tilbo.ipc.v1.FileAction
+                 * @static
+                 * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+                 * @returns {tilbo.ipc.v1.FileAction} FileAction
+                 * @throws {Error} If the payload is not a reader or valid buffer
+                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                 */
+                FileAction.decodeDelimited = function decodeDelimited(reader) {
+                    if (!(reader instanceof $Reader))
+                        reader = new $Reader(reader);
+                    return this.decode(reader, reader.uint32());
+                };
+
+                /**
+                 * Verifies a FileAction message.
+                 * @function verify
+                 * @memberof tilbo.ipc.v1.FileAction
+                 * @static
+                 * @param {Object.<string,*>} message Plain object to verify
+                 * @returns {string|null} `null` if valid, otherwise the reason why it is not
+                 */
+                FileAction.verify = function verify(message) {
+                    if (typeof message !== "object" || message === null)
+                        return "object expected";
+                    if (message.id != null && message.hasOwnProperty("id"))
+                        if (!$util.isString(message.id))
+                            return "id: string expected";
+                    if (message.label != null && message.hasOwnProperty("label"))
+                        if (!$util.isString(message.label))
+                            return "label: string expected";
+                    return null;
+                };
+
+                /**
+                 * Creates a FileAction message from a plain object. Also converts values to their respective internal types.
+                 * @function fromObject
+                 * @memberof tilbo.ipc.v1.FileAction
+                 * @static
+                 * @param {Object.<string,*>} object Plain object
+                 * @returns {tilbo.ipc.v1.FileAction} FileAction
+                 */
+                FileAction.fromObject = function fromObject(object) {
+                    if (object instanceof $root.tilbo.ipc.v1.FileAction)
+                        return object;
+                    let message = new $root.tilbo.ipc.v1.FileAction();
+                    if (object.id != null)
+                        message.id = String(object.id);
+                    if (object.label != null)
+                        message.label = String(object.label);
+                    return message;
+                };
+
+                /**
+                 * Creates a plain object from a FileAction message. Also converts values to other types if specified.
+                 * @function toObject
+                 * @memberof tilbo.ipc.v1.FileAction
+                 * @static
+                 * @param {tilbo.ipc.v1.FileAction} message FileAction
+                 * @param {$protobuf.IConversionOptions} [options] Conversion options
+                 * @returns {Object.<string,*>} Plain object
+                 */
+                FileAction.toObject = function toObject(message, options) {
+                    if (!options)
+                        options = {};
+                    let object = {};
+                    if (options.defaults) {
+                        object.id = "";
+                        object.label = "";
+                    }
+                    if (message.id != null && message.hasOwnProperty("id"))
+                        object.id = message.id;
+                    if (message.label != null && message.hasOwnProperty("label"))
+                        object.label = message.label;
+                    return object;
+                };
+
+                /**
+                 * Converts this FileAction to JSON.
+                 * @function toJSON
+                 * @memberof tilbo.ipc.v1.FileAction
+                 * @instance
+                 * @returns {Object.<string,*>} JSON object
+                 */
+                FileAction.prototype.toJSON = function toJSON() {
+                    return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+                };
+
+                /**
+                 * Gets the default type url for FileAction
+                 * @function getTypeUrl
+                 * @memberof tilbo.ipc.v1.FileAction
+                 * @static
+                 * @param {string} [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+                 * @returns {string} The default type url
+                 */
+                FileAction.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
+                    if (typeUrlPrefix === undefined) {
+                        typeUrlPrefix = "type.googleapis.com";
+                    }
+                    return typeUrlPrefix + "/tilbo.ipc.v1.FileAction";
+                };
+
+                return FileAction;
+            })();
+
+            v1.GetFileActionsRequest = (function() {
+
+                /**
+                 * Properties of a GetFileActionsRequest.
+                 * @memberof tilbo.ipc.v1
+                 * @interface IGetFileActionsRequest
+                 * @property {string|null} [path] GetFileActionsRequest path
+                 */
+
+                /**
+                 * Constructs a new GetFileActionsRequest.
+                 * @memberof tilbo.ipc.v1
+                 * @classdesc Represents a GetFileActionsRequest.
+                 * @implements IGetFileActionsRequest
+                 * @constructor
+                 * @param {tilbo.ipc.v1.IGetFileActionsRequest=} [properties] Properties to set
+                 */
+                function GetFileActionsRequest(properties) {
+                    if (properties)
+                        for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+                            if (properties[keys[i]] != null)
+                                this[keys[i]] = properties[keys[i]];
+                }
+
+                /**
+                 * GetFileActionsRequest path.
+                 * @member {string} path
+                 * @memberof tilbo.ipc.v1.GetFileActionsRequest
+                 * @instance
+                 */
+                GetFileActionsRequest.prototype.path = "";
+
+                /**
+                 * Creates a new GetFileActionsRequest instance using the specified properties.
+                 * @function create
+                 * @memberof tilbo.ipc.v1.GetFileActionsRequest
+                 * @static
+                 * @param {tilbo.ipc.v1.IGetFileActionsRequest=} [properties] Properties to set
+                 * @returns {tilbo.ipc.v1.GetFileActionsRequest} GetFileActionsRequest instance
+                 */
+                GetFileActionsRequest.create = function create(properties) {
+                    return new GetFileActionsRequest(properties);
+                };
+
+                /**
+                 * Encodes the specified GetFileActionsRequest message. Does not implicitly {@link tilbo.ipc.v1.GetFileActionsRequest.verify|verify} messages.
+                 * @function encode
+                 * @memberof tilbo.ipc.v1.GetFileActionsRequest
+                 * @static
+                 * @param {tilbo.ipc.v1.IGetFileActionsRequest} message GetFileActionsRequest message or plain object to encode
+                 * @param {$protobuf.Writer} [writer] Writer to encode to
+                 * @returns {$protobuf.Writer} Writer
+                 */
+                GetFileActionsRequest.encode = function encode(message, writer) {
+                    if (!writer)
+                        writer = $Writer.create();
+                    if (message.path != null && Object.hasOwnProperty.call(message, "path"))
+                        writer.uint32(/* id 1, wireType 2 =*/10).string(message.path);
+                    return writer;
+                };
+
+                /**
+                 * Encodes the specified GetFileActionsRequest message, length delimited. Does not implicitly {@link tilbo.ipc.v1.GetFileActionsRequest.verify|verify} messages.
+                 * @function encodeDelimited
+                 * @memberof tilbo.ipc.v1.GetFileActionsRequest
+                 * @static
+                 * @param {tilbo.ipc.v1.IGetFileActionsRequest} message GetFileActionsRequest message or plain object to encode
+                 * @param {$protobuf.Writer} [writer] Writer to encode to
+                 * @returns {$protobuf.Writer} Writer
+                 */
+                GetFileActionsRequest.encodeDelimited = function encodeDelimited(message, writer) {
+                    return this.encode(message, writer).ldelim();
+                };
+
+                /**
+                 * Decodes a GetFileActionsRequest message from the specified reader or buffer.
+                 * @function decode
+                 * @memberof tilbo.ipc.v1.GetFileActionsRequest
+                 * @static
+                 * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+                 * @param {number} [length] Message length if known beforehand
+                 * @returns {tilbo.ipc.v1.GetFileActionsRequest} GetFileActionsRequest
+                 * @throws {Error} If the payload is not a reader or valid buffer
+                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                 */
+                GetFileActionsRequest.decode = function decode(reader, length, error) {
+                    if (!(reader instanceof $Reader))
+                        reader = $Reader.create(reader);
+                    let end = length === undefined ? reader.len : reader.pos + length, message = new $root.tilbo.ipc.v1.GetFileActionsRequest();
+                    while (reader.pos < end) {
+                        let tag = reader.uint32();
+                        if (tag === error)
+                            break;
+                        switch (tag >>> 3) {
+                        case 1: {
+                                message.path = reader.string();
+                                break;
+                            }
+                        default:
+                            reader.skipType(tag & 7);
+                            break;
+                        }
+                    }
+                    return message;
+                };
+
+                /**
+                 * Decodes a GetFileActionsRequest message from the specified reader or buffer, length delimited.
+                 * @function decodeDelimited
+                 * @memberof tilbo.ipc.v1.GetFileActionsRequest
+                 * @static
+                 * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+                 * @returns {tilbo.ipc.v1.GetFileActionsRequest} GetFileActionsRequest
+                 * @throws {Error} If the payload is not a reader or valid buffer
+                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                 */
+                GetFileActionsRequest.decodeDelimited = function decodeDelimited(reader) {
+                    if (!(reader instanceof $Reader))
+                        reader = new $Reader(reader);
+                    return this.decode(reader, reader.uint32());
+                };
+
+                /**
+                 * Verifies a GetFileActionsRequest message.
+                 * @function verify
+                 * @memberof tilbo.ipc.v1.GetFileActionsRequest
+                 * @static
+                 * @param {Object.<string,*>} message Plain object to verify
+                 * @returns {string|null} `null` if valid, otherwise the reason why it is not
+                 */
+                GetFileActionsRequest.verify = function verify(message) {
+                    if (typeof message !== "object" || message === null)
+                        return "object expected";
+                    if (message.path != null && message.hasOwnProperty("path"))
+                        if (!$util.isString(message.path))
+                            return "path: string expected";
+                    return null;
+                };
+
+                /**
+                 * Creates a GetFileActionsRequest message from a plain object. Also converts values to their respective internal types.
+                 * @function fromObject
+                 * @memberof tilbo.ipc.v1.GetFileActionsRequest
+                 * @static
+                 * @param {Object.<string,*>} object Plain object
+                 * @returns {tilbo.ipc.v1.GetFileActionsRequest} GetFileActionsRequest
+                 */
+                GetFileActionsRequest.fromObject = function fromObject(object) {
+                    if (object instanceof $root.tilbo.ipc.v1.GetFileActionsRequest)
+                        return object;
+                    let message = new $root.tilbo.ipc.v1.GetFileActionsRequest();
+                    if (object.path != null)
+                        message.path = String(object.path);
+                    return message;
+                };
+
+                /**
+                 * Creates a plain object from a GetFileActionsRequest message. Also converts values to other types if specified.
+                 * @function toObject
+                 * @memberof tilbo.ipc.v1.GetFileActionsRequest
+                 * @static
+                 * @param {tilbo.ipc.v1.GetFileActionsRequest} message GetFileActionsRequest
+                 * @param {$protobuf.IConversionOptions} [options] Conversion options
+                 * @returns {Object.<string,*>} Plain object
+                 */
+                GetFileActionsRequest.toObject = function toObject(message, options) {
+                    if (!options)
+                        options = {};
+                    let object = {};
+                    if (options.defaults)
+                        object.path = "";
+                    if (message.path != null && message.hasOwnProperty("path"))
+                        object.path = message.path;
+                    return object;
+                };
+
+                /**
+                 * Converts this GetFileActionsRequest to JSON.
+                 * @function toJSON
+                 * @memberof tilbo.ipc.v1.GetFileActionsRequest
+                 * @instance
+                 * @returns {Object.<string,*>} JSON object
+                 */
+                GetFileActionsRequest.prototype.toJSON = function toJSON() {
+                    return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+                };
+
+                /**
+                 * Gets the default type url for GetFileActionsRequest
+                 * @function getTypeUrl
+                 * @memberof tilbo.ipc.v1.GetFileActionsRequest
+                 * @static
+                 * @param {string} [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+                 * @returns {string} The default type url
+                 */
+                GetFileActionsRequest.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
+                    if (typeUrlPrefix === undefined) {
+                        typeUrlPrefix = "type.googleapis.com";
+                    }
+                    return typeUrlPrefix + "/tilbo.ipc.v1.GetFileActionsRequest";
+                };
+
+                return GetFileActionsRequest;
+            })();
+
+            v1.GetFileActionsResponse = (function() {
+
+                /**
+                 * Properties of a GetFileActionsResponse.
+                 * @memberof tilbo.ipc.v1
+                 * @interface IGetFileActionsResponse
+                 * @property {Array.<tilbo.ipc.v1.IFileAction>|null} [actions] GetFileActionsResponse actions
+                 */
+
+                /**
+                 * Constructs a new GetFileActionsResponse.
+                 * @memberof tilbo.ipc.v1
+                 * @classdesc Represents a GetFileActionsResponse.
+                 * @implements IGetFileActionsResponse
+                 * @constructor
+                 * @param {tilbo.ipc.v1.IGetFileActionsResponse=} [properties] Properties to set
+                 */
+                function GetFileActionsResponse(properties) {
+                    this.actions = [];
+                    if (properties)
+                        for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+                            if (properties[keys[i]] != null)
+                                this[keys[i]] = properties[keys[i]];
+                }
+
+                /**
+                 * GetFileActionsResponse actions.
+                 * @member {Array.<tilbo.ipc.v1.IFileAction>} actions
+                 * @memberof tilbo.ipc.v1.GetFileActionsResponse
+                 * @instance
+                 */
+                GetFileActionsResponse.prototype.actions = $util.emptyArray;
+
+                /**
+                 * Creates a new GetFileActionsResponse instance using the specified properties.
+                 * @function create
+                 * @memberof tilbo.ipc.v1.GetFileActionsResponse
+                 * @static
+                 * @param {tilbo.ipc.v1.IGetFileActionsResponse=} [properties] Properties to set
+                 * @returns {tilbo.ipc.v1.GetFileActionsResponse} GetFileActionsResponse instance
+                 */
+                GetFileActionsResponse.create = function create(properties) {
+                    return new GetFileActionsResponse(properties);
+                };
+
+                /**
+                 * Encodes the specified GetFileActionsResponse message. Does not implicitly {@link tilbo.ipc.v1.GetFileActionsResponse.verify|verify} messages.
+                 * @function encode
+                 * @memberof tilbo.ipc.v1.GetFileActionsResponse
+                 * @static
+                 * @param {tilbo.ipc.v1.IGetFileActionsResponse} message GetFileActionsResponse message or plain object to encode
+                 * @param {$protobuf.Writer} [writer] Writer to encode to
+                 * @returns {$protobuf.Writer} Writer
+                 */
+                GetFileActionsResponse.encode = function encode(message, writer) {
+                    if (!writer)
+                        writer = $Writer.create();
+                    if (message.actions != null && message.actions.length)
+                        for (let i = 0; i < message.actions.length; ++i)
+                            $root.tilbo.ipc.v1.FileAction.encode(message.actions[i], writer.uint32(/* id 1, wireType 2 =*/10).fork()).ldelim();
+                    return writer;
+                };
+
+                /**
+                 * Encodes the specified GetFileActionsResponse message, length delimited. Does not implicitly {@link tilbo.ipc.v1.GetFileActionsResponse.verify|verify} messages.
+                 * @function encodeDelimited
+                 * @memberof tilbo.ipc.v1.GetFileActionsResponse
+                 * @static
+                 * @param {tilbo.ipc.v1.IGetFileActionsResponse} message GetFileActionsResponse message or plain object to encode
+                 * @param {$protobuf.Writer} [writer] Writer to encode to
+                 * @returns {$protobuf.Writer} Writer
+                 */
+                GetFileActionsResponse.encodeDelimited = function encodeDelimited(message, writer) {
+                    return this.encode(message, writer).ldelim();
+                };
+
+                /**
+                 * Decodes a GetFileActionsResponse message from the specified reader or buffer.
+                 * @function decode
+                 * @memberof tilbo.ipc.v1.GetFileActionsResponse
+                 * @static
+                 * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+                 * @param {number} [length] Message length if known beforehand
+                 * @returns {tilbo.ipc.v1.GetFileActionsResponse} GetFileActionsResponse
+                 * @throws {Error} If the payload is not a reader or valid buffer
+                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                 */
+                GetFileActionsResponse.decode = function decode(reader, length, error) {
+                    if (!(reader instanceof $Reader))
+                        reader = $Reader.create(reader);
+                    let end = length === undefined ? reader.len : reader.pos + length, message = new $root.tilbo.ipc.v1.GetFileActionsResponse();
+                    while (reader.pos < end) {
+                        let tag = reader.uint32();
+                        if (tag === error)
+                            break;
+                        switch (tag >>> 3) {
+                        case 1: {
+                                if (!(message.actions && message.actions.length))
+                                    message.actions = [];
+                                message.actions.push($root.tilbo.ipc.v1.FileAction.decode(reader, reader.uint32()));
+                                break;
+                            }
+                        default:
+                            reader.skipType(tag & 7);
+                            break;
+                        }
+                    }
+                    return message;
+                };
+
+                /**
+                 * Decodes a GetFileActionsResponse message from the specified reader or buffer, length delimited.
+                 * @function decodeDelimited
+                 * @memberof tilbo.ipc.v1.GetFileActionsResponse
+                 * @static
+                 * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+                 * @returns {tilbo.ipc.v1.GetFileActionsResponse} GetFileActionsResponse
+                 * @throws {Error} If the payload is not a reader or valid buffer
+                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                 */
+                GetFileActionsResponse.decodeDelimited = function decodeDelimited(reader) {
+                    if (!(reader instanceof $Reader))
+                        reader = new $Reader(reader);
+                    return this.decode(reader, reader.uint32());
+                };
+
+                /**
+                 * Verifies a GetFileActionsResponse message.
+                 * @function verify
+                 * @memberof tilbo.ipc.v1.GetFileActionsResponse
+                 * @static
+                 * @param {Object.<string,*>} message Plain object to verify
+                 * @returns {string|null} `null` if valid, otherwise the reason why it is not
+                 */
+                GetFileActionsResponse.verify = function verify(message) {
+                    if (typeof message !== "object" || message === null)
+                        return "object expected";
+                    if (message.actions != null && message.hasOwnProperty("actions")) {
+                        if (!Array.isArray(message.actions))
+                            return "actions: array expected";
+                        for (let i = 0; i < message.actions.length; ++i) {
+                            let error = $root.tilbo.ipc.v1.FileAction.verify(message.actions[i]);
+                            if (error)
+                                return "actions." + error;
+                        }
+                    }
+                    return null;
+                };
+
+                /**
+                 * Creates a GetFileActionsResponse message from a plain object. Also converts values to their respective internal types.
+                 * @function fromObject
+                 * @memberof tilbo.ipc.v1.GetFileActionsResponse
+                 * @static
+                 * @param {Object.<string,*>} object Plain object
+                 * @returns {tilbo.ipc.v1.GetFileActionsResponse} GetFileActionsResponse
+                 */
+                GetFileActionsResponse.fromObject = function fromObject(object) {
+                    if (object instanceof $root.tilbo.ipc.v1.GetFileActionsResponse)
+                        return object;
+                    let message = new $root.tilbo.ipc.v1.GetFileActionsResponse();
+                    if (object.actions) {
+                        if (!Array.isArray(object.actions))
+                            throw TypeError(".tilbo.ipc.v1.GetFileActionsResponse.actions: array expected");
+                        message.actions = [];
+                        for (let i = 0; i < object.actions.length; ++i) {
+                            if (typeof object.actions[i] !== "object")
+                                throw TypeError(".tilbo.ipc.v1.GetFileActionsResponse.actions: object expected");
+                            message.actions[i] = $root.tilbo.ipc.v1.FileAction.fromObject(object.actions[i]);
+                        }
+                    }
+                    return message;
+                };
+
+                /**
+                 * Creates a plain object from a GetFileActionsResponse message. Also converts values to other types if specified.
+                 * @function toObject
+                 * @memberof tilbo.ipc.v1.GetFileActionsResponse
+                 * @static
+                 * @param {tilbo.ipc.v1.GetFileActionsResponse} message GetFileActionsResponse
+                 * @param {$protobuf.IConversionOptions} [options] Conversion options
+                 * @returns {Object.<string,*>} Plain object
+                 */
+                GetFileActionsResponse.toObject = function toObject(message, options) {
+                    if (!options)
+                        options = {};
+                    let object = {};
+                    if (options.arrays || options.defaults)
+                        object.actions = [];
+                    if (message.actions && message.actions.length) {
+                        object.actions = [];
+                        for (let j = 0; j < message.actions.length; ++j)
+                            object.actions[j] = $root.tilbo.ipc.v1.FileAction.toObject(message.actions[j], options);
+                    }
+                    return object;
+                };
+
+                /**
+                 * Converts this GetFileActionsResponse to JSON.
+                 * @function toJSON
+                 * @memberof tilbo.ipc.v1.GetFileActionsResponse
+                 * @instance
+                 * @returns {Object.<string,*>} JSON object
+                 */
+                GetFileActionsResponse.prototype.toJSON = function toJSON() {
+                    return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+                };
+
+                /**
+                 * Gets the default type url for GetFileActionsResponse
+                 * @function getTypeUrl
+                 * @memberof tilbo.ipc.v1.GetFileActionsResponse
+                 * @static
+                 * @param {string} [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+                 * @returns {string} The default type url
+                 */
+                GetFileActionsResponse.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
+                    if (typeUrlPrefix === undefined) {
+                        typeUrlPrefix = "type.googleapis.com";
+                    }
+                    return typeUrlPrefix + "/tilbo.ipc.v1.GetFileActionsResponse";
+                };
+
+                return GetFileActionsResponse;
+            })();
+
+            v1.RunFileActionRequest = (function() {
+
+                /**
+                 * Properties of a RunFileActionRequest.
+                 * @memberof tilbo.ipc.v1
+                 * @interface IRunFileActionRequest
+                 * @property {string|null} [path] RunFileActionRequest path
+                 * @property {string|null} [actionId] RunFileActionRequest actionId
+                 */
+
+                /**
+                 * Constructs a new RunFileActionRequest.
+                 * @memberof tilbo.ipc.v1
+                 * @classdesc Represents a RunFileActionRequest.
+                 * @implements IRunFileActionRequest
+                 * @constructor
+                 * @param {tilbo.ipc.v1.IRunFileActionRequest=} [properties] Properties to set
+                 */
+                function RunFileActionRequest(properties) {
+                    if (properties)
+                        for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+                            if (properties[keys[i]] != null)
+                                this[keys[i]] = properties[keys[i]];
+                }
+
+                /**
+                 * RunFileActionRequest path.
+                 * @member {string} path
+                 * @memberof tilbo.ipc.v1.RunFileActionRequest
+                 * @instance
+                 */
+                RunFileActionRequest.prototype.path = "";
+
+                /**
+                 * RunFileActionRequest actionId.
+                 * @member {string} actionId
+                 * @memberof tilbo.ipc.v1.RunFileActionRequest
+                 * @instance
+                 */
+                RunFileActionRequest.prototype.actionId = "";
+
+                /**
+                 * Creates a new RunFileActionRequest instance using the specified properties.
+                 * @function create
+                 * @memberof tilbo.ipc.v1.RunFileActionRequest
+                 * @static
+                 * @param {tilbo.ipc.v1.IRunFileActionRequest=} [properties] Properties to set
+                 * @returns {tilbo.ipc.v1.RunFileActionRequest} RunFileActionRequest instance
+                 */
+                RunFileActionRequest.create = function create(properties) {
+                    return new RunFileActionRequest(properties);
+                };
+
+                /**
+                 * Encodes the specified RunFileActionRequest message. Does not implicitly {@link tilbo.ipc.v1.RunFileActionRequest.verify|verify} messages.
+                 * @function encode
+                 * @memberof tilbo.ipc.v1.RunFileActionRequest
+                 * @static
+                 * @param {tilbo.ipc.v1.IRunFileActionRequest} message RunFileActionRequest message or plain object to encode
+                 * @param {$protobuf.Writer} [writer] Writer to encode to
+                 * @returns {$protobuf.Writer} Writer
+                 */
+                RunFileActionRequest.encode = function encode(message, writer) {
+                    if (!writer)
+                        writer = $Writer.create();
+                    if (message.path != null && Object.hasOwnProperty.call(message, "path"))
+                        writer.uint32(/* id 1, wireType 2 =*/10).string(message.path);
+                    if (message.actionId != null && Object.hasOwnProperty.call(message, "actionId"))
+                        writer.uint32(/* id 2, wireType 2 =*/18).string(message.actionId);
+                    return writer;
+                };
+
+                /**
+                 * Encodes the specified RunFileActionRequest message, length delimited. Does not implicitly {@link tilbo.ipc.v1.RunFileActionRequest.verify|verify} messages.
+                 * @function encodeDelimited
+                 * @memberof tilbo.ipc.v1.RunFileActionRequest
+                 * @static
+                 * @param {tilbo.ipc.v1.IRunFileActionRequest} message RunFileActionRequest message or plain object to encode
+                 * @param {$protobuf.Writer} [writer] Writer to encode to
+                 * @returns {$protobuf.Writer} Writer
+                 */
+                RunFileActionRequest.encodeDelimited = function encodeDelimited(message, writer) {
+                    return this.encode(message, writer).ldelim();
+                };
+
+                /**
+                 * Decodes a RunFileActionRequest message from the specified reader or buffer.
+                 * @function decode
+                 * @memberof tilbo.ipc.v1.RunFileActionRequest
+                 * @static
+                 * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+                 * @param {number} [length] Message length if known beforehand
+                 * @returns {tilbo.ipc.v1.RunFileActionRequest} RunFileActionRequest
+                 * @throws {Error} If the payload is not a reader or valid buffer
+                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                 */
+                RunFileActionRequest.decode = function decode(reader, length, error) {
+                    if (!(reader instanceof $Reader))
+                        reader = $Reader.create(reader);
+                    let end = length === undefined ? reader.len : reader.pos + length, message = new $root.tilbo.ipc.v1.RunFileActionRequest();
+                    while (reader.pos < end) {
+                        let tag = reader.uint32();
+                        if (tag === error)
+                            break;
+                        switch (tag >>> 3) {
+                        case 1: {
+                                message.path = reader.string();
+                                break;
+                            }
+                        case 2: {
+                                message.actionId = reader.string();
+                                break;
+                            }
+                        default:
+                            reader.skipType(tag & 7);
+                            break;
+                        }
+                    }
+                    return message;
+                };
+
+                /**
+                 * Decodes a RunFileActionRequest message from the specified reader or buffer, length delimited.
+                 * @function decodeDelimited
+                 * @memberof tilbo.ipc.v1.RunFileActionRequest
+                 * @static
+                 * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+                 * @returns {tilbo.ipc.v1.RunFileActionRequest} RunFileActionRequest
+                 * @throws {Error} If the payload is not a reader or valid buffer
+                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                 */
+                RunFileActionRequest.decodeDelimited = function decodeDelimited(reader) {
+                    if (!(reader instanceof $Reader))
+                        reader = new $Reader(reader);
+                    return this.decode(reader, reader.uint32());
+                };
+
+                /**
+                 * Verifies a RunFileActionRequest message.
+                 * @function verify
+                 * @memberof tilbo.ipc.v1.RunFileActionRequest
+                 * @static
+                 * @param {Object.<string,*>} message Plain object to verify
+                 * @returns {string|null} `null` if valid, otherwise the reason why it is not
+                 */
+                RunFileActionRequest.verify = function verify(message) {
+                    if (typeof message !== "object" || message === null)
+                        return "object expected";
+                    if (message.path != null && message.hasOwnProperty("path"))
+                        if (!$util.isString(message.path))
+                            return "path: string expected";
+                    if (message.actionId != null && message.hasOwnProperty("actionId"))
+                        if (!$util.isString(message.actionId))
+                            return "actionId: string expected";
+                    return null;
+                };
+
+                /**
+                 * Creates a RunFileActionRequest message from a plain object. Also converts values to their respective internal types.
+                 * @function fromObject
+                 * @memberof tilbo.ipc.v1.RunFileActionRequest
+                 * @static
+                 * @param {Object.<string,*>} object Plain object
+                 * @returns {tilbo.ipc.v1.RunFileActionRequest} RunFileActionRequest
+                 */
+                RunFileActionRequest.fromObject = function fromObject(object) {
+                    if (object instanceof $root.tilbo.ipc.v1.RunFileActionRequest)
+                        return object;
+                    let message = new $root.tilbo.ipc.v1.RunFileActionRequest();
+                    if (object.path != null)
+                        message.path = String(object.path);
+                    if (object.actionId != null)
+                        message.actionId = String(object.actionId);
+                    return message;
+                };
+
+                /**
+                 * Creates a plain object from a RunFileActionRequest message. Also converts values to other types if specified.
+                 * @function toObject
+                 * @memberof tilbo.ipc.v1.RunFileActionRequest
+                 * @static
+                 * @param {tilbo.ipc.v1.RunFileActionRequest} message RunFileActionRequest
+                 * @param {$protobuf.IConversionOptions} [options] Conversion options
+                 * @returns {Object.<string,*>} Plain object
+                 */
+                RunFileActionRequest.toObject = function toObject(message, options) {
+                    if (!options)
+                        options = {};
+                    let object = {};
+                    if (options.defaults) {
+                        object.path = "";
+                        object.actionId = "";
+                    }
+                    if (message.path != null && message.hasOwnProperty("path"))
+                        object.path = message.path;
+                    if (message.actionId != null && message.hasOwnProperty("actionId"))
+                        object.actionId = message.actionId;
+                    return object;
+                };
+
+                /**
+                 * Converts this RunFileActionRequest to JSON.
+                 * @function toJSON
+                 * @memberof tilbo.ipc.v1.RunFileActionRequest
+                 * @instance
+                 * @returns {Object.<string,*>} JSON object
+                 */
+                RunFileActionRequest.prototype.toJSON = function toJSON() {
+                    return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+                };
+
+                /**
+                 * Gets the default type url for RunFileActionRequest
+                 * @function getTypeUrl
+                 * @memberof tilbo.ipc.v1.RunFileActionRequest
+                 * @static
+                 * @param {string} [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+                 * @returns {string} The default type url
+                 */
+                RunFileActionRequest.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
+                    if (typeUrlPrefix === undefined) {
+                        typeUrlPrefix = "type.googleapis.com";
+                    }
+                    return typeUrlPrefix + "/tilbo.ipc.v1.RunFileActionRequest";
+                };
+
+                return RunFileActionRequest;
+            })();
+
+            v1.RunFileActionResponse = (function() {
+
+                /**
+                 * Properties of a RunFileActionResponse.
+                 * @memberof tilbo.ipc.v1
+                 * @interface IRunFileActionResponse
+                 */
+
+                /**
+                 * Constructs a new RunFileActionResponse.
+                 * @memberof tilbo.ipc.v1
+                 * @classdesc Represents a RunFileActionResponse.
+                 * @implements IRunFileActionResponse
+                 * @constructor
+                 * @param {tilbo.ipc.v1.IRunFileActionResponse=} [properties] Properties to set
+                 */
+                function RunFileActionResponse(properties) {
+                    if (properties)
+                        for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+                            if (properties[keys[i]] != null)
+                                this[keys[i]] = properties[keys[i]];
+                }
+
+                /**
+                 * Creates a new RunFileActionResponse instance using the specified properties.
+                 * @function create
+                 * @memberof tilbo.ipc.v1.RunFileActionResponse
+                 * @static
+                 * @param {tilbo.ipc.v1.IRunFileActionResponse=} [properties] Properties to set
+                 * @returns {tilbo.ipc.v1.RunFileActionResponse} RunFileActionResponse instance
+                 */
+                RunFileActionResponse.create = function create(properties) {
+                    return new RunFileActionResponse(properties);
+                };
+
+                /**
+                 * Encodes the specified RunFileActionResponse message. Does not implicitly {@link tilbo.ipc.v1.RunFileActionResponse.verify|verify} messages.
+                 * @function encode
+                 * @memberof tilbo.ipc.v1.RunFileActionResponse
+                 * @static
+                 * @param {tilbo.ipc.v1.IRunFileActionResponse} message RunFileActionResponse message or plain object to encode
+                 * @param {$protobuf.Writer} [writer] Writer to encode to
+                 * @returns {$protobuf.Writer} Writer
+                 */
+                RunFileActionResponse.encode = function encode(message, writer) {
+                    if (!writer)
+                        writer = $Writer.create();
+                    return writer;
+                };
+
+                /**
+                 * Encodes the specified RunFileActionResponse message, length delimited. Does not implicitly {@link tilbo.ipc.v1.RunFileActionResponse.verify|verify} messages.
+                 * @function encodeDelimited
+                 * @memberof tilbo.ipc.v1.RunFileActionResponse
+                 * @static
+                 * @param {tilbo.ipc.v1.IRunFileActionResponse} message RunFileActionResponse message or plain object to encode
+                 * @param {$protobuf.Writer} [writer] Writer to encode to
+                 * @returns {$protobuf.Writer} Writer
+                 */
+                RunFileActionResponse.encodeDelimited = function encodeDelimited(message, writer) {
+                    return this.encode(message, writer).ldelim();
+                };
+
+                /**
+                 * Decodes a RunFileActionResponse message from the specified reader or buffer.
+                 * @function decode
+                 * @memberof tilbo.ipc.v1.RunFileActionResponse
+                 * @static
+                 * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+                 * @param {number} [length] Message length if known beforehand
+                 * @returns {tilbo.ipc.v1.RunFileActionResponse} RunFileActionResponse
+                 * @throws {Error} If the payload is not a reader or valid buffer
+                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                 */
+                RunFileActionResponse.decode = function decode(reader, length, error) {
+                    if (!(reader instanceof $Reader))
+                        reader = $Reader.create(reader);
+                    let end = length === undefined ? reader.len : reader.pos + length, message = new $root.tilbo.ipc.v1.RunFileActionResponse();
+                    while (reader.pos < end) {
+                        let tag = reader.uint32();
+                        if (tag === error)
+                            break;
+                        switch (tag >>> 3) {
+                        default:
+                            reader.skipType(tag & 7);
+                            break;
+                        }
+                    }
+                    return message;
+                };
+
+                /**
+                 * Decodes a RunFileActionResponse message from the specified reader or buffer, length delimited.
+                 * @function decodeDelimited
+                 * @memberof tilbo.ipc.v1.RunFileActionResponse
+                 * @static
+                 * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+                 * @returns {tilbo.ipc.v1.RunFileActionResponse} RunFileActionResponse
+                 * @throws {Error} If the payload is not a reader or valid buffer
+                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                 */
+                RunFileActionResponse.decodeDelimited = function decodeDelimited(reader) {
+                    if (!(reader instanceof $Reader))
+                        reader = new $Reader(reader);
+                    return this.decode(reader, reader.uint32());
+                };
+
+                /**
+                 * Verifies a RunFileActionResponse message.
+                 * @function verify
+                 * @memberof tilbo.ipc.v1.RunFileActionResponse
+                 * @static
+                 * @param {Object.<string,*>} message Plain object to verify
+                 * @returns {string|null} `null` if valid, otherwise the reason why it is not
+                 */
+                RunFileActionResponse.verify = function verify(message) {
+                    if (typeof message !== "object" || message === null)
+                        return "object expected";
+                    return null;
+                };
+
+                /**
+                 * Creates a RunFileActionResponse message from a plain object. Also converts values to their respective internal types.
+                 * @function fromObject
+                 * @memberof tilbo.ipc.v1.RunFileActionResponse
+                 * @static
+                 * @param {Object.<string,*>} object Plain object
+                 * @returns {tilbo.ipc.v1.RunFileActionResponse} RunFileActionResponse
+                 */
+                RunFileActionResponse.fromObject = function fromObject(object) {
+                    if (object instanceof $root.tilbo.ipc.v1.RunFileActionResponse)
+                        return object;
+                    return new $root.tilbo.ipc.v1.RunFileActionResponse();
+                };
+
+                /**
+                 * Creates a plain object from a RunFileActionResponse message. Also converts values to other types if specified.
+                 * @function toObject
+                 * @memberof tilbo.ipc.v1.RunFileActionResponse
+                 * @static
+                 * @param {tilbo.ipc.v1.RunFileActionResponse} message RunFileActionResponse
+                 * @param {$protobuf.IConversionOptions} [options] Conversion options
+                 * @returns {Object.<string,*>} Plain object
+                 */
+                RunFileActionResponse.toObject = function toObject() {
+                    return {};
+                };
+
+                /**
+                 * Converts this RunFileActionResponse to JSON.
+                 * @function toJSON
+                 * @memberof tilbo.ipc.v1.RunFileActionResponse
+                 * @instance
+                 * @returns {Object.<string,*>} JSON object
+                 */
+                RunFileActionResponse.prototype.toJSON = function toJSON() {
+                    return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+                };
+
+                /**
+                 * Gets the default type url for RunFileActionResponse
+                 * @function getTypeUrl
+                 * @memberof tilbo.ipc.v1.RunFileActionResponse
+                 * @static
+                 * @param {string} [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+                 * @returns {string} The default type url
+                 */
+                RunFileActionResponse.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
+                    if (typeUrlPrefix === undefined) {
+                        typeUrlPrefix = "type.googleapis.com";
+                    }
+                    return typeUrlPrefix + "/tilbo.ipc.v1.RunFileActionResponse";
+                };
+
+                return RunFileActionResponse;
+            })();
+
+            v1.LaunchGUIRequest = (function() {
+
+                /**
+                 * Properties of a LaunchGUIRequest.
+                 * @memberof tilbo.ipc.v1
+                 * @interface ILaunchGUIRequest
+                 * @property {string|null} [path] LaunchGUIRequest path
+                 */
+
+                /**
+                 * Constructs a new LaunchGUIRequest.
+                 * @memberof tilbo.ipc.v1
+                 * @classdesc Represents a LaunchGUIRequest.
+                 * @implements ILaunchGUIRequest
+                 * @constructor
+                 * @param {tilbo.ipc.v1.ILaunchGUIRequest=} [properties] Properties to set
+                 */
+                function LaunchGUIRequest(properties) {
+                    if (properties)
+                        for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+                            if (properties[keys[i]] != null)
+                                this[keys[i]] = properties[keys[i]];
+                }
+
+                /**
+                 * LaunchGUIRequest path.
+                 * @member {string} path
+                 * @memberof tilbo.ipc.v1.LaunchGUIRequest
+                 * @instance
+                 */
+                LaunchGUIRequest.prototype.path = "";
+
+                /**
+                 * Creates a new LaunchGUIRequest instance using the specified properties.
+                 * @function create
+                 * @memberof tilbo.ipc.v1.LaunchGUIRequest
+                 * @static
+                 * @param {tilbo.ipc.v1.ILaunchGUIRequest=} [properties] Properties to set
+                 * @returns {tilbo.ipc.v1.LaunchGUIRequest} LaunchGUIRequest instance
+                 */
+                LaunchGUIRequest.create = function create(properties) {
+                    return new LaunchGUIRequest(properties);
+                };
+
+                /**
+                 * Encodes the specified LaunchGUIRequest message. Does not implicitly {@link tilbo.ipc.v1.LaunchGUIRequest.verify|verify} messages.
+                 * @function encode
+                 * @memberof tilbo.ipc.v1.LaunchGUIRequest
+                 * @static
+                 * @param {tilbo.ipc.v1.ILaunchGUIRequest} message LaunchGUIRequest message or plain object to encode
+                 * @param {$protobuf.Writer} [writer] Writer to encode to
+                 * @returns {$protobuf.Writer} Writer
+                 */
+                LaunchGUIRequest.encode = function encode(message, writer) {
+                    if (!writer)
+                        writer = $Writer.create();
+                    if (message.path != null && Object.hasOwnProperty.call(message, "path"))
+                        writer.uint32(/* id 1, wireType 2 =*/10).string(message.path);
+                    return writer;
+                };
+
+                /**
+                 * Encodes the specified LaunchGUIRequest message, length delimited. Does not implicitly {@link tilbo.ipc.v1.LaunchGUIRequest.verify|verify} messages.
+                 * @function encodeDelimited
+                 * @memberof tilbo.ipc.v1.LaunchGUIRequest
+                 * @static
+                 * @param {tilbo.ipc.v1.ILaunchGUIRequest} message LaunchGUIRequest message or plain object to encode
+                 * @param {$protobuf.Writer} [writer] Writer to encode to
+                 * @returns {$protobuf.Writer} Writer
+                 */
+                LaunchGUIRequest.encodeDelimited = function encodeDelimited(message, writer) {
+                    return this.encode(message, writer).ldelim();
+                };
+
+                /**
+                 * Decodes a LaunchGUIRequest message from the specified reader or buffer.
+                 * @function decode
+                 * @memberof tilbo.ipc.v1.LaunchGUIRequest
+                 * @static
+                 * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+                 * @param {number} [length] Message length if known beforehand
+                 * @returns {tilbo.ipc.v1.LaunchGUIRequest} LaunchGUIRequest
+                 * @throws {Error} If the payload is not a reader or valid buffer
+                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                 */
+                LaunchGUIRequest.decode = function decode(reader, length, error) {
+                    if (!(reader instanceof $Reader))
+                        reader = $Reader.create(reader);
+                    let end = length === undefined ? reader.len : reader.pos + length, message = new $root.tilbo.ipc.v1.LaunchGUIRequest();
+                    while (reader.pos < end) {
+                        let tag = reader.uint32();
+                        if (tag === error)
+                            break;
+                        switch (tag >>> 3) {
+                        case 1: {
+                                message.path = reader.string();
+                                break;
+                            }
+                        default:
+                            reader.skipType(tag & 7);
+                            break;
+                        }
+                    }
+                    return message;
+                };
+
+                /**
+                 * Decodes a LaunchGUIRequest message from the specified reader or buffer, length delimited.
+                 * @function decodeDelimited
+                 * @memberof tilbo.ipc.v1.LaunchGUIRequest
+                 * @static
+                 * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+                 * @returns {tilbo.ipc.v1.LaunchGUIRequest} LaunchGUIRequest
+                 * @throws {Error} If the payload is not a reader or valid buffer
+                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                 */
+                LaunchGUIRequest.decodeDelimited = function decodeDelimited(reader) {
+                    if (!(reader instanceof $Reader))
+                        reader = new $Reader(reader);
+                    return this.decode(reader, reader.uint32());
+                };
+
+                /**
+                 * Verifies a LaunchGUIRequest message.
+                 * @function verify
+                 * @memberof tilbo.ipc.v1.LaunchGUIRequest
+                 * @static
+                 * @param {Object.<string,*>} message Plain object to verify
+                 * @returns {string|null} `null` if valid, otherwise the reason why it is not
+                 */
+                LaunchGUIRequest.verify = function verify(message) {
+                    if (typeof message !== "object" || message === null)
+                        return "object expected";
+                    if (message.path != null && message.hasOwnProperty("path"))
+                        if (!$util.isString(message.path))
+                            return "path: string expected";
+                    return null;
+                };
+
+                /**
+                 * Creates a LaunchGUIRequest message from a plain object. Also converts values to their respective internal types.
+                 * @function fromObject
+                 * @memberof tilbo.ipc.v1.LaunchGUIRequest
+                 * @static
+                 * @param {Object.<string,*>} object Plain object
+                 * @returns {tilbo.ipc.v1.LaunchGUIRequest} LaunchGUIRequest
+                 */
+                LaunchGUIRequest.fromObject = function fromObject(object) {
+                    if (object instanceof $root.tilbo.ipc.v1.LaunchGUIRequest)
+                        return object;
+                    let message = new $root.tilbo.ipc.v1.LaunchGUIRequest();
+                    if (object.path != null)
+                        message.path = String(object.path);
+                    return message;
+                };
+
+                /**
+                 * Creates a plain object from a LaunchGUIRequest message. Also converts values to other types if specified.
+                 * @function toObject
+                 * @memberof tilbo.ipc.v1.LaunchGUIRequest
+                 * @static
+                 * @param {tilbo.ipc.v1.LaunchGUIRequest} message LaunchGUIRequest
+                 * @param {$protobuf.IConversionOptions} [options] Conversion options
+                 * @returns {Object.<string,*>} Plain object
+                 */
+                LaunchGUIRequest.toObject = function toObject(message, options) {
+                    if (!options)
+                        options = {};
+                    let object = {};
+                    if (options.defaults)
+                        object.path = "";
+                    if (message.path != null && message.hasOwnProperty("path"))
+                        object.path = message.path;
+                    return object;
+                };
+
+                /**
+                 * Converts this LaunchGUIRequest to JSON.
+                 * @function toJSON
+                 * @memberof tilbo.ipc.v1.LaunchGUIRequest
+                 * @instance
+                 * @returns {Object.<string,*>} JSON object
+                 */
+                LaunchGUIRequest.prototype.toJSON = function toJSON() {
+                    return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+                };
+
+                /**
+                 * Gets the default type url for LaunchGUIRequest
+                 * @function getTypeUrl
+                 * @memberof tilbo.ipc.v1.LaunchGUIRequest
+                 * @static
+                 * @param {string} [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+                 * @returns {string} The default type url
+                 */
+                LaunchGUIRequest.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
+                    if (typeUrlPrefix === undefined) {
+                        typeUrlPrefix = "type.googleapis.com";
+                    }
+                    return typeUrlPrefix + "/tilbo.ipc.v1.LaunchGUIRequest";
+                };
+
+                return LaunchGUIRequest;
+            })();
+
+            v1.LaunchGUIResponse = (function() {
+
+                /**
+                 * Properties of a LaunchGUIResponse.
+                 * @memberof tilbo.ipc.v1
+                 * @interface ILaunchGUIResponse
+                 * @property {boolean|null} [alreadyRunning] LaunchGUIResponse alreadyRunning
+                 */
+
+                /**
+                 * Constructs a new LaunchGUIResponse.
+                 * @memberof tilbo.ipc.v1
+                 * @classdesc Represents a LaunchGUIResponse.
+                 * @implements ILaunchGUIResponse
+                 * @constructor
+                 * @param {tilbo.ipc.v1.ILaunchGUIResponse=} [properties] Properties to set
+                 */
+                function LaunchGUIResponse(properties) {
+                    if (properties)
+                        for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+                            if (properties[keys[i]] != null)
+                                this[keys[i]] = properties[keys[i]];
+                }
+
+                /**
+                 * LaunchGUIResponse alreadyRunning.
+                 * @member {boolean} alreadyRunning
+                 * @memberof tilbo.ipc.v1.LaunchGUIResponse
+                 * @instance
+                 */
+                LaunchGUIResponse.prototype.alreadyRunning = false;
+
+                /**
+                 * Creates a new LaunchGUIResponse instance using the specified properties.
+                 * @function create
+                 * @memberof tilbo.ipc.v1.LaunchGUIResponse
+                 * @static
+                 * @param {tilbo.ipc.v1.ILaunchGUIResponse=} [properties] Properties to set
+                 * @returns {tilbo.ipc.v1.LaunchGUIResponse} LaunchGUIResponse instance
+                 */
+                LaunchGUIResponse.create = function create(properties) {
+                    return new LaunchGUIResponse(properties);
+                };
+
+                /**
+                 * Encodes the specified LaunchGUIResponse message. Does not implicitly {@link tilbo.ipc.v1.LaunchGUIResponse.verify|verify} messages.
+                 * @function encode
+                 * @memberof tilbo.ipc.v1.LaunchGUIResponse
+                 * @static
+                 * @param {tilbo.ipc.v1.ILaunchGUIResponse} message LaunchGUIResponse message or plain object to encode
+                 * @param {$protobuf.Writer} [writer] Writer to encode to
+                 * @returns {$protobuf.Writer} Writer
+                 */
+                LaunchGUIResponse.encode = function encode(message, writer) {
+                    if (!writer)
+                        writer = $Writer.create();
+                    if (message.alreadyRunning != null && Object.hasOwnProperty.call(message, "alreadyRunning"))
+                        writer.uint32(/* id 1, wireType 0 =*/8).bool(message.alreadyRunning);
+                    return writer;
+                };
+
+                /**
+                 * Encodes the specified LaunchGUIResponse message, length delimited. Does not implicitly {@link tilbo.ipc.v1.LaunchGUIResponse.verify|verify} messages.
+                 * @function encodeDelimited
+                 * @memberof tilbo.ipc.v1.LaunchGUIResponse
+                 * @static
+                 * @param {tilbo.ipc.v1.ILaunchGUIResponse} message LaunchGUIResponse message or plain object to encode
+                 * @param {$protobuf.Writer} [writer] Writer to encode to
+                 * @returns {$protobuf.Writer} Writer
+                 */
+                LaunchGUIResponse.encodeDelimited = function encodeDelimited(message, writer) {
+                    return this.encode(message, writer).ldelim();
+                };
+
+                /**
+                 * Decodes a LaunchGUIResponse message from the specified reader or buffer.
+                 * @function decode
+                 * @memberof tilbo.ipc.v1.LaunchGUIResponse
+                 * @static
+                 * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+                 * @param {number} [length] Message length if known beforehand
+                 * @returns {tilbo.ipc.v1.LaunchGUIResponse} LaunchGUIResponse
+                 * @throws {Error} If the payload is not a reader or valid buffer
+                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                 */
+                LaunchGUIResponse.decode = function decode(reader, length, error) {
+                    if (!(reader instanceof $Reader))
+                        reader = $Reader.create(reader);
+                    let end = length === undefined ? reader.len : reader.pos + length, message = new $root.tilbo.ipc.v1.LaunchGUIResponse();
+                    while (reader.pos < end) {
+                        let tag = reader.uint32();
+                        if (tag === error)
+                            break;
+                        switch (tag >>> 3) {
+                        case 1: {
+                                message.alreadyRunning = reader.bool();
+                                break;
+                            }
+                        default:
+                            reader.skipType(tag & 7);
+                            break;
+                        }
+                    }
+                    return message;
+                };
+
+                /**
+                 * Decodes a LaunchGUIResponse message from the specified reader or buffer, length delimited.
+                 * @function decodeDelimited
+                 * @memberof tilbo.ipc.v1.LaunchGUIResponse
+                 * @static
+                 * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+                 * @returns {tilbo.ipc.v1.LaunchGUIResponse} LaunchGUIResponse
+                 * @throws {Error} If the payload is not a reader or valid buffer
+                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                 */
+                LaunchGUIResponse.decodeDelimited = function decodeDelimited(reader) {
+                    if (!(reader instanceof $Reader))
+                        reader = new $Reader(reader);
+                    return this.decode(reader, reader.uint32());
+                };
+
+                /**
+                 * Verifies a LaunchGUIResponse message.
+                 * @function verify
+                 * @memberof tilbo.ipc.v1.LaunchGUIResponse
+                 * @static
+                 * @param {Object.<string,*>} message Plain object to verify
+                 * @returns {string|null} `null` if valid, otherwise the reason why it is not
+                 */
+                LaunchGUIResponse.verify = function verify(message) {
+                    if (typeof message !== "object" || message === null)
+                        return "object expected";
+                    if (message.alreadyRunning != null && message.hasOwnProperty("alreadyRunning"))
+                        if (typeof message.alreadyRunning !== "boolean")
+                            return "alreadyRunning: boolean expected";
+                    return null;
+                };
+
+                /**
+                 * Creates a LaunchGUIResponse message from a plain object. Also converts values to their respective internal types.
+                 * @function fromObject
+                 * @memberof tilbo.ipc.v1.LaunchGUIResponse
+                 * @static
+                 * @param {Object.<string,*>} object Plain object
+                 * @returns {tilbo.ipc.v1.LaunchGUIResponse} LaunchGUIResponse
+                 */
+                LaunchGUIResponse.fromObject = function fromObject(object) {
+                    if (object instanceof $root.tilbo.ipc.v1.LaunchGUIResponse)
+                        return object;
+                    let message = new $root.tilbo.ipc.v1.LaunchGUIResponse();
+                    if (object.alreadyRunning != null)
+                        message.alreadyRunning = Boolean(object.alreadyRunning);
+                    return message;
+                };
+
+                /**
+                 * Creates a plain object from a LaunchGUIResponse message. Also converts values to other types if specified.
+                 * @function toObject
+                 * @memberof tilbo.ipc.v1.LaunchGUIResponse
+                 * @static
+                 * @param {tilbo.ipc.v1.LaunchGUIResponse} message LaunchGUIResponse
+                 * @param {$protobuf.IConversionOptions} [options] Conversion options
+                 * @returns {Object.<string,*>} Plain object
+                 */
+                LaunchGUIResponse.toObject = function toObject(message, options) {
+                    if (!options)
+                        options = {};
+                    let object = {};
+                    if (options.defaults)
+                        object.alreadyRunning = false;
+                    if (message.alreadyRunning != null && message.hasOwnProperty("alreadyRunning"))
+                        object.alreadyRunning = message.alreadyRunning;
+                    return object;
+                };
+
+                /**
+                 * Converts this LaunchGUIResponse to JSON.
+                 * @function toJSON
+                 * @memberof tilbo.ipc.v1.LaunchGUIResponse
+                 * @instance
+                 * @returns {Object.<string,*>} JSON object
+                 */
+                LaunchGUIResponse.prototype.toJSON = function toJSON() {
+                    return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+                };
+
+                /**
+                 * Gets the default type url for LaunchGUIResponse
+                 * @function getTypeUrl
+                 * @memberof tilbo.ipc.v1.LaunchGUIResponse
+                 * @static
+                 * @param {string} [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+                 * @returns {string} The default type url
+                 */
+                LaunchGUIResponse.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
+                    if (typeUrlPrefix === undefined) {
+                        typeUrlPrefix = "type.googleapis.com";
+                    }
+                    return typeUrlPrefix + "/tilbo.ipc.v1.LaunchGUIResponse";
+                };
+
+                return LaunchGUIResponse;
+            })();
+
+            v1.ShowWindowEvent = (function() {
+
+                /**
+                 * Properties of a ShowWindowEvent.
+                 * @memberof tilbo.ipc.v1
+                 * @interface IShowWindowEvent
+                 * @property {string|null} [path] ShowWindowEvent path
+                 */
+
+                /**
+                 * Constructs a new ShowWindowEvent.
+                 * @memberof tilbo.ipc.v1
+                 * @classdesc Represents a ShowWindowEvent.
+                 * @implements IShowWindowEvent
+                 * @constructor
+                 * @param {tilbo.ipc.v1.IShowWindowEvent=} [properties] Properties to set
+                 */
+                function ShowWindowEvent(properties) {
+                    if (properties)
+                        for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+                            if (properties[keys[i]] != null)
+                                this[keys[i]] = properties[keys[i]];
+                }
+
+                /**
+                 * ShowWindowEvent path.
+                 * @member {string} path
+                 * @memberof tilbo.ipc.v1.ShowWindowEvent
+                 * @instance
+                 */
+                ShowWindowEvent.prototype.path = "";
+
+                /**
+                 * Creates a new ShowWindowEvent instance using the specified properties.
+                 * @function create
+                 * @memberof tilbo.ipc.v1.ShowWindowEvent
+                 * @static
+                 * @param {tilbo.ipc.v1.IShowWindowEvent=} [properties] Properties to set
+                 * @returns {tilbo.ipc.v1.ShowWindowEvent} ShowWindowEvent instance
+                 */
+                ShowWindowEvent.create = function create(properties) {
+                    return new ShowWindowEvent(properties);
+                };
+
+                /**
+                 * Encodes the specified ShowWindowEvent message. Does not implicitly {@link tilbo.ipc.v1.ShowWindowEvent.verify|verify} messages.
+                 * @function encode
+                 * @memberof tilbo.ipc.v1.ShowWindowEvent
+                 * @static
+                 * @param {tilbo.ipc.v1.IShowWindowEvent} message ShowWindowEvent message or plain object to encode
+                 * @param {$protobuf.Writer} [writer] Writer to encode to
+                 * @returns {$protobuf.Writer} Writer
+                 */
+                ShowWindowEvent.encode = function encode(message, writer) {
+                    if (!writer)
+                        writer = $Writer.create();
+                    if (message.path != null && Object.hasOwnProperty.call(message, "path"))
+                        writer.uint32(/* id 1, wireType 2 =*/10).string(message.path);
+                    return writer;
+                };
+
+                /**
+                 * Encodes the specified ShowWindowEvent message, length delimited. Does not implicitly {@link tilbo.ipc.v1.ShowWindowEvent.verify|verify} messages.
+                 * @function encodeDelimited
+                 * @memberof tilbo.ipc.v1.ShowWindowEvent
+                 * @static
+                 * @param {tilbo.ipc.v1.IShowWindowEvent} message ShowWindowEvent message or plain object to encode
+                 * @param {$protobuf.Writer} [writer] Writer to encode to
+                 * @returns {$protobuf.Writer} Writer
+                 */
+                ShowWindowEvent.encodeDelimited = function encodeDelimited(message, writer) {
+                    return this.encode(message, writer).ldelim();
+                };
+
+                /**
+                 * Decodes a ShowWindowEvent message from the specified reader or buffer.
+                 * @function decode
+                 * @memberof tilbo.ipc.v1.ShowWindowEvent
+                 * @static
+                 * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+                 * @param {number} [length] Message length if known beforehand
+                 * @returns {tilbo.ipc.v1.ShowWindowEvent} ShowWindowEvent
+                 * @throws {Error} If the payload is not a reader or valid buffer
+                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                 */
+                ShowWindowEvent.decode = function decode(reader, length, error) {
+                    if (!(reader instanceof $Reader))
+                        reader = $Reader.create(reader);
+                    let end = length === undefined ? reader.len : reader.pos + length, message = new $root.tilbo.ipc.v1.ShowWindowEvent();
+                    while (reader.pos < end) {
+                        let tag = reader.uint32();
+                        if (tag === error)
+                            break;
+                        switch (tag >>> 3) {
+                        case 1: {
+                                message.path = reader.string();
+                                break;
+                            }
+                        default:
+                            reader.skipType(tag & 7);
+                            break;
+                        }
+                    }
+                    return message;
+                };
+
+                /**
+                 * Decodes a ShowWindowEvent message from the specified reader or buffer, length delimited.
+                 * @function decodeDelimited
+                 * @memberof tilbo.ipc.v1.ShowWindowEvent
+                 * @static
+                 * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+                 * @returns {tilbo.ipc.v1.ShowWindowEvent} ShowWindowEvent
+                 * @throws {Error} If the payload is not a reader or valid buffer
+                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                 */
+                ShowWindowEvent.decodeDelimited = function decodeDelimited(reader) {
+                    if (!(reader instanceof $Reader))
+                        reader = new $Reader(reader);
+                    return this.decode(reader, reader.uint32());
+                };
+
+                /**
+                 * Verifies a ShowWindowEvent message.
+                 * @function verify
+                 * @memberof tilbo.ipc.v1.ShowWindowEvent
+                 * @static
+                 * @param {Object.<string,*>} message Plain object to verify
+                 * @returns {string|null} `null` if valid, otherwise the reason why it is not
+                 */
+                ShowWindowEvent.verify = function verify(message) {
+                    if (typeof message !== "object" || message === null)
+                        return "object expected";
+                    if (message.path != null && message.hasOwnProperty("path"))
+                        if (!$util.isString(message.path))
+                            return "path: string expected";
+                    return null;
+                };
+
+                /**
+                 * Creates a ShowWindowEvent message from a plain object. Also converts values to their respective internal types.
+                 * @function fromObject
+                 * @memberof tilbo.ipc.v1.ShowWindowEvent
+                 * @static
+                 * @param {Object.<string,*>} object Plain object
+                 * @returns {tilbo.ipc.v1.ShowWindowEvent} ShowWindowEvent
+                 */
+                ShowWindowEvent.fromObject = function fromObject(object) {
+                    if (object instanceof $root.tilbo.ipc.v1.ShowWindowEvent)
+                        return object;
+                    let message = new $root.tilbo.ipc.v1.ShowWindowEvent();
+                    if (object.path != null)
+                        message.path = String(object.path);
+                    return message;
+                };
+
+                /**
+                 * Creates a plain object from a ShowWindowEvent message. Also converts values to other types if specified.
+                 * @function toObject
+                 * @memberof tilbo.ipc.v1.ShowWindowEvent
+                 * @static
+                 * @param {tilbo.ipc.v1.ShowWindowEvent} message ShowWindowEvent
+                 * @param {$protobuf.IConversionOptions} [options] Conversion options
+                 * @returns {Object.<string,*>} Plain object
+                 */
+                ShowWindowEvent.toObject = function toObject(message, options) {
+                    if (!options)
+                        options = {};
+                    let object = {};
+                    if (options.defaults)
+                        object.path = "";
+                    if (message.path != null && message.hasOwnProperty("path"))
+                        object.path = message.path;
+                    return object;
+                };
+
+                /**
+                 * Converts this ShowWindowEvent to JSON.
+                 * @function toJSON
+                 * @memberof tilbo.ipc.v1.ShowWindowEvent
+                 * @instance
+                 * @returns {Object.<string,*>} JSON object
+                 */
+                ShowWindowEvent.prototype.toJSON = function toJSON() {
+                    return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+                };
+
+                /**
+                 * Gets the default type url for ShowWindowEvent
+                 * @function getTypeUrl
+                 * @memberof tilbo.ipc.v1.ShowWindowEvent
+                 * @static
+                 * @param {string} [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+                 * @returns {string} The default type url
+                 */
+                ShowWindowEvent.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
+                    if (typeUrlPrefix === undefined) {
+                        typeUrlPrefix = "type.googleapis.com";
+                    }
+                    return typeUrlPrefix + "/tilbo.ipc.v1.ShowWindowEvent";
+                };
+
+                return ShowWindowEvent;
             })();
 
             return v1;
