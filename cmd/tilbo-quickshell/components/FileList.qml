@@ -69,26 +69,26 @@ Item {
             Item   { width: root._colIcon;  height: parent.height }
             
             HeaderItem {
-                width: root._colName; height: parent.height; text: "Name"
+                width: root._colName; height: parent.height; text: I18n.tr("list.header.name")
                 column: "name"; active: root.sortColumn === "name"
                 ascending: root.sortAscending
                 onClicked: root.sortRequested("name", active ? !ascending : true)
             }
             HeaderItem {
-                width: root._colSize; height: parent.height; text: "Size"
+                width: root._colSize; height: parent.height; text: I18n.tr("list.header.size")
                 column: "size"; active: root.sortColumn === "size"
                 ascending: root.sortAscending
                 horizontalAlignment: Text.AlignRight
                 onClicked: root.sortRequested("size", active ? !ascending : true)
             }
             HeaderItem {
-                width: root._colMtime; height: parent.height; text: "Modified"
+                width: root._colMtime; height: parent.height; text: I18n.tr("list.header.mtime")
                 column: "mtime"; active: root.sortColumn === "mtime"
                 ascending: root.sortAscending; leftPadding: 8
                 onClicked: root.sortRequested("mtime", active ? !ascending : true)
             }
             HeaderItem {
-                width: root._colTags;  height: parent.height; text: "Tags"
+                width: root._colTags;  height: parent.height; text: I18n.tr("list.header.tags")
                 column: "tags"; active: root.sortColumn === "tags"
                 ascending: root.sortAscending; leftPadding: 8
                 onClicked: root.sortRequested("tags", active ? !ascending : true)
@@ -376,16 +376,16 @@ Item {
     Menu {
         id: bgCtxMenu
         MenuItem {
-            text: "New File"
+            text: I18n.tr("menu.new_file")
             onTriggered: root.createFileRequested()
         }
         MenuItem {
-            text: "New Folder"
+            text: I18n.tr("menu.new_folder")
             onTriggered: root.createDirectoryRequested()
         }
         MenuSeparator {}
         MenuItem {
-            text: "Paste"
+            text: I18n.tr("menu.paste")
             onTriggered: root.pasteRequested()
         }
     }
@@ -406,7 +406,7 @@ Item {
         }
 
         MenuItem {
-            text: "Open"
+            text: I18n.tr("menu.open")
             onTriggered: {
                 if (rowCtxMenu.targetIsDir)
                     root.directoryActivated(rowCtxMenu.targetPath)
@@ -415,7 +415,7 @@ Item {
             }
         }
         MenuItem {
-            text: "Open With..."
+            text: I18n.tr("menu.open_with")
             visible: !rowCtxMenu.targetIsDir
             onTriggered: {
                 if (rowCtxMenu.targetPath)
@@ -423,7 +423,7 @@ Item {
             }
         }
         MenuItem {
-            text: "Open in Terminal"
+            text: I18n.tr("menu.open_terminal")
             onTriggered: {
                 var dir = rowCtxMenu.targetIsDir ? rowCtxMenu.targetPath
                          : rowCtxMenu.targetPath.substring(0, rowCtxMenu.targetPath.lastIndexOf("/"))
@@ -432,24 +432,24 @@ Item {
         }
         MenuSeparator {}
         MenuItem {
-            text: "Copy"
+            text: I18n.tr("menu.copy")
             onTriggered: root.copyRequested(false)
         }
         MenuItem {
-            text: "Cut"
+            text: I18n.tr("menu.cut")
             onTriggered: root.copyRequested(true)
         }
         MenuItem {
-            text: "Paste"
+            text: I18n.tr("menu.paste")
             onTriggered: root.pasteRequested()
         }
         MenuSeparator {}
         MenuItem {
-            text: "Rename"
+            text: I18n.tr("menu.rename")
             onTriggered: root._renamingIndex = rowCtxMenu.targetIndex
         }
         MenuItem {
-            text: "Move to Trash"
+            text: I18n.tr("menu.delete")
             onTriggered: {
                 if (rowCtxMenu.targetPath)
                     root.deleteRequested(rowCtxMenu.targetPath)

@@ -271,16 +271,16 @@ Item {
     Menu {
         id: bgCtxMenu
         MenuItem {
-            text: "New File"
+            text: I18n.tr("menu.new_file")
             onTriggered: root.createFileRequested()
         }
         MenuItem {
-            text: "New Folder"
+            text: I18n.tr("menu.new_folder")
             onTriggered: root.createDirectoryRequested()
         }
         MenuSeparator {}
         MenuItem {
-            text: "Paste"
+            text: I18n.tr("menu.paste")
             onTriggered: root.pasteRequested()
         }
     }
@@ -303,7 +303,7 @@ Item {
         }
 
         MenuItem {
-            text: "Open"
+            text: I18n.tr("menu.open")
             onTriggered: {
                 if (!ctxMenu.targetIsDir)
                     root.fileOpenRequested(ctxMenu.targetPath)
@@ -312,7 +312,7 @@ Item {
             }
         }
         MenuItem {
-            text: "Open With..."
+            text: I18n.tr("menu.open_with")
             visible: !ctxMenu.targetIsDir
             onTriggered: {
                 if (ctxMenu.targetPath)
@@ -320,7 +320,7 @@ Item {
             }
         }
         MenuItem {
-            text: "Open in Terminal"
+            text: I18n.tr("menu.open_terminal")
             onTriggered: {
                 var dir = ctxMenu.targetIsDir ? ctxMenu.targetPath
                          : ctxMenu.targetPath.substring(0, ctxMenu.targetPath.lastIndexOf("/"))
@@ -329,24 +329,24 @@ Item {
         }
         MenuSeparator {}
         MenuItem {
-            text: "Copy"
+            text: I18n.tr("menu.copy")
             onTriggered: root.copyRequested(false)
         }
         MenuItem {
-            text: "Cut"
+            text: I18n.tr("menu.cut")
             onTriggered: root.copyRequested(true)
         }
         MenuItem {
-            text: "Paste"
+            text: I18n.tr("menu.paste")
             onTriggered: root.pasteRequested()
         }
         MenuSeparator {}
         MenuItem {
-            text: "Rename"
+            text: I18n.tr("menu.rename")
             onTriggered: root._renamingIndex = ctxMenu.targetIndex
         }
         MenuItem {
-            text: "Move to Trash"
+            text: I18n.tr("menu.delete")
             onTriggered: {
                 if (ctxMenu.targetPath)
                     root.deleteRequested(ctxMenu.targetPath)

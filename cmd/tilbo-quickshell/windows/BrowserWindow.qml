@@ -635,17 +635,18 @@ ApplicationWindow {
                 enabled: window.canGoBack
                 opacity: enabled ? 1.0 : 0.4
                 onClicked: window.goBack()
-                ToolTip.text: "Back (Alt+Left)"
+                ToolTip.text: I18n.tr("toolbar.back")
                 ToolTip.visible: hovered
                 ToolTip.delay: 500
             }
+
             ToolButton {
                 text: "→"
                 font.pixelSize: 16
                 enabled: window.canGoForward
                 opacity: enabled ? 1.0 : 0.4
                 onClicked: window.goForward()
-                ToolTip.text: "Forward (Alt+Right)"
+                ToolTip.text: I18n.tr("toolbar.forward")
                 ToolTip.visible: hovered
                 ToolTip.delay: 500
             }
@@ -656,7 +657,7 @@ ApplicationWindow {
                 enabled: window.currentPath !== "/"
                 opacity: enabled ? 1.0 : 0.4
                 onClicked: window.goUp()
-                ToolTip.text: "Up (Alt+Up)"
+                ToolTip.text: I18n.tr("toolbar.up")
                 ToolTip.visible: hovered
                 ToolTip.delay: 500
             }
@@ -665,7 +666,7 @@ ApplicationWindow {
                 text: "🏠"
                 font.pixelSize: 16
                 onClicked: window.goHome()
-                ToolTip.text: "Home (Alt+Home)"
+                ToolTip.text: I18n.tr("toolbar.home")
                 ToolTip.visible: hovered
                 ToolTip.delay: 500
             }
@@ -680,7 +681,7 @@ ApplicationWindow {
             }
 
             ThemeButton {
-                text: "Pin"
+                text: I18n.tr("toolbar.pin")
                 Layout.preferredHeight: 40
                 visible: window.isSearchMode
                 onClicked: pinSearchDialog.open()
@@ -690,7 +691,7 @@ ApplicationWindow {
 
             Dialog {
                 id: pinSearchDialog
-                title: "Pin Search"
+                title: I18n.tr("search.pin_title")
                 modal: true
                 standardButtons: Dialog.Ok | Dialog.Cancel
                 anchors.centerIn: parent
@@ -702,11 +703,11 @@ ApplicationWindow {
                 }
                 ColumnLayout {
                     spacing: 8
-                    Text { text: "Enter a name for this search:"; color: Theme.fgDim }
+                    Text { text: I18n.tr("search.pin_prompt"); color: Theme.fgDim }
                     TextField {
                         id: pinSearchNameField
                         Layout.fillWidth: true
-                        placeholderText: "e.g. Large Images, Recent PDF..."
+                        placeholderText: I18n.tr("search.pin_placeholder")
                         color: Theme.fgMain
                         background: Rectangle {
                             color: Theme.bgInput; radius: 4; border.width: 1
@@ -718,7 +719,7 @@ ApplicationWindow {
 
             Dialog {
                 id: filterDialog
-                title: "Add Filter"
+                title: I18n.tr("search.filter_title")
                 modal: true
                 standardButtons: Dialog.Cancel
                 anchors.centerIn: parent
@@ -728,15 +729,15 @@ ApplicationWindow {
                     width: parent.width
                     spacing: 12
 
-                    Text { text: "Common MIME Filters:"; color: "#88C0D0"; font.bold: true }
+                    Text { text: I18n.tr("search.filter.mime"); color: Theme.accent; font.bold: true }
                     Flow {
                         Layout.fillWidth: true; spacing: 4
-                        Button { text: "Images"; onClicked: { tagSearchBar.addChip("glob:*.{jpg,jpeg,png,gif,webp}"); filterDialog.close() } }
-                        Button { text: "Videos"; onClicked: { tagSearchBar.addChip("glob:*.{mp4,mkv,avi,mov}"); filterDialog.close() } }
-                        Button { text: "Documents"; onClicked: { tagSearchBar.addChip("glob:*.{pdf,doc,docx,txt,odt}"); filterDialog.close() } }
+                        Button { text: I18n.tr("search.filter.images"); onClicked: { tagSearchBar.addChip("glob:*.{jpg,jpeg,png,gif,webp}"); filterDialog.close() } }
+                        Button { text: I18n.tr("search.filter.videos"); onClicked: { tagSearchBar.addChip("glob:*.{mp4,mkv,avi,mov}"); filterDialog.close() } }
+                        Button { text: I18n.tr("search.filter.docs"); onClicked: { tagSearchBar.addChip("glob:*.{pdf,doc,docx,txt,odt}"); filterDialog.close() } }
                     }
 
-                    Text { text: "Size Filters:"; color: "#88C0D0"; font.bold: true }
+                    Text { text: I18n.tr("search.filter.size"); color: Theme.accent; font.bold: true }
                     Flow {
                         Layout.fillWidth: true; spacing: 4
                         Button { text: "> 10MB"; onClicked: { tagSearchBar.addChip("fts:size > 10485760"); filterDialog.close() } }
@@ -744,22 +745,22 @@ ApplicationWindow {
                         Button { text: "> 1GB"; onClicked: { tagSearchBar.addChip("fts:size > 1073741824"); filterDialog.close() } }
                     }
 
-                    Text { text: "Date Filters:"; color: "#88C0D0"; font.bold: true }
+                    Text { text: I18n.tr("search.filter.date"); color: Theme.accent; font.bold: true }
                     Flow {
                         Layout.fillWidth: true; spacing: 4
-                        Button { text: "2026 Only"; onClicked: { tagSearchBar.addChip("fts:mtime > 1767225600"); filterDialog.close() } }
+                        Button { text: I18n.tr("search.filter.2026"); onClicked: { tagSearchBar.addChip("fts:mtime > 1767225600"); filterDialog.close() } }
                     }
                 }
             }
 
             ThemeButton {
-                text: window.isGridView ? "List ☰" : "Grid ⊞"
+                text: window.isGridView ? I18n.tr("toolbar.view.list") : I18n.tr("toolbar.view.grid")
                 Layout.preferredHeight: 40
                 onClicked: window.isGridView = !window.isGridView
             }
 
             ThemeButton {
-                text: "Hidden"
+                text: I18n.tr("toolbar.hidden")
                 checkable: true
                 checked: window.showHidden
                 Layout.preferredHeight: 40
@@ -788,7 +789,7 @@ ApplicationWindow {
             }
 
             Text {
-                text: "PLACES"
+                text: I18n.tr("sidebar.places")
                 color: Theme.accent
                 font.pixelSize: 14
                 font.bold: true
@@ -882,7 +883,7 @@ ApplicationWindow {
 
                 // Mounts section
                 Text {
-                    text: "MOUNTS"
+                    text: I18n.tr("sidebar.mounts")
                     color: Theme.fgPlaceholder
                     font.pixelSize: 10
                     font.bold: true
@@ -931,7 +932,7 @@ ApplicationWindow {
 
                 // Saved Searches section
                 Text {
-                    text: "SEARCHES"
+                    text: I18n.tr("sidebar.searches")
                     color: Theme.fgPlaceholder
                     font.pixelSize: 10
                     font.bold: true
@@ -1002,7 +1003,7 @@ ApplicationWindow {
                             anchors.verticalCenter: parent.verticalCenter
                         }
                         Text {
-                            text: "Trash"
+                            text: I18n.tr("sidebar.trash")
                             font.pixelSize: 14
                             color: window.isTrashView ? Theme.accent : Theme.fgMain
                             anchors.verticalCenter: parent.verticalCenter
@@ -1038,8 +1039,8 @@ ApplicationWindow {
                             anchors.verticalCenter: parent.verticalCenter
                         }
                         Text {
-                            text: "Pin Current Folder"
-                            font.pixelSize: 12; color: "#88C0D0"
+                            text: I18n.tr("sidebar.pin_current")
+                            font.pixelSize: 12; color: Theme.accent
                             anchors.verticalCenter: parent.verticalCenter
                         }
                     }
@@ -1054,7 +1055,7 @@ ApplicationWindow {
                 property string targetName: ""
 
                 MenuItem {
-                    text: "Change Icon..."
+                    text: I18n.tr("prop.change_icon")
                     onTriggered: {
                         iconPickerDialog.targetPath = placesCtxMenu.targetPath
                         iconPickerDialog.targetName = placesCtxMenu.targetName
@@ -1063,7 +1064,7 @@ ApplicationWindow {
                     }
                 }
                 MenuItem {
-                    text: "Remove from sidebar"
+                    text: I18n.tr("sidebar.remove")
                     onTriggered: {
                         TilboDaemon.unpinPlace(placesCtxMenu.targetPath, function(err) {
                             if (!err) window._loadPlaces()
@@ -1077,7 +1078,7 @@ ApplicationWindow {
                 id: searchCtxMenu
                 property string targetId: ""
                 MenuItem {
-                    text: "Remove from sidebar"
+                    text: I18n.tr("sidebar.remove")
                     onTriggered: {
                         TilboDaemon.unpinSearch(searchCtxMenu.targetId, function(err) {
                             if (!err) window._loadSavedSearches()
@@ -1089,7 +1090,7 @@ ApplicationWindow {
             // Icon picker dialog for pinned places
             Dialog {
                 id: iconPickerDialog
-                title: "Change Icon"
+                title: I18n.tr("prop.change_icon_title")
                 property string targetPath: ""
                 property string targetName: ""
                 modal: true
@@ -1109,8 +1110,8 @@ ApplicationWindow {
                     spacing: 12
 
                     Text {
-                        text: "Enter an XDG icon theme name:"
-                        color: "#D8DEE9"; font.pixelSize: 13
+                        text: I18n.tr("prop.icon_prompt", iconPickerDialog.targetName)
+                        color: Theme.fgDim; font.pixelSize: 13
                         Layout.fillWidth: true
                     }
 
@@ -1129,10 +1130,10 @@ ApplicationWindow {
                             Layout.fillWidth: true
                             width: parent.width - 60
                             placeholderText: "e.g. folder, user-home, tag…"
-                            color: "#ECEFF4"
+                            color: Theme.fgMain
                             background: Rectangle {
-                                color: "#1A1C23"; radius: 4
-                                border.color: parent.activeFocus ? "#5E81AC" : "#3B4252"
+                                color: Theme.bgInput; radius: 4
+                                border.color: parent.activeFocus ? Theme.borderFocus : Theme.border
                                 border.width: 1
                             }
                         }
@@ -1140,7 +1141,7 @@ ApplicationWindow {
 
                     Text {
                         text: "Common names: folder, user-home, user-trash, tag,\nfolder-documents, folder-download, folder-recent"
-                        color: "#4C566A"; font.pixelSize: 11
+                        color: Theme.fgDeemphasized; font.pixelSize: 11
                         Layout.fillWidth: true; wrapMode: Text.WordWrap
                     }
                 }
@@ -1172,7 +1173,7 @@ ApplicationWindow {
                             anchors.fill: parent
                             anchors.leftMargin: 12; anchors.rightMargin: 12
                             Text {
-                                text: "Trash  (" + window.trashEntries.length + " items)"
+                                text: I18n.tr("gen.trash_count", window.trashEntries.length)
                                 color: Theme.accent; font.pixelSize: 14; font.bold: true
                             }
                             Item { Layout.fillWidth: true }

@@ -62,12 +62,12 @@ Rectangle {
             // Show initial suggestions for discovery
             root._suggestions = ["glob:", "fts:", "hidden:", "size:", "mtime:", "meta:"]
             root._suggestionLabels = {
-                "glob:":   "Filename pattern (e.g. glob:*.jpg)",
-                "fts:":    "Full-text / metadata query",
-                "hidden:": "Include hidden files (hidden:any)",
-                "size:":   "Filter by size (e.g. size:>10MB)",
-                "mtime:":  "Filter by age (e.g. mtime:<1w)",
-                "meta:":   "Filter by metadata key (e.g. meta:width=gte:1920)"
+                "glob:":   I18n.tr("ac.glob"),
+                "fts:":    I18n.tr("ac.fts"),
+                "hidden:": I18n.tr("ac.hidden"),
+                "size:":   I18n.tr("ac.size"),
+                "mtime:":  I18n.tr("ac.mtime"),
+                "meta:":   I18n.tr("ac.meta")
             }
             acPopup.open()
             return
@@ -88,12 +88,12 @@ Rectangle {
         if (discoveryMatches.length > 0) {
             root._suggestions = discoveryMatches
             root._suggestionLabels = {
-                "glob:":   "Filename pattern",
-                "fts:":    "Full-text query",
-                "hidden:": "Toggle hidden files",
-                "size:":   "Size filter",
-                "mtime:":  "Age filter",
-                "meta:":   "Metadata filter"
+                "glob:":   I18n.tr("ac.label.glob"),
+                "fts:":    I18n.tr("ac.label.fts"),
+                "hidden:": I18n.tr("ac.label.hidden"),
+                "size:":   I18n.tr("ac.label.size"),
+                "mtime:":  I18n.tr("ac.label.mtime"),
+                "meta:":   I18n.tr("ac.label.meta")
             }
             acPopup.open()
             return
@@ -106,14 +106,14 @@ Rectangle {
                 var keys = ["width", "height", "duration", "artist", "album", "title", "codec", "format"]
                 root._suggestions = keys.map(k => "meta:" + k + "=").filter(k => k.startsWith(text))
                 root._suggestionLabels = {
-                    "meta:width=":    "Image/Video width",
-                    "meta:height=":   "Image/Video height",
-                    "meta:duration=": "Media duration (seconds)",
-                    "meta:artist=":   "Audio artist",
-                    "meta:album=":    "Audio album",
-                    "meta:title=":    "Media title",
-                    "meta:codec=":    "Media codec",
-                    "meta:format=":   "File format"
+                    "meta:width=":    I18n.tr("ac.meta.width"),
+                    "meta:height=":   I18n.tr("ac.meta.height"),
+                    "meta:duration=": I18n.tr("ac.meta.duration"),
+                    "meta:artist=":   I18n.tr("ac.meta.artist"),
+                    "meta:album=":    I18n.tr("ac.meta.album"),
+                    "meta:title=":    I18n.tr("ac.meta.title"),
+                    "meta:codec=":    I18n.tr("ac.meta.codec"),
+                    "meta:format=":   I18n.tr("ac.meta.format")
                 }
                 if (root._suggestions.length > 0) acPopup.open()
                 else                             acPopup.close()
@@ -127,8 +127,8 @@ Rectangle {
                 if (numericKeys.indexOf(key) !== -1 && !val.startsWith("gte:") && !val.startsWith("lte:")) {
                     root._suggestions = ["meta:" + key + "=gte:", "meta:" + key + "=lte:"]
                     root._suggestionLabels = {}
-                    root._suggestionLabels["meta:" + key + "=gte:"] = "Greater than or equal"
-                    root._suggestionLabels["meta:" + key + "=lte:"] = "Less than or equal"
+                    root._suggestionLabels["meta:" + key + "=gte:"] = I18n.tr("ac.op.gte")
+                    root._suggestionLabels["meta:" + key + "=lte:"] = I18n.tr("ac.op.lte")
                     acPopup.open()
                     return
                 }
@@ -138,7 +138,7 @@ Rectangle {
         // Sub-suggestions for specific prefixes
         if (text === "hidden:") {
             root._suggestions = ["hidden:any"]
-            root._suggestionLabels = { "hidden:any": "Show all hidden files" }
+            root._suggestionLabels = { "hidden:any": I18n.tr("ac.hidden_any") }
             acPopup.open()
             return
         }
@@ -153,10 +153,10 @@ Rectangle {
         if (text === "mtime:") {
             root._suggestions = ["mtime:<1d", "mtime:<1w", "mtime:<1m", "mtime:<1y"]
             root._suggestionLabels = {
-                "mtime:<1d": "Last 24 hours",
-                "mtime:<1w": "Last week",
-                "mtime:<1m": "Last month",
-                "mtime:<1y": "Last year"
+                "mtime:<1d": I18n.tr("ac.mtime.1d"),
+                "mtime:<1w": I18n.tr("ac.mtime.1w"),
+                "mtime:<1m": I18n.tr("ac.mtime.1m"),
+                "mtime:<1y": I18n.tr("ac.mtime.1y")
             }
             acPopup.open()
             return
@@ -295,13 +295,12 @@ TextInput {
     Text {
         anchors.fill: parent
         verticalAlignment: Text.AlignVCenter
-        text: root.daemonConnected ? "Search tags, glob:*, fts:query…"
-                                   : "Daemon not connected"
+        text: root.daemonConnected ? I18n.tr("search.placeholder")
+                                   : I18n.tr("search.no_daemon")
         color: Theme.fgPlaceholder
         font.pixelSize: 13
         visible: !searchInput.text && !searchInput.activeFocus
     }
-
             onTextChanged: {
                 acTimer.restart()
             }
