@@ -310,6 +310,7 @@ ApplicationWindow {
         var tagChips  = []
         var globPats  = []
         var ftsChips  = []
+        var metaFilters = {}
         var allowHid  = showHidden
 
         for (var i = 0; i < chips.length; i++) {
@@ -317,12 +318,18 @@ ApplicationWindow {
             if (c.startsWith("glob:"))    globPats.push(c.slice(5))
             else if (c === "hidden:any") allowHid = true
             else if (c.startsWith("fts:")) ftsChips.push(c.slice(4))
+            else if (c.startsWith("meta:")) {
+                var pair = c.slice(5).split("=")
+                if (pair.length === 2) {
+                    metaFilters[pair[0]] = pair[1]
+                }
+            }
             else                          tagChips.push(c)
         }
 
-        if (tagChips.length > 0 || ftsChips.length > 0) {
+        if (tagChips.length > 0 || ftsChips.length > 0 || Object.keys(metaFilters).length > 0) {
             TilboDaemon.search(
-                tagChips, false, [], {}, ftsChips.join(" "), 1000, 0, [],
+                tagChips, false, [], metaFilters, ftsChips.join(" "), 1000, 0, [],
                 function(res, err) {
                     if (!err && res && res.files.length > 0) {
                         searchResults = _sortEntries(res.files)

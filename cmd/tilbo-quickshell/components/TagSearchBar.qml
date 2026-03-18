@@ -60,13 +60,14 @@ Rectangle {
         var text = searchInput.text.trim()
         if (!text && root._chips.length === 0) {
             // Show initial suggestions for discovery
-            root._suggestions = ["glob:", "fts:", "hidden:", "size:", "mtime:"]
+            root._suggestions = ["glob:", "fts:", "hidden:", "size:", "mtime:", "meta:"]
             root._suggestionLabels = {
                 "glob:":   "Filename pattern (e.g. glob:*.jpg)",
                 "fts:":    "Full-text / metadata query",
                 "hidden:": "Include hidden files (hidden:any)",
                 "size:":   "Filter by size (e.g. size:>10MB)",
-                "mtime:":  "Filter by age (e.g. mtime:<1w)"
+                "mtime:":  "Filter by age (e.g. mtime:<1w)",
+                "meta:":   "Filter by metadata key (e.g. meta:width=gte:1920)"
             }
             acPopup.open()
             return
@@ -79,7 +80,7 @@ Rectangle {
         }
 
         // Discovery for prefixes if typing starts
-        var discoveries = ["glob:", "fts:", "hidden:", "size:", "mtime:"]
+        var discoveries = ["glob:", "fts:", "hidden:", "size:", "mtime:", "meta:"]
         var discoveryMatches = discoveries.filter(function(d) {
             return d.startsWith(text) && d !== text
         })
@@ -91,10 +92,47 @@ Rectangle {
                 "fts:":    "Full-text query",
                 "hidden:": "Toggle hidden files",
                 "size:":   "Size filter",
-                "mtime:":  "Age filter"
+                "mtime:":  "Age filter",
+                "meta:":   "Metadata filter"
             }
             acPopup.open()
             return
+        }
+
+        // Metadata key suggestions
+        if (text.startsWith("meta:")) {
+            var sub = text.slice(5)
+            if (sub.indexOf("=") === -1) {
+                var keys = ["width", "height", "duration", "artist", "album", "title", "codec", "format"]
+                root._suggestions = keys.map(k => "meta:" + k + "=").filter(k => k.startsWith(text))
+                root._suggestionLabels = {
+                    "meta:width=":    "Image/Video width",
+                    "meta:height=":   "Image/Video height",
+                    "meta:duration=": "Media duration (seconds)",
+                    "meta:artist=":   "Audio artist",
+                    "meta:album=":    "Audio album",
+                    "meta:title=":    "Media title",
+                    "meta:codec=":    "Media codec",
+                    "meta:format=":   "File format"
+                }
+                if (root._suggestions.length > 0) acPopup.open()
+                else                             acPopup.close()
+                return
+            } else {
+                // Key is chosen, suggest operators for numeric keys
+                var parts = sub.split("=")
+                var key = parts[0]
+                var val = parts[1]
+                var numericKeys = ["width", "height", "duration"]
+                if (numericKeys.indexOf(key) !== -1 && !val.startsWith("gte:") && !val.startsWith("lte:")) {
+                    root._suggestions = ["meta:" + key + "=gte:", "meta:" + key + "=lte:"]
+                    root._suggestionLabels = {}
+                    root._suggestionLabels["meta:" + key + "=gte:"] = "Greater than or equal"
+                    root._suggestionLabels["meta:" + key + "=lte:"] = "Less than or equal"
+                    acPopup.open()
+                    return
+                }
+            }
         }
 
         // Sub-suggestions for specific prefixes
@@ -394,6 +432,7 @@ TextInput {
         if (chip.startsWith("hidden:")) return "hidden"
         if (chip.startsWith("size:"))   return "size " + chip.slice(5)
         if (chip.startsWith("mtime:"))  return "age " + chip.slice(6)
+        if (chip.startsWith("meta:"))   return "meta " + chip.slice(5)
         return "# " + chip
     }
 
@@ -403,6 +442,7 @@ TextInput {
         if (chip.startsWith("hidden:")) return Qt.darker(Theme.danger, 1.5)
         if (chip.startsWith("size:"))   return Qt.darker(Theme.accentDim, 1.5)
         if (chip.startsWith("mtime:"))  return Qt.darker(Theme.warning, 1.5)
+        if (chip.startsWith("meta:"))   return Qt.darker(Theme.accent, 1.2)
         return Qt.darker(Theme.accentDim, 1.5)
     }
 }
