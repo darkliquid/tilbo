@@ -12,6 +12,7 @@ import (
 
 // preferredThemes are well-known icon themes checked when scanning icon
 // directories as a last resort.
+//
 //nolint:gochecknoglobals // read-only lookup table
 var preferredThemes = []string{
 	"Adwaita",
@@ -78,7 +79,7 @@ func Detect() string {
 
 // readQtCtTheme extracts icon_theme_name from a qt*ct config file.
 func readQtCtTheme(path string) string {
-	f, err := os.Open(path)
+	f, err := os.Open(path) //nolint:gosec // path from system config
 	if err != nil {
 		return ""
 	}
@@ -101,7 +102,10 @@ func readQtCtTheme(path string) string {
 
 // readGSettings queries gsettings for the GNOME icon theme.
 func readGSettings() string {
-	out, err := exec.Command("gsettings", "get", "org.gnome.desktop.interface", "icon-theme").Output()
+	//nolint:noctx // short lived query
+	out, err := exec.Command("gsettings", "get", "org.gnome.desktop.interface", "icon-theme").
+		Output()
+
 	if err != nil {
 		return ""
 	}
@@ -112,7 +116,7 @@ func readGSettings() string {
 
 // readINIKey reads a simple key=value from an INI file (ignoring sections).
 func readINIKey(path, key string) string {
-	f, err := os.Open(path)
+	f, err := os.Open(path) //nolint:gosec // path from system config
 	if err != nil {
 		return ""
 	}
@@ -152,6 +156,8 @@ func readGTK2Theme(path string) string {
 }
 
 // scanIconDirs looks for installed icon themes, preferring well-known themes.
+//
+//nolint:gocognit // multiple loops for fallback paths
 func scanIconDirs(home string) string {
 	dataHome := os.Getenv("XDG_DATA_HOME")
 	if dataHome == "" && home != "" {
@@ -167,7 +173,10 @@ func scanIconDirs(home string) string {
 	for _, dir := range dirs {
 		// Check preferred themes first.
 		for _, name := range preferredThemes {
-			if _, err := os.Stat(filepath.Join(dir, name, "index.theme")); err == nil {
+			//nolint:gosec // dir and name come from system paths
+			if _, err := os.Stat(
+				filepath.Join(dir, name, "index.theme"),
+			); err == nil {
 				return name
 			}
 		}
@@ -187,7 +196,10 @@ func scanIconDirs(home string) string {
 			if name == "hicolor" || name == "default" {
 				continue
 			}
-			if _, err := os.Stat(filepath.Join(dir, name, "index.theme")); err == nil {
+			//nolint:gosec // dir and name come from system paths
+			if _, err := os.Stat(
+				filepath.Join(dir, name, "index.theme"),
+			); err == nil {
 				return name
 			}
 		}

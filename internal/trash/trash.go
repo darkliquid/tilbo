@@ -1,3 +1,4 @@
+// Package trash implements XDG trash operations.
 package trash
 
 import (
@@ -12,6 +13,8 @@ import (
 )
 
 // TrashEntry represents a file in the trash.
+//
+//nolint:revive // keep name for clarity
 type TrashEntry struct {
 	Name         string // filename in trash (without trashinfo extension)
 	OriginalPath string
@@ -32,7 +35,7 @@ func trashDir(path string) (string, error) {
 	trashStat, err := os.Stat(filepath.Dir(homeTrash))
 	if err != nil {
 		// Home trash dir parent doesn't exist yet, assume same device
-		return homeTrash, nil
+		return homeTrash, nil //nolint:nilerr // expected fallback on stat error
 	}
 	_ = pathStat
 	_ = trashStat
@@ -146,15 +149,16 @@ func parseTrashInfo(infoPath, name string) (TrashEntry, error) {
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
 		line := scanner.Text()
-		if strings.HasPrefix(line, "Path=") {
-			rawPath := strings.TrimPrefix(line, "Path=")
+		//nolint:nestif // parsing simple INI-like lines
+		if after, ok := strings.CutPrefix(line, "Path="); ok {
+			rawPath := after
 			if decoded, err := url.PathUnescape(rawPath); err == nil {
 				entry.OriginalPath = decoded
 			} else {
 				entry.OriginalPath = rawPath
 			}
-		} else if strings.HasPrefix(line, "DeletionDate=") {
-			dateStr := strings.TrimPrefix(line, "DeletionDate=")
+		} else if after, ok := strings.CutPrefix(line, "DeletionDate="); ok {
+			dateStr := after
 			if t, err := time.Parse("2006-01-02T15:04:05", dateStr); err == nil {
 				entry.DeletionDate = t.Unix()
 			} else {
@@ -183,7 +187,7 @@ func RestoreFromTrash(trashName string) error {
 		return fmt.Errorf("trash: no original path in trashinfo for %q", trashName)
 	}
 
-	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(dst), 0o750); err != nil {
 		return fmt.Errorf("trash: create parent dir for restore: %w", err)
 	}
 	if err := os.Rename(src, dst); err != nil {

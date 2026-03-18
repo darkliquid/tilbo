@@ -74,10 +74,35 @@ type FileAction struct {
 	Label string
 }
 
+// MountEntry represents a system mount point.
+type MountEntry struct {
+	Path     string
+	Label    string
+	IconName string
+}
+
+// SavedSearch represents a pinned search query.
+type SavedSearch struct {
+	ID       string
+	Name     string
+	IconName string
+	Chips    []string
+}
+
 // BrowserConfig holds browser-level config returned to the frontend.
+//
+//nolint:revive // keep name for clarity
 type BrowserConfig struct {
-	Keybindings map[string]string
-	UseTrash    bool
+	Keybindings      map[string]string
+	UseTrash         bool
+	InlineThumbnails bool
+}
+
+// ThumbnailResult holds the outcome of a GetThumbnail call.
+type ThumbnailResult struct {
+	Path   string // local filesystem path to the PNG thumbnail
+	Width  int
+	Height int
 }
 
 // Methods is the complete callable method surface required by the Quickshell
@@ -153,6 +178,11 @@ type Methods interface {
 	// UnpinPlace removes a pinned place from the config by path.
 	UnpinPlace(path string) error
 
+	// Saved Searches
+	PinSearch(name string, chips []string, iconName string) (SavedSearch, error)
+	UnpinSearch(id string) error
+	ListSavedSearches() ([]SavedSearch, error)
+
 	// TrashFile moves path to the XDG trash.
 	TrashFile(path string) error
 
@@ -165,11 +195,22 @@ type Methods interface {
 	// EmptyTrash permanently removes all entries from the home trash.
 	EmptyTrash() error
 
+	// ListMounts returns the current system mount points.
+	ListMounts() ([]MountEntry, error)
+
 	// ListAppsForFile returns installed applications that handle the file's MIME type.
 	ListAppsForFile(path string) ([]AppEntry, error)
 
 	// OpenWithApp launches an application (by ID) to open path.
 	OpenWithApp(path, appID string) error
+
+	// Copy/Paste operations
+	Copy(paths []string, isMove bool) error
+	Paste(destinationDir string) ([]string, error)
+
+	// File creation
+	CreateFile(destinationDir, name string) (string, error)
+	CreateDirectory(destinationDir, name string) (string, error)
 
 	// GetBrowserConfig returns browser configuration (keybindings, use_trash, etc.).
 	GetBrowserConfig() (BrowserConfig, error)
@@ -182,4 +223,9 @@ type Methods interface {
 
 	// RunFileAction executes an extension action by ID for path.
 	RunFileAction(path, actionID string) error
+
+	// GetThumbnail returns a thumbnail for the file at path.  The size
+	// parameter selects between "normal" (128×128) and "large" (256×256).
+	// Thumbnails are generated on demand and cached under XDG_CACHE_HOME.
+	GetThumbnail(path string, size int) (ThumbnailResult, error)
 }

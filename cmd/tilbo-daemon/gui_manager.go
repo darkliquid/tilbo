@@ -61,7 +61,12 @@ func (gm *guiManager) Launch(path string) (bool, error) {
 	iconTheme := icontheme.Detect()
 	slog.Info("launching GUI", "shell", gm.shellPath, "icon_theme", iconTheme, "path", path)
 
-	cmd := exec.Command("quickshell", "-p", gm.shellPath)
+	//nolint:gosec,noctx // path is from user config and daemon starts independently
+	cmd := exec.Command(
+		"quickshell",
+		"-p",
+		gm.shellPath,
+	)
 	cmd.Stdin = nil
 	cmd.Stdout = nil
 	cmd.Stderr = nil
@@ -144,7 +149,7 @@ func resolveShellQML() string {
 	}
 	if dataHome != "" {
 		p := filepath.Join(dataHome, "tilbo", "quickshell", "shell.qml")
-		if _, err := os.Stat(p); err == nil {
+		if _, err := os.Stat(p); err == nil { //nolint:gosec // constructed from environment
 			return p
 		}
 	}

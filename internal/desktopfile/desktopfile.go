@@ -1,3 +1,4 @@
+// Package desktopfile parses and executes XDG .desktop files.
 package desktopfile
 
 import (
@@ -27,7 +28,7 @@ func scanDirs() []string {
 	if dataHome := os.Getenv("XDG_DATA_HOME"); dataHome != "" {
 		dirs = append([]string{filepath.Join(dataHome, "applications")}, dirs...)
 	}
-	for _, dir := range strings.Split(os.Getenv("XDG_DATA_DIRS"), ":") {
+	for dir := range strings.SplitSeq(os.Getenv("XDG_DATA_DIRS"), ":") {
 		if dir != "" {
 			dirs = append(dirs, filepath.Join(dir, "applications"))
 		}
@@ -37,6 +38,8 @@ func scanDirs() []string {
 
 // parseDesktopFile parses a .desktop file and returns an AppEntry.
 // Returns nil if the file is not a valid application entry.
+//
+//nolint:gocognit // inherently complex parsing
 func parseDesktopFile(path, id string) *AppEntry {
 	f, err := os.Open(path)
 	if err != nil {
@@ -79,7 +82,7 @@ func parseDesktopFile(path, id string) *AppEntry {
 		case "Icon":
 			entry.Icon = val
 		case "MimeType":
-			for _, mt := range strings.Split(val, ";") {
+			for mt := range strings.SplitSeq(val, ";") {
 				mt = strings.TrimSpace(mt)
 				if mt != "" {
 					entry.MimeTypes = append(entry.MimeTypes, mt)
@@ -103,6 +106,8 @@ func parseDesktopFile(path, id string) *AppEntry {
 }
 
 // FindAppsForMime returns all installed applications that handle the given MIME type.
+//
+//nolint:gocognit // deeply nested due to fallback paths
 func FindAppsForMime(mime string) []AppEntry {
 	seen := make(map[string]bool)
 	var apps []AppEntry
@@ -172,7 +177,10 @@ func LaunchApp(app AppEntry, filePath string) error {
 		return nil
 	}
 
-	cmd := exec.Command(parts[0], parts[1:]...)
+	//nolint:gosec,noctx // command comes from desktop file and daemon starts independently
+	cmd := exec.Command(
+		parts[0],
+		parts[1:]...)
 	cmd.Stdin = nil
 	cmd.Stdout = nil
 	cmd.Stderr = nil

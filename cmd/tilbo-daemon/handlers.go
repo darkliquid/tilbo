@@ -507,8 +507,9 @@ func handleGetBrowserConfig(_ *ipcv1.GetBrowserConfigRequest, browser *daemonBro
 	}
 	return &ipcv1.Response{Kind: &ipcv1.Response_GetBrowserConfig{
 		GetBrowserConfig: &ipcv1.GetBrowserConfigResponse{
-			Keybindings: cfg.Keybindings,
-			UseTrash:    cfg.UseTrash,
+			Keybindings:      cfg.Keybindings,
+			UseTrash:         cfg.UseTrash,
+			InlineThumbnails: cfg.InlineThumbnails,
 		},
 	}}, nil
 }
@@ -542,4 +543,119 @@ func handleRunFileAction(req *ipcv1.RunFileActionRequest, browser *daemonBrowser
 		return errResponse(daemonInternalErrCode, err.Error()), nil
 	}
 	return &ipcv1.Response{Kind: &ipcv1.Response_RunFileAction{RunFileAction: &ipcv1.RunFileActionResponse{}}}, nil
+}
+
+func handleGetThumbnail(req *ipcv1.GetThumbnailRequest, browser *daemonBrowserMethods) (*ipcv1.Response, error) {
+	res, err := browser.GetThumbnail(req.GetPath(), int(req.GetSize()))
+	if err != nil {
+		return errResponse(daemonInternalErrCode, err.Error()), nil
+	}
+	return &ipcv1.Response{Kind: &ipcv1.Response_GetThumbnail{
+		GetThumbnail: &ipcv1.GetThumbnailResponse{
+			ThumbnailPath: res.Path,
+			Width:         uint32(res.Width),  //nolint:gosec // thumbnail dimensions are always small
+			Height:        uint32(res.Height), //nolint:gosec // thumbnail dimensions are always small
+		},
+	}}, nil
+}
+
+func handleCopy(req *ipcv1.CopyRequest, browser *daemonBrowserMethods) (*ipcv1.Response, error) {
+	if err := browser.Copy(req.GetPaths(), req.GetIsMove()); err != nil {
+		return errResponse(daemonInternalErrCode, err.Error()), nil
+	}
+	return &ipcv1.Response{Kind: &ipcv1.Response_Copy{Copy: &ipcv1.CopyResponse{}}}, nil
+}
+
+func handlePaste(req *ipcv1.PasteRequest, browser *daemonBrowserMethods) (*ipcv1.Response, error) {
+	newPaths, err := browser.Paste(req.GetDestinationDir())
+	if err != nil {
+		return errResponse(daemonInternalErrCode, err.Error()), nil
+	}
+	return &ipcv1.Response{Kind: &ipcv1.Response_Paste{
+		Paste: &ipcv1.PasteResponse{NewPaths: newPaths},
+	}}, nil
+}
+
+func handleCreateFile(req *ipcv1.CreateFileRequest, browser *daemonBrowserMethods) (*ipcv1.Response, error) {
+	path, err := browser.CreateFile(req.GetDestinationDir(), req.GetName())
+	if err != nil {
+		return errResponse(daemonInternalErrCode, err.Error()), nil
+	}
+	return &ipcv1.Response{Kind: &ipcv1.Response_CreateFile{
+		CreateFile: &ipcv1.CreateFileResponse{Path: path},
+	}}, nil
+}
+
+func handleCreateDirectory(req *ipcv1.CreateDirectoryRequest, browser *daemonBrowserMethods) (*ipcv1.Response, error) {
+	path, err := browser.CreateDirectory(req.GetDestinationDir(), req.GetName())
+	if err != nil {
+		return errResponse(daemonInternalErrCode, err.Error()), nil
+	}
+	return &ipcv1.Response{Kind: &ipcv1.Response_CreateDirectory{
+		CreateDirectory: &ipcv1.CreateDirectoryResponse{Path: path},
+	}}, nil
+}
+
+func handleListMounts(_ *ipcv1.ListMountsRequest, browser *daemonBrowserMethods) (*ipcv1.Response, error) {
+	mounts, err := browser.ListMounts()
+	if err != nil {
+		return errResponse(daemonInternalErrCode, err.Error()), nil
+	}
+	var entries []*ipcv1.MountEntry
+	for _, m := range mounts {
+		entries = append(entries, &ipcv1.MountEntry{
+			Path:     m.Path,
+			Label:    m.Label,
+			IconName: m.IconName,
+		})
+	}
+	return &ipcv1.Response{Kind: &ipcv1.Response_ListMounts{
+		ListMounts: &ipcv1.ListMountsResponse{Mounts: entries},
+	}}, nil
+}
+
+func handlePinSearch(req *ipcv1.PinSearchRequest, browser *daemonBrowserMethods) (*ipcv1.Response, error) {
+	s, err := browser.PinSearch(req.GetName(), req.GetChips(), req.GetIconName())
+	if err != nil {
+		return errResponse(daemonInternalErrCode, err.Error()), nil
+	}
+	return &ipcv1.Response{Kind: &ipcv1.Response_PinSearch{
+		PinSearch: &ipcv1.PinSearchResponse{
+			Search: &ipcv1.SavedSearch{
+				Id:       s.ID,
+				Name:     s.Name,
+				Chips:    s.Chips,
+				IconName: s.IconName,
+			},
+		},
+	}}, nil
+}
+
+func handleUnpinSearch(req *ipcv1.UnpinSearchRequest, browser *daemonBrowserMethods) (*ipcv1.Response, error) {
+	if err := browser.UnpinSearch(req.GetId()); err != nil {
+		return errResponse(daemonInternalErrCode, err.Error()), nil
+	}
+	return &ipcv1.Response{Kind: &ipcv1.Response_UnpinSearch{UnpinSearch: &ipcv1.UnpinSearchResponse{}}}, nil
+}
+
+func handleListSavedSearches(
+	_ *ipcv1.ListSavedSearchesRequest,
+	browser *daemonBrowserMethods,
+) (*ipcv1.Response, error) {
+	searches, err := browser.ListSavedSearches()
+	if err != nil {
+		return errResponse(daemonInternalErrCode, err.Error()), nil
+	}
+	var entries []*ipcv1.SavedSearch
+	for _, s := range searches {
+		entries = append(entries, &ipcv1.SavedSearch{
+			Id:       s.ID,
+			Name:     s.Name,
+			Chips:    s.Chips,
+			IconName: s.IconName,
+		})
+	}
+	return &ipcv1.Response{Kind: &ipcv1.Response_ListSavedSearches{
+		ListSavedSearches: &ipcv1.ListSavedSearchesResponse{Searches: entries},
+	}}, nil
 }

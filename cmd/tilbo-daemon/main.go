@@ -30,6 +30,7 @@ import (
 	ipcv1 "github.com/darkliquid/tilbo/internal/ipc/gen/tilbo/ipc/v1"
 	"github.com/darkliquid/tilbo/internal/rules"
 	isync "github.com/darkliquid/tilbo/internal/sync"
+	"github.com/darkliquid/tilbo/internal/thumbnail"
 	"github.com/darkliquid/tilbo/internal/vectorize"
 	"github.com/darkliquid/tilbo/internal/watcher"
 	"github.com/darkliquid/tilbo/internal/xattr"
@@ -120,6 +121,7 @@ func run(
 		cfg:         browserCfgPtr,
 		cfgPath:     cfgPath,
 		extRegistry: extRegistry,
+		thumbGen:    thumbnail.New(""),
 	}
 
 	sweeper := rules.NewSweeper(idx, tags, pipeline, engine)
@@ -409,6 +411,7 @@ func daemonStateLabel(state ipcv1.DaemonState) string {
 	}
 }
 
+//nolint:gocyclo,cyclop,funlen // large switch for routing
 func buildIPCRequestHandler(
 	syncer *isync.Syncer,
 	warningStore *statusWarningStore,
@@ -496,6 +499,25 @@ func buildIPCRequestHandler(
 			return handleGetFileActions(r.GetFileActions, browser)
 		case *ipcv1.Request_RunFileAction:
 			return handleRunFileAction(r.RunFileAction, browser)
+
+		case *ipcv1.Request_GetThumbnail:
+			return handleGetThumbnail(r.GetThumbnail, browser)
+		case *ipcv1.Request_Copy:
+			return handleCopy(r.Copy, browser)
+		case *ipcv1.Request_Paste:
+			return handlePaste(r.Paste, browser)
+		case *ipcv1.Request_CreateFile:
+			return handleCreateFile(r.CreateFile, browser)
+		case *ipcv1.Request_CreateDirectory:
+			return handleCreateDirectory(r.CreateDirectory, browser)
+		case *ipcv1.Request_ListMounts:
+			return handleListMounts(r.ListMounts, browser)
+		case *ipcv1.Request_PinSearch:
+			return handlePinSearch(r.PinSearch, browser)
+		case *ipcv1.Request_UnpinSearch:
+			return handleUnpinSearch(r.UnpinSearch, browser)
+		case *ipcv1.Request_ListSavedSearches:
+			return handleListSavedSearches(r.ListSavedSearches, browser)
 
 		case *ipcv1.Request_LaunchGui:
 			alreadyRunning, launchErr := guiMgr.Launch(r.LaunchGui.GetPath())

@@ -44,6 +44,15 @@ message Request {
     GetFileActionsRequest get_file_actions = 27;
     RunFileActionRequest run_file_action = 28;
     LaunchGUIRequest launch_gui = 29;
+    GetThumbnailRequest get_thumbnail = 30;
+    CopyRequest copy = 31;
+    PasteRequest paste = 32;
+    CreateFileRequest create_file = 33;
+    CreateDirectoryRequest create_directory = 34;
+    ListMountsRequest list_mounts = 35;
+    PinSearchRequest pin_search = 36;
+    UnpinSearchRequest unpin_search = 37;
+    ListSavedSearchesRequest list_saved_searches = 38;
   }
 }
 
@@ -78,6 +87,15 @@ message Response {
     GetFileActionsResponse get_file_actions = 27;
     RunFileActionResponse run_file_action = 28;
     LaunchGUIResponse launch_gui = 29;
+    GetThumbnailResponse get_thumbnail = 30;
+    CopyResponse copy = 31;
+    PasteResponse paste = 32;
+    CreateFileResponse create_file = 33;
+    CreateDirectoryResponse create_directory = 34;
+    ListMountsResponse list_mounts = 35;
+    PinSearchResponse pin_search = 36;
+    UnpinSearchResponse unpin_search = 37;
+    ListSavedSearchesResponse list_saved_searches = 38;
   }
 }
 
@@ -384,6 +402,7 @@ message GetBrowserConfigRequest {}
 message GetBrowserConfigResponse {
   map<string, string> keybindings = 1;
   bool use_trash = 2;
+  bool inline_thumbnails = 3;
 }
 
 // Feature 7: Extension System
@@ -425,4 +444,87 @@ message LaunchGUIResponse {
 
 message ShowWindowEvent {
   string path = 1; // optional path to navigate to
+}
+
+// Feature 9: Thumbnail Generation
+enum ThumbnailSize {
+  THUMBNAIL_SIZE_NORMAL = 0; // 128×128 max
+  THUMBNAIL_SIZE_LARGE = 1;  // 256×256 max
+}
+
+message GetThumbnailRequest {
+  string path = 1;
+  ThumbnailSize size = 2;
+}
+
+message GetThumbnailResponse {
+  string thumbnail_path = 1; // local filesystem path to the PNG thumbnail
+  uint32 width = 2;
+  uint32 height = 3;
+}
+
+// Feature 10: Clipboard Operations
+message CopyRequest {
+  repeated string paths = 1;
+  bool is_move = 2; // true for Cut, false for Copy
+}
+message CopyResponse {}
+
+message PasteRequest {
+  string destination_dir = 1;
+}
+message PasteResponse {
+  repeated string new_paths = 1;
+}
+
+// Feature 11: File Creation
+message CreateFileRequest {
+  string destination_dir = 1;
+  string name = 2;
+}
+message CreateFileResponse {
+  string path = 1;
+}
+
+message CreateDirectoryRequest {
+  string destination_dir = 1;
+  string name = 2;
+}
+message CreateDirectoryResponse {
+  string path = 1;
+}
+
+// Feature 12: Mount Discovery
+message MountEntry {
+  string path = 1;
+  string label = 2;
+  string icon_name = 3;
+}
+message ListMountsRequest {}
+message ListMountsResponse {
+  repeated MountEntry mounts = 1;
+}
+
+// Feature 13: Saved Searches
+message SavedSearch {
+  string name = 1;
+  repeated string chips = 2;
+  string icon_name = 3;
+  string id = 4;
+}
+message PinSearchRequest {
+  string name = 1;
+  repeated string chips = 2;
+  string icon_name = 3;
+}
+message PinSearchResponse {
+  SavedSearch search = 1;
+}
+message UnpinSearchRequest {
+  string id = 1;
+}
+message UnpinSearchResponse {}
+message ListSavedSearchesRequest {}
+message ListSavedSearchesResponse {
+  repeated SavedSearch searches = 1;
 }

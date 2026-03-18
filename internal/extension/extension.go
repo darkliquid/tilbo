@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -55,6 +56,8 @@ type Extension interface {
 }
 
 // ExtensionConfig is the TOML configuration for an extension.
+//
+//nolint:revive // keep name for clarity
 type ExtensionConfig struct {
 	Name      string   `toml:"name"`
 	Hooks     []string `toml:"hooks"`
@@ -139,13 +142,7 @@ func (r *Registry) BadgesFor(ctx context.Context, path, mime string, meta map[st
 	ch := make(chan result, len(exts))
 
 	for _, ext := range exts {
-		hasHook := false
-		for _, h := range ext.Hooks() {
-			if h == "badge" {
-				hasHook = true
-				break
-			}
-		}
+		hasHook := slices.Contains(ext.Hooks(), "badge")
 		if !hasHook {
 			continue
 		}
@@ -163,16 +160,13 @@ func (r *Registry) BadgesFor(ctx context.Context, path, mime string, meta map[st
 	seen := make(map[string]bool)
 	var all []string
 	for _, ext := range exts {
-		for _, h := range ext.Hooks() {
-			if h == "badge" {
-				res := <-ch
-				for _, b := range res.badges {
-					if !seen[b] {
-						seen[b] = true
-						all = append(all, b)
-					}
+		if slices.Contains(ext.Hooks(), "badge") {
+			res := <-ch
+			for _, b := range res.badges {
+				if !seen[b] {
+					seen[b] = true
+					all = append(all, b)
 				}
-				break
 			}
 		}
 	}
@@ -222,7 +216,7 @@ func runActionCommand(ctx context.Context, command []string, path string) error 
 	for i, arg := range command {
 		args[i] = strings.ReplaceAll(arg, "{path}", path)
 	}
-	//nolint:gosec // command comes from user extension config
+
 	cmd := newExecCommand(ctx, args[0], args[1:]...)
 	cmd.Stdin = nil
 	return cmd.Start()
@@ -239,7 +233,11 @@ type subprocessExtension struct {
 func (e *subprocessExtension) Name() string    { return e.name }
 func (e *subprocessExtension) Hooks() []string { return e.hooks }
 
-func (e *subprocessExtension) BadgesFor(ctx context.Context, path, mime string, meta map[string]string) ([]string, error) {
+func (e *subprocessExtension) BadgesFor(
+	ctx context.Context,
+	path, mime string,
+	meta map[string]string,
+) ([]string, error) {
 	if len(e.command) == 0 {
 		return nil, nil
 	}
@@ -253,7 +251,6 @@ func (e *subprocessExtension) BadgesFor(ctx context.Context, path, mime string, 
 	runCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
-	//nolint:gosec // command comes from user extension config
 	cmd := newExecCommand(runCtx, e.command[0], e.command[1:]...)
 	cmd.Stdin = strings.NewReader(string(inJSON))
 	out, err := cmd.Output()
@@ -282,7 +279,6 @@ func (e *subprocessExtension) ActionsFor(ctx context.Context, path string, isDir
 	runCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
-	//nolint:gosec // command comes from user extension config
 	cmd := newExecCommand(runCtx, e.command[0], e.command[1:]...)
 	cmd.Stdin = strings.NewReader(string(inJSON))
 	out, err := cmd.Output()

@@ -27,10 +27,10 @@ type DaemonConfig struct {
 	LogLevel       string `toml:"log_level"`
 	Watcher        string `toml:"watcher"`
 	WatchHidden    bool   `toml:"watch_hidden"`
-	EmbedModel     string `toml:"embed_model"`       // Local path to ONNX model directory. Overrides auto-download.
-	EmbedModelName string `toml:"embed_model_name"`  // HuggingFace model name to download if embed_model is unset. Defaults to sentence-transformers/all-MiniLM-L6-v2.
-	EmbedDisabled  bool   `toml:"embed_disabled"`    // Explicitly disable vector embeddings.
-	GUIShellPath   string `toml:"gui_shell_path"`    // Path to the Quickshell shell.qml entry point. Auto-detected if empty.
+	EmbedModel     string `toml:"embed_model"`      // Local path to ONNX model directory. Overrides auto-download.
+	EmbedModelName string `toml:"embed_model_name"` // HuggingFace model name to download if embed_model is unset. Defaults to sentence-transformers/all-MiniLM-L6-v2.
+	EmbedDisabled  bool   `toml:"embed_disabled"`   // Explicitly disable vector embeddings.
+	GUIShellPath   string `toml:"gui_shell_path"`   // Path to the Quickshell shell.qml entry point. Auto-detected if empty.
 }
 
 // CLIConfig holds tilbo-cli settings.
@@ -45,11 +45,21 @@ type PinnedPlace struct {
 	IconName string `toml:"icon"`
 }
 
+// SavedSearch describes a pinned search query.
+type SavedSearch struct {
+	ID       string   `toml:"id"`
+	Name     string   `toml:"name"`
+	IconName string   `toml:"icon"`
+	Chips    []string `toml:"chips"`
+}
+
 // BrowserConfig holds tilbo file-browser settings.
 type BrowserConfig struct {
-	PinnedPlaces []PinnedPlace     `toml:"pinned_place"`
-	UseTrash     bool              `toml:"use_trash"`
-	Keybindings  map[string]string `toml:"keybindings"`
+	PinnedPlaces     []PinnedPlace     `toml:"pinned_place"`
+	SavedSearches    []SavedSearch     `toml:"saved_search"`
+	UseTrash         bool              `toml:"use_trash"`
+	InlineThumbnails bool              `toml:"inline_thumbnails"`
+	Keybindings      map[string]string `toml:"keybindings"`
 }
 
 // Config is the top-level structure of the shared config file.

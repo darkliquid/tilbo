@@ -21,6 +21,10 @@ Item {
     id: root
 
     property var entries: []
+    property bool inlineThumbnails: false
+    property var selection: []
+    property int _lastSelectedIndex: -1
+    property int iconSize: 48
 
     signal fileSelected(var fileData)
     signal directoryActivated(string path)
@@ -32,6 +36,16 @@ Item {
     signal getFileActions(string path, var cb)
     signal runFileAction(string path, string actionId)
     signal getFileBadges(string path, var cb)
+    signal getThumbnail(string path, int size, var cb)
+    signal copyRequested(bool isMove)
+    signal pasteRequested()
+    signal createFileRequested()
+    signal createDirectoryRequested()
+
+    // Helper to check if a MIME type is thumbnailable.
+    function _isThumbnailable(mime) {
+        return mime && (mime.indexOf("image/") === 0 || mime.indexOf("video/") === 0)
+    }
 
     // Index of the cell currently being renamed; -1 means none.
     property int _renamingIndex: -1
@@ -40,9 +54,23 @@ Item {
         id: grid
         anchors.fill: parent
         anchors.margins: 8
+
+        MouseArea {
+            anchors.fill: parent
+            z: -1
+            acceptedButtons: Qt.RightButton
+            onClicked: (mouse) => {
+                if (mouse.button === Qt.RightButton) {
+                    root.selection = []
+                    root._lastSelectedIndex = -1
+                    bgCtxMenu.popup()
+                }
+            }
+        }
+
         model: root.entries
-        cellWidth: 148
-        cellHeight: 164
+        cellWidth: root.iconSize + 100
+        cellHeight: root.iconSize + 116
         clip: true
         ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
 
@@ -59,8 +87,9 @@ Item {
                 anchors.fill: parent
                 anchors.margins: 4
                 radius: 6
-                color: cellMA.containsMouse && !cell.renaming ? "#2E3440" : "transparent"
-                border.color: cellMA.containsMouse && !cell.renaming ? "#4C566A" : "transparent"
+                property bool selected: root.selection.indexOf(cell.modelData.path) !== -1
+                color: selected ? "#4C566A" : (cellMA.containsMouse && !cell.renaming ? "#2E3440" : "transparent")
+                border.color: selected ? "#88C0D0" : (cellMA.containsMouse && !cell.renaming ? "#4C566A" : "transparent")
                 border.width: 1
 
                 Column {
@@ -68,16 +97,29 @@ Item {
                     anchors.margins: 8
                     spacing: 4
 
-                    // File type icon with badge overlay
+                    // File type icon / thumbnail with badge overlay
                     Item {
                         id: gridIconItem
                         anchors.horizontalCenter: parent.horizontalCenter
-                        width: 48; height: 48
+                        width: root.iconSize; height: root.iconSize
+
+                        property string _thumbnailSource: ""
 
                         ThemeIcon {
                             anchors.fill: parent
-                            iconName: cell.modelData.iconName
-                                    || (cell.modelData.isDir ? "inode-directory" : "application-x-generic")
+                            iconName: cell.modelData.iconName || (cell.modelData.isDir ? "folder" : "application-x-generic")
+                            visible: gridIconItem._thumbnailSource === ""
+                        }
+
+                        Image {
+                            anchors.fill: parent
+                            source: gridIconItem._thumbnailSource
+                            visible: gridIconItem._thumbnailSource !== ""
+                            fillMode: Image.PreserveAspectFit
+                            smooth: true
+                            sourceSize.width: root.iconSize
+                            sourceSize.height: root.iconSize
+                            cache: true
                         }
 
                         // Badge overlays (loaded asynchronously)
@@ -87,6 +129,12 @@ Item {
                                 root.getFileBadges(cell.modelData.path, function(badges, _err) {
                                     gridIconItem._badges = badges || []
                                 })
+                                if (root.inlineThumbnails && root._isThumbnailable(cell.modelData.mimeType)) {
+                                    root.getThumbnail(cell.modelData.path, 0, function(result, _err) {
+                                        if (result && result.thumbnailPath)
+                                            gridIconItem._thumbnailSource = "file://" + result.thumbnailPath
+                                    })
+                                }
                             }
                         }
 
@@ -174,12 +222,37 @@ Item {
 
                 onClicked: (mouse) => {
                     if (mouse.button === Qt.RightButton) {
+                        if (root.selection.indexOf(cell.modelData.path) === -1) {
+                            root.selection = [cell.modelData.path]
+                            root._lastSelectedIndex = cell.index
+                        }
                         ctxMenu.targetPath  = cell.modelData.path
                         ctxMenu.targetName  = cell.modelData.name
                         ctxMenu.targetIndex = cell.index
                         ctxMenu.targetIsDir = cell.modelData.isDir
                         ctxMenu.popup()
                     } else {
+                        var path = cell.modelData.path
+                        var currentSelection = root.selection.slice()
+
+                        if (mouse.modifiers & Qt.ControlModifier) {
+                            var idx = currentSelection.indexOf(path)
+                            if (idx === -1) currentSelection.push(path)
+                            else           currentSelection.splice(idx, 1)
+                            root._lastSelectedIndex = cell.index
+                        } else if (mouse.modifiers & Qt.ShiftModifier && root._lastSelectedIndex !== -1) {
+                            var start = Math.min(root._lastSelectedIndex, cell.index)
+                            var end = Math.max(root._lastSelectedIndex, cell.index)
+                            currentSelection = []
+                            for (var i = start; i <= end; i++) {
+                                currentSelection.push(root.entries[i].path)
+                            }
+                        } else {
+                            currentSelection = [path]
+                            root._lastSelectedIndex = cell.index
+                        }
+
+                        root.selection = currentSelection
                         root.fileSelected(cell.modelData)
                     }
                 }
@@ -190,6 +263,24 @@ Item {
                     else                      root.fileOpenRequested(cell.modelData.path)
                 }
             }
+        }
+    }
+
+    // Context menu for empty area
+    Menu {
+        id: bgCtxMenu
+        MenuItem {
+            text: "New File"
+            onTriggered: root.createFileRequested()
+        }
+        MenuItem {
+            text: "New Folder"
+            onTriggered: root.createDirectoryRequested()
+        }
+        MenuSeparator {}
+        MenuItem {
+            text: "Paste"
+            onTriggered: root.pasteRequested()
         }
     }
 
@@ -234,6 +325,19 @@ Item {
                          : ctxMenu.targetPath.substring(0, ctxMenu.targetPath.lastIndexOf("/"))
                 root.openInTerminalRequested(dir)
             }
+        }
+        MenuSeparator {}
+        MenuItem {
+            text: "Copy"
+            onTriggered: root.copyRequested(false)
+        }
+        MenuItem {
+            text: "Cut"
+            onTriggered: root.copyRequested(true)
+        }
+        MenuItem {
+            text: "Paste"
+            onTriggered: root.pasteRequested()
         }
         MenuSeparator {}
         MenuItem {

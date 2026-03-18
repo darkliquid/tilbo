@@ -5,12 +5,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"maps"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
+
+	"github.com/google/uuid"
 
 	"github.com/darkliquid/tilbo/internal/browser"
 	"github.com/darkliquid/tilbo/internal/config"
@@ -19,6 +22,7 @@ import (
 	"github.com/darkliquid/tilbo/internal/graph"
 	"github.com/darkliquid/tilbo/internal/index"
 	ipcv1 "github.com/darkliquid/tilbo/internal/ipc/gen/tilbo/ipc/v1"
+	"github.com/darkliquid/tilbo/internal/thumbnail"
 	"github.com/darkliquid/tilbo/internal/trash"
 	"github.com/darkliquid/tilbo/internal/xattr"
 )
@@ -58,14 +62,17 @@ func mimeToIconName(mime string) string {
 // frontend can drive all file-manager operations without a separate browser
 // runtime.
 type daemonBrowserMethods struct {
-	idx          *index.DB
-	tags         *xattr.Service
-	g            *graph.Graph
-	fuseMount    string
-	onFileTagged func(path string, added, removed []string)
-	cfg          *config.Config
-	cfgPath      string
-	extRegistry  *extension.Registry
+	idx             *index.DB
+	tags            *xattr.Service
+	g               *graph.Graph
+	fuseMount       string
+	onFileTagged    func(path string, added, removed []string)
+	cfg             *config.Config
+	cfgPath         string
+	extRegistry     *extension.Registry
+	thumbGen        *thumbnail.Generator
+	clipboardPaths  []string
+	clipboardIsMove bool
 }
 
 // validatePath cleans and validates a filesystem path for use in uisocket RPC
@@ -132,7 +139,7 @@ func (h *daemonBrowserMethods) ListDirectory(path string, hidden bool) ([]browse
 		var mimeType, iconName string
 		if de.IsDir() {
 			mimeType = "inode/directory"
-			iconName = "folder"
+			iconName = "folder" //nolint:goconst // simple string is fine
 		} else {
 			mimeType, _ = h.idx.GetFileMime(context.Background(), entryPath)
 			if mimeType != "" {
@@ -520,7 +527,7 @@ func (h *daemonBrowserMethods) ListPlaces() ([]browser.PlaceEntry, error) {
 		places = append(places,
 			browser.PlaceEntry{Name: "@recent", Path: h.fuseMount + "/@recent", IconName: "folder-recent"},
 			browser.PlaceEntry{Name: "@untagged", Path: h.fuseMount + "/@untagged", IconName: "folder"},
-			browser.PlaceEntry{Name: "@browse", Path: h.fuseMount + "/@browse", IconName: "tag"},
+			browser.PlaceEntry{Name: "@browse", Path: h.fuseMount + "/@browse", IconName: "folder-tag"},
 		)
 	}
 	return places, nil
@@ -592,14 +599,14 @@ func (h *daemonBrowserMethods) resolveForDelete(path string) (string, bool, erro
 		return "", false, err
 	}
 	// Virtual directories start with @
-	parts := strings.SplitN(rel, string(filepath.Separator), 2)
+	parts := strings.SplitN(rel, string(filepath.Separator), 2) //nolint:mnd // 2 parts is obvious
 	if len(parts) > 0 && strings.HasPrefix(parts[0], "@") {
 		return "", true, nil
 	}
 	// Follow symlink to real path
 	realPath, err := filepath.EvalSymlinks(clean)
 	if err != nil {
-		return "", true, nil // can't resolve = treat as virtual
+		return "", true, nil //nolint:nilerr // can't resolve = treat as virtual
 	}
 	return realPath, false, nil
 }
@@ -687,6 +694,8 @@ func (h *daemonBrowserMethods) OpenWithApp(path, appID string) error {
 }
 
 // GetBrowserConfig returns the browser configuration from daemon config.
+//
+//nolint:unparam // required by interface
 func (h *daemonBrowserMethods) GetBrowserConfig() (browser.BrowserConfig, error) {
 	if h.cfg == nil {
 		return browser.BrowserConfig{UseTrash: true, Keybindings: map[string]string{}}, nil
@@ -696,8 +705,9 @@ func (h *daemonBrowserMethods) GetBrowserConfig() (browser.BrowserConfig, error)
 		kb = map[string]string{}
 	}
 	return browser.BrowserConfig{
-		Keybindings: kb,
-		UseTrash:    h.cfg.Browser.UseTrash,
+		Keybindings:      kb,
+		UseTrash:         h.cfg.Browser.UseTrash,
+		InlineThumbnails: h.cfg.Browser.InlineThumbnails,
 	}, nil
 }
 
@@ -771,4 +781,307 @@ func isFUSEMounted(mountPoint string) bool {
 		}
 	}
 	return false
+}
+
+// GetThumbnail returns a thumbnail for the file at path.
+func (h *daemonBrowserMethods) GetThumbnail(path string, size int) (browser.ThumbnailResult, error) {
+	clean, err := validatePath(path)
+	if err != nil {
+		return browser.ThumbnailResult{}, err
+	}
+
+	if h.thumbGen == nil {
+		return browser.ThumbnailResult{}, errors.New("thumbnail generation is not available")
+	}
+
+	// Determine MIME type for the file.
+	mime, _ := h.idx.GetFileMime(context.Background(), clean)
+	if mime == "" {
+		return browser.ThumbnailResult{}, errors.New("cannot determine MIME type for file")
+	}
+
+	if !thumbnail.CanThumbnail(mime) {
+		return browser.ThumbnailResult{}, fmt.Errorf("MIME type %q is not thumbnailable", mime)
+	}
+
+	sz := thumbnail.Normal
+	if size == 1 {
+		sz = thumbnail.Large
+	}
+
+	res, err := h.thumbGen.GetOrGenerate(context.Background(), clean, mime, sz)
+	if err != nil {
+		return browser.ThumbnailResult{}, fmt.Errorf("generate thumbnail: %w", err)
+	}
+
+	return browser.ThumbnailResult{
+		Path:   res.Path,
+		Width:  res.Width,
+		Height: res.Height,
+	}, nil
+}
+
+// Copy sets the current clipboard state.
+func (h *daemonBrowserMethods) Copy(paths []string, isMove bool) error {
+	var cleaned []string
+	for _, p := range paths {
+		c, err := validatePath(p)
+		if err != nil {
+			return err
+		}
+		cleaned = append(cleaned, c)
+	}
+	h.clipboardPaths = cleaned
+	h.clipboardIsMove = isMove
+	return nil
+}
+
+// Paste executes the current clipboard operation (Copy/Cut) into the destination.
+func (h *daemonBrowserMethods) Paste(dest string) ([]string, error) {
+	if len(h.clipboardPaths) == 0 {
+		return nil, nil
+	}
+
+	cleanDest, err := validatePath(dest)
+	if err != nil {
+		return nil, err
+	}
+
+	var newPaths []string
+	for _, src := range h.clipboardPaths {
+		base := filepath.Base(src)
+		dst := filepath.Join(cleanDest, base)
+
+		if h.clipboardIsMove {
+			if err := os.Rename(src, dst); err != nil {
+				return newPaths, fmt.Errorf("move %q to %q: %w", src, dst, err)
+			}
+		} else {
+			if err := copyRecursive(src, dst); err != nil {
+				return newPaths, fmt.Errorf("copy %q to %q: %w", src, dst, err)
+			}
+		}
+		newPaths = append(newPaths, dst)
+	}
+
+	if h.clipboardIsMove {
+		h.clipboardPaths = nil // Clear clipboard after move
+	}
+
+	return newPaths, nil
+}
+
+func copyRecursive(src, dst string) error {
+	info, err := os.Stat(src)
+	if err != nil {
+		return err
+	}
+
+	if info.IsDir() {
+		if err := os.MkdirAll(dst, info.Mode()); err != nil {
+			return err
+		}
+		entries, err := os.ReadDir(src)
+		if err != nil {
+			return err
+		}
+		for _, entry := range entries {
+			if err := copyRecursive(filepath.Join(src, entry.Name()), filepath.Join(dst, entry.Name())); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+
+	// File copy
+	s, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer s.Close()
+
+	d, err := os.OpenFile(dst, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, info.Mode())
+	if err != nil {
+		return err
+	}
+	defer d.Close()
+
+	if _, err := io.Copy(d, s); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// CreateFile creates an empty file in the destination.
+func (h *daemonBrowserMethods) CreateFile(dest, name string) (string, error) {
+	cleanDest, err := validatePath(dest)
+	if err != nil {
+		return "", err
+	}
+	if err := validateNewName(name); err != nil {
+		return "", err
+	}
+
+	path := filepath.Join(cleanDest, name)
+	f, err := os.OpenFile(path, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600)
+	if err != nil {
+		return "", fmt.Errorf("create file %q: %w", path, err)
+	}
+	if err := f.Close(); err != nil {
+		return "", fmt.Errorf("close new file %q: %w", path, err)
+	}
+
+	return path, nil
+}
+
+// CreateDirectory creates a new directory in the destination.
+func (h *daemonBrowserMethods) CreateDirectory(dest, name string) (string, error) {
+	cleanDest, err := validatePath(dest)
+	if err != nil {
+		return "", err
+	}
+	if err := validateNewName(name); err != nil {
+		return "", err
+	}
+
+	path := filepath.Join(cleanDest, name)
+	if err := os.Mkdir(path, 0o700); err != nil {
+		return "", fmt.Errorf("create directory %q: %w", path, err)
+	}
+
+	return path, nil
+}
+
+// ListMounts parses /proc/mounts and returns a list of user-relevant mount points.
+func (h *daemonBrowserMethods) ListMounts() ([]browser.MountEntry, error) {
+	f, err := os.Open("/proc/mounts")
+	if err != nil {
+		return nil, fmt.Errorf("open /proc/mounts: %w", err)
+	}
+	defer f.Close()
+
+	var mounts []browser.MountEntry
+	scanner := bufio.NewScanner(f)
+	home, _ := os.UserHomeDir()
+
+	for scanner.Scan() {
+		line := scanner.Text()
+		fields := strings.Fields(line)
+		if len(fields) < mountsMinFields {
+			continue
+		}
+
+		// fields[0]=device, fields[1]=mountpoint, fields[2]=fstype
+		mp := fields[1]
+
+		// Filter for user-relevant mounts:
+		// 1. External media (/media, /run/media)
+		// 2. Custom mounts in /mnt
+		// 3. User's home dir if it's a separate mount (but already in places)
+		// We'll stick to /media, /run/media, and /mnt for now.
+		if !strings.HasPrefix(mp, "/media/") &&
+			!strings.HasPrefix(mp, "/run/media/") &&
+			!strings.HasPrefix(mp, "/mnt/") {
+			continue
+		}
+
+		// Skip the root of /media or /mnt if they appear
+		if mp == "/media" || mp == "/mnt" || mp == "/run/media" {
+			continue
+		}
+
+		label := filepath.Base(mp)
+		icon := "drive-removable-media"
+		if strings.HasPrefix(mp, "/mnt") {
+			icon = "drive-harddisk"
+		}
+
+		mounts = append(mounts, browser.MountEntry{
+			Path:     mp,
+			Label:    label,
+			IconName: icon,
+		})
+	}
+
+	// Also include home if it's not already covered (most distros don't mount home separately)
+	// but we usually have it in places anyway.
+
+	_ = home
+	return mounts, nil
+}
+
+// PinSearch adds a search query to the pinned searches in config.
+func (h *daemonBrowserMethods) PinSearch(name string, chips []string, iconName string) (browser.SavedSearch, error) {
+	if h.cfg == nil {
+		return browser.SavedSearch{}, errors.New("configuration not loaded")
+	}
+
+	if iconName == "" {
+		iconName = "folder-saved-search"
+	}
+
+	id := uuid.New().String()
+	s := config.SavedSearch{
+		ID:       id,
+		Name:     name,
+		Chips:    chips,
+		IconName: iconName,
+	}
+
+	h.cfg.Browser.SavedSearches = append(h.cfg.Browser.SavedSearches, s)
+	if err := config.Save(h.cfgPath, *h.cfg); err != nil {
+		return browser.SavedSearch{}, fmt.Errorf("save config: %w", err)
+	}
+
+	return browser.SavedSearch{
+		ID:       s.ID,
+		Name:     s.Name,
+		Chips:    s.Chips,
+		IconName: s.IconName,
+	}, nil
+}
+
+// UnpinSearch removes a search query from pinned searches by ID.
+func (h *daemonBrowserMethods) UnpinSearch(id string) error {
+	if h.cfg == nil {
+		return errors.New("configuration not loaded")
+	}
+
+	found := false
+	var next []config.SavedSearch
+	for _, s := range h.cfg.Browser.SavedSearches {
+		if s.ID == id {
+			found = true
+			continue
+		}
+		next = append(next, s)
+	}
+
+	if !found {
+		return fmt.Errorf("saved search %q not found", id)
+	}
+
+	h.cfg.Browser.SavedSearches = next
+	return config.Save(h.cfgPath, *h.cfg)
+}
+
+// ListSavedSearches returns the pinned search queries from config.
+//
+//nolint:unparam // required by interface
+func (h *daemonBrowserMethods) ListSavedSearches() ([]browser.SavedSearch, error) {
+	if h.cfg == nil {
+		return nil, nil
+	}
+
+	var res []browser.SavedSearch
+	for _, s := range h.cfg.Browser.SavedSearches {
+		res = append(res, browser.SavedSearch{
+			ID:       s.ID,
+			Name:     s.Name,
+			Chips:    s.Chips,
+			IconName: s.IconName,
+		})
+	}
+	return res, nil
 }

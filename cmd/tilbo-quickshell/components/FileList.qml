@@ -9,6 +9,9 @@ Item {
     id: root
 
     property var entries: []
+    property bool inlineThumbnails: false
+    property var selection: []
+    property int _lastSelectedIndex: -1
 
     signal fileSelected(var fileData)
     signal directoryActivated(string path)
@@ -20,8 +23,21 @@ Item {
     signal getFileActions(string path, var cb)
     signal runFileAction(string path, string actionId)
     signal getFileBadges(string path, var cb)
+    signal getThumbnail(string path, int size, var cb)
+    signal copyRequested(bool isMove)
+    signal pasteRequested()
+    signal createFileRequested()
+    signal createDirectoryRequested()
+
+    function _isThumbnailable(mime) {
+        return mime && (mime.indexOf("image/") === 0 || mime.indexOf("video/") === 0)
+    }
 
     property int _renamingIndex: -1
+
+    property string sortColumn: "name"
+    property bool sortAscending: true
+    signal sortRequested(string column, bool ascending)
 
     // ── Column widths (pixels) ─────────────────────────────────────────────
 
@@ -50,10 +66,61 @@ Item {
             spacing: 0
 
             Item   { width: root._colIcon;  height: parent.height }
-            Text   { width: root._colName;  height: parent.height; text: "Name";     color: "#88C0D0"; font.pixelSize: 12; verticalAlignment: Text.AlignVCenter }
-            Text   { width: root._colSize;  height: parent.height; text: "Size";     color: "#88C0D0"; font.pixelSize: 12; verticalAlignment: Text.AlignVCenter; horizontalAlignment: Text.AlignRight }
-            Text   { width: root._colMtime; height: parent.height; text: "Modified"; color: "#88C0D0"; font.pixelSize: 12; verticalAlignment: Text.AlignVCenter; leftPadding: 8 }
-            Text   { width: root._colTags;  height: parent.height; text: "Tags";     color: "#88C0D0"; font.pixelSize: 12; verticalAlignment: Text.AlignVCenter; leftPadding: 8 }
+            
+            HeaderItem {
+                width: root._colName; height: parent.height; text: "Name"
+                column: "name"; active: root.sortColumn === "name"
+                ascending: root.sortAscending
+                onClicked: root.sortRequested("name", active ? !ascending : true)
+            }
+            HeaderItem {
+                width: root._colSize; height: parent.height; text: "Size"
+                column: "size"; active: root.sortColumn === "size"
+                ascending: root.sortAscending
+                horizontalAlignment: Text.AlignRight
+                onClicked: root.sortRequested("size", active ? !ascending : true)
+            }
+            HeaderItem {
+                width: root._colMtime; height: parent.height; text: "Modified"
+                column: "mtime"; active: root.sortColumn === "mtime"
+                ascending: root.sortAscending; leftPadding: 8
+                onClicked: root.sortRequested("mtime", active ? !ascending : true)
+            }
+            HeaderItem {
+                width: root._colTags;  height: parent.height; text: "Tags"
+                column: "tags"; active: root.sortColumn === "tags"
+                ascending: root.sortAscending; leftPadding: 8
+                onClicked: root.sortRequested("tags", active ? !ascending : true)
+            }
+        }
+    }
+
+    // Header item component for re-use
+    component HeaderItem: Item {
+        property string text: ""
+        property string column: ""
+        property bool active: false
+        property bool ascending: true
+        property int horizontalAlignment: Text.AlignLeft
+        property int leftPadding: 0
+        signal clicked()
+
+        Text {
+            anchors.fill: parent
+            anchors.leftMargin: parent.leftPadding
+            text: parent.text + (parent.active ? (parent.ascending ? " ↑" : " ↓") : "")
+            color: parent.active ? "#ECEFF4" : "#88C0D0"
+            font.pixelSize: 12
+            font.bold: parent.active
+            verticalAlignment: Text.AlignVCenter
+            horizontalAlignment: parent.horizontalAlignment
+        }
+
+        MouseArea {
+            anchors.fill: parent
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+            onClicked: parent.clicked()
         }
     }
 
@@ -65,6 +132,20 @@ Item {
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.bottom: parent.bottom
+
+        MouseArea {
+            anchors.fill: parent
+            z: -1
+            acceptedButtons: Qt.RightButton
+            onClicked: (mouse) => {
+                if (mouse.button === Qt.RightButton) {
+                    root.selection = []
+                    root._lastSelectedIndex = -1
+                    bgCtxMenu.popup()
+                }
+            }
+        }
+
         model: root.entries
         clip: true
         ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
@@ -83,7 +164,10 @@ Item {
                 anchors.fill: parent
                 anchors.leftMargin: 4; anchors.rightMargin: 4
                 radius: 4
-                color: rowMA.containsMouse ? "#2E3440" : "transparent"
+                property bool selected: root.selection.indexOf(row.modelData.path) !== -1
+                color: selected ? "#4C566A" : (rowMA.containsMouse ? "#2E3440" : "transparent")
+                border.color: selected ? "#88C0D0" : "transparent"
+                border.width: 1
             }
 
             Row {
@@ -96,11 +180,26 @@ Item {
                     id: iconItem
                     width: root._colIcon; height: parent.height
 
+                    property string _thumbnailSource: ""
+
                     ThemeIcon {
                         anchors.centerIn: parent
                         width: 24; height: 24
                         iconName: row.modelData.iconName
                                 || (row.modelData.isDir ? "inode-directory" : "application-x-generic")
+                        visible: iconItem._thumbnailSource === ""
+                    }
+
+                    Image {
+                        anchors.centerIn: parent
+                        width: 24; height: 24
+                        source: iconItem._thumbnailSource
+                        visible: iconItem._thumbnailSource !== ""
+                        fillMode: Image.PreserveAspectFit
+                        smooth: true
+                        sourceSize.width: 24
+                        sourceSize.height: 24
+                        cache: true
                     }
 
                     property var _badges: []
@@ -109,6 +208,12 @@ Item {
                             root.getFileBadges(row.modelData.path, function(badges, _err) {
                                 iconItem._badges = badges || []
                             })
+                            if (root.inlineThumbnails && root._isThumbnailable(row.modelData.mimeType)) {
+                                root.getThumbnail(row.modelData.path, 0, function(result, _err) {
+                                    if (result && result.thumbnailPath)
+                                        iconItem._thumbnailSource = "file://" + result.thumbnailPath
+                                })
+                            }
                         }
                     }
 
@@ -222,12 +327,37 @@ Item {
 
                 onClicked: (mouse) => {
                     if (mouse.button === Qt.RightButton) {
+                        if (root.selection.indexOf(row.modelData.path) === -1) {
+                            root.selection = [row.modelData.path]
+                            root._lastSelectedIndex = row.index
+                        }
                         rowCtxMenu.targetPath  = row.modelData.path
                         rowCtxMenu.targetName  = row.modelData.name
                         rowCtxMenu.targetIndex = row.index
                         rowCtxMenu.targetIsDir = row.modelData.isDir
                         rowCtxMenu.popup()
                     } else {
+                        var path = row.modelData.path
+                        var currentSelection = root.selection.slice()
+
+                        if (mouse.modifiers & Qt.ControlModifier) {
+                            var idx = currentSelection.indexOf(path)
+                            if (idx === -1) currentSelection.push(path)
+                            else           currentSelection.splice(idx, 1)
+                            root._lastSelectedIndex = row.index
+                        } else if (mouse.modifiers & Qt.ShiftModifier && root._lastSelectedIndex !== -1) {
+                            var start = Math.min(root._lastSelectedIndex, row.index)
+                            var end = Math.max(root._lastSelectedIndex, row.index)
+                            currentSelection = []
+                            for (var i = start; i <= end; i++) {
+                                currentSelection.push(root.entries[i].path)
+                            }
+                        } else {
+                            currentSelection = [path]
+                            root._lastSelectedIndex = row.index
+                        }
+
+                        root.selection = currentSelection
                         root.fileSelected(row.modelData)
                     }
                 }
@@ -238,6 +368,24 @@ Item {
                     else                     root.fileOpenRequested(row.modelData.path)
                 }
             }
+        }
+    }
+
+    // Context menu for empty area
+    Menu {
+        id: bgCtxMenu
+        MenuItem {
+            text: "New File"
+            onTriggered: root.createFileRequested()
+        }
+        MenuItem {
+            text: "New Folder"
+            onTriggered: root.createDirectoryRequested()
+        }
+        MenuSeparator {}
+        MenuItem {
+            text: "Paste"
+            onTriggered: root.pasteRequested()
         }
     }
 
@@ -280,6 +428,19 @@ Item {
                          : rowCtxMenu.targetPath.substring(0, rowCtxMenu.targetPath.lastIndexOf("/"))
                 root.openInTerminalRequested(dir)
             }
+        }
+        MenuSeparator {}
+        MenuItem {
+            text: "Copy"
+            onTriggered: root.copyRequested(false)
+        }
+        MenuItem {
+            text: "Cut"
+            onTriggered: root.copyRequested(true)
+        }
+        MenuItem {
+            text: "Paste"
+            onTriggered: root.pasteRequested()
         }
         MenuSeparator {}
         MenuItem {

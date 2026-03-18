@@ -334,4 +334,19 @@ Singleton {
             if (callback) callback(err)
         })
     }
+
+    // getThumbnail requests an on-demand thumbnail for the file at path.
+    // size: 0 = normal (128×128), 1 = large (256×256).
+    // callback(result, err) where result = { thumbnailPath, width, height }.
+    function getThumbnail(path, size, callback) {
+        _call({ getThumbnail: { path: path, size: size === 1 ? "THUMBNAIL_SIZE_LARGE" : "THUMBNAIL_SIZE_NORMAL" } }, function(resp, err) {
+            if (err) { callback(null, err); return }
+            var t = resp.getThumbnail || {}
+            callback({
+                thumbnailPath: t.thumbnailPath || "",
+                width: Number(t.width || 0),
+                height: Number(t.height || 0)
+            }, null)
+        })
+    }
 }

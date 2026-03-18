@@ -34,15 +34,24 @@ ApplicationWindow {
     // Currently selected file object {name, path, isDir, size, mtime, tags, ...}
     property var    selectedFile: null
     property var    selectedFileMeta: null   // metadata map from daemon
+    property var    selectedPaths: []
+
+    property string _sortColumn: "name"
+    property bool   _sortAscending: true
 
     property bool   showLeftSidebar: true
     property bool   showRightSidebar: false
     property bool   pathEditMode: false
 
+    property bool   _useInlineThumbnails: false
+    property int    _gridIconSize: 48
+
     // Model arrays (plain JS objects — no QAbstractItemModel needed)
     property var    dirEntries: []   // [{name,path,isDir,size,mtime,mode,hidden,tags}]
     property var    searchResults: []
     property var    places: []
+    property var    mounts: []
+    property var    savedSearches: []
 
     // Shorthand for the active file list
     readonly property var activeEntries: isSearchMode ? searchResults : dirEntries
@@ -104,11 +113,14 @@ ApplicationWindow {
 
     Component.onCompleted: {
         _loadPlaces()
+        _loadMounts()
+        _loadSavedSearches()
         navigateTo(currentPath)
         TilboDaemon.getBrowserConfig(function(cfg, _err) {
             if (cfg) {
                 _keybindings = cfg.keybindings || {}
                 _useTrash = cfg.useTrash !== undefined ? cfg.useTrash : true
+                _useInlineThumbnails = cfg.inlineThumbnails !== undefined ? cfg.inlineThumbnails : false
             }
         })
     }
@@ -121,6 +133,7 @@ ApplicationWindow {
         isTrashView  = false
         searchChips  = []
         selectedFile = null
+        selectedPaths = []
         showRightSidebar = false
 
         // Update history: truncate forward entries, push new path
@@ -143,6 +156,7 @@ ApplicationWindow {
         isTrashView  = false
         searchChips  = []
         selectedFile = null
+        selectedPaths = []
         showRightSidebar = false
         currentPath = path
         _loadDirectory(path)
@@ -156,9 +170,39 @@ ApplicationWindow {
         isTrashView  = false
         searchChips  = []
         selectedFile = null
+        selectedPaths = []
         showRightSidebar = false
         currentPath = path
         _loadDirectory(path)
+    }
+
+    function goUp() {
+        if (currentPath === "/") return
+        var lastSlash = currentPath.lastIndexOf("/")
+        var parent = currentPath.substring(0, lastSlash)
+        if (parent === "") parent = "/"
+        navigateTo(parent)
+    }
+
+    function goHome() {
+        // We'll rely on the daemon to tell us HOME if needed, but usually we can just ask JS environment
+        // or a common path. Tilbo stores config in user config dir, so let's assume ~ exists.
+        // Actually, let's just use /home/user or whatever is in environment if possible.
+        // For now, let's just navigate to "/" if we don't know HOME, or we can add a way to get it.
+        // TilboDaemon could provide it. Let's assume most users want their home dir.
+        // For now, let's jump to "/" as a placeholder or we can use a known path.
+        // Better: add a GetHome call to the daemon? No, let's just use a simple approach.
+        // Most linux users have /home/username. 
+        // We'll just hardcode "~" and see if Qt.openUrlExternally handles it? No, we need a path.
+        // Let's just go to "/" for now until we have a better way to get $HOME.
+        // Actually, places usually contains Home.
+        for (var i = 0; i < places.length; i++) {
+            if (places[i].name === "Home") {
+                navigateTo(places[i].path)
+                return
+            }
+        }
+        navigateTo("/")
     }
 
     function navigateToTrash() {
@@ -166,14 +210,43 @@ ApplicationWindow {
         isTrashView  = true
         searchChips  = []
         selectedFile = null
+        selectedPaths = []
         showRightSidebar = false
         _loadTrash()
+    }
+
+    function _sortEntries(arr) {
+        if (!arr) return []
+        var col = window._sortColumn
+        var asc = window._sortAscending
+        return arr.slice().sort(function(a, b) {
+            // Folders always first
+            if (a.isDir && !b.isDir) return -1
+            if (!a.isDir && b.isDir) return 1
+
+            var valA, valB
+            if (col === "name") {
+                valA = a.name.toLowerCase(); valB = b.name.toLowerCase()
+            } else if (col === "size") {
+                valA = a.size; valB = b.size
+            } else if (col === "mtime") {
+                valA = a.mtime; valB = b.mtime
+            } else if (col === "tags") {
+                valA = (a.tags || []).join(","); valB = (b.tags || []).join(",")
+            } else {
+                valA = a.name.toLowerCase(); valB = b.name.toLowerCase()
+            }
+
+            if (valA < valB) return asc ? -1 : 1
+            if (valA > valB) return asc ? 1 : -1
+            return 0
+        })
     }
 
     function _loadTrash() {
         TilboDaemon.listTrash(function(entries, err) {
             if (err) { trashEntries = []; return }
-            trashEntries = entries
+            trashEntries = _sortEntries(entries)
         })
     }
 
@@ -184,7 +257,7 @@ ApplicationWindow {
                 dirEntries = []
                 return
             }
-            dirEntries = entries
+            dirEntries = _sortEntries(entries)
             // Hydrate tags for all returned paths.
             var paths = entries.map(e => e.path)
             if (paths.length === 0) return
@@ -205,6 +278,18 @@ ApplicationWindow {
     function _loadPlaces() {
         TilboDaemon.listPlaces(function(ps, err) {
             if (!err) places = ps
+        })
+    }
+
+    function _loadMounts() {
+        TilboDaemon.listMounts(function(ms, err) {
+            if (!err) mounts = ms || []
+        })
+    }
+
+    function _loadSavedSearches() {
+        TilboDaemon.listSavedSearches(function(ss, err) {
+            if (!err) savedSearches = ss || []
         })
     }
 
@@ -240,7 +325,7 @@ ApplicationWindow {
                 tagChips, false, [], {}, ftsChips.join(" "), 1000, 0, [],
                 function(res, err) {
                     if (!err && res && res.files.length > 0) {
-                        searchResults = res.files
+                        searchResults = _sortEntries(res.files)
                         return
                     }
                     // Fallback to glob if indexed search yields nothing.
@@ -260,7 +345,7 @@ ApplicationWindow {
 
     function _runGlobSearch(patterns, allowHidden) {
         TilboDaemon.globSearch(patterns, 1000, allowHidden, function(files, err) {
-            searchResults = err ? [] : files
+            searchResults = err ? [] : _sortEntries(files)
         })
     }
 
@@ -316,31 +401,93 @@ ApplicationWindow {
     // ── Delete helpers ────────────────────────────────────────────────────
 
     function _deleteSelected() {
-        if (!selectedFile) return
-        var path = selectedFile.path
-        TilboDaemon.deleteFile(path, function(err) {
-            if (err) { console.warn("delete:", err); return }
-            if (window.selectedFile && window.selectedFile.path === path)
-                window.selectedFile = null
-            if (window.isTrashView) _loadTrash()
-            else _loadDirectory(window.currentPath)
+        var targets = window.selectedPaths.length > 0 ? window.selectedPaths : (window.selectedFile ? [window.selectedFile.path] : [])
+        if (targets.length === 0) return
+
+        targets.forEach(path => {
+            TilboDaemon.deleteFile(path, function(err) {
+                if (err) { console.warn("delete:", err); return }
+                if (window.selectedFile && window.selectedFile.path === path)
+                    window.selectedFile = null
+                if (window.selectedPaths.indexOf(path) !== -1) {
+                    var newPaths = window.selectedPaths.slice()
+                    newPaths.splice(newPaths.indexOf(path), 1)
+                    window.selectedPaths = newPaths
+                }
+                if (window.isTrashView) _loadTrash()
+                else _loadDirectory(window.currentPath)
+            })
         })
     }
 
     function _permanentDeleteSelected() {
-        if (!selectedFile) return
-        var path = selectedFile.path
-        // Force permanent delete by calling deleteFile on the resolved path
-        // The daemon checks use_trash; Shift+Delete bypasses by using trashFile=false
-        // For now we call deleteFile which respects config; if user wants force-permanent
-        // they should set use_trash=false in config.
-        TilboDaemon.deleteFile(path, function(err) {
-            if (err) { console.warn("permanent delete:", err); return }
-            if (window.selectedFile && window.selectedFile.path === path)
-                window.selectedFile = null
-            if (window.isTrashView) _loadTrash()
-            else _loadDirectory(window.currentPath)
+        var targets = window.selectedPaths.length > 0 ? window.selectedPaths : (window.selectedFile ? [window.selectedFile.path] : [])
+        if (targets.length === 0) return
+
+        targets.forEach(path => {
+            TilboDaemon.deleteFile(path, function(err) {
+                if (err) { console.warn("permanent delete:", err); return }
+                if (window.selectedFile && window.selectedFile.path === path)
+                    window.selectedFile = null
+                if (window.selectedPaths.indexOf(path) !== -1) {
+                    var newPaths = window.selectedPaths.slice()
+                    newPaths.splice(newPaths.indexOf(path), 1)
+                    window.selectedPaths = newPaths
+                }
+                if (window.isTrashView) _loadTrash()
+                else _loadDirectory(window.currentPath)
+            })
         })
+    }
+
+    function _copySelected(isMove) {
+        var targets = window.selectedPaths.length > 0 ? window.selectedPaths : (window.selectedFile ? [window.selectedFile.path] : [])
+        if (targets.length === 0) return
+
+        TilboDaemon.copy(targets, isMove, function(err) {
+            if (err) { console.warn("copy:", err); return }
+            // Sync with system clipboard (best effort)
+            var pathsStr = targets.join("\n")
+            var cmd = Qt.createQmlObject(
+                'import QtQuick; SystemCommand { command: "bash"; arguments: ["-c", "echo \\"' + pathsStr + '\\" | (wl-copy --type text/uri-list || xclip -selection clipboard -t text/uri-list)"] }',
+                window, "clipCmd")
+        })
+    }
+
+    function _paste() {
+        if (window.isTrashView || window.isSearchMode) return
+        TilboDaemon.paste(window.currentPath, function(res, err) {
+            if (err) { console.warn("paste:", err); return }
+            _loadDirectory(window.currentPath)
+        })
+    }
+
+    function _createNew(isDir) {
+        if (window.isTrashView || window.isSearchMode) return
+        var defaultName = isDir ? "New Folder" : "New File"
+        // TODO: ideally we'd show an inline editor, but for now let's just create and refresh.
+        // The user can then rename it.
+        if (isDir) {
+            TilboDaemon.createDirectory(window.currentPath, defaultName, function(res, err) {
+                if (err) { console.warn("mkdir:", err); return }
+                _loadDirectory(window.currentPath)
+            })
+        } else {
+            TilboDaemon.createFile(window.currentPath, defaultName, function(res, err) {
+                if (err) { console.warn("touch:", err); return }
+                _loadDirectory(window.currentPath)
+            })
+        }
+    }
+
+    function zoomIn() {
+        if (window._gridIconSize < 256) window._gridIconSize += 16
+    }
+    function zoomOut() {
+        if (window._gridIconSize > 32) window._gridIconSize -= 16
+    }
+    function zoomReset() {
+        window._gridIconSize = 48
     }
 
     // ── Breadcrumb model ──────────────────────────────────────────────────
@@ -381,6 +528,14 @@ ApplicationWindow {
         onActivated: window.goForward()
     }
     Shortcut {
+        sequence: "Alt+Up"
+        onActivated: window.goUp()
+    }
+    Shortcut {
+        sequence: "Alt+Home"
+        onActivated: window.goHome()
+    }
+    Shortcut {
         sequence: window._keybindings["toggle_hidden"] || "Ctrl+H"
         onActivated: {
             window.showHidden = !window.showHidden
@@ -407,14 +562,46 @@ ApplicationWindow {
     Shortcut {
         sequence: window._keybindings["delete"] || "Delete"
         onActivated: {
-            if (window.selectedFile) window._deleteSelected()
+            if (window.selectedFile || window.selectedPaths.length > 0) window._deleteSelected()
         }
     }
     Shortcut {
         sequence: "Shift+Delete"
         onActivated: {
-            if (window.selectedFile) window._permanentDeleteSelected()
+            if (window.selectedFile || window.selectedPaths.length > 0) window._permanentDeleteSelected()
         }
+    }
+    Shortcut {
+        sequence: "Ctrl+C"
+        onActivated: window._copySelected(false)
+    }
+    Shortcut {
+        sequence: "Ctrl+X"
+        onActivated: window._copySelected(true)
+    }
+    Shortcut {
+        sequence: "Ctrl+V"
+        onActivated: window._paste()
+    }
+    Shortcut {
+        sequence: "Ctrl+Shift+N"
+        onActivated: window._createNew(true)
+    }
+    Shortcut {
+        sequence: "Ctrl++"
+        onActivated: window.zoomIn()
+    }
+    Shortcut {
+        sequence: "Ctrl+="
+        onActivated: window.zoomIn()
+    }
+    Shortcut {
+        sequence: "Ctrl+-"
+        onActivated: window.zoomOut()
+    }
+    Shortcut {
+        sequence: "Ctrl+0"
+        onActivated: window.zoomReset()
     }
 
     header: ToolBar {
@@ -456,11 +643,106 @@ ApplicationWindow {
                 ToolTip.delay: 500
             }
 
+            ToolButton {
+                text: "↑"
+                font.pixelSize: 16
+                enabled: window.currentPath !== "/"
+                opacity: enabled ? 1.0 : 0.4
+                onClicked: window.goUp()
+                ToolTip.text: "Up (Alt+Up)"
+                ToolTip.visible: hovered
+                ToolTip.delay: 500
+            }
+
+            ToolButton {
+                text: "🏠"
+                font.pixelSize: 16
+                onClicked: window.goHome()
+                ToolTip.text: "Home (Alt+Home)"
+                ToolTip.visible: hovered
+                ToolTip.delay: 500
+            }
+
             TagSearchBar {
+                id: tagSearchBar
                 Layout.fillWidth: true
                 Layout.preferredHeight: 40
                 daemonConnected: window.daemonConnected
                 onSearchRequested: chips => window.executeSearch(chips)
+                onFilterRequested: filterDialog.open()
+            }
+
+            Button {
+                text: "Pin"
+                Layout.preferredHeight: 40
+                visible: window.isSearchMode
+                onClicked: pinSearchDialog.open()
+                ToolTip.text: "Pin this search to sidebar"
+                ToolTip.visible: hovered
+            }
+
+            Dialog {
+                id: pinSearchDialog
+                title: "Pin Search"
+                modal: true
+                standardButtons: Dialog.Ok | Dialog.Cancel
+                anchors.centerIn: parent
+                onAccepted: {
+                    var name = pinSearchNameField.text.trim() || "New Search"
+                    TilboDaemon.pinSearch(name, window.searchChips, "folder-saved-search", function(err) {
+                        if (!err) window._loadSavedSearches()
+                    })
+                }
+                ColumnLayout {
+                    spacing: 8
+                    Text { text: "Enter a name for this search:"; color: "#D8DEE9" }
+                    TextField {
+                        id: pinSearchNameField
+                        Layout.fillWidth: true
+                        placeholderText: "e.g. Large Images, Recent PDF..."
+                        color: "#ECEFF4"
+                        background: Rectangle {
+                            color: "#1A1C23"; radius: 4; border.width: 1
+                            border.color: parent.activeFocus ? "#5E81AC" : "#3B4252"
+                        }
+                    }
+                }
+            }
+
+            Dialog {
+                id: filterDialog
+                title: "Add Filter"
+                modal: true
+                standardButtons: Dialog.Cancel
+                anchors.centerIn: parent
+                width: 300
+
+                ColumnLayout {
+                    width: parent.width
+                    spacing: 12
+
+                    Text { text: "Common MIME Filters:"; color: "#88C0D0"; font.bold: true }
+                    Flow {
+                        Layout.fillWidth: true; spacing: 4
+                        Button { text: "Images"; onClicked: { tagSearchBar.addChip("glob:*.{jpg,jpeg,png,gif,webp}"); filterDialog.close() } }
+                        Button { text: "Videos"; onClicked: { tagSearchBar.addChip("glob:*.{mp4,mkv,avi,mov}"); filterDialog.close() } }
+                        Button { text: "Documents"; onClicked: { tagSearchBar.addChip("glob:*.{pdf,doc,docx,txt,odt}"); filterDialog.close() } }
+                    }
+
+                    Text { text: "Size Filters:"; color: "#88C0D0"; font.bold: true }
+                    Flow {
+                        Layout.fillWidth: true; spacing: 4
+                        Button { text: "> 10MB"; onClicked: { tagSearchBar.addChip("fts:size > 10485760"); filterDialog.close() } }
+                        Button { text: "> 100MB"; onClicked: { tagSearchBar.addChip("fts:size > 104857600"); filterDialog.close() } }
+                        Button { text: "> 1GB"; onClicked: { tagSearchBar.addChip("fts:size > 1073741824"); filterDialog.close() } }
+                    }
+
+                    Text { text: "Date Filters:"; color: "#88C0D0"; font.bold: true }
+                    Flow {
+                        Layout.fillWidth: true; spacing: 4
+                        Button { text: "2026 Only"; onClicked: { tagSearchBar.addChip("fts:mtime > 1767225600"); filterDialog.close() } }
+                    }
+                }
             }
 
             Button {
@@ -591,6 +873,115 @@ ApplicationWindow {
                     }
                 }
 
+                // Mounts section
+                Text {
+                    text: "MOUNTS"
+                    color: "#4C566A"
+                    font.pixelSize: 10
+                    font.bold: true
+                    leftPadding: 12
+                    topPadding: 8; bottomPadding: 4
+                    visible: window.mounts.length > 0
+                }
+
+                ListView {
+                    id: mountsList
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: Math.min(window.mounts.length * 36, 200)
+                    clip: true
+                    model: window.mounts
+                    visible: window.mounts.length > 0
+
+                    delegate: ItemDelegate {
+                        required property var modelData
+                        width: ListView.view.width
+                        leftPadding: 8
+                        height: 36
+                        onClicked: window.navigateTo(modelData.path)
+                        contentItem: Row {
+                            spacing: 8
+                            ThemeIcon {
+                                iconName: modelData.iconName || "drive-removable-media"
+                                width: 20; height: 20
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+                            Text {
+                                text: modelData.label
+                                font.pixelSize: 14
+                                color: "#ECEFF4"
+                                anchors.verticalCenter: parent.verticalCenter
+                                elide: Text.ElideRight
+                                width: parent.width - 28
+                            }
+                        }
+                        background: Rectangle {
+                            x: 4; width: parent.width - 8
+                            color: parent.hovered ? "#2E3440" : "transparent"
+                            radius: 4
+                        }
+                    }
+                }
+
+                // Saved Searches section
+                Text {
+                    text: "SEARCHES"
+                    color: "#4C566A"
+                    font.pixelSize: 10
+                    font.bold: true
+                    leftPadding: 12
+                    topPadding: 8; bottomPadding: 4
+                    visible: window.savedSearches.length > 0
+                }
+
+                ListView {
+                    id: savedSearchesList
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: Math.min(window.savedSearches.length * 36, 200)
+                    clip: true
+                    model: window.savedSearches
+                    visible: window.savedSearches.length > 0
+
+                    delegate: ItemDelegate {
+                        required property var modelData
+                        width: ListView.view.width
+                        leftPadding: 8
+                        height: 36
+                        onClicked: window.executeSearch(modelData.chips)
+                        contentItem: Row {
+                            spacing: 8
+                            ThemeIcon {
+                                iconName: modelData.iconName || "folder-saved-search"
+                                width: 20; height: 20
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+                            Text {
+                                text: modelData.name
+                                font.pixelSize: 14
+                                color: "#ECEFF4"
+                                anchors.verticalCenter: parent.verticalCenter
+                                elide: Text.ElideRight
+                                width: parent.width - 28
+                            }
+                        }
+                        background: Rectangle {
+                            x: 4; width: parent.width - 8
+                            color: parent.hovered ? "#2E3440" : "transparent"
+                            radius: 4
+                        }
+
+                        MouseArea {
+                            anchors.fill: parent
+                            acceptedButtons: Qt.RightButton
+                            onClicked: (mouse) => {
+                                if (mouse.button === Qt.RightButton) {
+                                    searchCtxMenu.targetId = modelData.id
+                                    searchCtxMenu.popup()
+                                }
+                            }
+                        }
+                    }
+                }
+
                 // Trash entry
                 ItemDelegate {
                     Layout.fillWidth: true
@@ -669,6 +1060,20 @@ ApplicationWindow {
                     onTriggered: {
                         TilboDaemon.unpinPlace(placesCtxMenu.targetPath, function(err) {
                             if (!err) window._loadPlaces()
+                        })
+                    }
+                }
+            }
+
+            // Context menu for saved searches
+            Menu {
+                id: searchCtxMenu
+                property string targetId: ""
+                MenuItem {
+                    text: "Remove from sidebar"
+                    onTriggered: {
+                        TilboDaemon.unpinSearch(searchCtxMenu.targetId, function(err) {
+                            if (!err) window._loadSavedSearches()
                         })
                     }
                 }
@@ -850,8 +1255,20 @@ ApplicationWindow {
                 currentIndex: window.isGridView ? 0 : 1
                 visible: !window.isTrashView
 
+                WheelHandler {
+                    acceptedModifiers: Qt.ControlModifier
+                    onWheel: (event) => {
+                        if (event.angleDelta.y > 0) window.zoomIn()
+                        else                        window.zoomOut()
+                    }
+                }
+
                 FileGrid {
                     entries: window.activeEntries
+                    inlineThumbnails: window._useInlineThumbnails
+                    iconSize: window._gridIconSize
+                    selection: window.selectedPaths
+                    onSelectionChanged: window.selectedPaths = selection
                     onFileSelected: fileData => window.selectFile(fileData)
                     onDirectoryActivated: path => window.navigateTo(path)
                     onFileOpenRequested: path => Qt.openUrlExternally("file://" + path)
@@ -885,10 +1302,27 @@ ApplicationWindow {
                     onGetFileActions: (path, cb) => TilboDaemon.getFileActions(path, cb)
                     onRunFileAction: (path, actionId) => TilboDaemon.runFileAction(path, actionId, null)
                     onGetFileBadges: (path, cb) => TilboDaemon.getFileBadges(path, cb)
+                    onGetThumbnail: (path, size, cb) => TilboDaemon.getThumbnail(path, size, cb)
+                    onCopyRequested: isMove => window._copySelected(isMove)
+                    onPasteRequested: () => window._paste()
+                    onCreateFileRequested: () => window._createNew(false)
+                    onCreateDirectoryRequested: () => window._createNew(true)
                 }
 
                 FileList {
                     entries: window.activeEntries
+                    inlineThumbnails: window._useInlineThumbnails
+                    selection: window.selectedPaths
+                    sortColumn: window._sortColumn
+                    sortAscending: window._sortAscending
+                    onSortRequested: (col, asc) => {
+                        window._sortColumn = col
+                        window._sortAscending = asc
+                        if (window.isTrashView) trashEntries = _sortEntries(trashEntries)
+                        else if (window.isSearchMode) searchResults = _sortEntries(searchResults)
+                        else dirEntries = _sortEntries(dirEntries)
+                    }
+                    onSelectionChanged: window.selectedPaths = selection
                     onFileSelected: fileData => window.selectFile(fileData)
                     onDirectoryActivated: path => window.navigateTo(path)
                     onFileOpenRequested: path => Qt.openUrlExternally("file://" + path)
@@ -916,7 +1350,12 @@ ApplicationWindow {
                     onGetFileActions: (path, cb) => TilboDaemon.getFileActions(path, cb)
                     onRunFileAction: (path, actionId) => TilboDaemon.runFileAction(path, actionId, null)
                     onGetFileBadges: (path, cb) => TilboDaemon.getFileBadges(path, cb)
+                    onGetThumbnail: (path, size, cb) => TilboDaemon.getThumbnail(path, size, cb)
                     onOpenInTerminalRequested: dir => Qt.openUrlExternally("file://" + dir)
+                    onCopyRequested: isMove => window._copySelected(isMove)
+                    onPasteRequested: () => window._paste()
+                    onCreateFileRequested: () => window._createNew(false)
+                    onCreateDirectoryRequested: () => window._createNew(true)
                 }
             }
         }
@@ -1009,15 +1448,65 @@ ApplicationWindow {
                         width: parent.width
                         spacing: 12
 
-                        // Icon
-                        ThemeIcon {
+                        // Preview / Icon — shows thumbnail for media, icon for other files
+                        Item {
                             Layout.alignment: Qt.AlignHCenter
-                            Layout.preferredWidth: 64
-                            Layout.preferredHeight: 64
-                            iconName: window.selectedFile
-                                    ? (window.selectedFile.iconName
-                                       || (window.selectedFile.isDir ? "inode-directory" : "application-x-generic"))
-                                    : ""
+                            Layout.preferredWidth: 228
+                            Layout.preferredHeight: _previewImg.visible ? Math.min(_previewImg.implicitHeight * (228 / Math.max(1, _previewImg.implicitWidth)), 228) : 64
+
+                            property string _previewSource: ""
+                            property bool _isMedia: {
+                                var f = window.selectedFile
+                                return f && f.mimeType && (f.mimeType.indexOf("image/") === 0 || f.mimeType.indexOf("video/") === 0)
+                            }
+
+                            ThemeIcon {
+                                anchors.centerIn: parent
+                                width: 64; height: 64
+                                iconName: window.selectedFile
+                                        ? (window.selectedFile.iconName
+                                           || (window.selectedFile.isDir ? "inode-directory" : "application-x-generic"))
+                                        : ""
+                                visible: parent._previewSource === ""
+                            }
+
+                            Image {
+                                id: _previewImg
+                                anchors.fill: parent
+                                source: parent._previewSource
+                                visible: parent._previewSource !== ""
+                                fillMode: Image.PreserveAspectFit
+                                smooth: true
+                                cache: true
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                cursorShape: parent._previewSource !== "" ? Qt.PointingHandCursor : Qt.ArrowCursor
+                                enabled: parent._isMedia
+                                onClicked: {
+                                    if (window.selectedFile) {
+                                        imagePreview.filePath = window.selectedFile.path
+                                        imagePreview.mimeType = window.selectedFile.mimeType || ""
+                                        imagePreview.visible = true
+                                    }
+                                }
+                            }
+
+                            // Request large thumbnail when file changes
+                            Connections {
+                                target: window
+                                function onSelectedFileChanged() {
+                                    parent._previewSource = ""
+                                    var f = window.selectedFile
+                                    if (f && !f.isDir && parent._isMedia) {
+                                        TilboDaemon.getThumbnail(f.path, 1, function(result, _err) {
+                                            if (result && result.thumbnailPath && window.selectedFile && window.selectedFile.path === f.path)
+                                                parent._previewSource = "file://" + result.thumbnailPath
+                                        })
+                                    }
+                                }
+                            }
                         }
 
                         // Name
@@ -1296,5 +1785,10 @@ ApplicationWindow {
                 }
             }
         }
+    }
+
+    // ── Fullsize image preview overlay ────────────────────────────────────
+    ImagePreview {
+        id: imagePreview
     }
 }

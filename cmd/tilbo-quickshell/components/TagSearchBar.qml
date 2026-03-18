@@ -30,9 +30,14 @@ Rectangle {
     property bool daemonConnected: true
 
     signal searchRequested(var chips)
+    signal filterRequested()
 
     // Internal chip list (array of strings in the format BrowserWindow expects)
     property var _chips: []
+
+    function addChip(chip) {
+        _addChip(chip)
+    }
 
     color: "#22252E"
     radius: 6
@@ -233,6 +238,23 @@ Rectangle {
                 hoverEnabled: true
                 cursorShape: Qt.PointingHandCursor
                 onClicked: root._clearAll()
+            }
+        }
+
+        // Filter button
+        Text {
+            id: filterBtn
+            anchors.verticalCenter: parent.verticalCenter
+            text: "▽"
+            color: filterMA.containsMouse ? "#88C0D0" : "#6B7280"
+            font.pixelSize: 16
+            
+            MouseArea {
+                id: filterMA
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: root.filterRequested()
             }
         }
     }
