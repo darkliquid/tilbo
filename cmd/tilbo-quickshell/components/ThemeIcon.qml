@@ -1,12 +1,15 @@
 // ThemeIcon.qml — Icon component that loads XDG icon theme icons
 // via Quickshell's icon provider, with emoji fallback.
 import QtQuick
+import Qt5Compat.GraphicalEffects
 import Quickshell
+import "../services"
 
 Item {
     id: root
 
     property string iconName: ""
+    property color tintColor: Theme.iconTint
 
     // Resolve icon path via Quickshell; empty when icon is missing (check=true).
     readonly property string _resolvedPath: root.iconName
@@ -15,7 +18,27 @@ Item {
     Image {
         id: img
         anchors.fill: parent
-        visible: root._resolvedPath !== ""
+        visible: root._resolvedPath !== "" && !Theme.tintIcons
+
+        source: root._resolvedPath
+        sourceSize.width: root.width
+        sourceSize.height: root.height
+
+        fillMode: Image.PreserveAspectFit
+        smooth: true
+    }
+
+    ColorOverlay {
+        anchors.fill: parent
+        source: imgOverlay
+        color: root.tintColor
+        visible: root._resolvedPath !== "" && Theme.tintIcons
+    }
+
+    Image {
+        id: imgOverlay
+        anchors.fill: parent
+        visible: false
 
         source: root._resolvedPath
         sourceSize.width: root.width

@@ -21,7 +21,7 @@ ApplicationWindow {
     width: 1200
     height: 700
     title: "tilbo"
-    color: "#1A1C23"
+    color: Theme.bgDark
 
     // ── State ─────────────────────────────────────────────────────────────
 
@@ -605,7 +605,7 @@ ApplicationWindow {
     }
 
     header: ToolBar {
-        background: Rectangle { color: "#22252E" }
+        background: Rectangle { color: Theme.bgLight }
         height: 60
         RowLayout {
             anchors.fill: parent
@@ -617,7 +617,7 @@ ApplicationWindow {
                 text: "tilbo"
                 font.pixelSize: 20
                 font.bold: true
-                color: "#88C0D0"
+                color: Theme.accent
                 leftPadding: 8
             }
 
@@ -672,7 +672,7 @@ ApplicationWindow {
                 onFilterRequested: filterDialog.open()
             }
 
-            Button {
+            ThemeButton {
                 text: "Pin"
                 Layout.preferredHeight: 40
                 visible: window.isSearchMode
@@ -695,15 +695,15 @@ ApplicationWindow {
                 }
                 ColumnLayout {
                     spacing: 8
-                    Text { text: "Enter a name for this search:"; color: "#D8DEE9" }
+                    Text { text: "Enter a name for this search:"; color: Theme.fgDim }
                     TextField {
                         id: pinSearchNameField
                         Layout.fillWidth: true
                         placeholderText: "e.g. Large Images, Recent PDF..."
-                        color: "#ECEFF4"
+                        color: Theme.fgMain
                         background: Rectangle {
-                            color: "#1A1C23"; radius: 4; border.width: 1
-                            border.color: parent.activeFocus ? "#5E81AC" : "#3B4252"
+                            color: Theme.bgInput; radius: 4; border.width: 1
+                            border.color: parent.activeFocus ? Theme.borderFocus : Theme.border
                         }
                     }
                 }
@@ -745,13 +745,13 @@ ApplicationWindow {
                 }
             }
 
-            Button {
+            ThemeButton {
                 text: window.isGridView ? "List ☰" : "Grid ⊞"
                 Layout.preferredHeight: 40
                 onClicked: window.isGridView = !window.isGridView
             }
 
-            Button {
+            ThemeButton {
                 text: "Hidden"
                 checkable: true
                 checked: window.showHidden
@@ -773,16 +773,16 @@ ApplicationWindow {
         Rectangle {
             Layout.preferredWidth: 36
             Layout.fillHeight: true
-            color: "#1E212A"
+            color: Theme.bgMedium
 
             Rectangle {
                 anchors.fill: parent
-                color: maLeftToggle.containsMouse ? "#2A2E39" : "transparent"
+                color: maLeftToggle.containsMouse ? Theme.bgHover : "transparent"
             }
 
             Text {
                 text: "PLACES"
-                color: "#88C0D0"
+                color: Theme.accent
                 font.pixelSize: 14
                 font.bold: true
                 font.letterSpacing: 2
@@ -803,7 +803,7 @@ ApplicationWindow {
         Rectangle {
             Layout.preferredWidth: window.showLeftSidebar ? 200 : 0
             Layout.fillHeight: true
-            color: "#1E212A"
+            color: Theme.bgMedium
             clip: true
             Behavior on Layout.preferredWidth {
                 NumberAnimation { duration: 250; easing.type: Easing.InOutQuad }
@@ -846,7 +846,7 @@ ApplicationWindow {
                             Text {
                                 text: modelData.name
                                 font.pixelSize: 14
-                                color: "#ECEFF4"
+                                color: Theme.fgMain
                                 anchors.verticalCenter: parent.verticalCenter
                             }
                         }
@@ -854,7 +854,7 @@ ApplicationWindow {
                             x: 4
                             width: parent.width - 8
                                    - (placesScrollBar.visible ? placesScrollBar.width + 4 : 0)
-                            color: parent.hovered ? "#2E3440" : "transparent"
+                            color: parent.hovered ? Theme.bgHover : "transparent"
                             radius: 4
                         }
 
@@ -876,7 +876,7 @@ ApplicationWindow {
                 // Mounts section
                 Text {
                     text: "MOUNTS"
-                    color: "#4C566A"
+                    color: Theme.fgPlaceholder
                     font.pixelSize: 10
                     font.bold: true
                     leftPadding: 12
@@ -908,7 +908,7 @@ ApplicationWindow {
                             Text {
                                 text: modelData.label
                                 font.pixelSize: 14
-                                color: "#ECEFF4"
+                                color: Theme.fgMain
                                 anchors.verticalCenter: parent.verticalCenter
                                 elide: Text.ElideRight
                                 width: parent.width - 28
@@ -916,7 +916,7 @@ ApplicationWindow {
                         }
                         background: Rectangle {
                             x: 4; width: parent.width - 8
-                            color: parent.hovered ? "#2E3440" : "transparent"
+                            color: parent.hovered ? Theme.bgHover : "transparent"
                             radius: 4
                         }
                     }
@@ -925,7 +925,7 @@ ApplicationWindow {
                 // Saved Searches section
                 Text {
                     text: "SEARCHES"
-                    color: "#4C566A"
+                    color: Theme.fgPlaceholder
                     font.pixelSize: 10
                     font.bold: true
                     leftPadding: 12
@@ -957,7 +957,7 @@ ApplicationWindow {
                             Text {
                                 text: modelData.name
                                 font.pixelSize: 14
-                                color: "#ECEFF4"
+                                color: Theme.fgMain
                                 anchors.verticalCenter: parent.verticalCenter
                                 elide: Text.ElideRight
                                 width: parent.width - 28
@@ -997,7 +997,7 @@ ApplicationWindow {
                         Text {
                             text: "Trash"
                             font.pixelSize: 14
-                            color: window.isTrashView ? "#88C0D0" : "#ECEFF4"
+                            color: window.isTrashView ? Theme.accent : Theme.fgMain
                             anchors.verticalCenter: parent.verticalCenter
                         }
                     }
@@ -1160,17 +1160,18 @@ ApplicationWindow {
                     Rectangle {
                         Layout.fillWidth: true
                         height: 40
-                        color: "#1E212A"
+                        color: Theme.bgMedium
                         RowLayout {
                             anchors.fill: parent
                             anchors.leftMargin: 12; anchors.rightMargin: 12
                             Text {
                                 text: "Trash  (" + window.trashEntries.length + " items)"
-                                color: "#88C0D0"; font.pixelSize: 14; font.bold: true
+                                color: Theme.accent; font.pixelSize: 14; font.bold: true
                             }
                             Item { Layout.fillWidth: true }
-                            Button {
+                            ThemeButton {
                                 text: "Empty Trash"
+                                isDanger: true
                                 enabled: window.trashEntries.length > 0
                                 onClicked: {
                                     TilboDaemon.emptyTrash(function(err) {
@@ -1406,7 +1407,7 @@ ApplicationWindow {
         Rectangle {
             Layout.preferredWidth: window.showRightSidebar ? 260 : 0
             Layout.fillHeight: true
-            color: "#1E212A"
+            color: Theme.bgMedium
             clip: true
             Behavior on Layout.preferredWidth {
                 NumberAnimation { duration: 250; easing.type: Easing.InOutQuad }
@@ -1427,7 +1428,7 @@ ApplicationWindow {
                     Text {
                         anchors.centerIn: parent
                         text: "Select a file to view properties"
-                        color: "#4C566A"
+                        color: Theme.fgDeemphasized
                         font.pixelSize: 13
                         wrapMode: Text.WordWrap
                         horizontalAlignment: Text.AlignHCenter
@@ -1513,7 +1514,7 @@ ApplicationWindow {
                         Text {
                             Layout.fillWidth: true
                             text: window.selectedFile ? window.selectedFile.name : ""
-                            color: "#ECEFF4"
+                            color: Theme.fgMain
                             font.pixelSize: 16
                             font.bold: true
                             wrapMode: Text.WrapAnywhere
@@ -1527,30 +1528,30 @@ ApplicationWindow {
                             rowSpacing: 8
                             columnSpacing: 8
 
-                            Text { text: "Path:";     color: "#88C0D0"; font.pixelSize: 13 }
+                            Text { text: "Path:";     color: Theme.accent; font.pixelSize: 13 }
                             Text {
                                 text: window.selectedFile ? window.selectedFile.path : ""
-                                color: "#D8DEE9"; font.pixelSize: 12
+                                color: Theme.fgDim; font.pixelSize: 12
                                 Layout.fillWidth: true; elide: Text.ElideMiddle
                             }
 
-                            Text { text: "Size:";     color: "#88C0D0"; font.pixelSize: 13 }
+                            Text { text: "Size:";     color: Theme.accent; font.pixelSize: 13 }
                             Text {
                                 text: window.selectedFile
                                       ? (window.selectedFile.isDir ? "--"
                                          : (window.selectedFile.size / 1024).toFixed(1) + " KB")
                                       : ""
-                                color: "#D8DEE9"; font.pixelSize: 13
+                                color: Theme.fgDim; font.pixelSize: 13
                                 Layout.fillWidth: true; elide: Text.ElideRight
                             }
 
-                            Text { text: "Modified:"; color: "#88C0D0"; font.pixelSize: 13 }
+                            Text { text: "Modified:"; color: Theme.accent; font.pixelSize: 13 }
                             Text {
                                 text: window.selectedFile && window.selectedFile.mtime
                                       ? new Date(window.selectedFile.mtime * 1000)
                                             .toLocaleString(Qt.locale(), Locale.ShortFormat)
                                       : ""
-                                color: "#D8DEE9"; font.pixelSize: 13
+                                color: Theme.fgDim; font.pixelSize: 13
                                 Layout.fillWidth: true; elide: Text.ElideRight
                             }
                         }
@@ -1560,7 +1561,7 @@ ApplicationWindow {
                             Layout.fillWidth: true
                             Layout.preferredHeight: 1
                             Layout.topMargin: 8
-                            color: "#3B4252"
+                            color: Theme.border
                             visible: window.selectedFileMeta !== null
                                      && Object.keys(window.selectedFileMeta || {}).length > 0
                         }
@@ -1570,15 +1571,15 @@ ApplicationWindow {
                             Layout.preferredHeight: 220
                             visible: window.selectedFileMeta !== null
                                      && Object.keys(window.selectedFileMeta || {}).length > 0
-                            color: "#252A35"
-                            border.color: "#3B4252"; border.width: 1; radius: 6
+                            color: Theme.bgInput
+                            border.color: Theme.border; border.width: 1; radius: 6
 
                             Column {
                                 anchors.fill: parent; anchors.margins: 8; spacing: 6
 
                                 Text {
                                     text: "Metadata (" + Object.keys(window.selectedFileMeta || {}).length + ")"
-                                    color: "#88C0D0"; font.pixelSize: 13; font.bold: true
+                                    color: Theme.accent; font.pixelSize: 13; font.bold: true
                                 }
 
                                 ListView {
@@ -1595,14 +1596,14 @@ ApplicationWindow {
                                         spacing: 6
                                         Text {
                                             text: parent.modelData; width: 90
-                                            color: "#88C0D0"; font.pixelSize: 11
+                                            color: Theme.accent; font.pixelSize: 11
                                             elide: Text.ElideRight
                                         }
                                         Text {
                                             text: (window.selectedFileMeta && window.selectedFileMeta[parent.modelData])
                                                   ? window.selectedFileMeta[parent.modelData] : ""
                                             width: parent.width - 96
-                                            color: "#D8DEE9"; font.pixelSize: 11
+                                            color: Theme.fgDim; font.pixelSize: 11
                                             wrapMode: Text.WrapAnywhere
                                         }
                                     }
@@ -1614,7 +1615,7 @@ ApplicationWindow {
                         // Tags
                         Label {
                             text: "Tags"
-                            color: "#88C0D0"; font.pixelSize: 13; Layout.topMargin: 8
+                            color: Theme.accent; font.pixelSize: 13; Layout.topMargin: 8
                             visible: window.selectedFile
                                      && window.selectedFile.tags
                                      && window.selectedFile.tags.length > 0
@@ -1630,11 +1631,11 @@ ApplicationWindow {
                                        ? window.selectedFile.tags : []
                                 Rectangle {
                                     height: 22; width: propTagTxt.width + 16; radius: 4
-                                    color: "#3B4252"; border.color: "#4C566A"; border.width: 1
+                                    color: Theme.bgActive; border.color: Theme.fgDeemphasized; border.width: 1
                                     Text {
                                         id: propTagTxt
                                         anchors.centerIn: parent; text: modelData
-                                        color: "#A3BE8C"; font.pixelSize: 12
+                                        color: Theme.success; font.pixelSize: 12
                                     }
                                 }
                             }
@@ -1648,16 +1649,16 @@ ApplicationWindow {
         Rectangle {
             Layout.preferredWidth: 36
             Layout.fillHeight: true
-            color: "#1E212A"
+            color: Theme.bgMedium
 
             Rectangle {
                 anchors.fill: parent
-                color: maRightToggle.containsMouse ? "#2A2E39" : "transparent"
+                color: maRightToggle.containsMouse ? Theme.bgHover : "transparent"
             }
 
             Text {
                 text: "PROPERTIES"
-                color: "#88C0D0"; font.pixelSize: 14; font.bold: true
+                color: Theme.accent; font.pixelSize: 14; font.bold: true
                 font.letterSpacing: 2; rotation: -90; anchors.centerIn: parent
             }
 
@@ -1709,10 +1710,9 @@ ApplicationWindow {
 
                                     Text {
                                         visible: index > 0; text: "›"
-                                        color: "#6B7280"; font.pixelSize: 13
+                                        color: Theme.fgDeemphasized; font.pixelSize: 13
                                         anchors.verticalCenter: parent.verticalCenter
                                     }
-
                                     Item {
                                         height: parent.height
                                         width: Math.min(220, breadcrumbLabel.implicitWidth)
@@ -1722,7 +1722,7 @@ ApplicationWindow {
                                             width: parent.width
                                             anchors.verticalCenter: parent.verticalCenter
                                             text: modelData.label
-                                            color: bcMouse.containsMouse ? "#88C0D0" : "#D8DEE9"
+                                            color: bcMouse.containsMouse ? Theme.accent : Theme.fgDim
                                             font.pixelSize: 13; elide: Text.ElideRight
                                         }
 
@@ -1748,10 +1748,10 @@ ApplicationWindow {
                         id: pathEditor
                         Layout.fillWidth: true; Layout.preferredHeight: 30
                         text: window.currentPath
-                        color: "#D8DEE9"
+                        color: Theme.fgDim
                         background: Rectangle {
-                            color: "#1A1C23"; radius: 4; border.width: 1
-                            border.color: parent.activeFocus ? "#5E81AC" : "#3B4252"
+                            color: Theme.bgInput; radius: 4; border.width: 1
+                            border.color: parent.activeFocus ? Theme.borderFocus : Theme.border
                         }
                         onAccepted: { window.navigateTo(text); window.pathEditMode = false }
                         Keys.onEscapePressed: {
@@ -1766,7 +1766,7 @@ ApplicationWindow {
                 Text {
                     anchors.centerIn: parent
                     text: window.pathEditMode ? "✓" : "✎"
-                    color: editMouse.containsMouse ? "#88C0D0" : "#D8DEE9"
+                    color: editMouse.containsMouse ? Theme.accent : Theme.fgDim
                     font.pixelSize: 15
                 }
                 MouseArea {

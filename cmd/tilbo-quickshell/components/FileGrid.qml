@@ -16,6 +16,7 @@
 //   getFileBadges(path, cb)         — request badge overlays
 import QtQuick
 import QtQuick.Controls
+import "../services"
 
 Item {
     id: root
@@ -88,8 +89,8 @@ Item {
                 anchors.margins: 4
                 radius: 6
                 property bool selected: root.selection.indexOf(cell.modelData.path) !== -1
-                color: selected ? "#4C566A" : (cellMA.containsMouse && !cell.renaming ? "#2E3440" : "transparent")
-                border.color: selected ? "#88C0D0" : (cellMA.containsMouse && !cell.renaming ? "#4C566A" : "transparent")
+                color: selected ? Theme.selection : (cellMA.containsMouse && !cell.renaming ? Theme.bgHover : "transparent")
+                border.color: selected ? Theme.selectionBorder : (cellMA.containsMouse && !cell.renaming ? Theme.fgDeemphasized : "transparent")
                 border.width: 1
 
                 Column {
@@ -157,25 +158,25 @@ Item {
                         width: parent.width
                         visible: !cell.renaming
                         text: cell.modelData.name
-                        color: "#ECEFF4"
+                        color: Theme.fgMain
                         font.pixelSize: 12
-                        elide: Text.ElideRight
                         horizontalAlignment: Text.AlignHCenter
+                        elide: Text.ElideRight
+                        wrapMode: Text.Wrap
+                        maximumLineCount: 2
                     }
 
-                    // Inline rename editor
                     TextField {
                         id: renameField
                         width: parent.width
                         visible: cell.renaming
                         text: cell.modelData.name
-                        color: "#ECEFF4"
+                        color: Theme.fgMain
                         font.pixelSize: 12
                         background: Rectangle {
-                            color: "#1A1C23"; radius: 3
-                            border.color: "#5E81AC"; border.width: 1
+                            color: Theme.bgInput; radius: 3
+                            border.color: Theme.borderFocus; border.width: 1
                         }
-                        onVisibleChanged: {
                             if (visible) { selectAll(); forceActiveFocus() }
                         }
                         onAccepted: {
@@ -199,12 +200,12 @@ Item {
                             Rectangle {
                                 height: 16
                                 width: tagLbl.width + 8; radius: 3
-                                color: "#3B4252"
+                                color: Theme.bgActive
                                 Text {
                                     id: tagLbl
                                     anchors.centerIn: parent
                                     text: modelData
-                                    color: "#A3BE8C"; font.pixelSize: 10
+                                    color: Theme.success; font.pixelSize: 10
                                 }
                             }
                         }

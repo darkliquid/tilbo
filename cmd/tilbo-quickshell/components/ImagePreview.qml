@@ -59,13 +59,13 @@ Popup {
             anchors.top: parent.top; anchors.right: parent.right
             anchors.topMargin: 16; anchors.rightMargin: 16
             width: 40; height: 40; radius: 20
-            color: closeMa.containsMouse ? "#3B4252" : "#2E3440"
-            border.color: "#4C566A"; border.width: 1
+            color: closeMa.containsMouse ? Theme.bgActive : Theme.bgHover
+            border.color: Theme.fgDeemphasized; border.width: 1
 
             Text {
                 anchors.centerIn: parent
                 text: "✕"
-                color: "#ECEFF4"; font.pixelSize: 20
+                color: Theme.fgMain; font.pixelSize: 20
             }
 
             MouseArea {
@@ -82,14 +82,14 @@ Popup {
             anchors.bottom: parent.bottom; anchors.horizontalCenter: parent.horizontalCenter
             anchors.bottomMargin: 16
             width: zoomLabel.width + 20; height: 28; radius: 14
-            color: "#2E3440"; border.color: "#4C566A"; border.width: 1
+            color: Theme.bgHover; border.color: Theme.fgDeemphasized; border.width: 1
             visible: root._zoom !== 1.0
 
             Text {
                 id: zoomLabel
                 anchors.centerIn: parent
                 text: Math.round(root._zoom * 100) + "%"
-                color: "#ECEFF4"; font.pixelSize: 13
+                color: Theme.fgMain; font.pixelSize: 13
             }
         }
 

@@ -21,7 +21,6 @@
 //   }
 import QtQuick
 import QtQuick.Controls
-
 import "../services"
 
 Rectangle {
@@ -39,15 +38,17 @@ Rectangle {
         _addChip(chip)
     }
 
-    color: "#22252E"
+    color: Theme.bgLight
     radius: 6
-    border.color: searchInput.activeFocus ? "#5E81AC" : "#3B4252"
+    border.color: searchInput.activeFocus ? Theme.borderFocus : Theme.border
     border.width: 1
     clip: false  // autocomplete popup must be able to overflow
 
     // ── Autocomplete state ─────────────────────────────────────────────────
 
     property var _suggestions: []
+    // Optional descriptive labels for suggestions
+    property var _suggestionLabels: ({})
 
     Timer {
         id: acTimer
@@ -57,28 +58,96 @@ Rectangle {
 
     function _fetchSuggestions() {
         var text = searchInput.text.trim()
-        // Only autocomplete bare strings (tag names); skip prefixed inputs.
-        if (!text || text.startsWith("glob:") || text.startsWith("fts:")
-                  || text.startsWith("hidden:") || !root.daemonConnected) {
+        if (!text && root._chips.length === 0) {
+            // Show initial suggestions for discovery
+            root._suggestions = ["glob:", "fts:", "hidden:", "size:", "mtime:"]
+            root._suggestionLabels = {
+                "glob:":   "Filename pattern (e.g. glob:*.jpg)",
+                "fts:":    "Full-text / metadata query",
+                "hidden:": "Include hidden files (hidden:any)",
+                "size:":   "Filter by size (e.g. size:>10MB)",
+                "mtime:":  "Filter by age (e.g. mtime:<1w)"
+            }
+            acPopup.open()
+            return
+        }
+
+        if (!text) {
             root._suggestions = []
             acPopup.close()
             return
         }
-        TilboDaemon.listTags(text, function(tags, err) {
-            if (err || !tags || tags.length === 0) {
-                root._suggestions = []
-                acPopup.close()
-                return
-            }
-            // Exclude tags already added as chips.
-            root._suggestions = tags.filter(function(t) {
-                return root._chips.indexOf(t) === -1
-            }).slice(0, 8)
-            if (root._suggestions.length > 0)
-                acPopup.open()
-            else
-                acPopup.close()
+
+        // Discovery for prefixes if typing starts
+        var discoveries = ["glob:", "fts:", "hidden:", "size:", "mtime:"]
+        var discoveryMatches = discoveries.filter(function(d) {
+            return d.startsWith(text) && d !== text
         })
+
+        if (discoveryMatches.length > 0) {
+            root._suggestions = discoveryMatches
+            root._suggestionLabels = {
+                "glob:":   "Filename pattern",
+                "fts:":    "Full-text query",
+                "hidden:": "Toggle hidden files",
+                "size:":   "Size filter",
+                "mtime:":  "Age filter"
+            }
+            acPopup.open()
+            return
+        }
+
+        // Sub-suggestions for specific prefixes
+        if (text === "hidden:") {
+            root._suggestions = ["hidden:any"]
+            root._suggestionLabels = { "hidden:any": "Show all hidden files" }
+            acPopup.open()
+            return
+        }
+
+        if (text === "size:") {
+            root._suggestions = ["size:>1MB", "size:>10MB", "size:>100MB", "size:>1GB"]
+            root._suggestionLabels = {}
+            acPopup.open()
+            return
+        }
+
+        if (text === "mtime:") {
+            root._suggestions = ["mtime:<1d", "mtime:<1w", "mtime:<1m", "mtime:<1y"]
+            root._suggestionLabels = {
+                "mtime:<1d": "Last 24 hours",
+                "mtime:<1w": "Last week",
+                "mtime:<1m": "Last month",
+                "mtime:<1y": "Last year"
+            }
+            acPopup.open()
+            return
+        }
+
+        // Only autocomplete bare strings (tag names) from daemon
+        if (text.indexOf(":") === -1) {
+            TilboDaemon.listTags(text, function(tags, err) {
+                if (err || !tags || tags.length === 0) {
+                    root._suggestions = []
+                    acPopup.close()
+                    return
+                }
+                root._suggestions = tags.filter(function(t) {
+                    return root._chips.indexOf(t) === -1
+                }).slice(0, 8)
+                root._suggestionLabels = {}
+                if (root._suggestions.length > 0)
+                    acPopup.open()
+                else
+                    acPopup.close()
+            })
+        } else {
+            // If typing inside a prefix, just stay quiet or close
+            // unless we add specific value completions later.
+            if (root._suggestions.indexOf(text) === -1) {
+                // acPopup.close()
+            }
+        }
     }
 
     // ── Chip helpers ───────────────────────────────────────────────────────
@@ -173,27 +242,27 @@ Rectangle {
                 }
             }
         }
+// Text input
+TextInput {
+    id: searchInput
+    width: parent.width - (chipFlick.visible ? chipFlick.width + 4 : 0)
+           - (clearBtn.visible ? clearBtn.width + 4 : 0)
+           - (filterBtn.visible ? filterBtn.width + 4 : 0)
+    height: parent.height
+    color: Theme.fgMain
+    font.pixelSize: 13
+    verticalAlignment: Text.AlignVCenter
+    clip: true
 
-        // Text input
-        TextInput {
-            id: searchInput
-            width: parent.width - (chipFlick.visible ? chipFlick.width + 4 : 0)
-                   - (clearBtn.visible ? clearBtn.width + 4 : 0)
-            height: parent.height
-            color: "#ECEFF4"
-            font.pixelSize: 13
-            verticalAlignment: Text.AlignVCenter
-            clip: true
-
-            Text {
-                anchors.fill: parent
-                verticalAlignment: Text.AlignVCenter
-                text: root.daemonConnected ? "Search tags, glob:*, fts:query…"
-                                           : "Daemon not connected"
-                color: "#4C566A"
-                font.pixelSize: 13
-                visible: !searchInput.text && !searchInput.activeFocus
-            }
+    Text {
+        anchors.fill: parent
+        verticalAlignment: Text.AlignVCenter
+        text: root.daemonConnected ? "Search tags, glob:*, fts:query…"
+                                   : "Daemon not connected"
+        color: Theme.fgPlaceholder
+        font.pixelSize: 13
+        visible: !searchInput.text && !searchInput.activeFocus
+    }
 
             onTextChanged: {
                 acTimer.restart()
@@ -228,7 +297,7 @@ Rectangle {
             id: clearBtn
             anchors.verticalCenter: parent.verticalCenter
             text: "✕"
-            color: clearMA.containsMouse ? "#ECEFF4" : "#6B7280"
+            color: clearMA.containsMouse ? Theme.fgMain : Theme.fgDeemphasized
             font.pixelSize: 14
             visible: root._chips.length > 0 || searchInput.text.length > 0
 
@@ -246,7 +315,7 @@ Rectangle {
             id: filterBtn
             anchors.verticalCenter: parent.verticalCenter
             text: "▽"
-            color: filterMA.containsMouse ? "#88C0D0" : "#6B7280"
+            color: filterMA.containsMouse ? Theme.accent : Theme.fgDeemphasized
             font.pixelSize: 16
             
             MouseArea {
@@ -269,8 +338,8 @@ Rectangle {
         width: root.width
         padding: 4
         background: Rectangle {
-            color: "#22252E"; radius: 6
-            border.color: "#3B4252"; border.width: 1
+            color: Theme.bgLight; radius: 6
+            border.color: Theme.border; border.width: 1
         }
         contentItem: Column {
             spacing: 2
@@ -284,14 +353,23 @@ Rectangle {
 
                     Rectangle {
                         anchors.fill: parent; radius: 4
-                        color: acItemMA.containsMouse ? "#2E3440" : "transparent"
+                        color: acItemMA.containsMouse ? Theme.bgHover : "transparent"
                     }
 
                     Text {
                         anchors.verticalCenter: parent.verticalCenter
                         leftPadding: 8
                         text: modelData
-                        color: "#ECEFF4"; font.pixelSize: 13
+                        color: Theme.fgMain; font.pixelSize: 13
+                    }
+
+                    Text {
+                        anchors.verticalCenter: parent.verticalCenter
+                        anchors.right: parent.right
+                        rightPadding: 8
+                        text: root._suggestionLabels[modelData] || ""
+                        color: Theme.fgDeemphasized; font.pixelSize: 11
+                        visible: text !== ""
                     }
 
                     MouseArea {
@@ -313,14 +391,18 @@ Rectangle {
     function _chipLabel(chip) {
         if (chip.startsWith("glob:"))   return "~ " + chip.slice(5)
         if (chip.startsWith("fts:"))    return "fts " + chip.slice(4)
-        if (chip === "hidden:any")      return "hidden"
+        if (chip.startsWith("hidden:")) return "hidden"
+        if (chip.startsWith("size:"))   return "size " + chip.slice(5)
+        if (chip.startsWith("mtime:"))  return "age " + chip.slice(6)
         return "# " + chip
     }
 
     function _chipColor(chip) {
-        if (chip.startsWith("glob:"))   return "#2D4A3E"
-        if (chip.startsWith("fts:"))    return "#2D3A4A"
-        if (chip === "hidden:any")      return "#3A2D4A"
-        return "#2D3B28"
+        if (chip.startsWith("glob:"))   return Qt.darker(Theme.success, 1.5)
+        if (chip.startsWith("fts:"))    return Qt.darker(Theme.accent, 1.5)
+        if (chip.startsWith("hidden:")) return Qt.darker(Theme.danger, 1.5)
+        if (chip.startsWith("size:"))   return Qt.darker(Theme.accentDim, 1.5)
+        if (chip.startsWith("mtime:"))  return Qt.darker(Theme.warning, 1.5)
+        return Qt.darker(Theme.accentDim, 1.5)
     }
 }

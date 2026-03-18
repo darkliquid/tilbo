@@ -4,6 +4,7 @@
 // changes.  Columns: icon | name | size | modified | tags.
 import QtQuick
 import QtQuick.Controls
+import "../services"
 
 Item {
     id: root
@@ -57,7 +58,7 @@ Item {
         anchors.left: parent.left
         anchors.right: parent.right
         height: 28
-        color: "#1E212A"
+        color: Theme.bgMedium
 
         Row {
             anchors.fill: parent
@@ -109,7 +110,7 @@ Item {
             anchors.fill: parent
             anchors.leftMargin: parent.leftPadding
             text: parent.text + (parent.active ? (parent.ascending ? " ↑" : " ↓") : "")
-            color: parent.active ? "#ECEFF4" : "#88C0D0"
+            color: parent.active ? Theme.fgMain : Theme.accent
             font.pixelSize: 12
             font.bold: parent.active
             verticalAlignment: Text.AlignVCenter
@@ -165,8 +166,8 @@ Item {
                 anchors.leftMargin: 4; anchors.rightMargin: 4
                 radius: 4
                 property bool selected: root.selection.indexOf(row.modelData.path) !== -1
-                color: selected ? "#4C566A" : (rowMA.containsMouse ? "#2E3440" : "transparent")
-                border.color: selected ? "#88C0D0" : "transparent"
+                color: selected ? Theme.selection : (rowMA.containsMouse ? Theme.bgHover : "transparent")
+                border.color: selected ? Theme.selectionBorder : "transparent"
                 border.width: 1
             }
 
@@ -235,7 +236,7 @@ Item {
                         anchors.fill: parent
                         visible: !row.renaming
                         text: row.modelData.name
-                        color: "#ECEFF4"; font.pixelSize: 13
+                        color: Theme.fgMain; font.pixelSize: 13
                         elide: Text.ElideRight
                         verticalAlignment: Text.AlignVCenter
                     }
@@ -247,10 +248,10 @@ Item {
                         height: 28
                         visible: row.renaming
                         text: row.modelData.name
-                        color: "#ECEFF4"; font.pixelSize: 13
+                        color: Theme.fgMain; font.pixelSize: 13
                         background: Rectangle {
-                            color: "#1A1C23"; radius: 3
-                            border.color: "#5E81AC"; border.width: 1
+                            color: Theme.bgInput; radius: 3
+                            border.color: Theme.borderFocus; border.width: 1
                         }
                         onVisibleChanged: {
                             if (visible) { selectAll(); forceActiveFocus() }
@@ -272,7 +273,7 @@ Item {
                           : (row.modelData.size > 1048576
                              ? (row.modelData.size / 1048576).toFixed(1) + " MB"
                              : (row.modelData.size / 1024).toFixed(1) + " KB")
-                    color: "#9099A3"; font.pixelSize: 12
+                    color: Theme.fgMuted; font.pixelSize: 12
                     horizontalAlignment: Text.AlignRight
                     verticalAlignment: Text.AlignVCenter
                 }
@@ -285,7 +286,7 @@ Item {
                           ? new Date(row.modelData.mtime * 1000)
                                 .toLocaleString(Qt.locale(), Locale.ShortFormat)
                           : ""
-                    color: "#9099A3"; font.pixelSize: 12
+                    color: Theme.fgMuted; font.pixelSize: 12
                     verticalAlignment: Text.AlignVCenter
                     elide: Text.ElideRight
                 }
@@ -304,12 +305,12 @@ Item {
                                    ? row.modelData.tags.slice(0, 2) : []
                             Rectangle {
                                 height: 18; width: tl.width + 8; radius: 3
-                                color: "#3B4252"
+                                color: Theme.bgActive
                                 Text {
                                     id: tl
                                     anchors.centerIn: parent
                                     text: modelData
-                                    color: "#A3BE8C"; font.pixelSize: 10
+                                    color: Theme.success; font.pixelSize: 10
                                 }
                             }
                         }
