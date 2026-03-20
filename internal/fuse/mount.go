@@ -15,7 +15,12 @@ import (
 )
 
 const (
-	defaultCacheTTLDir  = 2 * time.Second
+	// defaultCacheTTLDir is the entry cache TTL for directory listings. Index
+	// changes from other processes may take up to this long to appear.
+	defaultCacheTTLDir = 2 * time.Second
+	// defaultCacheTTLAttr is the attribute cache TTL. Longer than dir TTL
+	// because file attributes (size, mtime) change less frequently than
+	// directory contents during active tagging.
 	defaultCacheTTLAttr = 30 * time.Second
 )
 

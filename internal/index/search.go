@@ -25,6 +25,9 @@ type SearchParams struct {
 	VectorQuery []float32 // optional embedding vector for semantic search
 }
 
+// buildOrderClauses converts user-facing sort specifications (e.g. "mtime:desc")
+// into SQL ORDER BY clauses. Only whitelisted column names are accepted to
+// prevent SQL injection.
 func buildOrderClauses(sortBy []string) []string {
 	if len(sortBy) == 0 {
 		return nil
@@ -64,6 +67,8 @@ type SearchResult struct {
 	Score     float64 // relevance score (FTS rank or vector distance)
 }
 
+// searchArgsCap is the initial capacity for the dynamic SQL args slice,
+// sized to accommodate most queries without reallocation.
 const searchArgsCap = 16
 
 // Search returns files matching params and the total count before limit/offset.

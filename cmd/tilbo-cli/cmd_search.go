@@ -15,8 +15,8 @@ import (
 )
 
 const (
-	defaultSearchLimit = 50
-	searchTabPadding   = 2
+	defaultSearchLimit = 50 // default --limit when not specified
+	searchTabPadding   = 2  // tabwriter padding for human-readable output
 )
 
 var searchCmd = &cobra.Command{

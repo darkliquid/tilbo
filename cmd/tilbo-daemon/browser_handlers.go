@@ -28,12 +28,22 @@ import (
 )
 
 const (
-	mountsMinFields       = 3
-	defaultGlobLimit      = 1000
+	// mountsMinFields is the minimum number of whitespace-delimited fields
+	// expected per line in /proc/mounts (device, mountpoint, fstype).
+	mountsMinFields = 3
+	// defaultGlobLimit caps the number of results returned by GlobSearch when
+	// the caller does not specify a limit, preventing unbounded memory usage
+	// on broad patterns.
+	defaultGlobLimit = 1000
+	// defaultPlacesCapacity is the initial slice capacity for ListPlaces,
+	// sized for the three standard XDG dirs plus a few extras.
 	defaultPlacesCapacity = 6
 )
 
-// mimeToIconName maps a MIME type string to an XDG icon theme name.
+// mimeToIconName maps a MIME type string to an XDG icon theme name suitable
+// for display in the Quickshell GUI. The mapping follows freedesktop.org icon
+// naming conventions, falling back to broad category icons (e.g. "image-x-generic")
+// when no exact match exists.
 func mimeToIconName(mime string) string {
 	switch {
 	case mime == "inode/directory":
@@ -58,29 +68,39 @@ func mimeToIconName(mime string) string {
 }
 
 // daemonBrowserMethods implements browser.Methods for the daemon process.
-// Its methods are exposed via the uisocket JSON RPC server so the Quickshell
+// Its methods are exposed via the uisocket JSON-RPC server so the Quickshell
 // frontend can drive all file-manager operations without a separate browser
-// runtime.
+// runtime. Each method validates its inputs, delegates to the appropriate
+// subsystem, and returns GUI-friendly result types from the browser package.
 type daemonBrowserMethods struct {
-	idx             *index.DB
-	tags            *xattr.Service
-	g               *graph.Graph
-	fuseMount       string
-	onFileTagged    func(path string, added, removed []string)
-	cfg             *config.Config
-	cfgPath         string
-	extRegistry     *extension.Registry
-	thumbGen        *thumbnail.Generator
+	idx          *index.DB        // SQLite full-text search index for file metadata and tags
+	tags         *xattr.Service   // xattr-based tag storage (primary tag persistence layer)
+	g            *graph.Graph     // tag relationship/dependency graph for hierarchical tags
+	fuseMount    string           // path to the tilbo FUSE virtual mount, empty if inactive
+	onFileTagged func(path string, added, removed []string) // broadcast callback for tag-change events to GUI clients
+	cfg          *config.Config   // daemon configuration (browser prefs, pinned places, etc.)
+	cfgPath      string           // filesystem path to the config file, used for persisting changes
+	extRegistry  *extension.Registry // plugin registry providing badges and context-menu actions
+	thumbGen     *thumbnail.Generator // on-demand thumbnail generator for file previews
+
+	// clipboardPaths and clipboardIsMove implement an in-process clipboard for
+	// copy/cut/paste operations. The clipboard lives in daemon memory rather than
+	// the system clipboard because operations may involve index updates and trash
+	// handling that require daemon coordination.
 	clipboardPaths  []string
 	clipboardIsMove bool
 }
 
 // validatePath cleans and validates a filesystem path for use in uisocket RPC
-// handlers.  It returns the cleaned absolute path or an error.
+// handlers. It rejects empty paths, null bytes (which could truncate C strings
+// in syscalls), and relative paths. All browser handler methods call this before
+// touching the filesystem to ensure consistent, safe path handling.
 func validatePath(path string) (string, error) {
 	if path == "" {
 		return "", errors.New("path must not be empty")
 	}
+	// Null bytes in paths can cause silent truncation in C-level syscalls,
+	// which could lead to operating on unintended files.
 	if strings.ContainsRune(path, 0) {
 		return "", errors.New("path must not contain null bytes")
 	}
@@ -91,7 +111,10 @@ func validatePath(path string) (string, error) {
 	return clean, nil
 }
 
-// validateNewName checks that a filename component is safe to use for rename.
+// validateNewName checks that a filename component is safe to use as a
+// destination name in rename or create operations. It prohibits empty names,
+// null bytes, and path separators to ensure the name stays within the target
+// directory (preventing directory traversal via crafted names like "../foo").
 func validateNewName(name string) error {
 	if name == "" {
 		return errors.New("name must not be empty")
@@ -129,15 +152,40 @@ func (h *daemonBrowserMethods) ListDirectory(path string, hidden bool) ([]browse
 
 		var size, mtime int64
 		var mode uint32
-		if info, statErr := de.Info(); statErr == nil {
+		var isDir bool
+		entryPath := filepath.Join(clean, name)
+
+		// Check for symlinks via the DirEntry type bits (from readdir, no extra syscall).
+		// If it is a symlink, resolve the target for display in the GUI.
+		isLink := de.Type()&os.ModeSymlink != 0
+		linkTarget := ""
+		if isLink {
+			if target, err := os.Readlink(entryPath); err == nil {
+				linkTarget = target
+			}
+		}
+
+		// Use os.Stat (which follows symlinks) so that symlinks to directories
+		// are reported as directories and file sizes reflect the target.
+		// If stat fails (e.g. broken symlink), fall back to DirEntry.Info()
+		// which uses lstat, so we still return whatever metadata is available.
+		if info, statErr := os.Stat(entryPath); statErr == nil {
 			size = info.Size()
 			mtime = info.ModTime().Unix()
 			mode = uint32(info.Mode().Perm())
+			isDir = info.IsDir()
+		} else if info, lstatErr := de.Info(); lstatErr == nil {
+			size = info.Size()
+			mtime = info.ModTime().Unix()
+			mode = uint32(info.Mode().Perm())
+			isDir = info.IsDir()
 		}
 
-		entryPath := filepath.Join(clean, name)
+		// Look up the MIME type from the index (not from the filesystem) so the
+		// result is consistent with search results and avoids expensive libmagic
+		// calls on every directory listing.
 		var mimeType, iconName string
-		if de.IsDir() {
+		if isDir {
 			mimeType = "inode/directory"
 			iconName = "folder" //nolint:goconst // simple string is fine
 		} else {
@@ -150,15 +198,17 @@ func (h *daemonBrowserMethods) ListDirectory(path string, hidden bool) ([]browse
 		}
 
 		entries = append(entries, browser.DirEntry{
-			Name:     name,
-			Path:     entryPath,
-			IsDir:    de.IsDir(),
-			Size:     size,
-			MTime:    mtime,
-			Mode:     mode,
-			Hidden:   isHidden,
-			MimeType: mimeType,
-			IconName: iconName,
+			Name:       name,
+			Path:       entryPath,
+			IsDir:      isDir,
+			IsLink:     isLink,
+			LinkTarget: linkTarget,
+			Size:       size,
+			MTime:      mtime,
+			Mode:       mode,
+			Hidden:     isHidden,
+			MimeType:   mimeType,
+			IconName:   iconName,
 		})
 	}
 	return entries, nil
@@ -181,7 +231,10 @@ func (h *daemonBrowserMethods) StatFile(path string) (browser.FileStat, error) {
 	}, nil
 }
 
-// Search executes an indexed search against the daemon index.
+// Search executes an indexed search against the daemon's SQLite FTS index.
+// It supports tag intersection/union, tag exclusion, key-value metadata filters,
+// full-text search, pagination, and multi-field sorting. Results are enriched
+// with symlink information from the live filesystem before being returned.
 func (h *daemonBrowserMethods) Search(
 	tags []string,
 	tagsAny bool,
@@ -207,14 +260,32 @@ func (h *daemonBrowserMethods) Search(
 
 	files := make([]browser.FileResult, 0, len(results))
 	for _, r := range results {
+		// Deep-copy the metadata map so callers cannot mutate the index's
+		// internal state.
 		meta := make(map[string]string, len(r.Metadata))
 		maps.Copy(meta, r.Metadata)
+
+		// Use Lstat (not Stat) here because we want to detect whether the
+		// indexed path itself is a symlink, not resolve through it.
+		isLink := false
+		linkTarget := ""
+		if linfo, lstatErr := os.Lstat(r.Path); lstatErr == nil {
+			isLink = linfo.Mode()&os.ModeSymlink != 0
+			if isLink {
+				if target, err := os.Readlink(r.Path); err == nil {
+					linkTarget = target
+				}
+			}
+		}
+
 		files = append(files, browser.FileResult{
-			Path:     r.Path,
-			Tags:     r.Tags,
-			Metadata: meta,
-			MTime:    r.Mtime,
-			Size:     r.SizeBytes,
+			Path:       r.Path,
+			Tags:       r.Tags,
+			Metadata:   meta,
+			MTime:      r.Mtime,
+			Size:       r.SizeBytes,
+			IsLink:     isLink,
+			LinkTarget: linkTarget,
 		})
 	}
 	return files, saturatingUint32FromInt(total), nil
@@ -285,11 +356,25 @@ func globPattern(
 		if statErr != nil {
 			continue
 		}
+		
+		isLink := false
+		linkTarget := ""
+		if linfo, lstatErr := os.Lstat(match); lstatErr == nil {
+			isLink = linfo.Mode()&os.ModeSymlink != 0
+			if isLink {
+				if target, err := os.Readlink(match); err == nil {
+					linkTarget = target
+				}
+			}
+		}
+
 		files = append(files, browser.FileResult{
-			Path:  match,
-			Tags:  []string{},
-			MTime: info.ModTime().Unix(),
-			Size:  info.Size(),
+			Path:       match,
+			Tags:       []string{},
+			MTime:      info.ModTime().Unix(),
+			Size:       info.Size(),
+			IsLink:     isLink,
+			LinkTarget: linkTarget,
 		})
 	}
 	return files, nil

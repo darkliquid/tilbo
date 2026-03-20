@@ -23,8 +23,13 @@ import (
 type MediaHarvester struct{}
 
 const (
-	mediaPriority           = 5
-	mediaMetaInitCap        = 12
+	// mediaPriority is lower than FFProbeHarvester (10) so the pure-Go results
+	// serve as a baseline that ffprobe can override with more accurate data.
+	mediaPriority    = 5
+	mediaMetaInitCap = 12 // expected number of metadata fields produced
+	// mkvDefaultTimecodeScale is the Matroska spec default: 1,000,000 nanoseconds
+	// per timecode unit (i.e. 1 ms resolution). Files that omit TimecodeScale
+	// from Segment/Info implicitly use this value per IETF RFC 8794 Section 8.1.
 	mkvDefaultTimecodeScale = 1_000_000
 	nanosPerSecond          = 1e9
 )

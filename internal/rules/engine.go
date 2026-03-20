@@ -11,7 +11,11 @@ import (
 )
 
 // Engine evaluates registered rules against a file's metadata map and computes
-// the set of new tags to apply.
+// the set of new tags to apply. It is safe for concurrent use.
+//
+// Rules are maintained in ascending priority order so that when multiple rules
+// produce the same tag, the highest-priority (last-evaluated) rule wins the
+// source attribution recorded in TagDiff.Sources.
 type Engine struct {
 	mu    sync.RWMutex
 	rules []Rule // sorted by priority ascending
@@ -63,6 +67,8 @@ func (e *Engine) Eval(
 	existingTags []string,
 	overrides map[string][]string,
 ) (TagDiff, error) {
+	// Snapshot the rule list under a read lock so evaluation does not hold
+	// the lock for the entire duration, which could block Register/Reset.
 	e.mu.RLock()
 	rs := make([]Rule, len(e.rules))
 	copy(rs, e.rules)
@@ -73,12 +79,16 @@ func (e *Engine) Eval(
 		existing[t] = true
 	}
 
-	// toAdd maps tag name → the last (highest-priority) rule that adds it.
+	// toAdd maps tag name to the name of the last (highest-priority) rule that
+	// produced it. Because rules are sorted ascending by priority, later entries
+	// overwrite earlier ones, giving the highest-priority rule source attribution.
 	toAdd := make(map[string]string)
 
 	for _, rule := range rs {
 		tags, err := rule.Eval(ctx, meta)
 		if err != nil {
+			// Individual rule failures are non-fatal: log and continue so that
+			// one broken rule does not prevent other rules from firing.
 			slog.WarnContext(ctx, "rule eval error", "rule", rule.Name(), "err", err)
 			continue
 		}
@@ -90,6 +100,9 @@ func (e *Engine) Eval(
 		}
 	}
 
+	// Build the diff: only include tags not already on the file. The "rule:"
+	// prefix in Sources enables downstream code (xattr provenance, index) to
+	// distinguish rule-applied tags from manually applied ones.
 	diff := TagDiff{Sources: make(map[string]string, len(toAdd))}
 	for tag, ruleName := range toAdd {
 		if !existing[tag] {

@@ -1,4 +1,3 @@
-// Package desktopfile parses and executes XDG .desktop files.
 package desktopfile
 
 import (

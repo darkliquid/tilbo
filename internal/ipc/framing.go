@@ -18,11 +18,14 @@ const maxFrameSize = 4 * 1024 * 1024 // 4 MiB
 // exceeds maxFrameSize.
 var ErrFrameTooLarge = errors.New("ipc: encoded frame exceeds maximum size")
 
-// WriteEnvelope writes a JSON newline-delimited protobuf message to w.
+// WriteEnvelope serialises an envelope as JSON and writes it to w followed by a
+// newline delimiter. EmitUnpopulated is set so that zero-value fields are always
+// present in the JSON output, which simplifies client-side parsing (especially
+// in the QML/JS layer where missing keys require extra null checks).
 func WriteEnvelope(w io.Writer, env *ipcv1.Envelope) error {
 	m := protojson.MarshalOptions{
-		EmitUnpopulated: true,
-		UseProtoNames:   false,
+		EmitUnpopulated: true,  // always emit zero-value fields for predictable JSON shape
+		UseProtoNames:   false, // use camelCase field names (matches protobufjs conventions)
 	}
 	buf, err := m.Marshal(env)
 	if err != nil {

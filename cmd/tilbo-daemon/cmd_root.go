@@ -18,6 +18,9 @@ import (
 	"github.com/darkliquid/tilbo/internal/watcher"
 )
 
+// daemonOptions holds all runtime configuration flags for tilbo-daemon.
+// Values are populated from the config file first, then overridden by CLI flags,
+// giving users a layered configuration approach (config file < CLI flags).
 type daemonOptions struct {
 	watchPath      string
 	dbPath         string
@@ -33,10 +36,17 @@ type daemonOptions struct {
 	printVersion   bool
 }
 
+// newRootCmd builds the top-level cobra command for tilbo-daemon. It loads the
+// config file eagerly so that config values can serve as flag defaults. If the
+// config file is missing or malformed, the error is deferred — the daemon will
+// still start with built-in defaults and log a warning at startup.
 func newRootCmd() *cobra.Command {
 	cfgPath := config.Path()
 	cfg, cfgErr := config.Load(cfgPath)
 
+	// orDefault returns cfgVal when non-empty, otherwise the hardcoded fallback.
+	// This enables config file values to override compiled defaults while still
+	// allowing CLI flags to override everything.
 	orDefault := func(cfgVal, fallback string) string {
 		if cfgVal != "" {
 			return cfgVal
@@ -118,7 +128,11 @@ func newRootCmd() *cobra.Command {
 	return rootCmd
 }
 
+// runDaemon is the main entry point after CLI flag parsing. It configures logging,
+// sets up signal handling for graceful shutdown (SIGTERM/SIGINT) and config reload
+// (SIGHUP), then delegates to the run() function which owns the daemon lifecycle.
 func runDaemon(ctx context.Context, cfgPath string, cfgErr error, opts *daemonOptions) error {
+	// Fall back to the XDG runtime directory socket if no explicit override was given.
 	sockPath := opts.socketOverride
 	if sockPath == "" {
 		sockPath = socketPath()
@@ -128,6 +142,8 @@ func runDaemon(ctx context.Context, cfgPath string, cfgErr error, opts *daemonOp
 		return fmt.Errorf("tilbo-daemon: bad log flags: %w", err)
 	}
 
+	// Report any config load error as a warning rather than a hard failure,
+	// because the daemon can operate entirely on defaults and CLI flags.
 	if cfgErr != nil {
 		slog.WarnContext(ctx, "tilbo-daemon: config load error; using defaults", "path", cfgPath, "err", cfgErr)
 	}
@@ -142,9 +158,12 @@ func runDaemon(ctx context.Context, cfgPath string, cfgErr error, opts *daemonOp
 		"pid", os.Getpid(),
 	)
 
+	// SIGTERM and SIGINT trigger a graceful shutdown via context cancellation.
 	runCtx, stop := signal.NotifyContext(ctx, syscall.SIGTERM, syscall.SIGINT)
 	defer stop()
 
+	// SIGHUP is handled separately to trigger a live config/rule reload
+	// without restarting the daemon (similar to nginx/systemd convention).
 	hupCh := make(chan os.Signal, 1)
 	signal.Notify(hupCh, syscall.SIGHUP)
 	defer signal.Stop(hupCh)
@@ -171,6 +190,10 @@ func runDaemon(ctx context.Context, cfgPath string, cfgErr error, opts *daemonOp
 	return nil
 }
 
+// newConfigCmd creates the "config" subcommand group for the daemon. Currently
+// it only contains "config init", which snapshots the active daemon flags into
+// a TOML config file so users can reproduce the same configuration without
+// passing CLI flags every time.
 func newConfigCmd(opts *daemonOptions, defaultConfigPath string) *cobra.Command {
 	var initPath string
 	var force bool
@@ -227,6 +250,10 @@ func newConfigCmd(opts *daemonOptions, defaultConfigPath string) *cobra.Command 
 	return cmd
 }
 
+// newCompletionCmd creates the "completion" subcommand that outputs shell
+// completion scripts for bash, zsh, fish, and powershell. Users typically
+// pipe the output into their shell's completion directory (e.g.,
+// "tilbo-daemon completion fish > ~/.config/fish/completions/tilbo-daemon.fish").
 func newCompletionCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:       "completion [bash|zsh|fish|powershell]",
@@ -250,6 +277,9 @@ func newCompletionCmd() *cobra.Command {
 	}
 }
 
+// newSystemdCmd creates the "systemd" subcommand group for installing user-mode
+// systemd service and socket units. This enables socket activation so the daemon
+// starts on-demand when a client connects to the IPC socket.
 func newSystemdCmd() *cobra.Command {
 	var (
 		targetDir string

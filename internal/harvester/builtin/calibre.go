@@ -26,13 +26,21 @@ type CalibreHarvester struct {
 	binary string
 }
 
+// calibreNoneValue is the literal string Calibre's ebook-meta outputs for
+// fields that have no value. We treat it equivalently to an empty string
+// when deciding whether to include a field in the resulting MetaMap.
 const calibreNoneValue = "None"
 
 const (
-	calibrePriority    = 15
+	// calibrePriority is higher than EPUBHarvester (10) so Calibre's richer
+	// metadata — series, rating, normalised identifiers — overrides the
+	// pure-Go EPUB parser when both run against the same file.
+	calibrePriority = 15
+	// calibreRunTimeout bounds the ebook-meta subprocess. Some large EPUB/MOBI
+	// files with embedded images can take a while to parse; 20s is generous.
 	calibreRunTimeout  = 20 * time.Second
-	calibreMetaInitCap = 12
-	calibreKVInitCap   = 16
+	calibreMetaInitCap = 12 // expected number of metadata fields produced
+	calibreKVInitCap   = 16 // expected number of key-value lines in ebook-meta output
 )
 
 // NewCalibreHarvester looks up ebook-meta on PATH. Returns nil if not found.
@@ -47,6 +55,11 @@ func NewCalibreHarvester() *CalibreHarvester {
 func (h *CalibreHarvester) Name() string  { return "builtin:calibre" }
 func (h *CalibreHarvester) Priority() int { return calibrePriority }
 func (h *CalibreHarvester) Async() bool   { return false }
+// Matches returns true for ebook MIME types that Calibre's ebook-meta can handle.
+// This covers EPUB, MOBI, AZW/AZW3 (Kindle), FictionBook (FB2), and comic book
+// archives (CBZ/CBR). The list intentionally includes EPUB even though the
+// pure-Go EPUBHarvester also handles it, because Calibre provides additional
+// fields (series, rating, identifiers) that the EPUB parser cannot extract.
 func (h *CalibreHarvester) Matches(_ string, mime string) bool {
 	switch mime {
 	case "application/epub+zip",

@@ -33,6 +33,9 @@ type Processor struct {
 	g        *graph.Graph
 	embedder *vectorize.ONNXEmbedder
 
+	// nonRetryablePaths tracks files that caused permission or context errors.
+	// These paths are skipped on subsequent events to avoid repeated failures.
+	// The set is cleared when rules are reloaded (SIGHUP).
 	nonRetryableMu    sync.RWMutex
 	nonRetryablePaths map[string]struct{}
 
@@ -85,6 +88,9 @@ func (p *Processor) preparePath(ctx context.Context, path string) bool {
 	return ctx.Err() == nil
 }
 
+// readProcessingState reads the current tags and metadata from xattrs for the
+// given path. This is the synchronous variant used in the main pipeline where
+// errors must be propagated.
 func (p *Processor) readProcessingState(ctx context.Context, path string) ([]string, harvester.MetaMap, error) {
 	existingTags, err := p.tags.ReadTags(ctx, path)
 	if err != nil {
@@ -97,6 +103,9 @@ func (p *Processor) readProcessingState(ctx context.Context, path string) ([]str
 	return existingTags, parseStoredMeta(existingMeta), nil
 }
 
+// readAsyncState is the best-effort variant of readProcessingState used by
+// async harvester callbacks. Errors are silently ignored because the async
+// path should not fail the pipeline.
 func (p *Processor) readAsyncState(ctx context.Context, path string) ([]string, harvester.MetaMap) {
 	existingTags, _ := p.tags.ReadTags(ctx, path)
 	existingMeta, _ := p.tags.ReadAllMeta(ctx, path)
@@ -111,6 +120,9 @@ func parseStoredMeta(existingMeta map[string]string) harvester.MetaMap {
 	return meta
 }
 
+// runPipelinePhase executes the harvester pipeline for the given input and
+// returns the extracted metadata. The stop return value is true if a
+// non-retryable error occurred and the caller should abort processing.
 func (p *Processor) runPipelinePhase(
 	ctx context.Context,
 	path string,
@@ -131,6 +143,11 @@ func (p *Processor) runPipelinePhase(
 	return additional, false
 }
 
+// maybeRunSecondPipelinePhase re-runs the pipeline if MIME was just discovered
+// in phase 1. On the very first processing of a file, the MIME type is unknown,
+// so only unconditional harvesters (stat, mime) run. Once MIME is known, this
+// second pass lets MIME-dependent harvesters (EXIF, ffprobe, media, etc.)
+// execute without waiting for another filesystem event.
 func (p *Processor) maybeRunSecondPipelinePhase(
 	ctx context.Context,
 	path string,
@@ -155,6 +172,9 @@ func (p *Processor) maybeRunSecondPipelinePhase(
 	return false
 }
 
+// mergeAndPersistMeta writes updated metadata values to both xattrs and the
+// index. Keys beginning with "_" are internal-only and skipped for xattr
+// persistence. The base map is mutated in place to reflect the merged state.
 func (p *Processor) mergeAndPersistMeta(
 	ctx context.Context,
 	path string,
@@ -306,6 +326,10 @@ func (p *Processor) processFile(ctx context.Context, path string) error {
 	return p.applyDiff(ctx, path, fileID, existingTags, diff)
 }
 
+// updateEmbedding generates a vector embedding for the file by concatenating
+// its path, tags, and key textual metadata fields (description, title, text).
+// The embedding is stored in the index and the in-memory graph for similarity
+// queries. Silently returns if the embedder is disabled.
 func (p *Processor) updateEmbedding(
 	ctx context.Context,
 	path string,
@@ -393,6 +417,8 @@ func (p *Processor) handleAsyncResult(ctx context.Context, path, harvesterName s
 	}
 }
 
+// shouldSkipPath checks if the path has been marked as non-retryable due to
+// prior permission or context errors.
 func (p *Processor) shouldSkipPath(path string) bool {
 	p.nonRetryableMu.RLock()
 	_, ok := p.nonRetryablePaths[path]
@@ -424,6 +450,9 @@ func (p *Processor) clearAllNonRetryablePaths() {
 	p.nonRetryableMu.Unlock()
 }
 
+// isRetryEligiblePath checks if a previously non-retryable path has become
+// writable again (e.g. permissions were fixed). If so, the path can be
+// removed from the non-retryable set and re-processed.
 func isRetryEligiblePath(path string) bool {
 	if path == "" {
 		return false
@@ -431,6 +460,9 @@ func isRetryEligiblePath(path string) bool {
 	return unix.Access(path, unix.W_OK) == nil
 }
 
+// isNonRetryableProcessingErr returns true for errors that will not resolve
+// on retry: context cancellation, deadline exceeded, or permission denied.
+// These paths are added to the non-retryable set to avoid repeated failures.
 func isNonRetryableProcessingErr(err error) bool {
 	if err == nil {
 		return false

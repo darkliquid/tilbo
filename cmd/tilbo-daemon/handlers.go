@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"maps"
 	"math"
+	"os"
 
 	"github.com/darkliquid/tilbo/internal/graph"
 	"github.com/darkliquid/tilbo/internal/index"
@@ -14,6 +15,8 @@ import (
 	"github.com/darkliquid/tilbo/internal/xattr"
 )
 
+// daemonInternalErrCode maps to ErrorResponse code 3 ("invalid") in the IPC
+// protocol. Used for internal daemon errors that don't fit other categories.
 const daemonInternalErrCode = 3
 
 // errResponse wraps an error as an IPC ErrorResponse.
@@ -61,13 +64,28 @@ func handleSearch(
 	for _, r := range results {
 		meta := make(map[string]string, len(r.Metadata))
 		maps.Copy(meta, r.Metadata)
+
+		// Hydrate symlink info manually since the index doesn't store it.
+		isLink := false
+		linkTarget := ""
+		if linfo, lstatErr := os.Lstat(r.Path); lstatErr == nil {
+			isLink = linfo.Mode()&os.ModeSymlink != 0
+			if isLink {
+				if target, err := os.Readlink(r.Path); err == nil {
+					linkTarget = target
+				}
+			}
+		}
+
 		files = append(files, &ipcv1.FileResult{
-			Path:      r.Path,
-			Tags:      r.Tags,
-			Metadata:  meta,
-			Mtime:     r.Mtime,
-			SizeBytes: r.SizeBytes,
-			Score:     r.Score,
+			Path:       r.Path,
+			Tags:       r.Tags,
+			Metadata:   meta,
+			Mtime:      r.Mtime,
+			SizeBytes:  r.SizeBytes,
+			Score:      r.Score,
+			IsLink:     isLink,
+			LinkTarget: linkTarget,
 		})
 	}
 
@@ -325,15 +343,17 @@ func handleListDirectory(req *ipcv1.ListDirectoryRequest, browser *daemonBrowser
 	resEntries := make([]*ipcv1.DirEntry, len(entries))
 	for i, e := range entries {
 		resEntries[i] = &ipcv1.DirEntry{
-			Name:      e.Name,
-			Path:      e.Path,
-			IsDir:     e.IsDir,
-			SizeBytes: e.Size,
-			Mtime:     e.MTime,
-			Mode:      e.Mode,
-			Hidden:    e.Hidden,
-			MimeType:  e.MimeType,
-			IconName:  e.IconName,
+			Name:       e.Name,
+			Path:       e.Path,
+			IsDir:      e.IsDir,
+			SizeBytes:  e.Size,
+			Mtime:      e.MTime,
+			Mode:       e.Mode,
+			Hidden:     e.Hidden,
+			MimeType:   e.MimeType,
+			IconName:   e.IconName,
+			IsLink:     e.IsLink,
+			LinkTarget: e.LinkTarget,
 		}
 	}
 	return &ipcv1.Response{Kind: &ipcv1.Response_ListDirectory{
@@ -365,12 +385,14 @@ func handleGlobSearch(req *ipcv1.GlobSearchRequest, browser *daemonBrowserMethod
 	resFiles := make([]*ipcv1.FileResult, len(files))
 	for i, f := range files {
 		resFiles[i] = &ipcv1.FileResult{
-			Path:      f.Path,
-			Tags:      f.Tags,
-			Metadata:  f.Metadata,
-			Score:     f.Score,
-			Mtime:     f.MTime,
-			SizeBytes: f.Size,
+			Path:       f.Path,
+			Tags:       f.Tags,
+			Metadata:   f.Metadata,
+			Score:      f.Score,
+			Mtime:      f.MTime,
+			SizeBytes:  f.Size,
+			IsLink:     f.IsLink,
+			LinkTarget: f.LinkTarget,
 		}
 	}
 	return &ipcv1.Response{Kind: &ipcv1.Response_GlobSearch{

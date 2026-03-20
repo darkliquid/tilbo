@@ -29,6 +29,17 @@ Item {
     signal pasteRequested()
     signal createFileRequested()
     signal createDirectoryRequested()
+    signal filesDropped(var urls, string targetPath, bool isCopy)
+
+    property bool selectionMode: false
+
+    function selectAll() {
+        var all = []
+        for (var i = 0; i < entries.length; i++) {
+            all.push(entries[i].path)
+        }
+        root.selection = all
+    }
 
     function _isThumbnailable(mime) {
         return mime && (mime.indexOf("image/") === 0 || mime.indexOf("video/") === 0)
@@ -151,6 +162,14 @@ Item {
         clip: true
         ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
 
+        // Background DropArea
+        DropArea {
+            anchors.fill: parent
+            onDropped: (drop) => {
+                root.filesDropped(drop.urls, "", drop.proposedAction === Qt.CopyAction)
+            }
+        }
+
         delegate: Item {
             id: row
             required property var modelData
@@ -162,6 +181,7 @@ Item {
 
             // Hover / selection background
             Rectangle {
+                id: rowRect
                 anchors.fill: parent
                 anchors.leftMargin: 4; anchors.rightMargin: 4
                 radius: 4
@@ -169,12 +189,46 @@ Item {
                 color: selected ? Theme.selection : (rowMA.containsMouse ? Theme.bgHover : "transparent")
                 border.color: selected ? Theme.selectionBorder : "transparent"
                 border.width: 1
+
+                // DropArea for folders
+                DropArea {
+                    anchors.fill: parent
+                    enabled: row.modelData.isDir
+                    onEntered: (drag) => {
+                        rowRect.border.color = Theme.accent
+                        rowRect.border.width = 2
+                    }
+                    onExited: {
+                        rowRect.border.color = rowRect.selected ? Theme.selectionBorder : "transparent"
+                        rowRect.border.width = 1
+                    }
+                    onDropped: (drop) => {
+                        rowRect.border.color = rowRect.selected ? Theme.selectionBorder : "transparent"
+                        rowRect.border.width = 1
+                        root.filesDropped(drop.urls, row.modelData.path, drop.proposedAction === Qt.CopyAction)
+                    }
+                }
             }
 
             Row {
                 anchors.fill: parent
                 anchors.leftMargin: 8; anchors.rightMargin: 8
                 spacing: 0
+
+                // Selection checkbox
+                CheckBox {
+                    width: 32; height: parent.height
+                    visible: root.selectionMode
+                    checked: rowRect.selected
+                    onToggled: {
+                        var path = row.modelData.path
+                        var currentSelection = root.selection.slice()
+                        var idx = currentSelection.indexOf(path)
+                        if (checked && idx === -1) currentSelection.push(path)
+                        else if (!checked && idx !== -1) currentSelection.splice(idx, 1)
+                        root.selection = currentSelection
+                    }
+                }
 
                 // Icon with badge overlay
                 Item {
@@ -219,12 +273,20 @@ Item {
                     }
 
                     // Badge overlay — bottom-right corner
-                    ThemeIcon {
+                    Row {
                         anchors.bottom: parent.bottom
                         anchors.right: parent.right
-                        width: 10; height: 10
-                        iconName: iconItem._badges.length > 0 ? iconItem._badges[0] : ""
-                        visible: iconItem._badges.length > 0
+                        spacing: 1
+                        ThemeIcon {
+                            iconName: "emblem-symbolic-link"
+                            width: 10; height: 10
+                            visible: row.modelData.isLink
+                        }
+                        ThemeIcon {
+                            width: 10; height: 10
+                            iconName: iconItem._badges.length > 0 ? iconItem._badges[0] : ""
+                            visible: iconItem._badges.length > 0
+                        }
                     }
                 }
 
@@ -326,6 +388,8 @@ Item {
                 cursorShape: Qt.PointingHandCursor
                 enabled: !row.renaming
 
+                drag.target: dragProxy
+
                 onClicked: (mouse) => {
                     if (mouse.button === Qt.RightButton) {
                         if (root.selection.indexOf(row.modelData.path) === -1) {
@@ -367,6 +431,27 @@ Item {
                     if (mouse.button !== Qt.LeftButton) return
                     if (row.modelData.isDir) root.directoryActivated(row.modelData.path)
                     else                     root.fileOpenRequested(row.modelData.path)
+                }
+
+                Item {
+                    id: dragProxy
+                    width: 1; height: 1
+                    Drag.active: rowMA.drag.active
+                    Drag.hotSpot.x: 0
+                    Drag.hotSpot.y: 0
+                    Drag.mimeData: { "text/uri-list": root.selection.map(p => "file://" + p).join("\n") }
+                    Drag.dragType: Drag.Internal
+                    visible: false
+                }
+
+                ThemeIcon {
+                    visible: rowMA.drag.active
+                    iconName: row.modelData.iconName || (row.modelData.isDir ? "folder" : "application-x-generic")
+                    width: 24; height: 24
+                    opacity: 0.7
+                    x: rowMA.mouseX - 12
+                    y: rowMA.mouseY - 12
+                    z: 100
                 }
             }
         }

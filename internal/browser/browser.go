@@ -1,18 +1,18 @@
-// Package browser defines the method surface and data types shared between the
-// daemon's browser-handler implementation and the UI socket server.
 package browser
 
 // DirEntry represents one filesystem item returned by ListDirectory.
 type DirEntry struct {
-	Name     string
-	Path     string
-	IsDir    bool
-	Size     int64
-	MTime    int64
-	Mode     uint32
-	Hidden   bool
-	MimeType string
-	IconName string
+	Name       string
+	Path       string
+	IsDir      bool
+	IsLink     bool
+	LinkTarget string
+	Size       int64
+	MTime      int64
+	Mode       uint32
+	Hidden     bool
+	MimeType   string
+	IconName   string
 }
 
 // FileStat holds the current size, mtime, and mode for a single path.
@@ -24,12 +24,14 @@ type FileStat struct {
 
 // FileResult is a search result item returned by Search and GlobSearch.
 type FileResult struct {
-	Path     string
-	Tags     []string
-	Metadata map[string]string
-	Score    float64
-	MTime    int64
-	Size     int64
+	Path       string
+	Tags       []string
+	Metadata   map[string]string
+	Score      float64
+	MTime      int64
+	Size       int64
+	IsLink     bool
+	LinkTarget string
 }
 
 // TagResult holds the outcome of a ModifyTags call.

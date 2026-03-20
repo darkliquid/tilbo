@@ -9,27 +9,111 @@ import (
 )
 
 type Querier interface {
+	// Associates a tag with a file. Uses INSERT OR IGNORE so duplicate
+	// associations are silently skipped. The tag_cardinality_inc trigger
+	// fires on successful insert to maintain the tags.cardinality counter.
 	AddFileTag(ctx context.Context, arg AddFileTagParams) error
+	// Removes all tags from a file. Called before TAG_OPERATION_SET to replace
+	// the entire tag set, and during file re-indexing when tags need to be
+	// recomputed from scratch.
 	ClearFileTags(ctx context.Context, fileID int64) error
+	// Permanently removes a file from the index. Cascades to file_tags, metadata,
+	// tag_provenance, and tag_overrides via ON DELETE CASCADE foreign keys.
+	// Called when a file is detected as deleted during a scan or explicitly removed.
 	DeleteFile(ctx context.Context, path string) error
+	// Removes a single metadata key from a file. Called when MetadataSetRequest
+	// receives an empty value string, signaling deletion.
 	DeleteMeta(ctx context.Context, arg DeleteMetaParams) error
+	// Removes the sidecar data for a file. Called when a file is permanently
+	// deleted (not trashed) to clean up orphaned sidecar records.
 	DeleteSidecar(ctx context.Context, arg DeleteSidecarParams) error
+	// Removes files under a given path prefix that were not seen in the most
+	// recent scan cycle. The indexed_at timestamp is compared against the scan
+	// start time to identify stale entries. Used at the end of each directory
+	// scan to clean up files that were moved or deleted outside tilbo.
 	DeleteStaleFiles(ctx context.Context, arg DeleteStaleFilesParams) error
+	// Looks up the internal row ID for a file by its absolute path. Used by
+	// handlers that receive a path from the IPC layer and need the integer ID
+	// for tag/metadata operations.
 	GetFileIDByPath(ctx context.Context, path string) (int64, error)
+	// Returns all metadata key-value pairs (with source attribution) for a file.
+	// Used by MetadataRequest to build the full metadata response.
 	GetFileMeta(ctx context.Context, fileID int64) ([]GetFileMetaRow, error)
+	// Retrieves the core stat fields (id, mtime, size) for a file. Used during
+	// scanning to check whether a file has changed since it was last indexed,
+	// avoiding unnecessary re-processing of unchanged files.
 	GetFileSummary(ctx context.Context, path string) (GetFileSummaryRow, error)
+	// Returns all tag names for a given file, ordered alphabetically. Used by
+	// MetadataRequest and HydrateTagsRequest handlers to populate tag lists
+	// in responses.
 	GetFileTags(ctx context.Context, fileID int64) ([]string, error)
+	// ---------------------------------------------------------------------------
+	// Statistics
+	// ---------------------------------------------------------------------------
+	// Returns aggregate counts for the StatusRequest handler: total number of
+	// indexed files and total number of distinct tags.
 	GetStats(ctx context.Context) (GetStatsRow, error)
+	// Returns all tag overrides for a file. Overrides are rules that suppress
+	// (prevent) specific tags from being applied, even if a harvester would
+	// normally add them. Used during tag computation to filter out suppressed tags.
 	GetTagOverrides(ctx context.Context, fileID int64) ([]GetTagOverridesRow, error)
+	// Returns all known tag names in alphabetical order. Used by the ListTags
+	// IPC handler for autocomplete and tag browsing UIs.
 	ListAllTags(ctx context.Context) ([]string, error)
+	// Returns all indexed file paths in alphabetical order. Used for bulk
+	// operations such as full tag recomputation or export.
 	ListFilePaths(ctx context.Context) ([]string, error)
+	// Returns every (path, tag_name) pair in the index. Used for bulk export
+	// and for building the in-memory tag graph used by RelatedRequest.
 	ListFileTagPairs(ctx context.Context) ([]ListFileTagPairsRow, error)
+	// ---------------------------------------------------------------------------
+	// Sidecar data
+	// ---------------------------------------------------------------------------
+	// Reads the JSON sidecar payload for a file identified by its inode/device
+	// pair. Sidecar data contains user-applied tags and metadata that persist
+	// across file renames (since inode/device identity is stable). Used during
+	// indexing to merge user data with harvester-produced data.
 	ReadSidecar(ctx context.Context, arg ReadSidecarParams) (string, error)
+	// Removes a single tag from a file. The tag_cardinality_dec trigger fires
+	// on successful delete to decrement the tags.cardinality counter.
 	RemoveFileTag(ctx context.Context, arg RemoveFileTagParams) error
+	// ---------------------------------------------------------------------------
+	// Tag provenance & overrides
+	// ---------------------------------------------------------------------------
+	// Records which source (harvester or rule) applied a tag to a file, and when.
+	// This provenance information is used for debugging and for resolving
+	// conflicts when multiple sources try to manage the same tag.
 	SetTagProvenance(ctx context.Context, arg SetTagProvenanceParams) error
+	// query.sql - Named SQL queries for tilbo's index database.
+	//
+	// These queries are consumed by sqlc to generate type-safe Go code. Each
+	// query is annotated with its name, return mode (:exec, :one, :many), and
+	// a description of when it is used.
+	// ---------------------------------------------------------------------------
+	// File CRUD
+	// ---------------------------------------------------------------------------
+	// Inserts a new file record or updates an existing one when the path already
+	// exists. Called during indexing scans to track every discovered file along
+	// with its inode/device identity and modification metadata. Returns the
+	// file's row ID for use in subsequent tag/metadata operations.
 	UpsertFile(ctx context.Context, arg UpsertFileParams) (int64, error)
+	// ---------------------------------------------------------------------------
+	// Metadata
+	// ---------------------------------------------------------------------------
+	// Sets a metadata key-value pair on a file. If the key already exists, both
+	// the value and source attribution are updated. Called by harvesters (exif,
+	// xattr, etc.) during indexing and by MetadataSetRequest for manual edits.
 	UpsertMeta(ctx context.Context, arg UpsertMetaParams) error
+	// ---------------------------------------------------------------------------
+	// Tags
+	// ---------------------------------------------------------------------------
+	// Inserts a tag name or returns the existing row if the name already exists.
+	// The "DO UPDATE SET name = name" is a no-op trick to make RETURNING work
+	// on conflict. Returns the tag's row ID for use in file_tags joins.
 	UpsertTag(ctx context.Context, name string) (int64, error)
+	// Writes or updates the JSON sidecar payload for a file. Called when the
+	// user manually adds/removes tags or sets metadata, ensuring those changes
+	// survive re-indexing and file renames.
 	WriteSidecar(ctx context.Context, arg WriteSidecarParams) error
 }
 

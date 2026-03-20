@@ -12,6 +12,8 @@ import (
 	"time"
 )
 
+// defaultHarvesterTimeout is the process execution timeout when timeout_ms
+// is not set or zero in the harvester TOML config.
 const defaultHarvesterTimeout = 5 * time.Second
 
 // SubprocessHarvester implements Harvester by launching an external process.

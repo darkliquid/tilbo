@@ -1,5 +1,3 @@
-// Package index manages the SQLite-backed file index for tilbo.
-// It is CGo-free, using the ncruces WASM-based SQLite driver.
 package index
 
 import (
@@ -21,6 +19,8 @@ import (
 	_ "github.com/ncruces/go-sqlite3/driver"
 )
 
+// tagArgMultiplier accounts for the two SQL args per tag in upsert operations:
+// one for the tag name and one for the file_id.
 const tagArgMultiplier = 2
 
 //go:embed migrations/*.sql

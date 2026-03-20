@@ -8,6 +8,8 @@ import (
 	"sync"
 )
 
+// mergedMetaInitCap is the initial capacity for merged metadata maps.
+// Sized to accommodate typical harvester output without reallocation.
 const mergedMetaInitCap = 32
 
 // Pipeline executes registered harvesters concurrently for a given file and merges

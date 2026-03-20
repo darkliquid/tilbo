@@ -9,6 +9,8 @@ import (
 	ipcv1 "github.com/darkliquid/tilbo/internal/ipc/gen/tilbo/ipc/v1"
 )
 
+// minTagArgs is the minimum number of positional arguments for tag subcommands:
+// the first arg is the file path, the rest are tag names.
 const minTagArgs = 2
 
 var tagCmd = &cobra.Command{

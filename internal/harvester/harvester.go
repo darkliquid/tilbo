@@ -1,5 +1,3 @@
-// Package harvester implements the tilbo harvester pipeline: per-file metadata
-// enrichment by concurrent, sandboxed harvesters whose output feeds the rule engine.
 package harvester
 
 import (

@@ -1,10 +1,3 @@
-// Package config loads the shared tilbo configuration file.
-//
-// Both binaries (tilbo-daemon, tilbo-cli) read the same file at
-// $XDG_CONFIG_HOME/tilbo/config.toml. App-specific settings live under
-// [daemon] and [cli] keys; inline tag rules use [[rule]].
-//
-// CLI flags always override values from the config file.
 package config
 
 import (

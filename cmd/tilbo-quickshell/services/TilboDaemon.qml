@@ -120,6 +120,8 @@ Singleton {
                 hidden: e.hidden,
                 mimeType: e.mimeType || "",
                 iconName: e.iconName || (e.isDir ? "inode-directory" : "application-x-generic"),
+                isLink: !!e.isLink,
+                linkTarget: e.linkTarget || "",
                 tags: []
             })), null)
         })
@@ -156,7 +158,9 @@ Singleton {
                 mtime: Number(f.mtime || 0),
                 size: Number(f.sizeBytes || 0),
                 name: String(f.path).split("/").pop(),
-                isDir: false
+                isDir: false,
+                isLink: !!f.isLink,
+                linkTarget: f.linkTarget || ""
             }))
             callback({ files: files, total: Number(s.total || 0) }, null)
         })
@@ -174,7 +178,9 @@ Singleton {
                 mtime: Number(f.mtime || 0),
                 size: Number(f.sizeBytes || 0),
                 name: String(f.path).split("/").pop(),
-                isDir: false
+                isDir: false,
+                isLink: !!f.isLink,
+                linkTarget: f.linkTarget || ""
             })), null)
         })
     }
@@ -347,6 +353,67 @@ Singleton {
                 width: Number(t.width || 0),
                 height: Number(t.height || 0)
             }, null)
+        })
+    }
+
+    function listMounts(callback) {
+        _call({ listMounts: {} }, function(resp, err) {
+            if (err) { callback([], err); return }
+            var mounts = (resp.listMounts && resp.listMounts.mounts) ? resp.listMounts.mounts : []
+            callback(mounts.map(m => ({
+                path: m.path,
+                label: m.label,
+                iconName: m.iconName || "drive-removable-media"
+            })), null)
+        })
+    }
+
+    function listSavedSearches(callback) {
+        _call({ listSavedSearches: {} }, function(resp, err) {
+            if (err) { callback([], err); return }
+            var searches = (resp.listSavedSearches && resp.listSavedSearches.searches) ? resp.listSavedSearches.searches : []
+            callback(searches.map(s => ({
+                id: s.id,
+                name: s.name,
+                chips: s.chips || [],
+                iconName: s.iconName || "folder-saved-search"
+            })), null)
+        })
+    }
+
+    function pinSearch(name, chips, iconName, callback) {
+        _call({ pinSearch: { name: name, chips: chips || [], iconName: iconName || "folder-saved-search" } }, function(resp, err) {
+            if (callback) callback(err)
+        })
+    }
+
+    function unpinSearch(id, callback) {
+        _call({ unpinSearch: { id: id } }, function(_resp, err) {
+            if (callback) callback(err)
+        })
+    }
+
+    function copy(paths, isMove, callback) {
+        _call({ copy: { paths: paths || [], isMove: !!isMove } }, function(_resp, err) {
+            if (callback) callback(err)
+        })
+    }
+
+    function paste(destinationDir, callback) {
+        _call({ paste: { destinationDir: destinationDir } }, function(resp, err) {
+            if (callback) callback(resp && resp.paste ? resp.paste.newPaths : [], err)
+        })
+    }
+
+    function createFile(destinationDir, name, callback) {
+        _call({ createFile: { destinationDir: destinationDir, name: name } }, function(resp, err) {
+            if (callback) callback(resp && resp.createFile ? resp.createFile.path : "", err)
+        })
+    }
+
+    function createDirectory(destinationDir, name, callback) {
+        _call({ createDirectory: { destinationDir: destinationDir, name: name } }, function(resp, err) {
+            if (callback) callback(resp && resp.createDirectory ? resp.createDirectory.path : "", err)
         })
     }
 }

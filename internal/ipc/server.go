@@ -21,16 +21,22 @@ import (
 type Handler func(ctx context.Context, req *ipcv1.Request) (*ipcv1.Response, error)
 
 // Server is a Unix socket server for the tilbo IPC protocol.
+// It accepts multiple concurrent client connections and dispatches incoming
+// requests to the registered [Handler]. Server also supports broadcasting
+// events to all connected clients for real-time UI updates.
 type Server struct {
 	path    string
 	handler Handler
 	closing atomic.Bool
-	wg      sync.WaitGroup
+	wg      sync.WaitGroup         // tracks serve loop + per-connection goroutines
 	ln      net.Listener
-	mu      sync.Mutex
-	conns   map[net.Conn]*connWriter
+	mu      sync.Mutex             // protects conns map
+	conns   map[net.Conn]*connWriter // active client connections
 }
 
+// connWriter wraps a connection with a mutex to serialise writes. Each
+// connection gets its own writer so that broadcasting events to one slow
+// client doesn't block responses to other clients.
 type connWriter struct {
 	conn net.Conn
 	mu   sync.Mutex
@@ -42,6 +48,8 @@ func (cw *connWriter) writeEnv(env *ipcv1.Envelope) error {
 	return WriteEnvelope(cw.conn, env)
 }
 
+// genericErrorCode maps to the "invalid" error code in the IPC protocol
+// (ErrorResponse.code: 1=not_found, 2=permission, 3=invalid, 4=daemon_unavailable).
 const genericErrorCode = 3
 
 // NewServer creates a new IPC Server listening on path.
@@ -140,6 +148,8 @@ func (s *Server) BroadcastEvent(event *ipcv1.Event) {
 	}
 }
 
+// serve is the main accept loop. It runs in a background goroutine started
+// by Start and exits when the listener is closed during Stop.
 func (s *Server) serve(ctx context.Context) {
 	defer s.wg.Done()
 	for {
@@ -158,6 +168,9 @@ func (s *Server) serve(ctx context.Context) {
 	}
 }
 
+// handleConn reads newline-delimited JSON envelopes from a single client
+// connection and dispatches each request to processEnvelope in its own goroutine,
+// allowing concurrent request handling per connection.
 func (s *Server) handleConn(ctx context.Context, conn net.Conn, cw *connWriter) {
 	defer s.wg.Done()
 	defer s.untrackConn(conn)
@@ -192,6 +205,9 @@ func (s *Server) handleConn(ctx context.Context, conn net.Conn, cw *connWriter) 
 	}
 }
 
+// processEnvelope extracts the request from an envelope, invokes the handler,
+// and writes the response back to the client. Handler errors are wrapped into
+// ErrorResponse messages so the client always receives a valid response.
 func (s *Server) processEnvelope(ctx context.Context, cw *connWriter, env *ipcv1.Envelope) {
 	req := env.GetRequest()
 	if req == nil {

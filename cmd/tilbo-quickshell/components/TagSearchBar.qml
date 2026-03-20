@@ -29,7 +29,6 @@ Rectangle {
     property bool daemonConnected: true
 
     signal searchRequested(var chips)
-    signal filterRequested()
 
     // Internal chip list (array of strings in the format BrowserWindow expects)
     property var _chips: []
@@ -60,14 +59,15 @@ Rectangle {
         var text = searchInput.text.trim()
         if (!text && root._chips.length === 0) {
             // Show initial suggestions for discovery
-            root._suggestions = ["glob:", "fts:", "hidden:", "size:", "mtime:", "meta:"]
+            root._suggestions = ["is:", "size:", "mtime:", "glob:", "fts:", "hidden:", "meta:"]
             root._suggestionLabels = {
-                "glob:":   I18n.tr("ac.glob"),
-                "fts:":    I18n.tr("ac.fts"),
-                "hidden:": I18n.tr("ac.hidden"),
-                "size:":   I18n.tr("ac.size"),
-                "mtime:":  I18n.tr("ac.mtime"),
-                "meta:":   I18n.tr("ac.meta")
+                "is:":     I18n.tr("ac.label.is"),
+                "size:":   I18n.tr("ac.label.size"),
+                "mtime:":  I18n.tr("ac.label.mtime"),
+                "glob:":   I18n.tr("ac.label.glob"),
+                "fts:":    I18n.tr("ac.label.fts"),
+                "hidden:": I18n.tr("ac.label.hidden"),
+                "meta:":   I18n.tr("ac.label.meta")
             }
             acPopup.open()
             return
@@ -80,7 +80,7 @@ Rectangle {
         }
 
         // Discovery for prefixes if typing starts
-        var discoveries = ["glob:", "fts:", "hidden:", "size:", "mtime:", "meta:"]
+        var discoveries = ["is:", "glob:", "fts:", "hidden:", "size:", "mtime:", "meta:"]
         var discoveryMatches = discoveries.filter(function(d) {
             return d.startsWith(text) && d !== text
         })
@@ -88,6 +88,7 @@ Rectangle {
         if (discoveryMatches.length > 0) {
             root._suggestions = discoveryMatches
             root._suggestionLabels = {
+                "is:":     I18n.tr("ac.label.is"),
                 "glob:":   I18n.tr("ac.label.glob"),
                 "fts:":    I18n.tr("ac.label.fts"),
                 "hidden:": I18n.tr("ac.label.hidden"),
@@ -136,6 +137,17 @@ Rectangle {
         }
 
         // Sub-suggestions for specific prefixes
+        if (text === "is:") {
+            root._suggestions = ["is:images", "is:videos", "is:docs"]
+            root._suggestionLabels = {
+                "is:images": I18n.tr("search.filter.images"),
+                "is:videos": I18n.tr("search.filter.videos"),
+                "is:docs":   I18n.tr("search.filter.docs")
+            }
+            acPopup.open()
+            return
+        }
+
         if (text === "hidden:") {
             root._suggestions = ["hidden:any"]
             root._suggestionLabels = { "hidden:any": I18n.tr("ac.hidden_any") }
@@ -144,15 +156,16 @@ Rectangle {
         }
 
         if (text === "size:") {
-            root._suggestions = ["size:>1MB", "size:>10MB", "size:>100MB", "size:>1GB"]
+            root._suggestions = ["size:>10MB", "size:>100MB", "size:>1GB"]
             root._suggestionLabels = {}
             acPopup.open()
             return
         }
 
         if (text === "mtime:") {
-            root._suggestions = ["mtime:<1d", "mtime:<1w", "mtime:<1m", "mtime:<1y"]
+            root._suggestions = ["mtime:2026", "mtime:<1d", "mtime:<1w", "mtime:<1m", "mtime:<1y"]
             root._suggestionLabels = {
+                "mtime:2026": I18n.tr("search.filter.2026"),
                 "mtime:<1d": I18n.tr("ac.mtime.1d"),
                 "mtime:<1w": I18n.tr("ac.mtime.1w"),
                 "mtime:<1m": I18n.tr("ac.mtime.1m"),
@@ -192,6 +205,18 @@ Rectangle {
 
     function _addChip(raw) {
         var chip = raw.trim()
+
+        // Semantic mappings from autocomplete
+        if (chip === "is:images") chip = "glob:*.{jpg,jpeg,png,gif,webp}"
+        if (chip === "is:videos") chip = "glob:*.{mp4,mkv,avi,mov}"
+        if (chip === "is:docs")   chip = "glob:*.{pdf,doc,docx,txt,odt}"
+
+        if (chip === "size:>10MB")  chip = "fts:size > 10485760"
+        if (chip === "size:>100MB") chip = "fts:size > 104857600"
+        if (chip === "size:>1GB")   chip = "fts:size > 1073741824"
+
+        if (chip === "mtime:2026")  chip = "fts:mtime > 1767225600"
+
         if (!chip || root._chips.indexOf(chip) !== -1) return
         var newChips = root._chips.concat([chip])
         root._chips = newChips
@@ -285,7 +310,6 @@ TextInput {
     id: searchInput
     width: parent.width - (chipFlick.visible ? chipFlick.width + 4 : 0)
            - (clearBtn.visible ? clearBtn.width + 4 : 0)
-           - (filterBtn.visible ? filterBtn.width + 4 : 0)
     height: parent.height
     color: Theme.fgMain
     font.pixelSize: 13
@@ -344,23 +368,6 @@ TextInput {
                 hoverEnabled: true
                 cursorShape: Qt.PointingHandCursor
                 onClicked: root._clearAll()
-            }
-        }
-
-        // Filter button
-        Text {
-            id: filterBtn
-            anchors.verticalCenter: parent.verticalCenter
-            text: "▽"
-            color: filterMA.containsMouse ? Theme.accent : Theme.fgDeemphasized
-            font.pixelSize: 16
-            
-            MouseArea {
-                id: filterMA
-                anchors.fill: parent
-                hoverEnabled: true
-                cursorShape: Qt.PointingHandCursor
-                onClicked: root.filterRequested()
             }
         }
     }
@@ -426,11 +433,22 @@ TextInput {
     // ── Helpers ────────────────────────────────────────────────────────────
 
     function _chipLabel(chip) {
+        if (chip === "glob:*.{jpg,jpeg,png,gif,webp}") return "images"
+        if (chip === "glob:*.{mp4,mkv,avi,mov}")        return "videos"
+        if (chip === "glob:*.{pdf,doc,docx,txt,odt}")  return "documents"
+
+        if (chip === "fts:size > 10485760")  return "size > 10MB"
+        if (chip === "fts:size > 104857600") return "size > 100MB"
+        if (chip === "fts:size > 1073741824") return "size > 1GB"
+
+        if (chip === "fts:mtime > 1767225600") return "2026"
+
         if (chip.startsWith("glob:"))   return "~ " + chip.slice(5)
         if (chip.startsWith("fts:"))    return "fts " + chip.slice(4)
         if (chip.startsWith("hidden:")) return "hidden"
         if (chip.startsWith("size:"))   return "size " + chip.slice(5)
         if (chip.startsWith("mtime:"))  return "age " + chip.slice(6)
+        if (chip.startsWith("is:"))     return "is " + chip.slice(3)
         if (chip.startsWith("meta:"))   return "meta " + chip.slice(5)
         return "# " + chip
     }
@@ -441,6 +459,7 @@ TextInput {
         if (chip.startsWith("hidden:")) return Qt.darker(Theme.danger, 1.5)
         if (chip.startsWith("size:"))   return Qt.darker(Theme.accentDim, 1.5)
         if (chip.startsWith("mtime:"))  return Qt.darker(Theme.warning, 1.5)
+        if (chip.startsWith("is:"))     return Qt.darker(Theme.success, 1.2)
         if (chip.startsWith("meta:"))   return Qt.darker(Theme.accent, 1.2)
         return Qt.darker(Theme.accentDim, 1.5)
     }

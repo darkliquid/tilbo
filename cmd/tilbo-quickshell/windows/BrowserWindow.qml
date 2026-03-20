@@ -45,6 +45,7 @@ ApplicationWindow {
 
     property bool   _useInlineThumbnails: false
     property int    _gridIconSize: 48
+    property bool   selectionMode: false
 
     // Model arrays (plain JS objects — no QAbstractItemModel needed)
     property var    dirEntries: []   // [{name,path,isDir,size,mtime,mode,hidden,tags}]
@@ -497,6 +498,23 @@ ApplicationWindow {
         window._gridIconSize = 48
     }
 
+    function handleFilesDropped(urls, targetPath, isCopy) {
+        var paths = urls.map(function(u) {
+            var s = u.toString()
+            if (s.indexOf("file://") === 0) return s.substring(7)
+            return s
+        })
+        var dest = targetPath || window.currentPath
+        
+        TilboDaemon.copy(paths, !isCopy, function(err) {
+            if (err) { console.warn("drop error:", err); return }
+            TilboDaemon.paste(dest, function(res, err2) {
+                if (err2) { console.warn("paste error:", err2); return }
+                _loadDirectory(window.currentPath)
+            })
+        })
+    }
+
     // ── Breadcrumb model ──────────────────────────────────────────────────
 
     function breadcrumbModel(path) {
@@ -595,6 +613,13 @@ ApplicationWindow {
         onActivated: window._createNew(true)
     }
     Shortcut {
+        sequence: "Ctrl+A"
+        onActivated: {
+            if (window.isGridView) fileGrid.selectAll()
+            else                   fileList.selectAll()
+        }
+    }
+    Shortcut {
         sequence: "Ctrl++"
         onActivated: window.zoomIn()
     }
@@ -628,47 +653,85 @@ ApplicationWindow {
                 leftPadding: 8
             }
 
-            // Back / Forward buttons (Feature 1)
-            ToolButton {
-                text: "←"
-                font.pixelSize: 16
-                enabled: window.canGoBack
-                opacity: enabled ? 1.0 : 0.4
+            ItemDelegate {
+                id: backBtn
+                Layout.preferredWidth: 40; Layout.preferredHeight: 40
                 onClicked: window.goBack()
+                enabled: window.canGoBack
+                padding: 10
+                contentItem: ThemeIcon {
+                    iconName: "go-previous-symbolic"
+                    useTintColor: true
+                    tintColor: backBtn.enabled ? Theme.iconTint : Theme.fgDeemphasized
+                }
+                background: Rectangle {
+                    color: parent.hovered ? Theme.bgHover : "transparent"
+                    radius: 4
+                    border.color: parent.hovered ? Theme.border : "transparent"
+                    border.width: 1
+                }
                 ToolTip.text: I18n.tr("toolbar.back")
                 ToolTip.visible: hovered
-                ToolTip.delay: 500
             }
 
-            ToolButton {
-                text: "→"
-                font.pixelSize: 16
-                enabled: window.canGoForward
-                opacity: enabled ? 1.0 : 0.4
+            ItemDelegate {
+                id: forwardBtn
+                Layout.preferredWidth: 40; Layout.preferredHeight: 40
                 onClicked: window.goForward()
+                enabled: window.canGoForward
+                padding: 10
+                contentItem: ThemeIcon {
+                    iconName: "go-next-symbolic"
+                    useTintColor: true
+                    tintColor: forwardBtn.enabled ? Theme.iconTint : Theme.fgDeemphasized
+                }
+                background: Rectangle {
+                    color: parent.hovered ? Theme.bgHover : "transparent"
+                    radius: 4
+                    border.color: parent.hovered ? Theme.border : "transparent"
+                    border.width: 1
+                }
                 ToolTip.text: I18n.tr("toolbar.forward")
                 ToolTip.visible: hovered
-                ToolTip.delay: 500
             }
 
-            ToolButton {
-                text: "↑"
-                font.pixelSize: 16
-                enabled: window.currentPath !== "/"
-                opacity: enabled ? 1.0 : 0.4
+            ItemDelegate {
+                id: upBtn
+                Layout.preferredWidth: 40; Layout.preferredHeight: 40
                 onClicked: window.goUp()
+                enabled: window.currentPath !== "/"
+                padding: 10
+                contentItem: ThemeIcon {
+                    iconName: "go-up-symbolic"
+                    useTintColor: true
+                    tintColor: upBtn.enabled ? Theme.iconTint : Theme.fgDeemphasized
+                }
+                background: Rectangle {
+                    color: parent.hovered ? Theme.bgHover : "transparent"
+                    radius: 4
+                    border.color: parent.hovered ? Theme.border : "transparent"
+                    border.width: 1
+                }
                 ToolTip.text: I18n.tr("toolbar.up")
                 ToolTip.visible: hovered
-                ToolTip.delay: 500
             }
-
-            ToolButton {
-                text: "🏠"
-                font.pixelSize: 16
+            ItemDelegate {
+                Layout.preferredWidth: 40; Layout.preferredHeight: 40
                 onClicked: window.goHome()
+                padding: 10
+                contentItem: ThemeIcon {
+                    iconName: "user-home-symbolic"
+                    useTintColor: true
+                    tintColor: Theme.iconTint
+                }
+                background: Rectangle {
+                    color: parent.hovered ? Theme.bgHover : "transparent"
+                    radius: 4
+                    border.color: parent.hovered ? Theme.border : "transparent"
+                    border.width: 1
+                }
                 ToolTip.text: I18n.tr("toolbar.home")
                 ToolTip.visible: hovered
-                ToolTip.delay: 500
             }
 
             TagSearchBar {
@@ -677,11 +740,12 @@ ApplicationWindow {
                 Layout.preferredHeight: 40
                 daemonConnected: window.daemonConnected
                 onSearchRequested: chips => window.executeSearch(chips)
-                onFilterRequested: filterDialog.open()
             }
 
             ThemeButton {
                 text: I18n.tr("toolbar.pin")
+                iconName: "bookmark-new-symbolic"
+                isAccent: true
                 Layout.preferredHeight: 40
                 visible: window.isSearchMode
                 onClicked: pinSearchDialog.open()
@@ -717,58 +781,70 @@ ApplicationWindow {
                 }
             }
 
-            Dialog {
-                id: filterDialog
-                title: I18n.tr("search.filter_title")
-                modal: true
-                standardButtons: Dialog.Cancel
-                anchors.centerIn: parent
-                width: 300
-
-                ColumnLayout {
-                    width: parent.width
-                    spacing: 12
-
-                    Text { text: I18n.tr("search.filter.mime"); color: Theme.accent; font.bold: true }
-                    Flow {
-                        Layout.fillWidth: true; spacing: 4
-                        Button { text: I18n.tr("search.filter.images"); onClicked: { tagSearchBar.addChip("glob:*.{jpg,jpeg,png,gif,webp}"); filterDialog.close() } }
-                        Button { text: I18n.tr("search.filter.videos"); onClicked: { tagSearchBar.addChip("glob:*.{mp4,mkv,avi,mov}"); filterDialog.close() } }
-                        Button { text: I18n.tr("search.filter.docs"); onClicked: { tagSearchBar.addChip("glob:*.{pdf,doc,docx,txt,odt}"); filterDialog.close() } }
-                    }
-
-                    Text { text: I18n.tr("search.filter.size"); color: Theme.accent; font.bold: true }
-                    Flow {
-                        Layout.fillWidth: true; spacing: 4
-                        Button { text: "> 10MB"; onClicked: { tagSearchBar.addChip("fts:size > 10485760"); filterDialog.close() } }
-                        Button { text: "> 100MB"; onClicked: { tagSearchBar.addChip("fts:size > 104857600"); filterDialog.close() } }
-                        Button { text: "> 1GB"; onClicked: { tagSearchBar.addChip("fts:size > 1073741824"); filterDialog.close() } }
-                    }
-
-                    Text { text: I18n.tr("search.filter.date"); color: Theme.accent; font.bold: true }
-                    Flow {
-                        Layout.fillWidth: true; spacing: 4
-                        Button { text: I18n.tr("search.filter.2026"); onClicked: { tagSearchBar.addChip("fts:mtime > 1767225600"); filterDialog.close() } }
-                    }
-                }
-            }
-
-            ThemeButton {
-                text: window.isGridView ? I18n.tr("toolbar.view.list") : I18n.tr("toolbar.view.grid")
-                Layout.preferredHeight: 40
+            ItemDelegate {
+                Layout.preferredWidth: 40; Layout.preferredHeight: 40
                 onClicked: window.isGridView = !window.isGridView
+                padding: 10
+                contentItem: ThemeIcon {
+                    // Show icon of the view we would switch TO
+                    iconName: window.isGridView ? "view-list-symbolic" : "view-grid-symbolic"
+                    useTintColor: true
+                    tintColor: Theme.iconTint
+                }
+                background: Rectangle {
+                    color: parent.hovered ? Theme.bgHover : "transparent"
+                    radius: 4
+                    border.color: parent.hovered ? Theme.border : "transparent"
+                    border.width: 1
+                }
+                ToolTip.text: window.isGridView ? I18n.tr("toolbar.view.list") : I18n.tr("toolbar.view.grid")
+                ToolTip.visible: hovered
             }
 
-            ThemeButton {
-                text: I18n.tr("toolbar.hidden")
+            ItemDelegate {
+                Layout.preferredWidth: 40; Layout.preferredHeight: 40
+                checkable: true
+                checked: window.selectionMode
+                onClicked: window.selectionMode = !window.selectionMode
+                padding: 10
+                contentItem: ThemeIcon {
+                    iconName: "edit-select-all-symbolic"
+                    useTintColor: true
+                    tintColor: parent.checked ? Theme.accent : Theme.iconTint
+                }
+                background: Rectangle {
+                    color: parent.hovered ? Theme.bgHover : "transparent"
+                    radius: 4
+                    border.color: parent.hovered ? Theme.border : "transparent"
+                    border.width: 1
+                }
+                ToolTip.text: I18n.tr("toolbar.selection")
+                ToolTip.visible: hovered
+            }
+
+            ItemDelegate {
+                Layout.preferredWidth: 40; Layout.preferredHeight: 40
                 checkable: true
                 checked: window.showHidden
-                Layout.preferredHeight: 40
-                onToggled: {
-                    window.showHidden = checked
+                onClicked: {
+                    window.showHidden = !window.showHidden
                     if (window.isSearchMode) _executeSearch(window.searchChips)
                     else if (!window.isTrashView) _loadDirectory(window.currentPath)
                 }
+                padding: 10
+                contentItem: ThemeIcon {
+                    iconName: window.showHidden ? "visibility-symbolic" : "visibility-off-symbolic"
+                    useTintColor: true
+                    tintColor: parent.checked ? Theme.accent : Theme.iconTint
+                }
+                background: Rectangle {
+                    color: parent.hovered ? Theme.bgHover : "transparent"
+                    radius: 4
+                    border.color: parent.hovered ? Theme.border : "transparent"
+                    border.width: 1
+                }
+                ToolTip.text: I18n.tr("toolbar.hidden")
+                ToolTip.visible: hovered
             }
         }
     }
@@ -839,10 +915,9 @@ ApplicationWindow {
                         required property var modelData
                         required property int index
                         width: ListView.view.width
-                        leftPadding: 8
-                        rightPadding: 8 + (placesScrollBar.visible ? placesScrollBar.width + 4 : 0)
-                        topPadding: 0; bottomPadding: 0
-                        height: 36
+                        leftPadding: 12; rightPadding: 12
+                        topPadding: 8; bottomPadding: 8
+                        height: 40
                         onClicked: window.navigateTo(modelData.path)
                         contentItem: Row {
                             spacing: 8
@@ -864,6 +939,8 @@ ApplicationWindow {
                                    - (placesScrollBar.visible ? placesScrollBar.width + 4 : 0)
                             color: parent.hovered ? Theme.bgHover : "transparent"
                             radius: 4
+                            border.color: parent.hovered ? Theme.border : "transparent"
+                            border.width: 1
                         }
 
                         MouseArea {
@@ -903,8 +980,9 @@ ApplicationWindow {
                     delegate: ItemDelegate {
                         required property var modelData
                         width: ListView.view.width
-                        leftPadding: 8
-                        height: 36
+                        leftPadding: 12; rightPadding: 12
+                        topPadding: 8; bottomPadding: 8
+                        height: 40
                         onClicked: window.navigateTo(modelData.path)
                         contentItem: Row {
                             spacing: 8
@@ -926,6 +1004,8 @@ ApplicationWindow {
                             x: 4; width: parent.width - 8
                             color: parent.hovered ? Theme.bgHover : "transparent"
                             radius: 4
+                            border.color: parent.hovered ? Theme.border : "transparent"
+                            border.width: 1
                         }
                     }
                 }
@@ -952,8 +1032,9 @@ ApplicationWindow {
                     delegate: ItemDelegate {
                         required property var modelData
                         width: ListView.view.width
-                        leftPadding: 8
-                        height: 36
+                        leftPadding: 12; rightPadding: 12
+                        topPadding: 8; bottomPadding: 8
+                        height: 40
                         onClicked: window.executeSearch(modelData.chips)
                         contentItem: Row {
                             spacing: 8
@@ -973,8 +1054,10 @@ ApplicationWindow {
                         }
                         background: Rectangle {
                             x: 4; width: parent.width - 8
-                            color: parent.hovered ? "#2E3440" : "transparent"
+                            color: parent.hovered ? Theme.bgHover : "transparent"
                             radius: 4
+                            border.color: parent.hovered ? Theme.border : "transparent"
+                            border.width: 1
                         }
 
                         MouseArea {
@@ -993,7 +1076,9 @@ ApplicationWindow {
                 // Trash entry
                 ItemDelegate {
                     Layout.fillWidth: true
-                    leftPadding: 8; topPadding: 0; bottomPadding: 0; height: 36
+                    leftPadding: 12; rightPadding: 12
+                    topPadding: 8; bottomPadding: 8
+                    height: 40
                     onClicked: window.navigateToTrash()
                     contentItem: Row {
                         spacing: 8
@@ -1011,38 +1096,10 @@ ApplicationWindow {
                     }
                     background: Rectangle {
                         x: 4; width: parent.width - 8
-                        color: parent.hovered ? "#2E3440" : "transparent"
+                        color: parent.hovered ? Theme.bgHover : "transparent"
                         radius: 4
-                    }
-                }
-
-                // Pin current folder button
-                Button {
-                    Layout.fillWidth: true
-                    visible: !window.isSearchMode && !window.isTrashView
-                    onClicked: {
-                        var name = window.currentPath.split("/").pop() || window.currentPath
-                        TilboDaemon.pinPlace(name, window.currentPath, "folder", function(err) {
-                            if (!err) window._loadPlaces()
-                        })
-                    }
-                    background: Rectangle {
-                        color: parent.hovered ? "#2E3440" : "transparent"
-                        radius: 4; border.color: "#3B4252"; border.width: 1
-                    }
-                    contentItem: Row {
-                        anchors.centerIn: parent
-                        spacing: 4
-                        ThemeIcon {
-                            iconName: "folder-new"
-                            width: 14; height: 14
-                            anchors.verticalCenter: parent.verticalCenter
-                        }
-                        Text {
-                            text: I18n.tr("sidebar.pin_current")
-                            font.pixelSize: 12; color: Theme.accent
-                            anchors.verticalCenter: parent.verticalCenter
-                        }
+                        border.color: parent.hovered ? Theme.border : "transparent"
+                        border.width: 1
                     }
                 }
             }
@@ -1273,10 +1330,12 @@ ApplicationWindow {
                 }
 
                 FileGrid {
+                    id: fileGrid
                     entries: window.activeEntries
                     inlineThumbnails: window._useInlineThumbnails
                     iconSize: window._gridIconSize
                     selection: window.selectedPaths
+                    selectionMode: window.selectionMode
                     onSelectionChanged: window.selectedPaths = selection
                     onFileSelected: fileData => window.selectFile(fileData)
                     onDirectoryActivated: path => window.navigateTo(path)
@@ -1316,12 +1375,15 @@ ApplicationWindow {
                     onPasteRequested: () => window._paste()
                     onCreateFileRequested: () => window._createNew(false)
                     onCreateDirectoryRequested: () => window._createNew(true)
+                    onFilesDropped: (urls, target, isCopy) => window.handleFilesDropped(urls, target, isCopy)
                 }
 
                 FileList {
+                    id: fileList
                     entries: window.activeEntries
                     inlineThumbnails: window._useInlineThumbnails
                     selection: window.selectedPaths
+                    selectionMode: window.selectionMode
                     sortColumn: window._sortColumn
                     sortAscending: window._sortAscending
                     onSortRequested: (col, asc) => {
@@ -1365,6 +1427,7 @@ ApplicationWindow {
                     onPasteRequested: () => window._paste()
                     onCreateFileRequested: () => window._createNew(false)
                     onCreateDirectoryRequested: () => window._createNew(true)
+                    onFilesDropped: (urls, target, isCopy) => window.handleFilesDropped(urls, target, isCopy)
                 }
             }
         }
@@ -1688,6 +1751,23 @@ ApplicationWindow {
         RowLayout {
             anchors.fill: parent
             anchors.leftMargin: 12; anchors.rightMargin: 12; spacing: 8
+
+            ThemeButton {
+                Layout.preferredWidth: 32
+                Layout.preferredHeight: 32
+                iconName: "folder-new"
+                iconSize: 18
+                isGhost: true
+                visible: !window.isSearchMode && !window.isTrashView
+                onClicked: {
+                    var name = window.currentPath.split("/").pop() || window.currentPath
+                    TilboDaemon.pinPlace(name, window.currentPath, "folder", function(err) {
+                        if (!err) window._loadPlaces()
+                    })
+                }
+                ToolTip.text: I18n.tr("sidebar.pin_current")
+                ToolTip.visible: hovered
+            }
 
             Item {
                 Layout.fillWidth: true; Layout.fillHeight: true

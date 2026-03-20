@@ -55,8 +55,13 @@ type Syncer struct {
 	onFileSyncedSem chan struct{}
 }
 
+// onFileSyncedWorkerMultiplier controls the size of the goroutine pool that
+// dispatches OnFileSynced callbacks. Set to 2× CPU count to keep the pipeline
+// busy while I/O-bound harvesters wait on disk or subprocess output.
 const onFileSyncedWorkerMultiplier = 2
 
+// onFileSyncedWorkerCount returns the bounded goroutine pool size for
+// OnFileSynced dispatch, clamped to at least 1.
 func onFileSyncedWorkerCount() int {
 	return max(1, runtime.NumCPU()*onFileSyncedWorkerMultiplier)
 }

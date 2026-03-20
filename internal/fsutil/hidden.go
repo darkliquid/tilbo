@@ -1,4 +1,3 @@
-// Package fsutil contains shared filesystem path helpers.
 package fsutil
 
 import (

@@ -1,9 +1,3 @@
-// Package thumbnail generates XDG-compliant thumbnails for image and video
-// files.  Thumbnails are stored under ~/.cache/thumbnails/{normal,large}/ as
-// PNG files keyed by the MD5 of the canonical file:// URI.
-//
-// Image thumbnails are produced with disintegration/imaging.  Video thumbnails
-// are extracted via ffmpeg (must be on PATH).
 package thumbnail
 
 import (

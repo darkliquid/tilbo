@@ -24,6 +24,9 @@ import (
 // (Wd + Mask + Cookie + Len fields; the variable-length Name follows).
 const inotifyEventBaseSize = int(unsafe.Sizeof(unix.InotifyEvent{}))
 
+// inotifyDefaultMask covers the full set of filesystem changes tilbo cares
+// about: file creation, content writes (both buffered close and direct modify),
+// deletion, and both halves of a rename (moved-from + moved-to).
 const inotifyDefaultMask = unix.IN_CREATE | unix.IN_CLOSE_WRITE | unix.IN_MODIFY |
 	unix.IN_DELETE | unix.IN_MOVED_FROM | unix.IN_MOVED_TO
 
@@ -38,10 +41,10 @@ type inotifyImpl struct {
 	out     chan Event
 
 	pendMu       sync.Mutex
-	pending      map[string]*debounceEntry
-	rootPath     string
-	watchHidden  bool
-	excludePaths []string // absolute paths to skip entirely (e.g. FUSE mount)
+	pending      map[string]*debounceEntry // debounce state keyed by absolute path
+	rootPath     string                    // cleaned root of the watched tree
+	watchHidden  bool                      // whether to emit events for dotfiles/dotdirs
+	excludePaths []string                  // absolute paths to skip entirely (e.g. FUSE mount)
 }
 
 // newInotify creates an inotify watcher rooted at mountPath.
@@ -217,6 +220,9 @@ func (i *inotifyImpl) run(ctx context.Context) error {
 }
 
 // processEvents parses a raw inotify read buffer and dispatches events.
+// The buffer may contain multiple variable-length inotify_event records packed
+// contiguously. Each record's Name field is NUL-terminated but padded to align
+// the next record, so we cut at the first NUL byte to extract the clean name.
 //
 //nolint:gocognit // event decoding branches mirror kernel masks and rename state handling
 func (i *inotifyImpl) processEvents(ctx context.Context, buf []byte) {
@@ -228,6 +234,7 @@ func (i *inotifyImpl) processEvents(ctx context.Context, buf []byte) {
 		nameStart := offset + inotifyEventBaseSize
 		if nameLen > 0 && nameStart+nameLen <= len(buf) {
 			raw := buf[nameStart : nameStart+nameLen]
+			// The kernel NUL-pads the name for alignment; cut at the first NUL.
 			if before, _, ok := bytes.Cut(raw, []byte{0}); ok {
 				name = string(before)
 			} else {
@@ -266,7 +273,8 @@ func (i *inotifyImpl) processEvents(ctx context.Context, buf []byte) {
 			}
 		}
 
-		// Map inotify mask to Event; skip directory events and unhandled masks.
+		// Skip pure directory events — we only emit file-level events to consumers.
+		// Directory creation is handled above (adding recursive watches).
 		if mask&unix.IN_ISDIR != 0 {
 			continue
 		}
@@ -282,9 +290,9 @@ func (i *inotifyImpl) processEvents(ctx context.Context, buf []byte) {
 		case mask&unix.IN_DELETE != 0:
 			event.Kind = EventDelete
 		case mask&unix.IN_MOVED_FROM != 0:
-			event.Kind = EventDelete
+			event.Kind = EventDelete // treat as delete; the moved-to side will emit a create
 		case mask&unix.IN_MOVED_TO != 0:
-			event.Kind = EventCreate
+			event.Kind = EventCreate // treat as create; correlating rename pairs is not done here
 		default:
 			continue
 		}

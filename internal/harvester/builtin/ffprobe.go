@@ -18,11 +18,18 @@ type FFProbeHarvester struct {
 }
 
 const (
-	ffprobePriority        = 10
+	// ffprobePriority is 10, matching MediaHarvester's priority. Because
+	// FFProbeHarvester runs asynchronously (Async() == true), its results
+	// arrive after the synchronous MediaHarvester and override them, giving
+	// ffprobe's more accurate data precedence when the binary is available.
+	ffprobePriority = 10
+	// ffprobeRunTimeout is generous because ffprobe may need to scan the
+	// entire file for container-level metadata on large video files, and
+	// it runs asynchronously so it does not block rule evaluation.
 	ffprobeRunTimeout      = 30 * time.Second
-	ffprobeMetaInitCap     = 12
-	bitrateKbpsDivisor     = 1000
-	splitFractionPartCount = 2
+	ffprobeMetaInitCap     = 12   // expected number of metadata fields produced
+	bitrateKbpsDivisor     = 1000 // ffprobe reports bit_rate in bps; divide to get kbps
+	splitFractionPartCount = 2    // numerator + denominator in a rational fraction
 )
 
 // NewFFProbeHarvester looks up ffprobe on PATH. Returns nil if not found.
@@ -47,22 +54,28 @@ type ffprobeOutput struct {
 	Format  ffprobeFormat   `json:"format"`
 }
 
+// ffprobeStream represents a single stream (video, audio, subtitle, etc.)
+// from ffprobe's JSON output. Only fields relevant to metadata extraction are
+// mapped; ffprobe emits many more fields that we intentionally ignore.
 type ffprobeStream struct {
-	CodecType      string         `json:"codec_type"`
-	CodecName      string         `json:"codec_name"`
-	Width          int            `json:"width"`
-	Height         int            `json:"height"`
-	AvgFrameRate   string         `json:"avg_frame_rate"`
-	Channels       int            `json:"channels"`
-	ColorTransfer  string         `json:"color_transfer"`
-	ColorPrimaries string         `json:"color_primaries"`
-	Tags           map[string]any `json:"tags"`
+	CodecType      string         `json:"codec_type"`       // "video", "audio", "subtitle", etc.
+	CodecName      string         `json:"codec_name"`       // short codec name, e.g. "h264", "aac"
+	Width          int            `json:"width"`            // video pixel width (0 for audio)
+	Height         int            `json:"height"`           // video pixel height (0 for audio)
+	AvgFrameRate   string         `json:"avg_frame_rate"`   // rational "num/den" or bare float
+	Channels       int            `json:"channels"`         // audio channel count
+	ColorTransfer  string         `json:"color_transfer"`   // EOTF name, e.g. "smpte2084" for HDR10
+	ColorPrimaries string         `json:"color_primaries"`  // color gamut, e.g. "bt2020"
+	Tags           map[string]any `json:"tags"`             // per-stream key-value tags
 }
 
+// ffprobeFormat represents the container-level format block from ffprobe.
+// Duration and BitRate are strings because ffprobe emits them as decimal
+// number strings rather than typed JSON numbers.
 type ffprobeFormat struct {
-	Duration string         `json:"duration"`
-	BitRate  string         `json:"bit_rate"`
-	Tags     map[string]any `json:"tags"`
+	Duration string         `json:"duration"` // total duration in seconds as a decimal string
+	BitRate  string         `json:"bit_rate"` // overall bit rate in bps as a decimal string
+	Tags     map[string]any `json:"tags"`     // container-level tags (title, artist, etc.)
 }
 
 // Run calls ffprobe and returns a MetaMap with video/audio metadata:

@@ -14,6 +14,8 @@ import (
 // Kept short so a slow or unavailable daemon does not stall the shell prompt.
 const completionTimeout = 2 * time.Second
 
+// minMetaKeyArgs is the minimum positional arguments for metadata subcommands:
+// one path and one key.
 const minMetaKeyArgs = 2
 
 // completeTags returns tag names from the daemon that match toComplete,

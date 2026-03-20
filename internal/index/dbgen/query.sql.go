@@ -18,6 +18,9 @@ type AddFileTagParams struct {
 	TagID  int64 `json:"tag_id"`
 }
 
+// Associates a tag with a file. Uses INSERT OR IGNORE so duplicate
+// associations are silently skipped. The tag_cardinality_inc trigger
+// fires on successful insert to maintain the tags.cardinality counter.
 func (q *Queries) AddFileTag(ctx context.Context, arg AddFileTagParams) error {
 	_, err := q.db.ExecContext(ctx, addFileTag, arg.FileID, arg.TagID)
 	return err
@@ -27,6 +30,9 @@ const clearFileTags = `-- name: ClearFileTags :exec
 DELETE FROM file_tags WHERE file_id = ?
 `
 
+// Removes all tags from a file. Called before TAG_OPERATION_SET to replace
+// the entire tag set, and during file re-indexing when tags need to be
+// recomputed from scratch.
 func (q *Queries) ClearFileTags(ctx context.Context, fileID int64) error {
 	_, err := q.db.ExecContext(ctx, clearFileTags, fileID)
 	return err
@@ -36,6 +42,9 @@ const deleteFile = `-- name: DeleteFile :exec
 DELETE FROM files WHERE path = ?
 `
 
+// Permanently removes a file from the index. Cascades to file_tags, metadata,
+// tag_provenance, and tag_overrides via ON DELETE CASCADE foreign keys.
+// Called when a file is detected as deleted during a scan or explicitly removed.
 func (q *Queries) DeleteFile(ctx context.Context, path string) error {
 	_, err := q.db.ExecContext(ctx, deleteFile, path)
 	return err
@@ -50,6 +59,8 @@ type DeleteMetaParams struct {
 	Key    string `json:"key"`
 }
 
+// Removes a single metadata key from a file. Called when MetadataSetRequest
+// receives an empty value string, signaling deletion.
 func (q *Queries) DeleteMeta(ctx context.Context, arg DeleteMetaParams) error {
 	_, err := q.db.ExecContext(ctx, deleteMeta, arg.FileID, arg.Key)
 	return err
@@ -64,6 +75,8 @@ type DeleteSidecarParams struct {
 	Device int64 `json:"device"`
 }
 
+// Removes the sidecar data for a file. Called when a file is permanently
+// deleted (not trashed) to clean up orphaned sidecar records.
 func (q *Queries) DeleteSidecar(ctx context.Context, arg DeleteSidecarParams) error {
 	_, err := q.db.ExecContext(ctx, deleteSidecar, arg.Inode, arg.Device)
 	return err
@@ -78,6 +91,10 @@ type DeleteStaleFilesParams struct {
 	IndexedAt int64  `json:"indexed_at"`
 }
 
+// Removes files under a given path prefix that were not seen in the most
+// recent scan cycle. The indexed_at timestamp is compared against the scan
+// start time to identify stale entries. Used at the end of each directory
+// scan to clean up files that were moved or deleted outside tilbo.
 func (q *Queries) DeleteStaleFiles(ctx context.Context, arg DeleteStaleFilesParams) error {
 	_, err := q.db.ExecContext(ctx, deleteStaleFiles, arg.Path, arg.IndexedAt)
 	return err
@@ -87,6 +104,9 @@ const getFileIDByPath = `-- name: GetFileIDByPath :one
 SELECT id FROM files WHERE path = ?
 `
 
+// Looks up the internal row ID for a file by its absolute path. Used by
+// handlers that receive a path from the IPC layer and need the integer ID
+// for tag/metadata operations.
 func (q *Queries) GetFileIDByPath(ctx context.Context, path string) (int64, error) {
 	row := q.db.QueryRowContext(ctx, getFileIDByPath, path)
 	var id int64
@@ -104,6 +124,8 @@ type GetFileMetaRow struct {
 	Source string `json:"source"`
 }
 
+// Returns all metadata key-value pairs (with source attribution) for a file.
+// Used by MetadataRequest to build the full metadata response.
 func (q *Queries) GetFileMeta(ctx context.Context, fileID int64) ([]GetFileMetaRow, error) {
 	rows, err := q.db.QueryContext(ctx, getFileMeta, fileID)
 	if err != nil {
@@ -137,6 +159,9 @@ type GetFileSummaryRow struct {
 	SizeBytes int64 `json:"size_bytes"`
 }
 
+// Retrieves the core stat fields (id, mtime, size) for a file. Used during
+// scanning to check whether a file has changed since it was last indexed,
+// avoiding unnecessary re-processing of unchanged files.
 func (q *Queries) GetFileSummary(ctx context.Context, path string) (GetFileSummaryRow, error) {
 	row := q.db.QueryRowContext(ctx, getFileSummary, path)
 	var i GetFileSummaryRow
@@ -145,12 +170,15 @@ func (q *Queries) GetFileSummary(ctx context.Context, path string) (GetFileSumma
 }
 
 const getFileTags = `-- name: GetFileTags :many
-SELECT t.name FROM file_tags ft 
-JOIN tags t ON t.id = ft.tag_id 
+SELECT t.name FROM file_tags ft
+JOIN tags t ON t.id = ft.tag_id
 WHERE ft.file_id = ?
 ORDER BY t.name
 `
 
+// Returns all tag names for a given file, ordered alphabetically. Used by
+// MetadataRequest and HydrateTagsRequest handlers to populate tag lists
+// in responses.
 func (q *Queries) GetFileTags(ctx context.Context, fileID int64) ([]string, error) {
 	rows, err := q.db.QueryContext(ctx, getFileTags, fileID)
 	if err != nil {
@@ -175,8 +203,9 @@ func (q *Queries) GetFileTags(ctx context.Context, fileID int64) ([]string, erro
 }
 
 const getStats = `-- name: GetStats :one
-SELECT 
-    (SELECT COUNT(*) FROM files) as files_count, 
+
+SELECT
+    (SELECT COUNT(*) FROM files) as files_count,
     (SELECT COUNT(*) FROM tags) as tags_count
 `
 
@@ -185,6 +214,11 @@ type GetStatsRow struct {
 	TagsCount  int64 `json:"tags_count"`
 }
 
+// ---------------------------------------------------------------------------
+// Statistics
+// ---------------------------------------------------------------------------
+// Returns aggregate counts for the StatusRequest handler: total number of
+// indexed files and total number of distinct tags.
 func (q *Queries) GetStats(ctx context.Context) (GetStatsRow, error) {
 	row := q.db.QueryRowContext(ctx, getStats)
 	var i GetStatsRow
@@ -204,6 +238,9 @@ type GetTagOverridesRow struct {
 	RuleName string `json:"rule_name"`
 }
 
+// Returns all tag overrides for a file. Overrides are rules that suppress
+// (prevent) specific tags from being applied, even if a harvester would
+// normally add them. Used during tag computation to filter out suppressed tags.
 func (q *Queries) GetTagOverrides(ctx context.Context, fileID int64) ([]GetTagOverridesRow, error) {
 	rows, err := q.db.QueryContext(ctx, getTagOverrides, fileID)
 	if err != nil {
@@ -231,6 +268,8 @@ const listAllTags = `-- name: ListAllTags :many
 SELECT name FROM tags ORDER BY name
 `
 
+// Returns all known tag names in alphabetical order. Used by the ListTags
+// IPC handler for autocomplete and tag browsing UIs.
 func (q *Queries) ListAllTags(ctx context.Context) ([]string, error) {
 	rows, err := q.db.QueryContext(ctx, listAllTags)
 	if err != nil {
@@ -258,6 +297,8 @@ const listFilePaths = `-- name: ListFilePaths :many
 SELECT path FROM files ORDER BY path
 `
 
+// Returns all indexed file paths in alphabetical order. Used for bulk
+// operations such as full tag recomputation or export.
 func (q *Queries) ListFilePaths(ctx context.Context) ([]string, error) {
 	rows, err := q.db.QueryContext(ctx, listFilePaths)
 	if err != nil {
@@ -293,6 +334,8 @@ type ListFileTagPairsRow struct {
 	Name string `json:"name"`
 }
 
+// Returns every (path, tag_name) pair in the index. Used for bulk export
+// and for building the in-memory tag graph used by RelatedRequest.
 func (q *Queries) ListFileTagPairs(ctx context.Context) ([]ListFileTagPairsRow, error) {
 	rows, err := q.db.QueryContext(ctx, listFileTagPairs)
 	if err != nil {
@@ -317,6 +360,7 @@ func (q *Queries) ListFileTagPairs(ctx context.Context) ([]ListFileTagPairsRow, 
 }
 
 const readSidecar = `-- name: ReadSidecar :one
+
 SELECT data FROM sidecar_data WHERE inode = ? AND device = ?
 `
 
@@ -325,6 +369,13 @@ type ReadSidecarParams struct {
 	Device int64 `json:"device"`
 }
 
+// ---------------------------------------------------------------------------
+// Sidecar data
+// ---------------------------------------------------------------------------
+// Reads the JSON sidecar payload for a file identified by its inode/device
+// pair. Sidecar data contains user-applied tags and metadata that persist
+// across file renames (since inode/device identity is stable). Used during
+// indexing to merge user data with harvester-produced data.
 func (q *Queries) ReadSidecar(ctx context.Context, arg ReadSidecarParams) (string, error) {
 	row := q.db.QueryRowContext(ctx, readSidecar, arg.Inode, arg.Device)
 	var data string
@@ -341,12 +392,15 @@ type RemoveFileTagParams struct {
 	TagID  int64 `json:"tag_id"`
 }
 
+// Removes a single tag from a file. The tag_cardinality_dec trigger fires
+// on successful delete to decrement the tags.cardinality counter.
 func (q *Queries) RemoveFileTag(ctx context.Context, arg RemoveFileTagParams) error {
 	_, err := q.db.ExecContext(ctx, removeFileTag, arg.FileID, arg.TagID)
 	return err
 }
 
 const setTagProvenance = `-- name: SetTagProvenance :exec
+
 INSERT INTO tag_provenance(file_id, tag_id, source, set_at)
 VALUES (?, ?, ?, ?)
 ON CONFLICT(file_id, tag_id) DO UPDATE SET
@@ -361,6 +415,12 @@ type SetTagProvenanceParams struct {
 	SetAt  int64  `json:"set_at"`
 }
 
+// ---------------------------------------------------------------------------
+// Tag provenance & overrides
+// ---------------------------------------------------------------------------
+// Records which source (harvester or rule) applied a tag to a file, and when.
+// This provenance information is used for debugging and for resolving
+// conflicts when multiple sources try to manage the same tag.
 func (q *Queries) SetTagProvenance(ctx context.Context, arg SetTagProvenanceParams) error {
 	_, err := q.db.ExecContext(ctx, setTagProvenance,
 		arg.FileID,
@@ -372,6 +432,8 @@ func (q *Queries) SetTagProvenance(ctx context.Context, arg SetTagProvenancePara
 }
 
 const upsertFile = `-- name: UpsertFile :one
+
+
 INSERT INTO files(path, inode, device, mtime, size_bytes, indexed_at)
 VALUES (?, ?, ?, ?, ?, ?)
 ON CONFLICT(path) DO UPDATE SET
@@ -392,6 +454,18 @@ type UpsertFileParams struct {
 	IndexedAt int64  `json:"indexed_at"`
 }
 
+// query.sql - Named SQL queries for tilbo's index database.
+//
+// These queries are consumed by sqlc to generate type-safe Go code. Each
+// query is annotated with its name, return mode (:exec, :one, :many), and
+// a description of when it is used.
+// ---------------------------------------------------------------------------
+// File CRUD
+// ---------------------------------------------------------------------------
+// Inserts a new file record or updates an existing one when the path already
+// exists. Called during indexing scans to track every discovered file along
+// with its inode/device identity and modification metadata. Returns the
+// file's row ID for use in subsequent tag/metadata operations.
 func (q *Queries) UpsertFile(ctx context.Context, arg UpsertFileParams) (int64, error) {
 	row := q.db.QueryRowContext(ctx, upsertFile,
 		arg.Path,
@@ -407,6 +481,7 @@ func (q *Queries) UpsertFile(ctx context.Context, arg UpsertFileParams) (int64, 
 }
 
 const upsertMeta = `-- name: UpsertMeta :exec
+
 INSERT INTO metadata(file_id, key, value, source)
 VALUES (?, ?, ?, ?)
 ON CONFLICT(file_id, key) DO UPDATE SET
@@ -421,6 +496,12 @@ type UpsertMetaParams struct {
 	Source string `json:"source"`
 }
 
+// ---------------------------------------------------------------------------
+// Metadata
+// ---------------------------------------------------------------------------
+// Sets a metadata key-value pair on a file. If the key already exists, both
+// the value and source attribution are updated. Called by harvesters (exif,
+// xattr, etc.) during indexing and by MetadataSetRequest for manual edits.
 func (q *Queries) UpsertMeta(ctx context.Context, arg UpsertMetaParams) error {
 	_, err := q.db.ExecContext(ctx, upsertMeta,
 		arg.FileID,
@@ -432,11 +513,18 @@ func (q *Queries) UpsertMeta(ctx context.Context, arg UpsertMetaParams) error {
 }
 
 const upsertTag = `-- name: UpsertTag :one
+
 INSERT INTO tags(name) VALUES (?)
 ON CONFLICT(name) DO UPDATE SET name = name
 RETURNING id
 `
 
+// ---------------------------------------------------------------------------
+// Tags
+// ---------------------------------------------------------------------------
+// Inserts a tag name or returns the existing row if the name already exists.
+// The "DO UPDATE SET name = name" is a no-op trick to make RETURNING work
+// on conflict. Returns the tag's row ID for use in file_tags joins.
 func (q *Queries) UpsertTag(ctx context.Context, name string) (int64, error) {
 	row := q.db.QueryRowContext(ctx, upsertTag, name)
 	var id int64
@@ -445,8 +533,8 @@ func (q *Queries) UpsertTag(ctx context.Context, name string) (int64, error) {
 }
 
 const writeSidecar = `-- name: WriteSidecar :exec
-INSERT INTO sidecar_data(inode, device, data) 
-VALUES (?, ?, ?) 
+INSERT INTO sidecar_data(inode, device, data)
+VALUES (?, ?, ?)
 ON CONFLICT(inode, device) DO UPDATE SET data=excluded.data
 `
 
@@ -456,6 +544,9 @@ type WriteSidecarParams struct {
 	Data   string `json:"data"`
 }
 
+// Writes or updates the JSON sidecar payload for a file. Called when the
+// user manually adds/removes tags or sets metadata, ensuring those changes
+// survive re-indexing and file renames.
 func (q *Queries) WriteSidecar(ctx context.Context, arg WriteSidecarParams) error {
 	_, err := q.db.ExecContext(ctx, writeSidecar, arg.Inode, arg.Device, arg.Data)
 	return err

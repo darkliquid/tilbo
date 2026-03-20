@@ -18,17 +18,19 @@ import (
 const dialTimeout = 5 * time.Second
 
 // Client is a thread-safe client for the tilbo IPC protocol.
+// It maintains a single persistent connection to the daemon's Unix socket and
+// multiplexes concurrent requests using monotonically increasing request IDs.
 type Client struct {
 	path    string
 	conn    net.Conn
-	mu      sync.Mutex
-	writeMu sync.Mutex
+	mu      sync.Mutex   // protects reqs map and nextID
+	writeMu sync.Mutex   // serialises writes to conn (separate from mu to avoid blocking reads)
 
-	nextID uint64
+	nextID uint64 // monotonically increasing request ID counter
 
-	reqs   map[uint64]chan *ipcv1.Response
+	reqs   map[uint64]chan *ipcv1.Response // pending requests keyed by request ID
 	closed atomic.Bool
-	wg     sync.WaitGroup
+	wg     sync.WaitGroup // tracks readLoop goroutine for graceful shutdown
 }
 
 // NewClient creates a new connected IPC Client.
@@ -62,6 +64,10 @@ func (c *Client) Close() error {
 	return nil
 }
 
+// readLoop runs in a background goroutine, reading newline-delimited JSON
+// envelopes from the connection and dispatching responses to waiting Call()
+// callers via their registered channel. On connection close, drainReqs
+// unblocks all outstanding callers.
 func (c *Client) readLoop() {
 	defer c.wg.Done()
 	defer c.conn.Close()
@@ -81,6 +87,8 @@ func (c *Client) readLoop() {
 		}
 
 		env := &ipcv1.Envelope{}
+		// DiscardUnknown allows forward-compatible evolution of the proto schema:
+		// newer daemons can add fields without breaking older clients.
 		if err := (protojson.UnmarshalOptions{DiscardUnknown: true}).Unmarshal(line, env); err != nil {
 			if c.closed.Load() {
 				return
@@ -90,9 +98,10 @@ func (c *Client) readLoop() {
 
 		resp := env.GetResponse()
 		if resp == nil {
-			continue // ignore non-responses
+			continue // ignore non-responses (e.g. server-push events)
 		}
 
+		// Match response to pending request by ID and deliver via buffered channel.
 		c.mu.Lock()
 		ch, ok := c.reqs[env.GetRequestId()]
 		if ok {
@@ -118,7 +127,9 @@ func (c *Client) drainReqs() {
 	}
 }
 
-// Call sends a request and waits for the response.
+// Call sends a request and waits for the matching response. It is safe for
+// concurrent use — multiple goroutines may call Call simultaneously. Each
+// request gets a unique ID and a dedicated response channel.
 func (c *Client) Call(ctx context.Context, req *ipcv1.Request) (*ipcv1.Response, error) {
 	if c.closed.Load() {
 		return nil, errors.New("ipc client closed")
@@ -127,6 +138,7 @@ func (c *Client) Call(ctx context.Context, req *ipcv1.Request) (*ipcv1.Response,
 		return nil, err
 	}
 
+	// Allocate a unique request ID and register a response channel.
 	c.mu.Lock()
 	id := c.nextID
 	c.nextID++
@@ -134,6 +146,8 @@ func (c *Client) Call(ctx context.Context, req *ipcv1.Request) (*ipcv1.Response,
 	c.reqs[id] = ch
 	c.mu.Unlock()
 
+	// Double-check context between registration and write to avoid sending
+	// a request that will never be read.
 	if err := ctx.Err(); err != nil {
 		c.mu.Lock()
 		delete(c.reqs, id)

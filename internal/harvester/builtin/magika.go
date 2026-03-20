@@ -36,6 +36,9 @@ type MagikaHarvester struct {
 	binary string
 }
 
+// magikaRunTimeout caps how long the magika subprocess may run. Magika's
+// deep-learning model is lightweight but can stall on very large files or
+// under resource contention, so we bound it to avoid blocking the pipeline.
 const magikaRunTimeout = 15 * time.Second
 
 // NewMagikaHarvester looks up magika on PATH. Returns nil if not found.

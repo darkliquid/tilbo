@@ -72,9 +72,15 @@ const (
 	// outChanBuf is the Events channel capacity.
 	outChanBuf = 512
 
+	// watcherShutdownWait is the maximum time Run waits for the hybrid inotify
+	// goroutine to exit before giving up during shutdown.
 	watcherShutdownWait = 2 * time.Second
+	// fanHandleHeaderSize is the fixed-size header of a kernel file_handle:
+	// handle_bytes (u32) + handle_type (i32).
 	fanHandleHeaderSize = 8
-	mountInfoMinFields  = 5
+	// mountInfoMinFields is the minimum number of whitespace-delimited fields
+	// expected in a /proc/self/mountinfo line. Field index 4 is the mount point.
+	mountInfoMinFields = 5
 )
 
 // fanotifyMetaVersion matches FANOTIFY_METADATA_VERSION in linux/fanotify.h.

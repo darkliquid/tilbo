@@ -25,6 +25,8 @@ var (
 	buildDate = "unknown"
 )
 
+// sockFlag is the --socket persistent flag shared by all commands that need
+// the daemon. Set from config or defaulted to /run/user/$UID/tilbo.sock.
 var sockFlag string
 
 var rootCmd = &cobra.Command{

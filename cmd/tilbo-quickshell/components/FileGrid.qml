@@ -42,6 +42,7 @@ Item {
     signal pasteRequested()
     signal createFileRequested()
     signal createDirectoryRequested()
+    signal filesDropped(var urls, string targetPath, bool isCopy)
 
     // Helper to check if a MIME type is thumbnailable.
     function _isThumbnailable(mime) {
@@ -51,16 +52,78 @@ Item {
     // Index of the cell currently being renamed; -1 means none.
     property int _renamingIndex: -1
 
+    property bool selectionMode: false
+
+    function selectAll() {
+        var all = []
+        for (var i = 0; i < entries.length; i++) {
+            all.push(entries[i].path)
+        }
+        root.selection = all
+    }
+
     GridView {
         id: grid
         anchors.fill: parent
         anchors.margins: 8
 
+        // Rubber band selection
+        Rectangle {
+            id: rubberBand
+            property int startX: 0
+            property int startY: 0
+            visible: false
+            color: Theme.selection
+            opacity: 0.3
+            border.color: Theme.selectionBorder
+            border.width: 1
+            z: 10
+        }
+
         MouseArea {
             anchors.fill: parent
             z: -1
-            acceptedButtons: Qt.RightButton
-            onClicked: (mouse) => {
+            acceptedButtons: Qt.LeftButton | Qt.RightButton
+            onPressed: (mouse) => {
+                if (mouse.button === Qt.LeftButton) {
+                    rubberBand.startX = mouse.x + grid.contentX
+                    rubberBand.startY = mouse.y + grid.contentY
+                    rubberBand.x = mouse.x
+                    rubberBand.y = mouse.y
+                    rubberBand.width = 0
+                    rubberBand.height = 0
+                    rubberBand.visible = true
+                }
+            }
+            onPositionChanged: (mouse) => {
+                if (rubberBand.visible) {
+                    var curX = mouse.x + grid.contentX
+                    var curY = mouse.y + grid.contentY
+                    rubberBand.x = Math.min(rubberBand.startX, curX) - grid.contentX
+                    rubberBand.y = Math.min(rubberBand.startY, curY) - grid.contentY
+                    rubberBand.width = Math.abs(curX - rubberBand.startX)
+                    rubberBand.height = Math.abs(curY - rubberBand.startY)
+
+                    // Update selection based on intersection
+                    var newSelection = []
+                    for (var i = 0; i < grid.count; i++) {
+                        var item = grid.contentItem.children[i]
+                        if (!item || item.index === undefined) continue
+                        
+                        var itemX = item.x
+                        var itemY = item.y
+                        if (itemX + item.width > rubberBand.x + grid.contentX &&
+                            itemX < rubberBand.x + grid.contentX + rubberBand.width &&
+                            itemY + item.height > rubberBand.y + grid.contentY &&
+                            itemY < rubberBand.y + grid.contentY + rubberBand.height) {
+                            newSelection.push(root.entries[i].path)
+                        }
+                    }
+                    root.selection = newSelection
+                }
+            }
+            onReleased: (mouse) => {
+                rubberBand.visible = false
                 if (mouse.button === Qt.RightButton) {
                     root.selection = []
                     root._lastSelectedIndex = -1
@@ -75,6 +138,14 @@ Item {
         clip: true
         ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
 
+        // Background DropArea for dropping into current directory
+        DropArea {
+            anchors.fill: parent
+            onDropped: (drop) => {
+                root.filesDropped(drop.urls, "", drop.proposedAction === Qt.CopyAction)
+            }
+        }
+
         delegate: Item {
             id: cell
             required property var modelData
@@ -85,6 +156,7 @@ Item {
             property bool renaming: root._renamingIndex === cell.index
 
             Rectangle {
+                id: cellRect
                 anchors.fill: parent
                 anchors.margins: 4
                 radius: 6
@@ -143,6 +215,11 @@ Item {
                             anchors.bottom: parent.bottom
                             anchors.right: parent.right
                             spacing: 1
+                            ThemeIcon {
+                                iconName: "emblem-symbolic-link"
+                                width: 16; height: 16
+                                visible: cell.modelData.isLink
+                            }
                             Repeater {
                                 model: gridIconItem._badges.slice(0, 3)
                                 ThemeIcon {
@@ -150,6 +227,21 @@ Item {
                                     width: 16; height: 16
                                 }
                             }
+                        }
+                    }
+
+                    // Selection checkbox for mass selection mode
+                    CheckBox {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        visible: root.selectionMode
+                        checked: cellRect.selected
+                        onToggled: {
+                            var path = cell.modelData.path
+                            var currentSelection = root.selection.slice()
+                            var idx = currentSelection.indexOf(path)
+                            if (checked && idx === -1) currentSelection.push(path)
+                            else if (!checked && idx !== -1) currentSelection.splice(idx, 1)
+                            root.selection = currentSelection
                         }
                     }
 
@@ -177,6 +269,7 @@ Item {
                             color: Theme.bgInput; radius: 3
                             border.color: Theme.borderFocus; border.width: 1
                         }
+                        onVisibleChanged: {
                             if (visible) { selectAll(); forceActiveFocus() }
                         }
                         onAccepted: {
@@ -211,6 +304,25 @@ Item {
                         }
                     }
                 }
+
+                // DropArea for folders
+                DropArea {
+                    anchors.fill: parent
+                    enabled: cell.modelData.isDir
+                    onEntered: (drag) => {
+                        cellRect.border.color = Theme.accent
+                        cellRect.border.width = 2
+                    }
+                    onExited: {
+                        cellRect.border.color = cellRect.selected ? Theme.selectionBorder : "transparent"
+                        cellRect.border.width = 1
+                    }
+                    onDropped: (drop) => {
+                        cellRect.border.color = cellRect.selected ? Theme.selectionBorder : "transparent"
+                        cellRect.border.width = 1
+                        root.filesDropped(drop.urls, cell.modelData.path, drop.proposedAction === Qt.CopyAction)
+                    }
+                }
             }
 
             MouseArea {
@@ -220,6 +332,8 @@ Item {
                 acceptedButtons: Qt.LeftButton | Qt.RightButton
                 cursorShape: Qt.PointingHandCursor
                 enabled: !cell.renaming
+
+                drag.target: dragProxy
 
                 onClicked: (mouse) => {
                     if (mouse.button === Qt.RightButton) {
@@ -262,6 +376,30 @@ Item {
                     if (mouse.button !== Qt.LeftButton) return
                     if (cell.modelData.isDir) root.directoryActivated(cell.modelData.path)
                     else                      root.fileOpenRequested(cell.modelData.path)
+                }
+
+                Item {
+                    id: dragProxy
+                    width: 1; height: 1
+                    Drag.active: cellMA.drag.active
+                    Drag.hotSpot.x: 0
+                    Drag.hotSpot.y: 0
+                    Drag.mimeData: { "text/uri-list": root.selection.map(p => "file://" + p).join("\n") }
+                    Drag.dragType: Drag.Internal
+                    
+                    // Visual feedback during drag
+                    visible: false
+                }
+                
+                // Ghost icon during drag
+                ThemeIcon {
+                    visible: cellMA.drag.active
+                    iconName: cell.modelData.iconName || (cell.modelData.isDir ? "folder" : "application-x-generic")
+                    width: 32; height: 32
+                    opacity: 0.7
+                    x: cellMA.mouseX - 16
+                    y: cellMA.mouseY - 16
+                    z: 100
                 }
             }
         }

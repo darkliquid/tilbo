@@ -1,11 +1,3 @@
-// Package xattr provides read and write access to the extended attributes used
-// by tilbo for tag and metadata storage.
-//
-// Schema:
-//
-//	user.xdg.tags      — comma-separated list of tag names (XDG standard)
-//	user.meta.<key>    — arbitrary string metadata values
-//	user.tags.source   — JSON object mapping tag name → harvester name
 package xattr
 
 import (
@@ -33,6 +25,10 @@ const (
 	XattrSourceKey = "user.tags.source"
 )
 
+// sidecarStore abstracts the sidecar.Store for testing and to avoid a hard
+// dependency on SQLite in the xattr package. When non-nil, xattr operations
+// fall back to the sidecar if the underlying filesystem does not support
+// extended attributes (ENOTSUP/EOPNOTSUPP).
 type sidecarStore interface {
 	Read(ctx context.Context, path string) (*sidecar.Data, error)
 	Remove(ctx context.Context, path string) error

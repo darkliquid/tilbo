@@ -1,11 +1,35 @@
+// Tilbo IPC Protocol v1
+//
+// This file defines the inter-process communication protocol between the tilbo
+// daemon (tilbo-daemon) and its GUI/CLI clients (e.g. tilbo-quickshell, tilbo CLI).
+//
+// Communication uses a request/response pattern multiplexed over a single Unix
+// domain socket connection, with support for unsolicited server-pushed events.
+// Every message on the wire is wrapped in an Envelope which carries a request_id
+// for correlation and exactly one of: Request, Response, or Event.
+//
+// The protocol is serialized as length-prefixed protobuf (4-byte big-endian
+// length header followed by the serialized Envelope).
+
 syntax = "proto3";
 
 package tilbo.ipc.v1;
 
 option go_package = "github.com/darkliquid/tilbo/internal/ipc/gen/tilbo/ipc/v1;ipcv1";
 
+// ---------------------------------------------------------------------------
+// Top-level wire messages
+// ---------------------------------------------------------------------------
+
+// Envelope is the top-level message sent on every IPC exchange. It wraps a
+// single request, response, or event with a correlation ID so clients can
+// match responses to their originating requests.
 message Envelope {
+  // Monotonically increasing ID assigned by the sender. Responses echo the
+  // request_id of the request they are answering. Events use request_id = 0.
   uint64 request_id = 1;
+
+  // Exactly one of the three payload types will be set.
   oneof payload {
     Request request = 2;
     Response response = 3;
@@ -13,518 +37,949 @@ message Envelope {
   }
 }
 
+// Request is the union of all client-to-daemon request types. Exactly one
+// field will be set, indicating the operation to perform.
 message Request {
   oneof kind {
+    // -- Search & discovery --
     SearchRequest search = 1;
+    ListTagsRequest list_tags = 8;
+    HydrateTagsRequest hydrate_tags = 9;
+    RelatedRequest related = 5;
+    GlobSearchRequest glob_search = 12;
+
+    // -- Tag & metadata mutations --
     TagRequest tag = 2;
     MetadataRequest metadata = 3;
     MetadataSetRequest metadata_set = 4;
-    RelatedRequest related = 5;
+
+    // -- Daemon administration --
     StatusRequest status = 6;
     ReloadRulesRequest reload_rules = 7;
-    ListTagsRequest list_tags = 8;
-    HydrateTagsRequest hydrate_tags = 9;
+
+    // -- Filesystem browsing --
     ListDirectoryRequest list_directory = 10;
     StatFileRequest stat_file = 11;
-    GlobSearchRequest glob_search = 12;
+
+    // -- File operations --
     RenameFileRequest rename_file = 13;
     DeleteFileRequest delete_file = 14;
     ChmodFileRequest chmod_file = 15;
-    ListPlacesRequest list_places = 16;
-    PinPlaceRequest pin_place = 17;
-    UnpinPlaceRequest unpin_place = 18;
-    TrashFileRequest trash_file = 19;
-    ListTrashRequest list_trash = 20;
-    RestoreTrashRequest restore_trash = 21;
-    EmptyTrashRequest empty_trash = 22;
-    ListAppsForFileRequest list_apps_for_file = 23;
-    OpenWithAppRequest open_with_app = 24;
-    GetBrowserConfigRequest get_browser_config = 25;
-    GetFileBadgesRequest get_file_badges = 26;
-    GetFileActionsRequest get_file_actions = 27;
-    RunFileActionRequest run_file_action = 28;
-    LaunchGUIRequest launch_gui = 29;
-    GetThumbnailRequest get_thumbnail = 30;
     CopyRequest copy = 31;
     PasteRequest paste = 32;
     CreateFileRequest create_file = 33;
     CreateDirectoryRequest create_directory = 34;
+
+    // -- Places (sidebar bookmarks) --
+    ListPlacesRequest list_places = 16;
+    PinPlaceRequest pin_place = 17;
+    UnpinPlaceRequest unpin_place = 18;
+
+    // -- Trash management --
+    TrashFileRequest trash_file = 19;
+    ListTrashRequest list_trash = 20;
+    RestoreTrashRequest restore_trash = 21;
+    EmptyTrashRequest empty_trash = 22;
+
+    // -- Desktop integration --
+    ListAppsForFileRequest list_apps_for_file = 23;
+    OpenWithAppRequest open_with_app = 24;
+    GetBrowserConfigRequest get_browser_config = 25;
+    LaunchGUIRequest launch_gui = 29;
+    GetThumbnailRequest get_thumbnail = 30;
     ListMountsRequest list_mounts = 35;
+
+    // -- Extension system (badges & actions) --
+    GetFileBadgesRequest get_file_badges = 26;
+    GetFileActionsRequest get_file_actions = 27;
+    RunFileActionRequest run_file_action = 28;
+
+    // -- Saved searches --
     PinSearchRequest pin_search = 36;
     UnpinSearchRequest unpin_search = 37;
     ListSavedSearchesRequest list_saved_searches = 38;
   }
 }
 
+// Response is the union of all daemon-to-client response types. The field set
+// here corresponds to the request kind that triggered it, or error for any
+// request that failed.
 message Response {
   oneof kind {
     ErrorResponse error = 1;
+
+    // -- Search & discovery --
     SearchResponse search = 2;
-    TagResponse tag = 3;
-    MetadataResponse metadata = 4;
-    RelatedResponse related = 5;
-    StatusResponse status = 6;
-    ReloadRulesResponse reload_rules = 7;
     ListTagsResponse list_tags = 8;
     HydrateTagsResponse hydrate_tags = 9;
+    RelatedResponse related = 5;
+    GlobSearchResponse glob_search = 12;
+
+    // -- Tag & metadata mutations --
+    TagResponse tag = 3;
+    MetadataResponse metadata = 4;
+
+    // -- Daemon administration --
+    StatusResponse status = 6;
+    ReloadRulesResponse reload_rules = 7;
+
+    // -- Filesystem browsing --
     ListDirectoryResponse list_directory = 10;
     StatFileResponse stat_file = 11;
-    GlobSearchResponse glob_search = 12;
+
+    // -- File operations --
     RenameFileResponse rename_file = 13;
     DeleteFileResponse delete_file = 14;
     ChmodFileResponse chmod_file = 15;
-    ListPlacesResponse list_places = 16;
-    PinPlaceResponse pin_place = 17;
-    UnpinPlaceResponse unpin_place = 18;
-    TrashFileResponse trash_file = 19;
-    ListTrashResponse list_trash = 20;
-    RestoreTrashResponse restore_trash = 21;
-    EmptyTrashResponse empty_trash = 22;
-    ListAppsForFileResponse list_apps_for_file = 23;
-    OpenWithAppResponse open_with_app = 24;
-    GetBrowserConfigResponse get_browser_config = 25;
-    GetFileBadgesResponse get_file_badges = 26;
-    GetFileActionsResponse get_file_actions = 27;
-    RunFileActionResponse run_file_action = 28;
-    LaunchGUIResponse launch_gui = 29;
-    GetThumbnailResponse get_thumbnail = 30;
     CopyResponse copy = 31;
     PasteResponse paste = 32;
     CreateFileResponse create_file = 33;
     CreateDirectoryResponse create_directory = 34;
+
+    // -- Places (sidebar bookmarks) --
+    ListPlacesResponse list_places = 16;
+    PinPlaceResponse pin_place = 17;
+    UnpinPlaceResponse unpin_place = 18;
+
+    // -- Trash management --
+    TrashFileResponse trash_file = 19;
+    ListTrashResponse list_trash = 20;
+    RestoreTrashResponse restore_trash = 21;
+    EmptyTrashResponse empty_trash = 22;
+
+    // -- Desktop integration --
+    ListAppsForFileResponse list_apps_for_file = 23;
+    OpenWithAppResponse open_with_app = 24;
+    GetBrowserConfigResponse get_browser_config = 25;
+    LaunchGUIResponse launch_gui = 29;
+    GetThumbnailResponse get_thumbnail = 30;
     ListMountsResponse list_mounts = 35;
+
+    // -- Extension system (badges & actions) --
+    GetFileBadgesResponse get_file_badges = 26;
+    GetFileActionsResponse get_file_actions = 27;
+    RunFileActionResponse run_file_action = 28;
+
+    // -- Saved searches --
     PinSearchResponse pin_search = 36;
     UnpinSearchResponse unpin_search = 37;
     ListSavedSearchesResponse list_saved_searches = 38;
   }
 }
 
+// Event represents an unsolicited notification pushed from the daemon to all
+// connected clients. Events always have request_id = 0 in the Envelope.
 message Event {
   oneof kind {
+    // Emitted when tags are added to or removed from a file.
     FileTaggedEvent file_tagged = 1;
+    // Emitted after a scan cycle completes with updated index counts.
     IndexUpdatedEvent index_updated = 2;
+    // Emitted when the daemon transitions between states (idle, scanning, etc.).
     DaemonStateChangedEvent daemon_state_changed = 3;
+    // Emitted to tell a running GUI instance to show/raise its window.
     ShowWindowEvent show_window = 4;
   }
 }
 
+// ---------------------------------------------------------------------------
+// Error handling
+// ---------------------------------------------------------------------------
+
+// ErrorResponse is returned instead of the expected response type when a
+// request fails. The code field uses a simple numeric scheme (not gRPC codes).
 message ErrorResponse {
-  uint32 code = 1; // 1=not_found, 2=permission, 3=invalid, 4=daemon_unavailable
+  // Error category: 1=not_found, 2=permission_denied, 3=invalid_argument,
+  // 4=daemon_unavailable.
+  uint32 code = 1;
+  // Human-readable error description.
   string message = 2;
 }
 
+// ---------------------------------------------------------------------------
+// Search & discovery
+// ---------------------------------------------------------------------------
+
+// SearchRequest performs a combined tag, metadata, full-text, and/or vector
+// similarity search across all indexed files.
 message SearchRequest {
-  repeated string tags = 1; // AND semantics by default
-  bool tags_any = 2; // set true for OR
+  // Tags to require. By default all must match (AND semantics).
+  repeated string tags = 1;
+  // When true, any of the listed tags satisfies the filter (OR semantics).
+  bool tags_any = 2;
+  // Tags that must NOT be present on matching files.
   repeated string tag_exclude = 3;
-  map<string, string> meta_filters = 4; // key=op:value e.g. "width"="gte:1280"
+  // Metadata filters. Each entry maps a metadata key to an operator-value
+  // string, e.g. "width" -> "gte:1280", "mime" -> "eq:image/png".
+  map<string, string> meta_filters = 4;
+  // Free-text query matched against metadata values via FTS5.
   string fts_query = 5;
-  uint32 limit = 6; // default 100
+  // Maximum number of results to return. Defaults to 100 if zero.
+  uint32 limit = 6;
+  // Pagination offset (number of results to skip).
   uint32 offset = 7;
-  repeated string sort_by = 8; // e.g. ["mtime:desc", "name:asc"]
+  // Sort clauses as "field:direction" strings, e.g. ["mtime:desc", "name:asc"].
+  // Applied in the order given.
+  repeated string sort_by = 8;
+  // Natural-language query for vector similarity search. The daemon embeds
+  // this text and finds files with the closest cosine distance.
   string vector_query = 9;
 }
 
+// FileResult represents a single file in search results or directory listings.
 message FileResult {
+  // Absolute filesystem path to the file.
   string path = 1;
+  // All tags currently applied to this file.
   repeated string tags = 2;
+  // Key-value metadata pairs harvested for this file.
   map<string, string> metadata = 3;
-  double score = 4; // relevance score if fts or vector query
-  int64 mtime = 5; // unix timestamp
+  // Relevance score, populated only for FTS or vector search queries.
+  // Higher is more relevant. Zero for non-scored results.
+  double score = 4;
+  // Last modification time as a Unix epoch timestamp (seconds).
+  int64 mtime = 5;
+  // File size in bytes.
   int64 size_bytes = 6;
+  // True if the file is a symbolic link.
+  bool is_link = 7;
+  // If is_link is true, the target path the symlink points to.
+  string link_target = 8;
 }
 
+// SearchResponse returns the matching files for a SearchRequest.
 message SearchResponse {
+  // The page of matching files (respecting limit/offset).
   repeated FileResult files = 1;
-  uint32 total = 2; // total matching (before limit/offset)
+  // Total number of files matching the query, before limit/offset is applied.
+  // Useful for pagination UI.
+  uint32 total = 2;
 }
 
+// ---------------------------------------------------------------------------
+// Tag & metadata mutations
+// ---------------------------------------------------------------------------
+
+// TagOperation specifies how the tags list in a TagRequest should be applied.
 enum TagOperation {
   TAG_OPERATION_UNSPECIFIED = 0;
+  // Add the given tags without removing existing ones.
   TAG_OPERATION_ADD = 1;
+  // Remove only the specified tags, leaving others intact.
   TAG_OPERATION_REMOVE = 2;
-  TAG_OPERATION_SET = 3; // replace all tags
+  // Replace all existing tags with exactly the given set.
+  TAG_OPERATION_SET = 3;
 }
 
+// TagRequest applies a tag mutation to one or more files. The operation field
+// controls whether tags are added, removed, or replaced wholesale.
 message TagRequest {
+  // Absolute paths to the files to modify.
   repeated string paths = 1;
+  // Tag names to add, remove, or set (interpretation depends on operation).
   repeated string tags = 2;
+  // The mutation operation to perform.
   TagOperation operation = 3;
 }
 
+// TagResponse reports per-path success/failure for a TagRequest.
 message TagResponse {
+  // Paths that were tagged successfully.
   repeated string paths_ok = 1;
+  // Paths that encountered errors.
   repeated string paths_error = 2;
+  // Map of path -> error message for each failed path.
   map<string, string> errors = 3;
 }
 
+// MetadataRequest retrieves all metadata key-value pairs for a single file.
 message MetadataRequest {
+  // Absolute path to the file to query.
   string path = 1;
 }
 
+// MetadataResponse returns the full metadata map and source attribution for
+// each key.
 message MetadataResponse {
+  // The queried file path (echoed back for convenience).
   string path = 1;
+  // All metadata key-value pairs for this file.
   map<string, string> metadata = 2;
-  map<string, string> sources = 3; // key → harvester name that produced it
+  // Attribution: maps each metadata key to the harvester name that produced it
+  // (e.g. "exif", "xattr", "manual").
+  map<string, string> sources = 3;
 }
 
+// MetadataSetRequest sets or deletes a single metadata key on a file.
 message MetadataSetRequest {
+  // Absolute path to the file to modify.
   string path = 1;
+  // The metadata key to set or delete.
   string key = 2;
-  string value = 3; // empty string to delete
+  // The new value. An empty string signals deletion of the key.
+  string value = 3;
 }
 
+// ---------------------------------------------------------------------------
+// Related files (graph + vector similarity)
+// ---------------------------------------------------------------------------
+
+// RelatedRequest finds files related to a seed file by combining tag-graph
+// traversal (shared tags = edges) with vector embedding cosine similarity.
 message RelatedRequest {
+  // Absolute path to the seed file.
   string seed_path = 1;
-  uint32 limit = 2; // default 20
-  uint32 max_hops = 3; // default 3
-  float hop_weight = 4; // default 0.6
-  float vec_weight = 5; // default 0.4
+  // Maximum number of related files to return. Defaults to 20 if zero.
+  uint32 limit = 2;
+  // Maximum number of tag-graph hops from the seed. Defaults to 3.
+  uint32 max_hops = 3;
+  // Weight given to the hop-distance score component. Defaults to 0.6.
+  // Must sum with vec_weight to 1.0.
+  float hop_weight = 4;
+  // Weight given to the vector cosine-similarity score component. Defaults to 0.4.
+  float vec_weight = 5;
 }
 
+// ScoredFile pairs a file result with its composite relatedness score and
+// the individual scoring components used to compute it.
 message ScoredFile {
+  // The related file and its metadata.
   FileResult file = 1;
+  // Composite score combining hop distance and cosine similarity (0.0 - 1.0).
   double score = 2;
+  // Number of tag-graph hops from the seed to reach this file.
   uint32 hop_distance = 3;
+  // Cosine similarity between the seed and this file's embedding vectors.
   double cosine_sim = 4;
 }
 
+// RelatedResponse returns files related to the seed, ordered by descending
+// composite score.
 message RelatedResponse {
   repeated ScoredFile files = 1;
 }
 
+// ---------------------------------------------------------------------------
+// Daemon administration
+// ---------------------------------------------------------------------------
+
+// DaemonState represents the current operational state of the tilbo daemon.
 enum DaemonState {
   DAEMON_STATE_UNSPECIFIED = 0;
+  // The daemon is running but not actively scanning. Normal operating state.
   DAEMON_STATE_IDLE = 1;
+  // The daemon is actively scanning watched directories for changes.
   DAEMON_STATE_SCANNING = 2;
+  // Initial startup indexing is complete and the daemon is fully operational.
   DAEMON_STATE_READY = 3;
+  // The daemon is running but some subsystems have errors (see warnings).
   DAEMON_STATE_DEGRADED = 4;
 }
 
+// StatusRequest retrieves the current daemon health and index statistics.
+// No fields are needed.
 message StatusRequest {}
 
+// StatusResponse provides a snapshot of daemon health and index statistics.
 message StatusResponse {
+  // Current daemon lifecycle state.
   DaemonState state = 1;
+  // Total number of files currently tracked in the index.
   uint64 files_indexed = 2;
+  // Total number of distinct tag names in the index.
   uint64 tags_total = 3;
+  // Approximate size of the SQLite database in megabytes.
   float index_size_mb = 4;
-  repeated string warnings = 5; // e.g. "FAN_RENAME unavailable, using fallback"
+  // Non-fatal warnings about degraded functionality, e.g.
+  // "FAN_RENAME unavailable, using fallback polling".
+  repeated string warnings = 5;
+  // Seconds since the daemon process started.
   int64 uptime_seconds = 6;
 }
 
+// ReloadRulesRequest asks the daemon to re-read tagging rules from disk.
+// No fields are needed.
 message ReloadRulesRequest {}
 
+// ReloadRulesResponse reports how many rules were loaded and any parse errors.
 message ReloadRulesResponse {
+  // Number of tagging rules successfully loaded.
   uint32 rules_loaded = 1;
+  // Parse or validation errors encountered while loading rules.
   repeated string errors = 2;
 }
 
+// ListTagsRequest returns all known tag names, optionally filtered by prefix
+// (useful for autocomplete / completion UIs).
 message ListTagsRequest {
-  string prefix = 1; // optional prefix filter for completion
+  // If non-empty, only return tags whose name starts with this prefix.
+  string prefix = 1;
 }
 
+// ListTagsResponse returns matching tag names in alphabetical order.
 message ListTagsResponse {
   repeated string tags = 1;
 }
 
+// HydrateTagsRequest looks up the tags for a batch of file paths in one round
+// trip. This is more efficient than issuing individual MetadataRequests when
+// populating a directory listing.
 message HydrateTagsRequest {
+  // Absolute paths to look up.
   repeated string paths = 1;
 }
 
+// HydratedPathTags pairs a single file path with its resolved tags.
 message HydratedPathTags {
   string path = 1;
   repeated string tags = 2;
 }
 
+// HydrateTagsResponse returns tags for each requested path.
 message HydrateTagsResponse {
   repeated HydratedPathTags entries = 1;
 }
 
+// ---------------------------------------------------------------------------
+// Filesystem browsing
+// ---------------------------------------------------------------------------
+
+// ListDirectoryRequest reads the contents of a directory, similar to readdir(3).
 message ListDirectoryRequest {
+  // Absolute path to the directory to list.
   string path = 1;
+  // When true, include entries whose names start with a dot.
   bool hidden = 2;
 }
 
+// DirEntry represents a single entry within a directory listing.
 message DirEntry {
+  // Base name of the entry (e.g. "photo.jpg").
   string name = 1;
+  // Full absolute path (parent + name).
   string path = 2;
+  // True if the entry is a directory.
   bool is_dir = 3;
+  // File size in bytes (0 for directories).
   int64 size_bytes = 4;
+  // Last modification time as a Unix epoch timestamp (seconds).
   int64 mtime = 5;
+  // POSIX file mode bits (permissions + type).
   uint32 mode = 6;
+  // True if the entry name starts with a dot.
   bool hidden = 7;
+  // Detected MIME type, e.g. "image/png". May be empty if detection failed.
   string mime_type = 8;
+  // Freedesktop icon name suitable for display, e.g. "text-x-generic".
   string icon_name = 9;
+  // True if the entry is a symbolic link.
+  bool is_link = 10;
+  // If is_link is true, the target path the symlink resolves to.
+  string link_target = 11;
 }
 
+// ListDirectoryResponse returns all entries in the requested directory.
 message ListDirectoryResponse {
   repeated DirEntry entries = 1;
 }
 
+// StatFileRequest retrieves stat(2) information for a single file.
 message StatFileRequest {
+  // Absolute path to the file to stat.
   string path = 1;
 }
 
+// FileStat contains the core stat(2) fields for a file.
 message FileStat {
+  // File size in bytes.
   int64 size_bytes = 1;
+  // Last modification time as a Unix epoch timestamp (seconds).
   int64 mtime = 2;
+  // POSIX file mode bits.
   uint32 mode = 3;
 }
 
+// StatFileResponse wraps the stat result for a single file.
 message StatFileResponse {
   FileStat stat = 1;
 }
 
+// GlobSearchRequest searches for files matching one or more glob patterns
+// across the filesystem (not restricted to the index).
 message GlobSearchRequest {
+  // Glob patterns to match, e.g. ["*.jpg", "Documents/**/*.pdf"].
   repeated string patterns = 1;
+  // Maximum number of results to return.
   uint32 limit = 2;
+  // When true, include hidden files/directories in results.
   bool allow_hidden = 3;
 }
 
+// GlobSearchResponse returns files matching the glob patterns.
 message GlobSearchResponse {
   repeated FileResult files = 1;
 }
 
+// ---------------------------------------------------------------------------
+// File operations
+// ---------------------------------------------------------------------------
+
+// RenameFileRequest renames a file (basename only, not a move across directories).
 message RenameFileRequest {
+  // Absolute path to the file to rename.
   string path = 1;
+  // The new base name (not a full path).
   string new_name = 2;
 }
 
+// RenameFileResponse returns the resulting full path after the rename.
 message RenameFileResponse {
+  // New absolute path of the renamed file.
   string new_path = 1;
 }
 
+// DeleteFileRequest permanently deletes a file from the filesystem.
+// For recoverable deletion, use TrashFileRequest instead.
 message DeleteFileRequest {
+  // Absolute path to the file to delete.
   string path = 1;
 }
 
+// DeleteFileResponse is empty on success; errors use ErrorResponse.
 message DeleteFileResponse {}
 
+// ChmodFileRequest changes the POSIX permission bits of a file.
 message ChmodFileRequest {
+  // Absolute path to the file to modify.
   string path = 1;
+  // New POSIX permission mode, e.g. 0o644 = 420 decimal.
   uint32 mode = 2;
 }
 
+// ChmodFileResponse is empty on success; errors use ErrorResponse.
 message ChmodFileResponse {}
 
+// ---------------------------------------------------------------------------
+// Places (sidebar bookmarks)
+// ---------------------------------------------------------------------------
+
+// ListPlacesRequest returns all sidebar places, both auto-detected (e.g. XDG
+// user directories) and user-pinned custom places.
 message ListPlacesRequest {}
 
+// PlaceEntry represents a single sidebar bookmark.
 message PlaceEntry {
+  // Display name shown in the sidebar.
   string name = 1;
+  // Absolute path this place navigates to.
   string path = 2;
+  // True if the user explicitly pinned this place (vs. auto-detected).
   bool pinned = 3;
+  // Freedesktop icon name for display, e.g. "folder-documents".
   string icon_name = 4;
 }
 
+// ListPlacesResponse returns all known places.
 message ListPlacesResponse {
   repeated PlaceEntry places = 1;
 }
 
+// ---------------------------------------------------------------------------
+// Server-pushed events
+// ---------------------------------------------------------------------------
+
+// FileTaggedEvent is emitted when tags on a file change, allowing clients to
+// update their UI without re-querying.
 message FileTaggedEvent {
+  // The file whose tags changed.
   string path = 1;
+  // Tags that were added in this change.
   repeated string added = 2;
+  // Tags that were removed in this change.
   repeated string removed = 3;
 }
 
+// IndexUpdatedEvent is emitted after a scan cycle completes, providing
+// updated aggregate counts for the index.
 message IndexUpdatedEvent {
+  // Current total number of indexed files.
   uint64 files_total = 1;
+  // Current total number of distinct tags.
   uint64 tags_total = 2;
 }
 
+// DaemonStateChangedEvent is emitted when the daemon transitions between
+// lifecycle states (e.g. scanning -> idle).
 message DaemonStateChangedEvent {
+  // The new state as a human-readable string (matches DaemonState enum names).
   string state = 1;
 }
 
-// Feature 2: Custom Pinned Places
+// PinPlaceRequest adds a user-defined place to the sidebar.
 message PinPlaceRequest {
+  // Display name for the new place.
   string name = 1;
+  // Absolute directory path to bookmark.
   string path = 2;
+  // Freedesktop icon name, e.g. "folder-music".
   string icon_name = 3;
 }
+
+// PinPlaceResponse is empty on success.
 message PinPlaceResponse {}
 
+// UnpinPlaceRequest removes a user-pinned place from the sidebar.
 message UnpinPlaceRequest {
+  // Absolute path of the place to unpin.
   string path = 1;
 }
+
+// UnpinPlaceResponse is empty on success.
 message UnpinPlaceResponse {}
 
-// Feature 4: Trash Support
+// ---------------------------------------------------------------------------
+// Trash management (XDG Trash spec)
+// ---------------------------------------------------------------------------
+
+// TrashFileRequest moves a file to the user's trash directory (recoverable
+// deletion, following the XDG Trash specification).
 message TrashFileRequest {
+  // Absolute path to the file to trash.
   string path = 1;
 }
+
+// TrashFileResponse is empty on success.
 message TrashFileResponse {}
 
+// ListTrashRequest returns all items currently in the trash.
 message ListTrashRequest {}
 
+// TrashEntry represents a single item in the trash.
 message TrashEntry {
+  // The name of the file within the trash directory (may differ from original
+  // if there were name collisions).
   string name = 1;
+  // The original absolute path the file was trashed from.
   string original_path = 2;
+  // When the file was trashed, as a Unix epoch timestamp (seconds).
   int64 deletion_date = 3;
+  // Size of the trashed file in bytes.
   int64 size_bytes = 4;
 }
 
+// ListTrashResponse returns all trashed items.
 message ListTrashResponse {
   repeated TrashEntry entries = 1;
 }
 
+// RestoreTrashRequest moves a trashed item back to its original location.
 message RestoreTrashRequest {
+  // The trash-internal name of the item to restore (from TrashEntry.name).
   string trash_name = 1;
 }
+
+// RestoreTrashResponse is empty on success.
 message RestoreTrashResponse {}
 
+// EmptyTrashRequest permanently deletes all items in the trash.
 message EmptyTrashRequest {}
+
+// EmptyTrashResponse is empty on success.
 message EmptyTrashResponse {}
 
-// Feature 5: Open With
+// ---------------------------------------------------------------------------
+// Desktop integration (Open With, Config, Mounts)
+// ---------------------------------------------------------------------------
+
+// AppEntry describes a desktop application that can open a file (from XDG
+// .desktop entries).
 message AppEntry {
+  // Unique application identifier (e.g. "org.gnome.Evince.desktop").
   string id = 1;
+  // Human-readable application name (e.g. "Document Viewer").
   string name = 2;
+  // Freedesktop icon name for the application.
   string icon_name = 3;
 }
 
+// ListAppsForFileRequest queries which applications can open a given file,
+// based on its MIME type and registered handlers.
 message ListAppsForFileRequest {
+  // Absolute path to the file.
   string path = 1;
 }
 
+// ListAppsForFileResponse returns the available applications, with the
+// default/recommended handler first.
 message ListAppsForFileResponse {
   repeated AppEntry apps = 1;
 }
 
+// OpenWithAppRequest opens a file using a specific desktop application.
 message OpenWithAppRequest {
+  // Absolute path to the file to open.
   string path = 1;
+  // Application ID from AppEntry.id.
   string app_id = 2;
 }
+
+// OpenWithAppResponse is empty on success.
 message OpenWithAppResponse {}
 
-// Feature 6: Browser Config / Keybindings
+// GetBrowserConfigRequest retrieves the user's browser configuration,
+// including keybindings and feature toggles.
 message GetBrowserConfigRequest {}
 
+// GetBrowserConfigResponse returns the current browser configuration.
 message GetBrowserConfigResponse {
+  // Maps action names (e.g. "navigate_up", "delete") to key sequences
+  // (e.g. "Alt+Up", "Delete").
   map<string, string> keybindings = 1;
+  // When true, the "delete" action moves files to trash instead of
+  // permanently deleting them.
   bool use_trash = 2;
+  // When true, show inline thumbnail previews in file listings.
   bool inline_thumbnails = 3;
 }
 
-// Feature 7: Extension System
+// ---------------------------------------------------------------------------
+// Extension system (badges & context actions)
+// ---------------------------------------------------------------------------
+
+// GetFileBadgesRequest retrieves visual badge indicators for a file. Badges
+// are provided by loaded extensions (e.g. a git extension might add a "modified"
+// badge to tracked files).
 message GetFileBadgesRequest {
+  // Absolute path to the file.
   string path = 1;
 }
 
+// GetFileBadgesResponse returns badge identifiers that the UI can render as
+// small overlay icons or labels.
 message GetFileBadgesResponse {
+  // Badge identifiers, e.g. ["git:modified", "sync:pending"].
   repeated string badges = 1;
 }
 
+// FileAction represents a context-menu action provided by an extension.
 message FileAction {
+  // Unique action identifier (scoped to the extension).
   string id = 1;
+  // Human-readable label shown in context menus.
   string label = 2;
 }
 
+// GetFileActionsRequest retrieves the available context actions for a file.
 message GetFileActionsRequest {
+  // Absolute path to the file.
   string path = 1;
 }
 
+// GetFileActionsResponse returns the extension-provided actions.
 message GetFileActionsResponse {
   repeated FileAction actions = 1;
 }
 
+// RunFileActionRequest executes a previously discovered file action.
 message RunFileActionRequest {
+  // Absolute path to the file to act on.
   string path = 1;
+  // The action ID from FileAction.id.
   string action_id = 2;
 }
+
+// RunFileActionResponse is empty on success.
 message RunFileActionResponse {}
 
-// Feature 8: GUI Launch
+// ---------------------------------------------------------------------------
+// GUI launch
+// ---------------------------------------------------------------------------
+
+// LaunchGUIRequest asks the daemon to start (or raise) the GUI browser window.
+// Sent by the CLI when the user runs e.g. `tilbo browse /some/dir`.
 message LaunchGUIRequest {
-  string path = 1; // optional initial directory to navigate to
+  // Optional initial directory to navigate to. Empty means use the default.
+  string path = 1;
 }
 
+// LaunchGUIResponse indicates whether a new window was created or an existing
+// one was raised.
 message LaunchGUIResponse {
+  // True if a GUI instance was already running and was raised instead of
+  // starting a new one.
   bool already_running = 1;
 }
 
+// ShowWindowEvent is pushed to GUI clients to tell them to raise/focus their
+// window and optionally navigate to a path.
 message ShowWindowEvent {
-  string path = 1; // optional path to navigate to
-}
-
-// Feature 9: Thumbnail Generation
-enum ThumbnailSize {
-  THUMBNAIL_SIZE_NORMAL = 0; // 128×128 max
-  THUMBNAIL_SIZE_LARGE = 1;  // 256×256 max
-}
-
-message GetThumbnailRequest {
+  // Optional directory path to navigate to when the window is shown.
   string path = 1;
+}
+
+// ---------------------------------------------------------------------------
+// Thumbnail generation
+// ---------------------------------------------------------------------------
+
+// ThumbnailSize controls the maximum dimensions of generated thumbnails,
+// following the XDG thumbnail specification sizes.
+enum ThumbnailSize {
+  // Normal size: 128x128 pixels maximum.
+  THUMBNAIL_SIZE_NORMAL = 0;
+  // Large size: 256x256 pixels maximum.
+  THUMBNAIL_SIZE_LARGE = 1;
+}
+
+// GetThumbnailRequest generates (or retrieves a cached) thumbnail for a file.
+message GetThumbnailRequest {
+  // Absolute path to the file to thumbnail.
+  string path = 1;
+  // Desired thumbnail size.
   ThumbnailSize size = 2;
 }
 
+// GetThumbnailResponse returns the path to the generated PNG thumbnail and
+// its actual dimensions.
 message GetThumbnailResponse {
-  string thumbnail_path = 1; // local filesystem path to the PNG thumbnail
+  // Absolute path to the cached PNG thumbnail on the local filesystem.
+  string thumbnail_path = 1;
+  // Actual width of the generated thumbnail in pixels.
   uint32 width = 2;
+  // Actual height of the generated thumbnail in pixels.
   uint32 height = 3;
 }
 
-// Feature 10: Clipboard Operations
+// ---------------------------------------------------------------------------
+// Clipboard operations
+// ---------------------------------------------------------------------------
+
+// CopyRequest places file paths on the internal clipboard for a subsequent
+// paste. Supports both copy and cut (move) semantics.
 message CopyRequest {
+  // Absolute paths of the files to copy or cut.
   repeated string paths = 1;
-  bool is_move = 2; // true for Cut, false for Copy
+  // True for a cut (move) operation; false for copy.
+  bool is_move = 2;
 }
+
+// CopyResponse is empty on success.
 message CopyResponse {}
 
+// PasteRequest pastes the previously copied/cut files into a destination
+// directory.
 message PasteRequest {
+  // Absolute path to the directory to paste into.
   string destination_dir = 1;
 }
+
+// PasteResponse returns the paths of the newly created files/directories.
 message PasteResponse {
+  // Absolute paths of the pasted files in their new locations.
   repeated string new_paths = 1;
 }
 
-// Feature 11: File Creation
+// ---------------------------------------------------------------------------
+// File & directory creation
+// ---------------------------------------------------------------------------
+
+// CreateFileRequest creates a new empty file.
 message CreateFileRequest {
+  // Absolute path to the parent directory.
   string destination_dir = 1;
+  // Name for the new file.
   string name = 2;
 }
+
+// CreateFileResponse returns the full path of the created file.
 message CreateFileResponse {
+  // Absolute path to the newly created file.
   string path = 1;
 }
 
+// CreateDirectoryRequest creates a new empty directory.
 message CreateDirectoryRequest {
+  // Absolute path to the parent directory.
   string destination_dir = 1;
+  // Name for the new directory.
   string name = 2;
 }
+
+// CreateDirectoryResponse returns the full path of the created directory.
 message CreateDirectoryResponse {
+  // Absolute path to the newly created directory.
   string path = 1;
 }
 
-// Feature 12: Mount Discovery
+// ---------------------------------------------------------------------------
+// Mount discovery
+// ---------------------------------------------------------------------------
+
+// MountEntry represents a mounted filesystem volume (USB drive, network
+// share, etc.) discovered via system mount points.
 message MountEntry {
+  // Mount point path, e.g. "/mnt/usb".
   string path = 1;
+  // Human-readable label, e.g. "USB Drive" or the filesystem label.
   string label = 2;
+  // Freedesktop icon name, e.g. "drive-removable-media".
   string icon_name = 3;
 }
+
+// ListMountsRequest returns all discovered mounted volumes.
 message ListMountsRequest {}
+
+// ListMountsResponse returns the list of active mounts.
 message ListMountsResponse {
   repeated MountEntry mounts = 1;
 }
 
-// Feature 13: Saved Searches
+// ---------------------------------------------------------------------------
+// Saved searches
+// ---------------------------------------------------------------------------
+
+// SavedSearch represents a user-pinned search query that appears in the
+// sidebar for quick access.
 message SavedSearch {
+  // Display name for the saved search.
   string name = 1;
+  // The search chips (tag names, metadata filters, etc.) that define the
+  // query. These are the same chip strings used by the search bar UI.
   repeated string chips = 2;
+  // Freedesktop icon name for sidebar display.
   string icon_name = 3;
+  // Unique identifier assigned by the daemon when the search is pinned.
   string id = 4;
 }
+
+// PinSearchRequest saves a search query to the sidebar.
 message PinSearchRequest {
+  // Display name for the saved search.
   string name = 1;
+  // Search chip strings defining the query.
   repeated string chips = 2;
+  // Freedesktop icon name for the sidebar entry.
   string icon_name = 3;
 }
+
+// PinSearchResponse returns the newly created saved search with its
+// assigned ID.
 message PinSearchResponse {
   SavedSearch search = 1;
 }
+
+// UnpinSearchRequest removes a saved search from the sidebar.
 message UnpinSearchRequest {
+  // ID of the saved search to remove (from SavedSearch.id).
   string id = 1;
 }
+
+// UnpinSearchResponse is empty on success.
 message UnpinSearchResponse {}
+
+// ListSavedSearchesRequest returns all pinned searches.
 message ListSavedSearchesRequest {}
+
+// ListSavedSearchesResponse returns all saved searches.
 message ListSavedSearchesResponse {
   repeated SavedSearch searches = 1;
 }

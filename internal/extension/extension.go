@@ -1,6 +1,3 @@
-// Package extension implements the Nautilus-style extension system for tilbo.
-// Extensions are subprocess programs that can add file badges and
-// context menu actions.
 package extension
 
 import (

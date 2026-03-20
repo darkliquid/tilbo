@@ -1,4 +1,3 @@
-// Package trash implements XDG trash operations.
 package trash
 
 import (

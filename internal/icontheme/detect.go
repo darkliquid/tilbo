@@ -1,5 +1,3 @@
-// Package icontheme detects the active XDG icon theme name by probing
-// desktop environment configuration sources in priority order.
 package icontheme
 
 import (

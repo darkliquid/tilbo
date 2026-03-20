@@ -15,9 +15,9 @@ import (
 const EmbeddingDim = 384
 
 const (
-	bytesPerFloat32 = 4
-	knnBaseArgCount = 2
-	knnFilterScale  = 10
+	bytesPerFloat32 = 4  // IEEE 754 single-precision float size
+	knnBaseArgCount = 2  // base number of args for a KNN query (vector + k)
+	knnFilterScale  = 10 // k is multiplied by this when filters are present to compensate for post-filter rejection
 )
 
 // KNNResult is one file returned by KNNSearch.

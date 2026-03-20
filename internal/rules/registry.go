@@ -29,11 +29,13 @@ type RuleDef struct {
 }
 
 // Registry loads rule files from config directories and registers the resulting
-// rules into an Engine.
+// rules into an Engine. It supports TOML (.toml), Lua (.lua), and WASM (.wasm)
+// rule files. Directories are scanned in order, so user rules (loaded first)
+// can be overridden by system rules if they share the same priority.
 type Registry struct {
 	dirs    []string
-	cache   wazero.CompilationCache
-	closers []func(context.Context) error
+	cache   wazero.CompilationCache                  // shared WASM compilation cache across all WASM rules
+	closers []func(context.Context) error             // cleanup functions for WASM runtimes
 }
 
 // NewRegistry creates a Registry that scans the given directories for rule files.
@@ -42,6 +44,8 @@ func NewRegistry(dirs []string, cache wazero.CompilationCache) *Registry {
 }
 
 // DefaultDirs returns the standard rule config directories, user rules first.
+// The order matters: user config takes precedence over system-wide rules.
+// Falls back to ~/.config if XDG_CONFIG_HOME is unset.
 func DefaultDirs() []string {
 	var dirs []string
 	if cfgDir, err := os.UserConfigDir(); err == nil {
@@ -119,6 +123,10 @@ func (r *Registry) loadTOML(ctx context.Context, path string, e *Engine) error {
 	return r.registerDefs(ctx, raw.Rules, path, e)
 }
 
+// registerDefs converts a slice of raw TOML RuleDef entries into TOMLRule
+// instances and registers them with the engine. A missing name is a hard error
+// (returned immediately) because it would make override matching impossible.
+// Rules with no tags are silently skipped since they can never produce output.
 func (r *Registry) registerDefs(ctx context.Context, defs []RuleDef, source string, e *Engine) error {
 	for i, def := range defs {
 		if def.Name == "" {
@@ -129,6 +137,8 @@ func (r *Registry) registerDefs(ctx context.Context, defs []RuleDef, source stri
 				"rule", def.Name, "source", source)
 			continue
 		}
+		// Parse raw TOML condition values into the internal matchCond type.
+		// Each field in Match corresponds to a metadata key the rule tests.
 		match := make(map[string]matchCond, len(def.Match))
 		for field, rawCond := range def.Match {
 			cond, err := parseMatchCond(rawCond)

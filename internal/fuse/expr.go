@@ -1,5 +1,3 @@
-// Package fuse implements the tilbo virtual FUSE filesystem at ~/tags.
-// Files matching tag expressions appear as symlinks to their real paths.
 package fuse
 
 import (
@@ -15,6 +13,8 @@ import (
 )
 
 const (
+	// metaExprMaxParts and metaExprMinParts define the expected number of
+	// colon-separated segments in a @meta:<key>:<op>:<value> expression.
 	metaExprMaxParts = 3
 	metaExprMinParts = 2
 )

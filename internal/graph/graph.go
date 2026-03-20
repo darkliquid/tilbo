@@ -1,8 +1,3 @@
-// Package graph provides an in-memory bipartite file-tag graph used to power
-// the "related files" feature (M4). File nodes carry the key "f:<path>";
-// tag nodes carry the key "t:<name>". Adjacency maps are maintained alongside
-// the dominikbraun/graph backing store to provide O(1) neighbour lookup
-// during BFS traversal.
 package graph
 
 import (
@@ -16,7 +11,12 @@ import (
 )
 
 const (
-	highCardinalityDivisor      = 20
+	// highCardinalityDivisor: tags shared by more than totalFiles/20 (5%) of
+	// files are treated as stopwords and skipped during traversal. This prevents
+	// very common tags (e.g. "document") from dominating related-file results.
+	highCardinalityDivisor = 20
+	// minHighCardinalityThreshold ensures the stopword check doesn't trigger
+	// on small corpora where 5% would be too few files.
 	minHighCardinalityThreshold = 50
 )
 
