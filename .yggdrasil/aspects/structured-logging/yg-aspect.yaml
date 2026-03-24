@@ -1,0 +1,3 @@
+name: Structured Logging
+description: All components use log/slog with context for structured, leveled logging
+stability: protocol

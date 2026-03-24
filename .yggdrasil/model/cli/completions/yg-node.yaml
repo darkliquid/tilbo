@@ -1,0 +1,21 @@
+name: Shell Completions
+type: module
+description: "Dynamic shell completions (tags, paths, meta keys) and static completion script generation"
+
+aspects:
+  - aspect: ipc-envelope
+    anchors:
+      - ipcv1.Request_ListTags
+      - ipcv1.ListTagsRequest
+    exceptions:
+      - "Completion functions silently return empty results on daemon connection failure, rather than propagating errors, because completion should never block the shell"
+
+relations:
+  - target: cli
+    type: calls
+    consumes: [call]
+
+mapping:
+  paths:
+    - cmd/tilbo-cli/completions.go
+    - cmd/tilbo-cli/cmd_completion_cmd.go

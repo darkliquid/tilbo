@@ -1,0 +1,19 @@
+name: File Operations
+type: module
+description: "File manipulation: selection, stat, metadata, clipboard, delete, create, drag-drop, and zoom controls"
+
+aspects:
+  - aspect: ipc-envelope
+    anchors:
+      - TilboDaemon
+    exceptions:
+      - "Consumes TilboDaemon singleton methods rather than directly using IPC envelope — the daemon-service abstraction hides the protocol"
+
+relations:
+  - target: quickshell/daemon-service
+    type: uses
+    consumes: [statFile, getMetadata, deleteFile, copy, paste, createDirectory, createFile]
+
+mapping:
+  paths:
+    - cmd/tilbo-quickshell/windows/browser/BrowserFileOperations.qml

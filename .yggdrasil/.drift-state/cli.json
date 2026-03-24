@@ -1,0 +1,29 @@
+{
+  "hash": "06d849efad98fe62b04e05bd81cced4a8107b879b14258d539a6bcb3aee044eb",
+  "files": {
+    ".yggdrasil/model/cli/yg-node.yaml": "fb14691e2c921a7a25f0a66f2d0c97ba1665ee8bc08e34f715ec87812de25217",
+    ".yggdrasil/model/cli/interface.md": "1834d8fecb51f9b6dc2f1a20c08abbbb1811aff2bad31990e477722eb50734e1",
+    ".yggdrasil/model/cli/internals.md": "fb0b5688ec0256c3a0038bcfad0f538960df3f4cc2fea6ee2c526000e4c6b7db",
+    ".yggdrasil/model/cli/responsibility.md": "9896dc5673ebb97ee283c712e02515157f23a5c872237e3b9ed4416acc32064b",
+    ".yggdrasil/aspects/ipc-envelope/yg-aspect.yaml": "e9646609c1a0d858d18496465819a0c81de02a0e9cd5c30f8fba0caaab2e4645",
+    ".yggdrasil/aspects/ipc-envelope/guidance.md": "5cb10aa1755fbe6a975c4643575192fa83a88249a319efee1a08a32626240ad1",
+    ".yggdrasil/aspects/structured-logging/yg-aspect.yaml": "a54c104b3ea2b820e3888b643fe08fb5b606216d31929fffda4d74fcc5f9c194",
+    ".yggdrasil/aspects/structured-logging/guidance.md": "ac68b260dbe3a96f48f19dfd2ca4d8560c8dd2cbd6777c79fcbd27f6c22572f3",
+    ".yggdrasil/model/daemon/responsibility.md": "5f39c0177cdf865b567f07f3e70d6ead720265a1a34332a897db1df8cadb84d4",
+    ".yggdrasil/model/daemon/interface.md": "e1b7b1630508fc50bd160b3a8b5bce8c540b8ca23c823e7dab9aa7070d7ddb27",
+    "cmd/tilbo-cli/main.go": "21ff61df6bd5bf4fd007a5f5a31631469198636fab89c8861c1a4ef0ed55f9af"
+  },
+  "mtimes": {
+    ".yggdrasil/model/cli/yg-node.yaml": 1774332890213.7942,
+    ".yggdrasil/model/cli/interface.md": 1774332905936.9053,
+    ".yggdrasil/model/cli/internals.md": 1774332911401.9443,
+    ".yggdrasil/model/cli/responsibility.md": 1774332897812.8477,
+    ".yggdrasil/aspects/ipc-envelope/yg-aspect.yaml": 1774330828056.589,
+    ".yggdrasil/aspects/ipc-envelope/guidance.md": 1774330840373.7412,
+    ".yggdrasil/aspects/structured-logging/yg-aspect.yaml": 1774330751639.6455,
+    ".yggdrasil/aspects/structured-logging/guidance.md": 1774330769410.865,
+    ".yggdrasil/model/daemon/responsibility.md": 1774330964674.2761,
+    ".yggdrasil/model/daemon/interface.md": 1774331230123.5542,
+    "cmd/tilbo-cli/main.go": 1773991768570.4753
+  }
+}

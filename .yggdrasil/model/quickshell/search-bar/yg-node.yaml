@@ -1,0 +1,16 @@
+name: Search Bar
+type: module
+description: "Chip-based search input with daemon-driven tag autocomplete"
+
+relations:
+  - target: quickshell/daemon-service
+    type: uses
+    consumes: [listTags]
+  - target: quickshell/theme
+    type: uses
+  - target: quickshell/i18n
+    type: uses
+
+mapping:
+  paths:
+    - cmd/tilbo-quickshell/components/TagSearchBar.qml

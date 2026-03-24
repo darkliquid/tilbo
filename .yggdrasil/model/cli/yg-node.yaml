@@ -1,0 +1,24 @@
+name: Tilbo CLI
+type: service
+description: "Terminal client for the tilbo daemon — manages file tags, searches, metadata, and daemon control over Unix socket IPC"
+
+aspects:
+  - aspect: ipc-envelope
+    anchors:
+      - ipcv1.Request
+      - ipcv1.Response
+      - call
+      - daemonError
+  - aspect: structured-logging
+    exceptions:
+      - "CLI uses slog only in search/related commands for debug output, not pervasively like the daemon"
+
+relations:
+  - target: daemon
+    type: calls
+    consumes: [buildIPCRequestHandler]
+    failure: "returns error to user with daemon connection context"
+
+mapping:
+  paths:
+    - cmd/tilbo-cli/main.go

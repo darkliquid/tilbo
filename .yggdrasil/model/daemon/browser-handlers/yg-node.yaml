@@ -1,0 +1,25 @@
+name: Browser Handlers
+type: module
+description: "GUI-specific file manager operations exposed via the UI socket for the Quickshell browser"
+
+aspects:
+  - aspect: structured-logging
+    anchors:
+      - slog.Warn
+  - aspect: path-validation
+    anchors:
+      - validatePath
+      - validateNewName
+  - aspect: ipc-envelope
+    anchors:
+      - ipcv1.TagOperation
+      - ipcv1.TagRequest
+
+relations:
+  - target: daemon
+    type: calls
+    consumes: [daemonBrowserMethods]
+
+mapping:
+  paths:
+    - cmd/tilbo-daemon/browser_handlers.go

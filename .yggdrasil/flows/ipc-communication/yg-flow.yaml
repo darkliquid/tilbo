@@ -1,0 +1,9 @@
+name: IPC Communication
+description: Bidirectional JSON-RPC communication between daemon and clients over Unix socket
+nodes:
+  - daemon
+  - daemon/ipc-handlers
+  - daemon/browser-handlers
+aspects:
+  - ipc-envelope
+  - structured-logging

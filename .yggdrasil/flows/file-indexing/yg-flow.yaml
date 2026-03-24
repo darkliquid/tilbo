@@ -1,0 +1,7 @@
+name: File Indexing
+description: Filesystem event triggers sync, metadata harvesting, rule evaluation, and index update
+nodes:
+  - daemon
+  - daemon/processor
+aspects:
+  - structured-logging

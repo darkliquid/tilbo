@@ -1,0 +1,16 @@
+name: Local Commands
+type: module
+description: "CLI commands that run locally without a daemon connection: harvester, rule, and config management"
+
+aspects:
+  - aspect: output-formatting
+    anchors:
+      - json.NewEncoder
+    exceptions:
+      - "Config commands use simple fmt.Printf, not the full format switch pattern, because output is always a single value or confirmation"
+
+mapping:
+  paths:
+    - cmd/tilbo-cli/cmd_harvester.go
+    - cmd/tilbo-cli/cmd_rule.go
+    - cmd/tilbo-cli/cmd_config.go

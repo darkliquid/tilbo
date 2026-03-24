@@ -1,0 +1,7 @@
+name: I18n Service
+type: module
+description: "QML singleton providing centralized localization with English defaults and external locale override"
+
+mapping:
+  paths:
+    - cmd/tilbo-quickshell/services/I18n.qml

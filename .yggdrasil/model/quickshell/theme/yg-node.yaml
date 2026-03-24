@@ -1,0 +1,7 @@
+name: Theme Service
+type: module
+description: "QML singleton providing centralized color palette with Nord-inspired defaults and external config override"
+
+mapping:
+  paths:
+    - cmd/tilbo-quickshell/services/Theme.qml

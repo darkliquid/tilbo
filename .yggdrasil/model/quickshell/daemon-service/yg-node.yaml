@@ -1,0 +1,24 @@
+name: Daemon Service
+type: module
+description: "QML singleton providing JSON-RPC communication with the tilbo daemon over a Unix socket"
+
+aspects:
+  - aspect: ipc-envelope
+    anchors:
+      - _call
+      - _handleLine
+      - _pending
+    exceptions:
+      - "Uses JSON-RPC framing directly rather than protobuf binary encoding — the daemon's UI socket speaks JSON, not binary protobuf. The generated qml_ipc.mjs provides type-safe request/response shapes."
+
+relations:
+  - target: daemon/browser-handlers
+    type: calls
+    consumes: [daemonBrowserMethods]
+    failure: "rejects all pending callbacks with 'daemon disconnected', auto-reconnects on 3s timer"
+
+mapping:
+  paths:
+    - cmd/tilbo-quickshell/services/TilboDaemon.qml
+    - cmd/tilbo-quickshell/services/qmldir
+    - cmd/tilbo-quickshell/services/qml_ipc.mjs

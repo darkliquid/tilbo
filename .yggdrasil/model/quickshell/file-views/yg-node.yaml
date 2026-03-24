@@ -1,0 +1,20 @@
+name: File Views
+type: module
+description: "Grid and list view components for displaying file entries with shared signal contract"
+
+relations:
+  - target: quickshell/daemon-service
+    type: uses
+    consumes: [getThumbnail]
+  - target: quickshell/theme
+    type: uses
+  - target: quickshell/i18n
+    type: uses
+  - target: quickshell/ui-primitives
+    type: uses
+    consumes: [ThemeIcon]
+
+mapping:
+  paths:
+    - cmd/tilbo-quickshell/components/FileGrid.qml
+    - cmd/tilbo-quickshell/components/FileList.qml

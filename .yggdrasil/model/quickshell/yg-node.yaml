@@ -1,0 +1,13 @@
+name: Tilbo Quickshell GUI
+type: service
+description: "QML-based file browser GUI built on Quickshell, communicating with the daemon over a Unix socket"
+
+relations:
+  - target: daemon
+    type: calls
+    consumes: [buildIPCRequestHandler]
+    failure: "shows disconnected indicator, auto-reconnects on 3s timer"
+
+mapping:
+  paths:
+    - cmd/tilbo-quickshell/shell.qml

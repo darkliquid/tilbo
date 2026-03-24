@@ -1,0 +1,30 @@
+name: Browser Window
+type: module
+description: "Main application window — orchestrates navigation, file operations, sidebar, and layout subcomponents"
+
+aspects:
+  - aspect: ipc-envelope
+    anchors:
+      - TilboDaemon
+    exceptions:
+      - "Consumes TilboDaemon singleton methods rather than directly using IPC envelope — the daemon-service abstraction hides the protocol"
+
+relations:
+  - target: quickshell/daemon-service
+    type: uses
+    consumes: [getBrowserConfig]
+  - target: quickshell/theme
+    type: uses
+  - target: quickshell/browser-window/navigation
+    type: uses
+    consumes: [BrowserNavigation]
+  - target: quickshell/browser-window/file-operations
+    type: uses
+    consumes: [BrowserFileOperations]
+  - target: quickshell/browser-window/layout
+    type: uses
+    consumes: [BrowserLayout]
+
+mapping:
+  paths:
+    - cmd/tilbo-quickshell/windows/BrowserWindow.qml

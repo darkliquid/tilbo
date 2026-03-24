@@ -1,0 +1,20 @@
+name: GUI Manager
+type: module
+description: "Manages the Quickshell GUI subprocess lifecycle: launch, stop, and window focus"
+
+aspects:
+  - aspect: structured-logging
+    anchors:
+      - slog.Info
+  - aspect: graceful-shutdown
+    anchors:
+      - Process.Signal
+
+relations:
+  - target: daemon
+    type: calls
+    consumes: [Launch, Stop]
+
+mapping:
+  paths:
+    - cmd/tilbo-daemon/gui_manager.go

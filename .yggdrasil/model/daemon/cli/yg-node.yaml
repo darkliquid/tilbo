@@ -1,0 +1,23 @@
+name: Daemon CLI
+type: module
+description: "Cobra command setup, CLI flag parsing, config loading, signal handling, and logging configuration"
+
+aspects:
+  - aspect: structured-logging
+    anchors:
+      - setupLogging
+      - slog.WarnContext
+  - aspect: graceful-shutdown
+    anchors:
+      - signal.NotifyContext
+      - syscall.SIGTERM
+      - syscall.SIGHUP
+
+relations:
+  - target: daemon
+    type: calls
+    consumes: [run]
+
+mapping:
+  paths:
+    - cmd/tilbo-daemon/cmd_root.go

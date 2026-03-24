@@ -1,0 +1,19 @@
+{
+  "hash": "2039fae6b81a96d10104bd9d03d89ed4bfc97550bd486046288999b3cac31989",
+  "files": {
+    ".yggdrasil/model/quickshell/yg-node.yaml": "dc9d1e46e3018d0c412e27d84fb914d1ccb83c72d99eaf927591a9d65eee3f88",
+    ".yggdrasil/model/quickshell/internals.md": "b6a2f74059cc51eb643de37da359b2701afb9c56cadea816fded91427788502e",
+    ".yggdrasil/model/quickshell/responsibility.md": "f918b91041fe592eb6b07392652353b71b0cac5d8c903bcc77058181fbd2ad68",
+    ".yggdrasil/model/daemon/responsibility.md": "5f39c0177cdf865b567f07f3e70d6ead720265a1a34332a897db1df8cadb84d4",
+    ".yggdrasil/model/daemon/interface.md": "e1b7b1630508fc50bd160b3a8b5bce8c540b8ca23c823e7dab9aa7070d7ddb27",
+    "cmd/tilbo-quickshell/shell.qml": "5bd9209f8d279255f37cec8c1fbaf04fee2f1eb183ef1d7a6e3b217a1410a886"
+  },
+  "mtimes": {
+    ".yggdrasil/model/quickshell/yg-node.yaml": 1774334414496.7632,
+    ".yggdrasil/model/quickshell/internals.md": 1774334168451.3125,
+    ".yggdrasil/model/quickshell/responsibility.md": 1774334157765.2065,
+    ".yggdrasil/model/daemon/responsibility.md": 1774330964674.2761,
+    ".yggdrasil/model/daemon/interface.md": 1774331230123.5542,
+    "cmd/tilbo-quickshell/shell.qml": 1773728212182.3376
+  }
+}

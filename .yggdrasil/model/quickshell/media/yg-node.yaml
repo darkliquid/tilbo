@@ -1,0 +1,14 @@
+name: Image Preview
+type: module
+description: "Fullscreen lightbox overlay for image and video preview with zoom and pan"
+
+relations:
+  - target: quickshell/daemon-service
+    type: uses
+    consumes: [getThumbnail]
+  - target: quickshell/theme
+    type: uses
+
+mapping:
+  paths:
+    - cmd/tilbo-quickshell/components/ImagePreview.qml

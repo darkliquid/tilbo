@@ -1,0 +1,12 @@
+name: UI Primitives
+type: library
+description: "Reusable themed button and icon components used across the entire GUI"
+
+relations:
+  - target: quickshell/theme
+    type: uses
+
+mapping:
+  paths:
+    - cmd/tilbo-quickshell/components/ThemeButton.qml
+    - cmd/tilbo-quickshell/components/ThemeIcon.qml

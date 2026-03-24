@@ -1,0 +1,7 @@
+name: GUI Lifecycle
+description: Daemon manages the Quickshell GUI subprocess, launching and stopping it on demand
+nodes:
+  - daemon/gui-manager
+  - daemon/ipc-handlers
+aspects:
+  - graceful-shutdown

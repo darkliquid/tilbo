@@ -1,0 +1,3 @@
+name: Path Validation
+description: Strict filesystem path validation to prevent traversal, null-byte injection, and relative path attacks
+stability: protocol

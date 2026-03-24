@@ -1,0 +1,3 @@
+name: Graceful Shutdown
+description: Context-based cancellation with Unix signal handling for clean daemon lifecycle
+stability: protocol

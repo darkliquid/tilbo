@@ -1,0 +1,22 @@
+name: Metadata Commands
+type: module
+description: "CLI commands for viewing and managing file metadata key-value pairs"
+
+aspects:
+  - aspect: ipc-envelope
+    anchors:
+      - ipcv1.Request_Metadata
+      - ipcv1.MetadataRequest
+  - aspect: output-formatting
+    anchors:
+      - tabwriter.NewWriter
+      - json.NewEncoder
+
+relations:
+  - target: cli
+    type: calls
+    consumes: [call, daemonError, absPath]
+
+mapping:
+  paths:
+    - cmd/tilbo-cli/cmd_meta.go

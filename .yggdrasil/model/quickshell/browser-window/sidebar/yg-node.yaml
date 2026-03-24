@@ -1,0 +1,26 @@
+name: Sidebar
+type: module
+description: "Left sidebar with places, mounts, saved searches, and trash; right sidebar with file properties panel"
+
+aspects:
+  - aspect: ipc-envelope
+    anchors:
+      - TilboDaemon
+    exceptions:
+      - "Consumes TilboDaemon singleton methods rather than directly using IPC envelope — the daemon-service abstraction hides the protocol"
+
+relations:
+  - target: quickshell/daemon-service
+    type: uses
+    consumes: [listPlaces, listMounts, listSavedSearches, unpinPlace, unpinSearch, pinPlace, getThumbnail]
+  - target: quickshell/theme
+    type: uses
+  - target: quickshell/i18n
+    type: uses
+  - target: quickshell/ui-primitives
+    type: uses
+    consumes: [ThemeButton, ThemeIcon]
+
+mapping:
+  paths:
+    - cmd/tilbo-quickshell/windows/browser/BrowserSidebar.qml

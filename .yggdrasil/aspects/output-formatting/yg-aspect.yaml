@@ -1,0 +1,3 @@
+name: Output Formatting
+description: CLI commands support multiple output formats (json, tsv, human-readable) via --format flag
+stability: protocol

@@ -1,0 +1,20 @@
+name: Admin Commands
+type: module
+description: "CLI commands for daemon status, rule reload, and GUI launch/control"
+
+aspects:
+  - aspect: ipc-envelope
+    anchors:
+      - ipcv1.Request_Status
+      - ipcv1.Request_LaunchGui
+      - ipcv1.Request_ReloadRules
+
+relations:
+  - target: cli
+    type: calls
+    consumes: [call, daemonError]
+
+mapping:
+  paths:
+    - cmd/tilbo-cli/cmd_daemon.go
+    - cmd/tilbo-cli/cmd_gui.go

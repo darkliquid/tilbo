@@ -1,0 +1,3 @@
+name: IPC Envelope Pattern
+description: Protobuf Request/Response/Event envelope with typed oneof variants for JSON-RPC communication
+stability: schema

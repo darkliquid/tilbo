@@ -1,0 +1,21 @@
+name: IPC Handlers
+type: module
+description: "Core IPC request handler functions for tag, search, metadata, status, and rule operations"
+
+aspects:
+  - aspect: structured-logging
+    anchors:
+      - slog.WarnContext
+  - aspect: ipc-envelope
+    anchors:
+      - ipcv1.Response
+      - ipcv1.SearchRequest
+
+relations:
+  - target: daemon
+    type: calls
+    consumes: [handleSearch, handleTagReq, handleMetadata, handleMetadataSet, handleListTags, handleHydrateTags, handleRelated, handleListDirectory]
+
+mapping:
+  paths:
+    - cmd/tilbo-daemon/handlers.go

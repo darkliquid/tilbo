@@ -1,0 +1,19 @@
+name: Navigation
+type: module
+description: "Browser navigation: history stack, path resolution, directory loading, search execution, sorting, and tag patching"
+
+aspects:
+  - aspect: ipc-envelope
+    anchors:
+      - TilboDaemon
+    exceptions:
+      - "Consumes TilboDaemon singleton methods rather than directly using IPC envelope — the daemon-service abstraction hides the protocol"
+
+relations:
+  - target: quickshell/daemon-service
+    type: uses
+    consumes: [listDirectory, hydrateTags, listTrash, search, globSearch]
+
+mapping:
+  paths:
+    - cmd/tilbo-quickshell/windows/browser/BrowserNavigation.qml

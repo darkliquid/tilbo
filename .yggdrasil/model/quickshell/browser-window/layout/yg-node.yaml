@@ -1,0 +1,38 @@
+name: Layout
+type: module
+description: "Top-level visual structure: header toolbar, footer breadcrumb bar, keyboard shortcuts, file area, dialogs, and image preview"
+
+aspects:
+  - aspect: ipc-envelope
+    anchors:
+      - TilboDaemon
+    exceptions:
+      - "Consumes TilboDaemon singleton methods rather than directly using IPC envelope — the daemon-service abstraction hides the protocol"
+
+relations:
+  - target: quickshell/daemon-service
+    type: uses
+    consumes: [renameFile, deleteFile, listAppsForFile, openWithApp, getFileActions, runFileAction, getFileBadges, getThumbnail, emptyTrash, restoreTrash, pinPlace, pinSearch]
+  - target: quickshell/theme
+    type: uses
+  - target: quickshell/i18n
+    type: uses
+  - target: quickshell/file-views
+    type: uses
+    consumes: [FileGrid, FileList]
+  - target: quickshell/search-bar
+    type: uses
+    consumes: [TagSearchBar]
+  - target: quickshell/media
+    type: uses
+    consumes: [ImagePreview]
+  - target: quickshell/ui-primitives
+    type: uses
+    consumes: [ThemeButton, ThemeIcon]
+  - target: quickshell/browser-window/sidebar
+    type: uses
+    consumes: [BrowserSidebar]
+
+mapping:
+  paths:
+    - cmd/tilbo-quickshell/windows/browser/BrowserLayout.qml

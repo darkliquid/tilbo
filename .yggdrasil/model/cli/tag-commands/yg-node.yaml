@@ -1,0 +1,19 @@
+name: Tag Commands
+type: module
+description: "CLI commands for managing file tags: add, remove, set, list, clear"
+
+aspects:
+  - aspect: ipc-envelope
+    anchors:
+      - ipcv1.Request_Tag
+      - ipcv1.TagRequest
+      - ipcv1.TagOperation_TAG_OPERATION_ADD
+
+relations:
+  - target: cli
+    type: calls
+    consumes: [call, daemonError, absPath]
+
+mapping:
+  paths:
+    - cmd/tilbo-cli/cmd_tag.go

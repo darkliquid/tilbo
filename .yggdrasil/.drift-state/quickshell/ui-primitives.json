@@ -1,0 +1,27 @@
+{
+  "hash": "ce523bedcf8117d2c81e47e6d1f399857e8ead9771549d470a65aa5afc3f03b4",
+  "files": {
+    ".yggdrasil/model/quickshell/ui-primitives/yg-node.yaml": "ba8caa76a1077c15a9b2f6493b6f3b7ffb88ea678d228df45f824a818619891d",
+    ".yggdrasil/model/quickshell/ui-primitives/interface.md": "bdd4e67b8ed3eb03312bd36abb0b9ff7e99b4a64f2dc1dd178a22408d0da3c4f",
+    ".yggdrasil/model/quickshell/ui-primitives/responsibility.md": "7db846499f701aec3b53dc16a208462e3448e96ff71bda690397df5480572c4d",
+    ".yggdrasil/model/quickshell/yg-node.yaml": "dc9d1e46e3018d0c412e27d84fb914d1ccb83c72d99eaf927591a9d65eee3f88",
+    ".yggdrasil/model/quickshell/internals.md": "b6a2f74059cc51eb643de37da359b2701afb9c56cadea816fded91427788502e",
+    ".yggdrasil/model/quickshell/responsibility.md": "f918b91041fe592eb6b07392652353b71b0cac5d8c903bcc77058181fbd2ad68",
+    ".yggdrasil/model/quickshell/theme/responsibility.md": "fa5108ab06999c90e6792d13c1594d35a924d20e611a40570a648dd98da37574",
+    ".yggdrasil/model/quickshell/theme/interface.md": "81e051950a26fe2eecfcbf14c0cc5144cf83914957174a309dddf01fc41938ed",
+    "cmd/tilbo-quickshell/components/ThemeButton.qml": "a32cf03fe60d35d71fecb3d6c36b3d998bde73351f6113967bb8ba1e28ff9005",
+    "cmd/tilbo-quickshell/components/ThemeIcon.qml": "0c1fa69d965b60a98eba9cf2bac799e2fad877c7fd07a7d5470c5df093977b31"
+  },
+  "mtimes": {
+    ".yggdrasil/model/quickshell/ui-primitives/yg-node.yaml": 1774334360011.2185,
+    ".yggdrasil/model/quickshell/ui-primitives/interface.md": 1774334374455.3628,
+    ".yggdrasil/model/quickshell/ui-primitives/responsibility.md": 1774334366399.2825,
+    ".yggdrasil/model/quickshell/yg-node.yaml": 1774334414496.7632,
+    ".yggdrasil/model/quickshell/internals.md": 1774334168451.3125,
+    ".yggdrasil/model/quickshell/responsibility.md": 1774334157765.2065,
+    ".yggdrasil/model/quickshell/theme/responsibility.md": 1774334203992.665,
+    ".yggdrasil/model/quickshell/theme/interface.md": 1774334209348.718,
+    "cmd/tilbo-quickshell/components/ThemeButton.qml": 1773991802186.3828,
+    "cmd/tilbo-quickshell/components/ThemeIcon.qml": 1773817406249.5996
+  }
+}

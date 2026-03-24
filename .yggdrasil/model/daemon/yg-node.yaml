@@ -1,0 +1,24 @@
+name: Tilbo Daemon
+type: service
+description: "Background service that watches the filesystem, maintains the tag/metadata index, and exposes IPC endpoints for CLI and GUI clients"
+
+aspects:
+  - aspect: structured-logging
+    anchors:
+      - slog.InfoContext
+      - slog.DebugContext
+      - slog.WarnContext
+  - aspect: graceful-shutdown
+    anchors:
+      - cleanShutdownErr
+      - shutdownWaitTimeout
+  - aspect: ipc-envelope
+    anchors:
+      - buildIPCRequestHandler
+      - ipcv1.Request
+      - ipcv1.Response
+
+mapping:
+  paths:
+    - cmd/tilbo-daemon/main.go
+    - cmd/tilbo-daemon/builtins.go

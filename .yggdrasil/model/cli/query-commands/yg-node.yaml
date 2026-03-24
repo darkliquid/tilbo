@@ -1,0 +1,25 @@
+name: Query Commands
+type: module
+description: "CLI commands for searching files and finding related files via the tag graph"
+
+aspects:
+  - aspect: ipc-envelope
+    anchors:
+      - ipcv1.Request_Search
+      - ipcv1.SearchRequest
+      - ipcv1.Request_Related
+  - aspect: output-formatting
+    anchors:
+      - outputFormatJSON
+      - tabwriter.NewWriter
+      - jsonFileResult
+
+relations:
+  - target: cli
+    type: calls
+    consumes: [call, daemonError, absPath]
+
+mapping:
+  paths:
+    - cmd/tilbo-cli/cmd_search.go
+    - cmd/tilbo-cli/cmd_related.go

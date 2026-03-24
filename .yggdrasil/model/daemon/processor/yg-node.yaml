@@ -1,0 +1,17 @@
+name: File Processor
+type: module
+description: "M2 pipeline: harvests metadata, evaluates rules, updates xattr and index for a single file"
+
+aspects:
+  - aspect: structured-logging
+    anchors:
+      - slog.DebugContext
+
+relations:
+  - target: daemon
+    type: calls
+    consumes: [ProcessFile, clearPathNonRetryable, clearNonRetryable]
+
+mapping:
+  paths:
+    - cmd/tilbo-daemon/processor.go
