@@ -148,13 +148,13 @@ func (s *Suite) Shell(ctx context.Context, script string) (string, error) {
 	return s.ExecOK(ctx, "sh", "-c", script)
 }
 
-// CLI runs tilbo-cli inside the container with the given socket and arguments.
+// CLI runs tilbo inside the container with the given socket and arguments.
 func (s *Suite) CLI(ctx context.Context, sockPath string, args ...string) (string, error) {
-	cmd := append([]string{"tilbo-cli", "--socket", sockPath}, args...)
+	cmd := append([]string{"tilbo", "--socket", sockPath}, args...)
 	return s.ExecOK(ctx, cmd...)
 }
 
-// StartDaemon launches tilbo-daemon in the background inside the container.
+// StartDaemon launches `tilbo daemon` in the background inside the container.
 // It returns after the daemon's IPC socket appears (up to 10s) so callers can
 // immediately issue CLI commands.
 //
@@ -164,7 +164,7 @@ func (s *Suite) CLI(ctx context.Context, sockPath string, args ...string) (strin
 //   - watchPath: container-side directory to watch
 //   - fuseMount: container-side FUSE mount point (empty to disable FUSE)
 //   - logPath: container-side path where daemon stdout+stderr is written
-//   - extraArgs: additional flags forwarded verbatim to tilbo-daemon
+//   - extraArgs: additional flags forwarded verbatim to `tilbo daemon`
 //     (e.g. "--watcher", "inotify")
 func (s *Suite) StartDaemon(
 	ctx context.Context,
@@ -196,7 +196,7 @@ func (s *Suite) StartDaemon(
 	}
 
 	cmd := fmt.Sprintf(
-		"tilbo-daemon --socket '%s' --db '%s' --watch '%s' --fuse-mount '%s' --log-format json",
+		"tilbo daemon --socket '%s' --db '%s' --watch '%s' --fuse-mount '%s' --log-format json",
 		sockPath, dbPath, watchPath, fuseMount,
 	)
 	if len(extraArgs) > 0 {
@@ -271,13 +271,13 @@ func (s *Suite) WaitForSocket(ctx context.Context, sockPath string, timeout time
 	return fmt.Errorf("timed out waiting for socket %s to appear", sockPath)
 }
 
-// WaitIndexed polls tilbo-cli search until path appears in the index, or times out.
+// WaitIndexed polls `tilbo search` until path appears in the index, or times out.
 // It is used after file-creation/modification events to account for the 200ms debounce.
 func (s *Suite) WaitIndexed(ctx context.Context, sockPath, path string, timeout time.Duration) error {
 	deadline := time.Now().Add(timeout)
 	for time.Now().Before(deadline) {
 		out, code, err := s.Exec(ctx,
-			"tilbo-cli", "--socket", sockPath,
+			"tilbo", "--socket", sockPath,
 			"search", "--meta", "__path__=eq:"+path, "--format", "json",
 		)
 		if err != nil {
@@ -296,12 +296,12 @@ func (s *Suite) WaitIndexed(ctx context.Context, sockPath, path string, timeout 
 	return fmt.Errorf("timed out waiting for %s to appear in index", path)
 }
 
-// WaitRemoved polls tilbo-cli search until path is absent from the index, or times out.
+// WaitRemoved polls `tilbo search` until path is absent from the index, or times out.
 func (s *Suite) WaitRemoved(ctx context.Context, sockPath, path string, timeout time.Duration) error {
 	deadline := time.Now().Add(timeout)
 	for time.Now().Before(deadline) {
 		out, code, err := s.Exec(ctx,
-			"tilbo-cli", "--socket", sockPath,
+			"tilbo", "--socket", sockPath,
 			"search", "--meta", "__path__=eq:"+path, "--format", "json",
 		)
 		if err != nil {

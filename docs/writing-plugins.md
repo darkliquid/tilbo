@@ -18,11 +18,11 @@ Tilbo looks for WASM plugins in specific directories. By default, these are:
     *   `~/.config/tilbo/rules`
     *   `/etc/tilbo/rules`
 
-You can also define "inline" rules directly in the `tilbo-daemon` configuration file.
+You can also define "inline" rules directly in the `tilbo daemon` configuration file.
 
 ## How it Works
 
-1.  **Plugin Discovery**: On startup, `tilbo-daemon` scans the plugin directories for `.wasm` files.
+1.  **Plugin Discovery**: On startup, `tilbo daemon` scans the plugin directories for `.wasm` files.
 2.  **WASM Runtime**: The daemon uses the [wazero](https://wazero.io/) runtime to load and execute the WASM plugins in a secure sandbox.
 3.  **Execution**:
     *   When a new or modified file is detected, it is passed through the **Harvester pipeline**. Each harvester that matches the file type is executed, and any metadata it returns is added to the index.

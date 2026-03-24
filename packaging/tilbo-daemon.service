@@ -5,7 +5,7 @@ Requires=tilbo-daemon.socket
 
 [Service]
 Type=notify
-ExecStart=/usr/local/bin/tilbo-daemon
+ExecStart=/usr/local/bin/tilbo daemon
 Restart=on-failure
 RestartSec=5
 

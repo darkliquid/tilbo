@@ -12,7 +12,7 @@ Tilbo is a three-component system: a daemon, a CLI, and a GUI. All three are in 
 
 ```
                          Unix socket (JSON-RPC)
- tilbo-cli ────────────────────────────────────────► tilbo-daemon
+ tilbo ────────────────────────────────────────────► tilbo daemon
                                                         │
  tilbo-quickshell (QML) ──── tilbo-ui.sock ────────────►│
                                                         │
@@ -161,7 +161,7 @@ mise run build-cli      # Build CLI only
 The daemon prefers fanotify for filesystem watching, which requires `CAP_SYS_ADMIN`:
 
 ```sh
-sudo setcap cap_sys_admin+ep ./tilbo-daemon
+sudo setcap cap_sys_admin+ep ./tilbo
 ```
 
 Rebuilding the binary clears file capabilities — reapply after each build. If the capability is unavailable, the daemon falls back to inotify automatically.
@@ -319,7 +319,7 @@ mise run local-integration-test   # Colima Docker context
 ```
 
 Integration tests use testcontainers-go to manage the container lifecycle. The test suite:
-- Builds tilbo-daemon and tilbo-cli from source
+- Builds the unified `tilbo` binary from source
 - Creates loop-mounted ext4, btrfs, vfat, and tmpfs volumes
 - Starts a daemon instance and runs CLI + FUSE tests against it
 
@@ -370,7 +370,7 @@ Same TOML config but with a `.wasm` path in the command field. WASI modules have
 2. Add the new types to the `Request` and `Response` `oneof` blocks
 3. Run `mise run generate-proto` and `mise run generate-js`
 4. Implement the handler in `cmd/tilbo-daemon/handlers.go` (or `browser_handlers.go` for browser-specific methods)
-5. Add the CLI command in `cmd/tilbo-cli/cmd_<domain>.go`
+5. Add the CLI command in `cmd/tilbo/cmd_<domain>.go`
 6. If the GUI needs it, add the RPC call in `cmd/tilbo-quickshell/services/TilboDaemon.qml`
 7. Commit the proto file and all generated outputs together
 
@@ -390,8 +390,8 @@ TOML rule condition operators are defined in `internal/rules/toml.go`. To add a 
 
 ```
 cmd/
-  tilbo-daemon/         Daemon binary (main, handlers, processor, FUSE, GUI manager)
-  tilbo-cli/            CLI binary (Cobra commands)
+  tilbo-daemon/         Importable daemon command/runtime package
+  tilbo/                Unified CLI binary (Cobra commands + `tilbo daemon`)
   tilbo-quickshell/     QML GUI (components, services, windows)
 internal/
   bookmarks/            GTK bookmarks integration for virtual tag roots

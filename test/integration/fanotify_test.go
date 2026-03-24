@@ -174,7 +174,7 @@ func TestRapidCreatesAllIndexed(t *testing.T) {
 func searchJSON(t *testing.T, ctx context.Context, path string) string {
 	t.Helper()
 	out, _, _ := suite.Exec(ctx,
-		"tilbo-cli", "--socket", mainSock,
+		"tilbo", "--socket", mainSock,
 		"search", "--meta", "__path__=eq:"+path, "--format", "json",
 	)
 	return out

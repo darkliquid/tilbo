@@ -1,4 +1,4 @@
-package main
+package daemoncmd
 
 import (
 	"context"
@@ -18,7 +18,14 @@ import (
 	"github.com/darkliquid/tilbo/internal/watcher"
 )
 
-// daemonOptions holds all runtime configuration flags for tilbo-daemon.
+// CommandMetadata carries build metadata injected by the top-level tilbo binary.
+type CommandMetadata struct {
+	Version   string
+	Commit    string
+	BuildDate string
+}
+
+// daemonOptions holds all runtime configuration flags for the daemon command.
 // Values are populated from the config file first, then overridden by CLI flags,
 // giving users a layered configuration approach (config file < CLI flags).
 type daemonOptions struct {
@@ -36,7 +43,15 @@ type daemonOptions struct {
 	printVersion   bool
 }
 
-// newRootCmd builds the top-level cobra command for tilbo-daemon. It loads the
+// NewCommand builds the `tilbo daemon` command tree.
+func NewCommand(meta CommandMetadata) *cobra.Command {
+	version = meta.Version
+	commit = meta.Commit
+	buildDate = meta.BuildDate
+	return newRootCmd()
+}
+
+// newRootCmd builds the daemon command tree. It loads the
 // config file eagerly so that config values can serve as flag defaults. If the
 // config file is missing or malformed, the error is deferred — the daemon will
 // still start with built-in defaults and log a warning at startup.
@@ -69,19 +84,20 @@ func newRootCmd() *cobra.Command {
 	}
 
 	rootCmd := &cobra.Command{
-		Use:   "tilbo-daemon",
-		Short: "Tilbo daemon",
-		Long:  "tilbo-daemon watches files, indexes tags/metadata, and serves IPC requests.",
+		Use:   "daemon",
+		Short: "Run or manage the tilbo daemon",
+		Long:  "Run or manage the tilbo daemon. The daemon watches files, indexes tags and metadata, and serves IPC requests.",
 		RunE: func(cmd *cobra.Command, _ []string) error {
+			opts.socketOverride = socketOverrideForCommand(cmd, opts.socketOverride)
 			if opts.printVersion {
-				fmt.Printf("tilbo-daemon %s (commit %s, built %s)\n", version, commit, buildDate)
+				fmt.Printf("tilbo daemon %s (commit %s, built %s)\n", version, commit, buildDate)
 				return nil
 			}
 			return runDaemon(cmd.Context(), cfgPath, cfgErr, opts)
 		},
 	}
 	rootCmd.Version = version
-	rootCmd.SetVersionTemplate(fmt.Sprintf("tilbo-daemon %s (commit %s, built %s)\n", version, commit, buildDate))
+	rootCmd.SetVersionTemplate(fmt.Sprintf("tilbo daemon %s (commit %s, built %s)\n", version, commit, buildDate))
 
 	rootCmd.Flags().StringVar(&opts.watchPath, "watch", opts.watchPath, "filesystem path to watch")
 	rootCmd.Flags().StringVar(&opts.dbPath, "db", opts.dbPath, "path to the SQLite index database")
@@ -91,7 +107,6 @@ func newRootCmd() *cobra.Command {
 		opts.fuseMount,
 		"FUSE virtual filesystem mount point (empty to disable)",
 	)
-	rootCmd.Flags().StringVar(&opts.socketOverride, "socket", opts.socketOverride, "override default Unix socket path")
 	rootCmd.Flags().StringVar(&opts.logFormat, "log-format", opts.logFormat, "log format: text or json")
 	rootCmd.Flags().StringVar(&opts.logLevel, "log-level", opts.logLevel, "log level: debug, info, warn, error")
 	rootCmd.Flags().StringVar(
@@ -128,6 +143,17 @@ func newRootCmd() *cobra.Command {
 	return rootCmd
 }
 
+func socketOverrideForCommand(cmd *cobra.Command, fallback string) string {
+	flag := cmd.Flags().Lookup("socket")
+	if flag == nil {
+		flag = cmd.InheritedFlags().Lookup("socket")
+	}
+	if flag != nil && flag.Changed {
+		return flag.Value.String()
+	}
+	return fallback
+}
+
 // runDaemon is the main entry point after CLI flag parsing. It configures logging,
 // sets up signal handling for graceful shutdown (SIGTERM/SIGINT) and config reload
 // (SIGHUP), then delegates to the run() function which owns the daemon lifecycle.
@@ -139,16 +165,16 @@ func runDaemon(ctx context.Context, cfgPath string, cfgErr error, opts *daemonOp
 	}
 
 	if err := setupLogging(opts.logFormat, opts.logLevel); err != nil {
-		return fmt.Errorf("tilbo-daemon: bad log flags: %w", err)
+		return fmt.Errorf("tilbo daemon: bad log flags: %w", err)
 	}
 
 	// Report any config load error as a warning rather than a hard failure,
 	// because the daemon can operate entirely on defaults and CLI flags.
 	if cfgErr != nil {
-		slog.WarnContext(ctx, "tilbo-daemon: config load error; using defaults", "path", cfgPath, "err", cfgErr)
+		slog.WarnContext(ctx, "tilbo daemon: config load error; using defaults", "path", cfgPath, "err", cfgErr)
 	}
 
-	slog.InfoContext(ctx, "tilbo-daemon starting",
+	slog.InfoContext(ctx, "tilbo daemon starting",
 		"version", version,
 		"commit", commit,
 		"built", buildDate,
@@ -186,7 +212,7 @@ func runDaemon(ctx context.Context, cfgPath string, cfgErr error, opts *daemonOp
 		return err
 	}
 
-	slog.InfoContext(ctx, "tilbo-daemon stopped")
+	slog.InfoContext(ctx, "tilbo daemon stopped")
 	return nil
 }
 
@@ -207,7 +233,8 @@ func newConfigCmd(opts *daemonOptions, defaultConfigPath string) *cobra.Command 
 		Use:   "init",
 		Short: "Write a baseline config file using the current daemon flags",
 		Long:  "Writes a baseline TOML config. The generated [daemon] section reflects the flags used for this command invocation.",
-		RunE: func(_ *cobra.Command, _ []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			opts.socketOverride = socketOverrideForCommand(cmd, opts.socketOverride)
 			if !force {
 				if _, err := os.Stat(initPath); err == nil {
 					return fmt.Errorf("config file already exists at %s (use --force to overwrite)", initPath)
@@ -260,7 +287,7 @@ func newConfigCmd(opts *daemonOptions, defaultConfigPath string) *cobra.Command 
 // newCompletionCmd creates the "completion" subcommand that outputs shell
 // completion scripts for bash, zsh, fish, and powershell. Users typically
 // pipe the output into their shell's completion directory (e.g.,
-// "tilbo-daemon completion fish > ~/.config/fish/completions/tilbo-daemon.fish").
+// "tilbo completion fish > ~/.config/fish/completions/tilbo.fish").
 func newCompletionCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:       "completion [bash|zsh|fish|powershell]",
@@ -301,7 +328,7 @@ func newSystemdCmd() *cobra.Command {
 
 	installCmd := &cobra.Command{
 		Use:   "install",
-		Short: "Install user-mode systemd service and socket for tilbo-daemon",
+		Short: "Install user-mode systemd service and socket for the tilbo daemon",
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			return installSystemdUnits(cmd.Context(), targetDir, enable, now)
 		},
@@ -410,7 +437,7 @@ func systemdServiceUnit(exePath string) string {
 		"After=dbus.socket local-fs.target\n\n" +
 		"[Service]\n" +
 		"Type=simple\n" +
-		"ExecStart=" + shellQuote(exePath) + "\n" +
+		"ExecStart=" + shellQuote(exePath) + " daemon\n" +
 		"Restart=on-failure\n" +
 		"RestartSec=5s\n" +
 		"StandardOutput=journal\n" +

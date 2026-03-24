@@ -1,5 +1,4 @@
-// tilbo-cli is the terminal client for the tilbo daemon.
-// It communicates with tilbo-daemon over a Unix socket using protobuf IPC.
+// tilbo is the unified CLI and daemon entrypoint for the project.
 package main
 
 import (
@@ -57,7 +56,7 @@ func init() {
 	rootCmd.AddCommand(searchCmd)
 	rootCmd.AddCommand(metaCmd)
 	rootCmd.AddCommand(relatedCmd)
-	rootCmd.AddCommand(daemonCmd)
+	rootCmd.AddCommand(newDaemonCmd())
 	rootCmd.AddCommand(ruleCmd)
 	rootCmd.AddCommand(harvesterCmd)
 	rootCmd.AddCommand(configCmd)
@@ -74,7 +73,7 @@ func main() {
 func dial(ctx context.Context) (*ipc.Client, error) {
 	c, err := ipc.NewClient(ctx, sockFlag)
 	if err != nil {
-		return nil, fmt.Errorf("cannot connect to tilbo daemon at %s: %w\nIs tilbo-daemon running?", sockFlag, err)
+		return nil, fmt.Errorf("cannot connect to tilbo daemon at %s: %w\nIs the tilbo daemon running?", sockFlag, err)
 	}
 	return c, nil
 }

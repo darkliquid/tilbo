@@ -4,7 +4,7 @@
 //
 // Requirements:
 //   - Docker or Podman daemon accessible to the test runner
-//   - go binary on PATH (used to build tilbo-daemon and tilbo-cli)
+//   - go binary on PATH (used to build the unified tilbo binary)
 //   - Linux host (fanotify/FUSE tests are Linux-only)
 //
 // Run with:

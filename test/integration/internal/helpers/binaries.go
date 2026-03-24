@@ -40,7 +40,7 @@ func TempBase() string {
 	return os.TempDir()
 }
 
-// Build compiles tilbo-daemon and tilbo-cli into a temporary directory and
+// Build compiles the unified tilbo binary into a temporary directory and
 // returns the directory path. The caller must remove the directory when done.
 //
 // Both binaries are built for linux/amd64 with CGO_ENABLED=0 so they can be
@@ -56,7 +56,7 @@ func Build() (binDir string, err error) {
 		return "", fmt.Errorf("create bin tmpdir: %w", err)
 	}
 
-	for _, cmd := range []string{"tilbo-daemon", "tilbo-cli"} {
+	for _, cmd := range []string{"tilbo"} {
 		out := filepath.Join(binDir, cmd)
 		c := exec.Command("go", "build", "-o", out, "./cmd/"+cmd)
 		c.Dir = root

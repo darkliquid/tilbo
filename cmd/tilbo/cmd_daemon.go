@@ -6,6 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	daemoncmd "github.com/darkliquid/tilbo/cmd/tilbo-daemon"
 	ipcv1 "github.com/darkliquid/tilbo/internal/ipc/gen/tilbo/ipc/v1"
 )
 
@@ -15,9 +16,15 @@ const (
 	secondsPerDay    = 24 * secondsPerHour
 )
 
-var daemonCmd = &cobra.Command{
-	Use:   "daemon",
-	Short: "Inspect or control the tilbo daemon",
+func newDaemonCmd() *cobra.Command {
+	cmd := daemoncmd.NewCommand(daemoncmd.CommandMetadata{
+		Version:   version,
+		Commit:    commit,
+		BuildDate: buildDate,
+	})
+	cmd.Short = "Run, inspect, or control the tilbo daemon"
+	cmd.AddCommand(daemonStatusCmd, daemonReloadRulesCmd)
+	return cmd
 }
 
 var daemonStatusCmd = &cobra.Command{
@@ -83,10 +90,6 @@ var daemonReloadRulesCmd = &cobra.Command{
 		fmt.Println("rules reloaded successfully")
 		return nil
 	},
-}
-
-func init() {
-	daemonCmd.AddCommand(daemonStatusCmd, daemonReloadRulesCmd)
 }
 
 // formatUptime returns a human-readable duration string from seconds.

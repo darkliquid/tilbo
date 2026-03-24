@@ -45,12 +45,11 @@ support extended filesystem attributes.
 ## Installation
 
 ```sh
-# Build daemon and CLI (CGo-free; no special deps needed)
-go build -o tilbo-daemon ./cmd/tilbo-daemon
-go build -o tilbo-cli    ./cmd/tilbo-cli
+# Build the unified tilbo binary (CGo-free; no special deps needed)
+go build -o tilbo ./cmd/tilbo
 
 # Install to ~/bin (or /usr/local/bin)
-cp tilbo-daemon tilbo-cli ~/bin/
+cp tilbo ~/bin/
 
 # The GUI browser is a pure-QML app — no Go build step needed.
 # Install Quickshell (https://quickshell.outfoxxed.me/), then run directly:
@@ -58,11 +57,10 @@ cp tilbo-daemon tilbo-cli ~/bin/
 
 # Generate shell completions
 tilbo completion bash > ~/.local/share/bash-completion/completions/tilbo
-tilbo-daemon completion bash > ~/.local/share/bash-completion/completions/tilbo-daemon
 
 # Write baseline config files from current flags
 tilbo --socket /run/user/$UID/tilbo.sock config init
-tilbo-daemon --watch "$HOME" --log-level info config init
+tilbo daemon --watch "$HOME" --log-level info config init
 ```
 
 A systemd user service unit is recommended for the daemon:
@@ -74,7 +72,7 @@ Description=Tilbo tag-first file manager daemon
 After=network.target
 
 [Service]
-ExecStart=%h/bin/tilbo-daemon --watch %h --log-format text --log-level info
+ExecStart=%h/bin/tilbo daemon --watch %h --log-format text --log-level info
 Restart=on-failure
 
 [Install]
@@ -83,7 +81,7 @@ WantedBy=default.target
 
 ```sh
 # Install user-mode units via CLI using standard systemd tooling
-tilbo-daemon systemd install
+tilbo daemon systemd install
 
 # Or manually, if preferred
 systemctl --user enable --now tilbo-daemon
@@ -96,7 +94,7 @@ systemctl --user enable --now tilbo-daemon
 1. **Start the daemon** (watching your home directory):
 
    ```sh
-   tilbo-daemon --watch ~ --fuse-mount ~/tags
+   tilbo daemon --watch ~ --fuse-mount ~/tags
    ```
 
 2. **Open the GUI browser** (optional, requires Quickshell):
@@ -133,7 +131,7 @@ and recreate it without losing any tag data.
 
 ## The Daemon
 
-`tilbo-daemon` is the core engine. It watches a directory tree via fanotify,
+`tilbo daemon` is the core engine. It watches a directory tree via fanotify,
 runs a metadata harvester pipeline, stores results in a SQLite index, serves a
 FUSE virtual filesystem, and exposes a Unix socket IPC endpoint.
 
@@ -156,13 +154,13 @@ FUSE virtual filesystem, and exposes a Unix socket IPC endpoint.
 
 ```sh
 # Write a baseline daemon config using current flags
-tilbo-daemon --watch "$HOME" --db "$HOME/.local/state/tilbo/index.db" config init
+tilbo daemon --watch "$HOME" --db "$HOME/.local/state/tilbo/index.db" config init
 
 # Install user-mode systemd service and socket
-tilbo-daemon systemd install
+tilbo daemon systemd install
 
 # Generate shell completions
-tilbo-daemon completion zsh > ~/.zfunc/_tilbo-daemon
+tilbo completion zsh > ~/.zfunc/_tilbo
 ```
 
 The generated `~/.config/tilbo/config.toml` also includes a `[browser]` section.
@@ -199,7 +197,7 @@ zoom_reset = "Ctrl+0"
 
 ### Watcher Permissions and Fallback Modes
 
-`tilbo-daemon` prefers fanotify, but fanotify setup depends on kernel and runtime permissions.
+`tilbo daemon` prefers fanotify, but fanotify setup depends on kernel and runtime permissions.
 
 - `CAP_SYS_ADMIN` is required for fanotify mark setup and FID handle resolution.
 - On a normal supported mount, the daemon uses full fanotify mode.
@@ -211,13 +209,13 @@ zoom_reset = "Ctrl+0"
 To grant capability to a local build:
 
 ```sh
-sudo setcap cap_sys_admin+ep ./tilbo-daemon
+sudo setcap cap_sys_admin+ep ./tilbo
 ```
 
 Verify capability:
 
 ```sh
-getcap ./tilbo-daemon
+getcap ./tilbo
 ```
 
 Note: rebuilding the binary clears file capabilities, so re-apply `setcap` after each rebuild.
@@ -254,7 +252,7 @@ keyed by inode and device number.
 
 ## The CLI
 
-`tilbo-cli` is the terminal client. All commands communicate with a running
+`tilbo` is the terminal client. All commands communicate with a running
 daemon via the Unix socket at `/run/user/$UID/tilbo.sock`.
 
 ### Tag management
@@ -402,7 +400,7 @@ socket (`$XDG_RUNTIME_DIR/tilbo-ui.sock`). It requires
 
 ```sh
 # Start the daemon first
-tilbo-daemon --watch ~ --fuse-mount ~/tags
+tilbo daemon --watch ~ --fuse-mount ~/tags
 
 # Then launch the browser in another terminal (or via autostart)
 quickshell -p cmd/tilbo-quickshell/shell.qml

@@ -10,8 +10,8 @@ node = "25"
 "npm:protobufjs-cli" = "latest"
 
 [tasks.build-daemon]
-description = "Build tilbo daemon"
-run = "go build -v ./cmd/tilbo-daemon"
+description = "Build tilbo binary"
+run = "go build -v -o tilbo ./cmd/tilbo"
 depends = ["generate"]
 
 [tasks.generate-js]
@@ -26,14 +26,14 @@ sources = ["proto/**/*.proto"]
 outputs = ["cmd/tilbo-quickshell/services/qml_ipc.mjs"]
 
 [tasks.build-cli]
-description = "Build tilbo cli"
-run = "go build -v ./cmd/tilbo-cli"
+description = "Build tilbo binary"
+run = "go build -v -o tilbo ./cmd/tilbo"
 depends = ["generate"]
 sources = ["**/*.go"]
-outputs = ["tilbo-cli"]
+outputs = ["tilbo"]
 
 [tasks.build]
-description = "Build all tilbo binaries"
+description = "Build the tilbo binary"
 depends = ["build-daemon", "build-cli"]
 
 [tasks.test]
@@ -104,7 +104,7 @@ depends = ["generate", "lint", "test", "build"]
 [tasks.clean]
 description = "Clean build artifacts and generated code"
 run = """
-rm -rf tilbo-cli tilbo-daemon
+rm -rf tilbo tilbo-cli tilbo-daemon
 rm -rf internal/ipc/gen/
 """
 
@@ -119,4 +119,3 @@ sources = ["cmd/tilbo-quickshell/**/*.qml"]
 [tasks.build-sqlite-vec]
 description = "Rebuild sqlite-vec.wasm for the index package using pinned sqlite-vec-go versions"
 run = "bash contrib/scripts/build-sqlite-vec.sh"
-

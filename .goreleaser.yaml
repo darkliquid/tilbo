@@ -8,26 +8,9 @@ before:
     - go mod verify
 
 builds:
-  - id: tilbo-daemon
-    binary: tilbo-daemon
-    main: ./cmd/tilbo-daemon
-    env:
-      - CGO_ENABLED=0
-    goos:
-      - linux
-    goarch:
-      - amd64
-      - arm64
-    ldflags:
-      - -s -w
-      - -X main.version={{.Version}}
-      - -X main.commit={{.ShortCommit}}
-      - -X main.buildDate={{.Date}}
-    mod_timestamp: "{{ .CommitTimestamp }}"
-
-  - id: tilbo-cli
-    binary: tilbo-cli
-    main: ./cmd/tilbo-cli
+  - id: tilbo
+    binary: tilbo
+    main: ./cmd/tilbo
     env:
       - CGO_ENABLED=0
     goos:
@@ -45,8 +28,7 @@ builds:
 archives:
   - id: tilbo-archive
     ids:
-      - tilbo-daemon
-      - tilbo-cli
+      - tilbo
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     formats:
       - tar.gz
@@ -61,8 +43,7 @@ nfpms:
   - id: tilbo-packages
     package_name: tilbo
     ids:
-      - tilbo-daemon
-      - tilbo-cli
+      - tilbo
     vendor: darkliquid
     homepage: https://github.com/darkliquid/tilbo
     maintainer: "darkliquid <darkliquid@users.noreply.github.com>"

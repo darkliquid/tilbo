@@ -178,13 +178,13 @@ func TestDaemonStatusCmd(t *testing.T) {
 
 // --- helpers -----------------------------------------------------------------
 
-// cliMust runs tilbo-cli against the main daemon socket and fails the test on
+// cliMust runs tilbo against the main daemon socket and fails the test on
 // any error. Returns stdout+stderr output.
 func cliMust(t *testing.T, ctx context.Context, args ...string) string {
 	t.Helper()
 	out, err := suite.CLI(ctx, mainSock, args...)
 	if err != nil {
-		t.Fatalf("tilbo-cli %v: %v\noutput: %s", args, err, out)
+		t.Fatalf("tilbo %v: %v\noutput: %s", args, err, out)
 	}
 	return out
 }

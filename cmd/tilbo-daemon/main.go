@@ -1,7 +1,5 @@
-// tilbo-daemon is the core engine for the tilbo tag-first file manager.
-// It watches a filesystem mount via fanotify, maintains a SQLite index of
-// file tags and metadata, and exposes a Unix socket IPC endpoint for clients.
-package main
+// Package daemoncmd provides the tilbo daemon command and runtime.
+package daemoncmd
 
 import (
 	"context"
@@ -16,7 +14,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/charmbracelet/fang"
 	"github.com/tetratelabs/wazero"
 
 	"github.com/darkliquid/tilbo/internal/bookmarks"
@@ -49,12 +46,6 @@ const (
 	fuseMountWaitTimeout = 5 * time.Second
 	shutdownWaitTimeout  = 2 * time.Second
 )
-
-func main() {
-	if err := fang.Execute(context.Background(), newRootCmd()); err != nil {
-		os.Exit(1)
-	}
-}
 
 // run is the main daemon loop. It returns nil on clean shutdown and a non-nil
 // error if any component fails unexpectedly.
@@ -186,7 +177,7 @@ func run(
 		})
 	}
 
-	slog.InfoContext(ctx, "tilbo-daemon ready", "socket", sockPath)
+	slog.InfoContext(ctx, "tilbo daemon ready", "socket", sockPath)
 	startFuseMount(ctx, fuseMount, idx, fileGraph, warningStore.Append)
 
 	return runEventLoop(ctx, events, watchErrCh, hupCh, syncer, idx, proc, engine, ruleReg, sweeper, wasmCache, cfgPath)
@@ -606,7 +597,7 @@ func runEventLoop(
 func fuseCapabilityWarning(err error, mountPoint string) string {
 	if isPermissionErr(err) {
 		return fmt.Sprintf(
-			"fuse mount at %q failed due to missing permissions. grant access to /dev/fuse and CAP_SYS_ADMIN, then restart tilbo-daemon",
+			"fuse mount at %q failed due to missing permissions. grant access to /dev/fuse and CAP_SYS_ADMIN, then restart `tilbo daemon`",
 			mountPoint,
 		)
 	}

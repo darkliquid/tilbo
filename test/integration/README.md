@@ -63,8 +63,8 @@ host machine
     ↓ build binaries (go build, linux/amd64)
     ↓ start container (privileged Docker/Podman)
     ↓ mount loop devices (ext4, btrfs, vfat, tmpfs) via container.Exec
-    ↓ start tilbo-daemon inside container
-    ↓ run tests via container.Exec(tilbo-cli ...)
+    ↓ start tilbo daemon inside container
+    ↓ run tests via container.Exec(tilbo ...)
     ↓ assert output
     ↓ teardown
 ```

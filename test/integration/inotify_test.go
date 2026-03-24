@@ -10,7 +10,7 @@ import (
 	"github.com/darkliquid/tilbo/test/integration/internal/helpers"
 )
 
-// startInotifyDaemon starts an isolated tilbo-daemon with the inotify backend
+// startInotifyDaemon starts an isolated `tilbo daemon` process with the inotify backend
 // forced (-watcher inotify). It creates a private subdirectory under tmpfs as
 // the watch root and registers t.Cleanup to stop the daemon.
 //
@@ -170,7 +170,7 @@ func TestInotifyRapidCreatesAllIndexed(t *testing.T) {
 func inotifySearchJSON(t *testing.T, ctx context.Context, sock, path string) string {
 	t.Helper()
 	out, _, _ := suite.Exec(ctx,
-		"tilbo-cli", "--socket", sock,
+		"tilbo", "--socket", sock,
 		"search", "--meta", "__path__=eq:"+path, "--format", "json",
 	)
 	return out

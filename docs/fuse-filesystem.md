@@ -1,6 +1,6 @@
 # The Tilbo FUSE Filesystem
 
-The `tilbo-daemon` includes an optional FUSE (Filesystem in Userspace) server that provides a powerful, dynamic view of your tagged files. When enabled, it creates a virtual filesystem (by default at `~/.local/share/tilbo/tags` or `/run/user/$UID/tilbo/tags`) where directories are tags and files are symlinks to their real counterparts.
+`tilbo daemon` includes an optional FUSE (Filesystem in Userspace) server that provides a powerful, dynamic view of your tagged files. When enabled, it creates a virtual filesystem (by default at `~/.local/share/tilbo/tags` or `/run/user/$UID/tilbo/tags`) where directories are tags and files are symlinks to their real counterparts.
 
 This allows you to browse and manage your files using standard shell commands (`ls`, `cd`, `mv`) in a tag-based structure.
 

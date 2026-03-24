@@ -149,7 +149,7 @@ jobs:
             -timeout=45m \
             -race \
             -coverprofile=coverage.out \
-            ./internal/... ./cmd/tilbo-cli/... ./cmd/tilbo-daemon/...
+            ./internal/... ./cmd/tilbo/... ./cmd/tilbo-daemon/...
 
       - name: Write coverage summary
         if: always()
@@ -245,14 +245,13 @@ jobs:
           go-version-file: go.mod
           cache: true
 
-      - name: Build tilbo-daemon and tilbo-cli
-        run: go build -v -trimpath ./cmd/tilbo-daemon ./cmd/tilbo-cli
+      - name: Build tilbo
+        run: go build -v -trimpath -o tilbo ./cmd/tilbo
 
       - name: Upload binaries
         uses: actions/upload-artifact@v7
         with:
           name: binaries-linux-${{ matrix.goarch }}
           path: |
-            tilbo-daemon
-            tilbo-cli
+            tilbo
           retention-days: 7
