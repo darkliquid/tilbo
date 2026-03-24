@@ -73,15 +73,15 @@ func mimeToIconName(mime string) string {
 // runtime. Each method validates its inputs, delegates to the appropriate
 // subsystem, and returns GUI-friendly result types from the browser package.
 type daemonBrowserMethods struct {
-	idx          *index.DB        // SQLite full-text search index for file metadata and tags
-	tags         *xattr.Service   // xattr-based tag storage (primary tag persistence layer)
-	g            *graph.Graph     // tag relationship/dependency graph for hierarchical tags
-	fuseMount    string           // path to the tilbo FUSE virtual mount, empty if inactive
+	idx          *index.DB                                  // SQLite full-text search index for file metadata and tags
+	tags         *xattr.Service                             // xattr-based tag storage (primary tag persistence layer)
+	g            *graph.Graph                               // tag relationship/dependency graph for hierarchical tags
+	fuseMount    string                                     // path to the tilbo FUSE virtual mount, empty if inactive
 	onFileTagged func(path string, added, removed []string) // broadcast callback for tag-change events to GUI clients
-	cfg          *config.Config   // daemon configuration (browser prefs, pinned places, etc.)
-	cfgPath      string           // filesystem path to the config file, used for persisting changes
-	extRegistry  *extension.Registry // plugin registry providing badges and context-menu actions
-	thumbGen     *thumbnail.Generator // on-demand thumbnail generator for file previews
+	cfg          *config.Config                             // daemon configuration (browser prefs, pinned places, etc.)
+	cfgPath      string                                     // filesystem path to the config file, used for persisting changes
+	extRegistry  *extension.Registry                        // plugin registry providing badges and context-menu actions
+	thumbGen     *thumbnail.Generator                       // on-demand thumbnail generator for file previews
 
 	// clipboardPaths and clipboardIsMove implement an in-process clipboard for
 	// copy/cut/paste operations. The clipboard lives in daemon memory rather than
@@ -144,74 +144,82 @@ func (h *daemonBrowserMethods) ListDirectory(path string, hidden bool) ([]browse
 
 	entries := make([]browser.DirEntry, 0, len(des))
 	for _, de := range des {
-		name := de.Name()
-		isHidden := name != "" && name[0] == '.'
-		if !hidden && isHidden {
+		entry, skip := h.toDirEntry(clean, de, hidden)
+		if skip {
 			continue
 		}
-
-		var size, mtime int64
-		var mode uint32
-		var isDir bool
-		entryPath := filepath.Join(clean, name)
-
-		// Check for symlinks via the DirEntry type bits (from readdir, no extra syscall).
-		// If it is a symlink, resolve the target for display in the GUI.
-		isLink := de.Type()&os.ModeSymlink != 0
-		linkTarget := ""
-		if isLink {
-			if target, err := os.Readlink(entryPath); err == nil {
-				linkTarget = target
-			}
-		}
-
-		// Use os.Stat (which follows symlinks) so that symlinks to directories
-		// are reported as directories and file sizes reflect the target.
-		// If stat fails (e.g. broken symlink), fall back to DirEntry.Info()
-		// which uses lstat, so we still return whatever metadata is available.
-		if info, statErr := os.Stat(entryPath); statErr == nil {
-			size = info.Size()
-			mtime = info.ModTime().Unix()
-			mode = uint32(info.Mode().Perm())
-			isDir = info.IsDir()
-		} else if info, lstatErr := de.Info(); lstatErr == nil {
-			size = info.Size()
-			mtime = info.ModTime().Unix()
-			mode = uint32(info.Mode().Perm())
-			isDir = info.IsDir()
-		}
-
-		// Look up the MIME type from the index (not from the filesystem) so the
-		// result is consistent with search results and avoids expensive libmagic
-		// calls on every directory listing.
-		var mimeType, iconName string
-		if isDir {
-			mimeType = "inode/directory"
-			iconName = "folder" //nolint:goconst // simple string is fine
-		} else {
-			mimeType, _ = h.idx.GetFileMime(context.Background(), entryPath)
-			if mimeType != "" {
-				iconName = mimeToIconName(mimeType)
-			} else {
-				iconName = "application-x-generic"
-			}
-		}
-
-		entries = append(entries, browser.DirEntry{
-			Name:       name,
-			Path:       entryPath,
-			IsDir:      isDir,
-			IsLink:     isLink,
-			LinkTarget: linkTarget,
-			Size:       size,
-			MTime:      mtime,
-			Mode:       mode,
-			Hidden:     isHidden,
-			MimeType:   mimeType,
-			IconName:   iconName,
-		})
+		entries = append(entries, entry)
 	}
 	return entries, nil
+}
+
+func (h *daemonBrowserMethods) toDirEntry(cleanDir string, de os.DirEntry, hidden bool) (browser.DirEntry, bool) {
+	name := de.Name()
+	isHidden := name != "" && name[0] == '.'
+	if !hidden && isHidden {
+		return browser.DirEntry{}, true
+	}
+
+	var size, mtime int64
+	var mode uint32
+	var isDir bool
+	entryPath := filepath.Join(cleanDir, name)
+
+	// Check for symlinks via the DirEntry type bits (from readdir, no extra syscall).
+	// If it is a symlink, resolve the target for display in the GUI.
+	isLink := de.Type()&os.ModeSymlink != 0
+	linkTarget := ""
+	if isLink {
+		if target, err := os.Readlink(entryPath); err == nil {
+			linkTarget = target
+		}
+	}
+
+	// Use os.Stat (which follows symlinks) so that symlinks to directories
+	// are reported as directories and file sizes reflect the target.
+	// If stat fails (e.g. broken symlink), fall back to DirEntry.Info()
+	// which uses lstat, so we still return whatever metadata is available.
+	if info, statErr := os.Stat(entryPath); statErr == nil {
+		size = info.Size()
+		mtime = info.ModTime().Unix()
+		mode = uint32(info.Mode().Perm())
+		isDir = info.IsDir()
+	} else if info, lstatErr := de.Info(); lstatErr == nil {
+		size = info.Size()
+		mtime = info.ModTime().Unix()
+		mode = uint32(info.Mode().Perm())
+		isDir = info.IsDir()
+	}
+
+	// Look up the MIME type from the index (not from the filesystem) so the
+	// result is consistent with search results and avoids expensive libmagic
+	// calls on every directory listing.
+	var mimeType, iconName string
+	if isDir {
+		mimeType = "inode/directory"
+		iconName = "folder" //nolint:goconst // simple string is fine
+	} else {
+		mimeType, _ = h.idx.GetFileMime(context.Background(), entryPath)
+		if mimeType != "" {
+			iconName = mimeToIconName(mimeType)
+		} else {
+			iconName = "application-x-generic"
+		}
+	}
+
+	return browser.DirEntry{
+		Name:       name,
+		Path:       entryPath,
+		IsDir:      isDir,
+		IsLink:     isLink,
+		LinkTarget: linkTarget,
+		Size:       size,
+		MTime:      mtime,
+		Mode:       mode,
+		Hidden:     isHidden,
+		MimeType:   mimeType,
+		IconName:   iconName,
+	}, false
 }
 
 // StatFile returns size, mtime, and permission bits for a single path.
@@ -347,37 +355,45 @@ func globPattern(
 		}
 		seen[match] = struct{}{}
 
-		base := filepath.Base(match)
-		if !allowHidden && base != "" && base[0] == '.' {
+		result, ok := toMatchResult(match, allowHidden)
+		if !ok {
 			continue
 		}
-
-		info, statErr := os.Stat(match)
-		if statErr != nil {
-			continue
-		}
-		
-		isLink := false
-		linkTarget := ""
-		if linfo, lstatErr := os.Lstat(match); lstatErr == nil {
-			isLink = linfo.Mode()&os.ModeSymlink != 0
-			if isLink {
-				if target, err := os.Readlink(match); err == nil {
-					linkTarget = target
-				}
-			}
-		}
-
-		files = append(files, browser.FileResult{
-			Path:       match,
-			Tags:       []string{},
-			MTime:      info.ModTime().Unix(),
-			Size:       info.Size(),
-			IsLink:     isLink,
-			LinkTarget: linkTarget,
-		})
+		files = append(files, result)
 	}
 	return files, nil
+}
+
+func toMatchResult(match string, allowHidden bool) (browser.FileResult, bool) {
+	base := filepath.Base(match)
+	if !allowHidden && base != "" && base[0] == '.' {
+		return browser.FileResult{}, false
+	}
+
+	info, statErr := os.Stat(match)
+	if statErr != nil {
+		return browser.FileResult{}, false
+	}
+
+	isLink := false
+	linkTarget := ""
+	if linfo, lstatErr := os.Lstat(match); lstatErr == nil {
+		isLink = linfo.Mode()&os.ModeSymlink != 0
+		if isLink {
+			if target, err := os.Readlink(match); err == nil {
+				linkTarget = target
+			}
+		}
+	}
+
+	return browser.FileResult{
+		Path:       match,
+		Tags:       []string{},
+		MTime:      info.ModTime().Unix(),
+		Size:       info.Size(),
+		IsLink:     isLink,
+		LinkTarget: linkTarget,
+	}, true
 }
 
 // GetMetadata returns all metadata for a file (values and source map).

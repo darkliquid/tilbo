@@ -16,6 +16,10 @@
 //     a list of tag names. The Lua sandbox provides only standard math, string,
 //     and table libraries — no filesystem or network access.
 //
+//   - WASM Scripted Rules: Stored in ~/.config/tilbo/rules/*.wasm. Each module
+//     is executed with the metadata map JSON-encoded on stdin. The module must
+//     output a JSON-encoded array of tag names to stdout and exit with code 0.
+//
 // # Rule Overrides
 //
 // When a user manually removes a tag that was applied by a rule, the removal is

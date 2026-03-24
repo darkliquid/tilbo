@@ -1,5 +1,3 @@
-// Package rules implements the tilbo rule engine: declarative TOML rules,
-// Lua scripted rules, and WASM scripted rules that tag files based on metadata.
 package rules
 
 import (

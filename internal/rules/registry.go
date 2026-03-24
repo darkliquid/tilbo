@@ -34,8 +34,8 @@ type RuleDef struct {
 // can be overridden by system rules if they share the same priority.
 type Registry struct {
 	dirs    []string
-	cache   wazero.CompilationCache                  // shared WASM compilation cache across all WASM rules
-	closers []func(context.Context) error             // cleanup functions for WASM runtimes
+	cache   wazero.CompilationCache       // shared WASM compilation cache across all WASM rules
+	closers []func(context.Context) error // cleanup functions for WASM runtimes
 }
 
 // NewRegistry creates a Registry that scans the given directories for rule files.

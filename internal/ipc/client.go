@@ -23,8 +23,8 @@ const dialTimeout = 5 * time.Second
 type Client struct {
 	path    string
 	conn    net.Conn
-	mu      sync.Mutex   // protects reqs map and nextID
-	writeMu sync.Mutex   // serialises writes to conn (separate from mu to avoid blocking reads)
+	mu      sync.Mutex // protects reqs map and nextID
+	writeMu sync.Mutex // serialises writes to conn (separate from mu to avoid blocking reads)
 
 	nextID uint64 // monotonically increasing request ID counter
 

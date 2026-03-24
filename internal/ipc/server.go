@@ -28,9 +28,9 @@ type Server struct {
 	path    string
 	handler Handler
 	closing atomic.Bool
-	wg      sync.WaitGroup         // tracks serve loop + per-connection goroutines
+	wg      sync.WaitGroup // tracks serve loop + per-connection goroutines
 	ln      net.Listener
-	mu      sync.Mutex             // protects conns map
+	mu      sync.Mutex               // protects conns map
 	conns   map[net.Conn]*connWriter // active client connections
 }
 

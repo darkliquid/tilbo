@@ -8,7 +8,9 @@ require (
 	github.com/bep/imagemeta v0.17.0
 	github.com/charmbracelet/fang v0.4.4
 	github.com/dhowden/tag v0.0.0-20240417053706-3d75831295e8
+	github.com/disintegration/imaging v1.6.2
 	github.com/dominikbraun/graph v0.23.0
+	github.com/google/uuid v1.6.0
 	github.com/h2non/filetype v1.1.3
 	github.com/hanwen/go-fuse/v2 v2.9.0
 	github.com/knights-analytics/hugot v0.6.4
@@ -37,7 +39,6 @@ require (
 	github.com/clipperhouse/stringish v0.1.1 // indirect
 	github.com/clipperhouse/uax29/v2 v2.3.0 // indirect
 	github.com/daulet/tokenizers v1.25.0 // indirect
-	github.com/disintegration/imaging v1.6.2 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/emirpasic/gods v1.18.1 // indirect
 	github.com/go-errors/errors v1.5.1 // indirect
@@ -48,7 +49,6 @@ require (
 	github.com/gomlx/go-xla v0.1.4 // indirect
 	github.com/gomlx/gomlx v0.26.0 // indirect
 	github.com/gomlx/onnx-gomlx v0.3.4 // indirect
-	github.com/google/uuid v1.6.0 // indirect
 	github.com/hhrutter/lzw v1.0.0 // indirect
 	github.com/hhrutter/pkcs7 v0.2.0 // indirect
 	github.com/hhrutter/tiff v1.0.2 // indirect

@@ -58,15 +58,15 @@ type ffprobeOutput struct {
 // from ffprobe's JSON output. Only fields relevant to metadata extraction are
 // mapped; ffprobe emits many more fields that we intentionally ignore.
 type ffprobeStream struct {
-	CodecType      string         `json:"codec_type"`       // "video", "audio", "subtitle", etc.
-	CodecName      string         `json:"codec_name"`       // short codec name, e.g. "h264", "aac"
-	Width          int            `json:"width"`            // video pixel width (0 for audio)
-	Height         int            `json:"height"`           // video pixel height (0 for audio)
-	AvgFrameRate   string         `json:"avg_frame_rate"`   // rational "num/den" or bare float
-	Channels       int            `json:"channels"`         // audio channel count
-	ColorTransfer  string         `json:"color_transfer"`   // EOTF name, e.g. "smpte2084" for HDR10
-	ColorPrimaries string         `json:"color_primaries"`  // color gamut, e.g. "bt2020"
-	Tags           map[string]any `json:"tags"`             // per-stream key-value tags
+	CodecType      string         `json:"codec_type"`      // "video", "audio", "subtitle", etc.
+	CodecName      string         `json:"codec_name"`      // short codec name, e.g. "h264", "aac"
+	Width          int            `json:"width"`           // video pixel width (0 for audio)
+	Height         int            `json:"height"`          // video pixel height (0 for audio)
+	AvgFrameRate   string         `json:"avg_frame_rate"`  // rational "num/den" or bare float
+	Channels       int            `json:"channels"`        // audio channel count
+	ColorTransfer  string         `json:"color_transfer"`  // EOTF name, e.g. "smpte2084" for HDR10
+	ColorPrimaries string         `json:"color_primaries"` // color gamut, e.g. "bt2020"
+	Tags           map[string]any `json:"tags"`            // per-stream key-value tags
 }
 
 // ffprobeFormat represents the container-level format block from ffprobe.

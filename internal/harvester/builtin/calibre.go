@@ -55,6 +55,7 @@ func NewCalibreHarvester() *CalibreHarvester {
 func (h *CalibreHarvester) Name() string  { return "builtin:calibre" }
 func (h *CalibreHarvester) Priority() int { return calibrePriority }
 func (h *CalibreHarvester) Async() bool   { return false }
+
 // Matches returns true for ebook MIME types that Calibre's ebook-meta can handle.
 // This covers EPUB, MOBI, AZW/AZW3 (Kindle), FictionBook (FB2), and comic book
 // archives (CBZ/CBR). The list intentionally includes EPUB even though the
