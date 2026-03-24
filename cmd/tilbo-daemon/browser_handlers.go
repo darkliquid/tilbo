@@ -38,6 +38,7 @@ const (
 	// defaultPlacesCapacity is the initial slice capacity for ListPlaces,
 	// sized for the three standard XDG dirs plus a few extras.
 	defaultPlacesCapacity = 6
+	defaultBrowserTheme   = "nord"
 )
 
 // mimeToIconName maps a MIME type string to an XDG icon theme name suitable
@@ -558,7 +559,10 @@ func (h *daemonBrowserMethods) DeleteFile(path string) error {
 		return errors.New("browser: cannot delete virtual directory")
 	}
 
-	useTrash := h.cfg != nil && h.cfg.Browser.UseTrash
+	useTrash := true
+	if h.cfg != nil && h.cfg.Browser.UseTrash != nil {
+		useTrash = *h.cfg.Browser.UseTrash
+	}
 	if useTrash {
 		if err := trash.MoveToTrash(realPath); err != nil {
 			return fmt.Errorf("trash: %w", err)
@@ -799,17 +803,39 @@ func (h *daemonBrowserMethods) OpenWithApp(path, appID string) error {
 //nolint:unparam // required by interface
 func (h *daemonBrowserMethods) GetBrowserConfig() (browser.BrowserConfig, error) {
 	if h.cfg == nil {
-		return browser.BrowserConfig{UseTrash: true, Keybindings: map[string]string{}}, nil
+		return browser.BrowserConfig{
+			UseTrash:               true,
+			InlineThumbnails:       true,
+			AutoPropertiesSlideout: false,
+			Theme:                  defaultBrowserTheme,
+			Keybindings:            map[string]string{},
+		}, nil
 	}
 	kb := h.cfg.Browser.Keybindings
 	if kb == nil {
 		kb = map[string]string{}
 	}
 	return browser.BrowserConfig{
-		Keybindings:      kb,
-		UseTrash:         h.cfg.Browser.UseTrash,
-		InlineThumbnails: h.cfg.Browser.InlineThumbnails,
+		Keybindings:            kb,
+		UseTrash:               browserConfigBool(h.cfg.Browser.UseTrash, true),
+		InlineThumbnails:       browserConfigBool(h.cfg.Browser.InlineThumbnails, true),
+		AutoPropertiesSlideout: browserConfigBool(h.cfg.Browser.AutoPropertiesSlideout, false),
+		Theme:                  browserConfigTheme(h.cfg.Browser.Theme),
 	}, nil
+}
+
+func browserConfigBool(v *bool, fallback bool) bool {
+	if v != nil {
+		return *v
+	}
+	return fallback
+}
+
+func browserConfigTheme(theme string) string {
+	if strings.TrimSpace(theme) == "" {
+		return defaultBrowserTheme
+	}
+	return theme
 }
 
 // GetFileBadges returns badge icon names for path from registered extensions.
@@ -905,10 +931,7 @@ func (h *daemonBrowserMethods) GetThumbnail(path string, size int) (browser.Thum
 		return browser.ThumbnailResult{}, fmt.Errorf("MIME type %q is not thumbnailable", mime)
 	}
 
-	sz := thumbnail.Normal
-	if size == 1 {
-		sz = thumbnail.Large
-	}
+	sz := thumbnailSizeFromRequest(size)
 
 	res, err := h.thumbGen.GetOrGenerate(context.Background(), clean, mime, sz)
 	if err != nil {
@@ -920,6 +943,13 @@ func (h *daemonBrowserMethods) GetThumbnail(path string, size int) (browser.Thum
 		Width:  res.Width,
 		Height: res.Height,
 	}, nil
+}
+
+func thumbnailSizeFromRequest(size int) thumbnail.Size {
+	if size == 2 {
+		return thumbnail.Large
+	}
+	return thumbnail.Normal
 }
 
 // Copy sets the current clipboard state.

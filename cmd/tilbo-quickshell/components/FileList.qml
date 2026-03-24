@@ -236,6 +236,20 @@ Item {
                     width: root._colIcon; height: parent.height
 
                     property string _thumbnailSource: ""
+                    function refreshThumbnail() {
+                        if (!row.modelData || row.modelData.isDir) {
+                            iconItem._thumbnailSource = ""
+                            return
+                        }
+                        if (!root.inlineThumbnails || !root._isThumbnailable(row.modelData.mimeType)) {
+                            iconItem._thumbnailSource = ""
+                            return
+                        }
+                        root.getThumbnail(row.modelData.path, 0, function(result, _err) {
+                            if (result && result.thumbnailPath)
+                                iconItem._thumbnailSource = "file://" + result.thumbnailPath
+                        })
+                    }
 
                     ThemeIcon {
                         anchors.centerIn: parent
@@ -263,12 +277,14 @@ Item {
                             root.getFileBadges(row.modelData.path, function(badges, _err) {
                                 iconItem._badges = badges || []
                             })
-                            if (root.inlineThumbnails && root._isThumbnailable(row.modelData.mimeType)) {
-                                root.getThumbnail(row.modelData.path, 0, function(result, _err) {
-                                    if (result && result.thumbnailPath)
-                                        iconItem._thumbnailSource = "file://" + result.thumbnailPath
-                                })
-                            }
+                            iconItem.refreshThumbnail()
+                        }
+                    }
+
+                    Connections {
+                        target: root
+                        function onInlineThumbnailsChanged() {
+                            iconItem.refreshThumbnail()
                         }
                     }
 

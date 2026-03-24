@@ -25,6 +25,7 @@ Item {
     property bool   pathEditMode: false
     property var    _keybindings: ({})
     property bool   _useTrash: true
+    property bool   _autoPropertiesSlideout: false
     property bool   daemonConnected: false
 
     // ── Expose sidebar for orchestrator access ──────────────────────────
@@ -42,11 +43,11 @@ Item {
         onActivated: nav.goForward()
     }
     Shortcut {
-        sequence: "Alt+Up"
+        sequence: root._keybindings["up"] || "Alt+Up"
         onActivated: nav.goUp()
     }
     Shortcut {
-        sequence: "Alt+Home"
+        sequence: root._keybindings["home"] || "Alt+Home"
         onActivated: nav.goHome()
     }
     Shortcut {
@@ -80,48 +81,48 @@ Item {
         }
     }
     Shortcut {
-        sequence: "Shift+Delete"
+        sequence: root._keybindings["permanent_delete"] || "Shift+Delete"
         onActivated: {
             if (fileOps.selectedFile || fileOps.selectedPaths.length > 0) fileOps.permanentDeleteSelected()
         }
     }
     Shortcut {
-        sequence: "Ctrl+C"
+        sequence: root._keybindings["copy"] || "Ctrl+C"
         onActivated: fileOps.copySelected(false)
     }
     Shortcut {
-        sequence: "Ctrl+X"
+        sequence: root._keybindings["cut"] || "Ctrl+X"
         onActivated: fileOps.copySelected(true)
     }
     Shortcut {
-        sequence: "Ctrl+V"
+        sequence: root._keybindings["paste"] || "Ctrl+V"
         onActivated: fileOps.paste()
     }
     Shortcut {
-        sequence: "Ctrl+Shift+N"
+        sequence: root._keybindings["new_folder"] || "Ctrl+Shift+N"
         onActivated: fileOps.createNew(true)
     }
     Shortcut {
-        sequence: "Ctrl+A"
+        sequence: root._keybindings["select_all"] || "Ctrl+A"
         onActivated: {
             if (root.isGridView) fileGrid.selectAll()
             else                 fileList.selectAll()
         }
     }
     Shortcut {
-        sequence: "Ctrl++"
+        sequence: root._keybindings["zoom_in"] || "Ctrl++"
         onActivated: fileOps.zoomIn()
     }
     Shortcut {
-        sequence: "Ctrl+="
+        sequence: root._keybindings["zoom_in_alternate"] || "Ctrl+="
         onActivated: fileOps.zoomIn()
     }
     Shortcut {
-        sequence: "Ctrl+-"
+        sequence: root._keybindings["zoom_out"] || "Ctrl+-"
         onActivated: fileOps.zoomOut()
     }
     Shortcut {
-        sequence: "Ctrl+0"
+        sequence: root._keybindings["zoom_reset"] || "Ctrl+0"
         onActivated: fileOps.zoomReset()
     }
 

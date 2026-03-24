@@ -7,6 +7,63 @@ import Quickshell
 Item {
     id: root
 
+    property string preset: "nord"
+
+    function applyPreset(name) {
+        var requested = (name || "").toLowerCase()
+        if (requested === "" || requested === "nord") {
+            root.preset = "nord"
+            root.bgDark = "#1A1C23"
+            root.bgMedium = "#1E212A"
+            root.bgLight = "#22252E"
+            root.bgHover = "#2E3440"
+            root.bgActive = "#3B4252"
+            root.bgInput = "#1A1C23"
+            root.fgMain = "#ECEFF4"
+            root.fgDim = "#D8DEE9"
+            root.fgMuted = "#9099A3"
+            root.fgDeemphasized = "#4C566A"
+            root.fgPlaceholder = "#4C566A"
+            root.accent = "#88C0D0"
+            root.accentDim = "#5E81AC"
+            root.success = "#A3BE8C"
+            root.warning = "#EBCB8B"
+            root.danger = "#BF616A"
+            root.border = "#3B4252"
+            root.borderFocus = "#5E81AC"
+            root.selection = "#4C566A"
+            root.selectionBorder = "#88C0D0"
+            root.tintIcons = false
+            root.iconTint = root.accent
+            return
+        }
+        if (requested === "light") {
+            root.preset = "light"
+            root.bgDark = "#F4F6FB"
+            root.bgMedium = "#E8ECF4"
+            root.bgLight = "#DDE3EE"
+            root.bgHover = "#D2D9E6"
+            root.bgActive = "#C3CCDC"
+            root.bgInput = "#FFFFFF"
+            root.fgMain = "#1F2937"
+            root.fgDim = "#374151"
+            root.fgMuted = "#6B7280"
+            root.fgDeemphasized = "#9CA3AF"
+            root.fgPlaceholder = "#9CA3AF"
+            root.accent = "#2563EB"
+            root.accentDim = "#1D4ED8"
+            root.success = "#059669"
+            root.warning = "#D97706"
+            root.danger = "#DC2626"
+            root.border = "#C7D0E0"
+            root.borderFocus = "#2563EB"
+            root.selection = "#BFDBFE"
+            root.selectionBorder = "#2563EB"
+            root.tintIcons = false
+            root.iconTint = root.accent
+        }
+    }
+
     // ── Nord-inspired Defaults ────────────────────────────────────────────
 
     property color bgDark:      "#1A1C23"
@@ -81,5 +138,8 @@ Item {
         }
     }
 
-    Component.onCompleted: loadTheme()
+    Component.onCompleted: {
+        applyPreset(root.preset)
+        loadTheme()
+    }
 }

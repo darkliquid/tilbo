@@ -301,14 +301,14 @@ func initOptionalEmbedder(
 		return nil
 	}
 
-	if embedModelPath == "" {
-		embedModelName = vectorize.DefaultModelName
-	}
-
-	resolvedPath, dlErr := vectorize.EnsureModel(ctx, embedModelName, vectorize.DefaultModelDir())
-	if dlErr != nil {
-		slog.WarnContext(ctx, "embedding model unavailable; vectorization disabled", "err", dlErr)
-		return nil
+	resolvedPath, modelName, shouldDownload := resolveEmbedModelSource(embedModelPath, embedModelName)
+	if shouldDownload {
+		var dlErr error
+		resolvedPath, dlErr = vectorize.EnsureModel(ctx, modelName, vectorize.DefaultModelDir())
+		if dlErr != nil {
+			slog.WarnContext(ctx, "embedding model unavailable; vectorization disabled", "err", dlErr)
+			return nil
+		}
 	}
 
 	embedder, err := vectorize.NewONNXEmbedder(ctx, resolvedPath)
@@ -318,6 +318,16 @@ func initOptionalEmbedder(
 	}
 
 	return embedder
+}
+
+func resolveEmbedModelSource(embedModelPath, embedModelName string) (string, string, bool) {
+	if embedModelPath != "" {
+		return embedModelPath, "", false
+	}
+	if embedModelName == "" {
+		embedModelName = vectorize.DefaultModelName
+	}
+	return "", embedModelName, true
 }
 
 func startSyncerLoop(ctx context.Context, syncer *isync.Syncer, proc *Processor) <-chan error {

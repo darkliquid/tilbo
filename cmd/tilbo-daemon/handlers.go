@@ -529,9 +529,11 @@ func handleGetBrowserConfig(_ *ipcv1.GetBrowserConfigRequest, browser *daemonBro
 	}
 	return &ipcv1.Response{Kind: &ipcv1.Response_GetBrowserConfig{
 		GetBrowserConfig: &ipcv1.GetBrowserConfigResponse{
-			Keybindings:      cfg.Keybindings,
-			UseTrash:         cfg.UseTrash,
-			InlineThumbnails: cfg.InlineThumbnails,
+			Keybindings:            cfg.Keybindings,
+			UseTrash:               cfg.UseTrash,
+			InlineThumbnails:       cfg.InlineThumbnails,
+			AutoPropertiesSlideout: cfg.AutoPropertiesSlideout,
+			Theme:                  cfg.Theme,
 		},
 	}}, nil
 }

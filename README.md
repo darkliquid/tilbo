@@ -165,6 +165,38 @@ tilbo-daemon systemd install
 tilbo-daemon completion zsh > ~/.zfunc/_tilbo-daemon
 ```
 
+The generated `~/.config/tilbo/config.toml` also includes a `[browser]` section.
+Common browser settings can be edited there:
+
+```toml
+[browser]
+use_trash = true
+inline_thumbnails = true
+auto_properties_slideout = false
+theme = "nord" # supported presets: nord, light
+
+[browser.keybindings]
+back = "Alt+Left"
+forward = "Alt+Right"
+up = "Alt+Up"
+home = "Alt+Home"
+toggle_hidden = "Ctrl+H"
+toggle_grid = "Ctrl+G"
+refresh = "F5"
+focus_path = "Ctrl+L"
+delete = "Delete"
+permanent_delete = "Shift+Delete"
+copy = "Ctrl+C"
+cut = "Ctrl+X"
+paste = "Ctrl+V"
+new_folder = "Ctrl+Shift+N"
+select_all = "Ctrl+A"
+zoom_in = "Ctrl++"
+zoom_in_alternate = "Ctrl+="
+zoom_out = "Ctrl+-"
+zoom_reset = "Ctrl+0"
+```
+
 ### Watcher Permissions and Fallback Modes
 
 `tilbo-daemon` prefers fanotify, but fanotify setup depends on kernel and runtime permissions.
@@ -378,6 +410,10 @@ quickshell -p cmd/tilbo-quickshell/shell.qml
 # Or with the mise task shorthand
 mise run run-quickshell
 ```
+
+By default the properties sidebar stays closed until you click the `PROPERTIES`
+strip. Set `browser.auto_properties_slideout = true` in `config.toml` if you
+want it to open automatically on selection.
 
 ### Layout
 

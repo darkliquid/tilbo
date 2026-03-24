@@ -16,6 +16,7 @@ import (
 	"github.com/darkliquid/tilbo/internal/index"
 	"github.com/darkliquid/tilbo/internal/rules"
 	isync "github.com/darkliquid/tilbo/internal/sync"
+	"github.com/darkliquid/tilbo/internal/vectorize"
 	"github.com/darkliquid/tilbo/internal/watcher"
 	"github.com/darkliquid/tilbo/internal/xattr"
 )
@@ -93,6 +94,62 @@ func runDeleteBurst(
 		if err := os.Remove(pathB); err == nil {
 			handleFSEvent(ctx, watcher.Event{Kind: watcher.EventDelete, Path: pathB}, syncer, idx, proc)
 		}
+	}
+}
+
+func TestResolveEmbedModelSource(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name           string
+		embedModelPath string
+		embedModelName string
+		wantPath       string
+		wantModelName  string
+		wantDownload   bool
+	}{
+		{
+			name:           "explicit path wins",
+			embedModelPath: "/models/local",
+			embedModelName: "sentence-transformers/custom",
+			wantPath:       "/models/local",
+			wantModelName:  "",
+			wantDownload:   false,
+		},
+		{
+			name:           "custom model name preserved",
+			embedModelName: "sentence-transformers/custom",
+			wantPath:       "",
+			wantModelName:  "sentence-transformers/custom",
+			wantDownload:   true,
+		},
+		{
+			name:          "default model name filled in",
+			wantPath:      "",
+			wantModelName: vectorize.DefaultModelName,
+			wantDownload:  true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			gotPath, gotModelName, gotDownload := resolveEmbedModelSource(tt.embedModelPath, tt.embedModelName)
+			if gotPath != tt.wantPath || gotModelName != tt.wantModelName || gotDownload != tt.wantDownload {
+				t.Fatalf(
+					"resolveEmbedModelSource(%q, %q) = (%q, %q, %t), want (%q, %q, %t)",
+					tt.embedModelPath,
+					tt.embedModelName,
+					gotPath,
+					gotModelName,
+					gotDownload,
+					tt.wantPath,
+					tt.wantModelName,
+					tt.wantDownload,
+				)
+			}
+		})
 	}
 }
 

@@ -177,6 +177,20 @@ Item {
                         width: root.iconSize; height: root.iconSize
 
                         property string _thumbnailSource: ""
+                        function refreshThumbnail() {
+                            if (cell.modelData.isDir) {
+                                gridIconItem._thumbnailSource = ""
+                                return
+                            }
+                            if (!root.inlineThumbnails || !root._isThumbnailable(cell.modelData.mimeType)) {
+                                gridIconItem._thumbnailSource = ""
+                                return
+                            }
+                            root.getThumbnail(cell.modelData.path, 0, function(result, _err) {
+                                if (result && result.thumbnailPath)
+                                    gridIconItem._thumbnailSource = "file://" + result.thumbnailPath
+                            })
+                        }
 
                         ThemeIcon {
                             anchors.fill: parent
@@ -202,12 +216,14 @@ Item {
                                 root.getFileBadges(cell.modelData.path, function(badges, _err) {
                                     gridIconItem._badges = badges || []
                                 })
-                                if (root.inlineThumbnails && root._isThumbnailable(cell.modelData.mimeType)) {
-                                    root.getThumbnail(cell.modelData.path, 0, function(result, _err) {
-                                        if (result && result.thumbnailPath)
-                                            gridIconItem._thumbnailSource = "file://" + result.thumbnailPath
-                                    })
-                                }
+                                gridIconItem.refreshThumbnail()
+                            }
+                        }
+
+                        Connections {
+                            target: root
+                            function onInlineThumbnailsChanged() {
+                                gridIconItem.refreshThumbnail()
                             }
                         }
 

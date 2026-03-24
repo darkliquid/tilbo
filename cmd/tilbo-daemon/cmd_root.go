@@ -233,6 +233,13 @@ func newConfigCmd(opts *daemonOptions, defaultConfigPath string) *cobra.Command 
 				EmbedModelName: opts.embedModelName,
 				EmbedDisabled:  opts.embedDisabled,
 			}
+			cfg.Browser = config.BrowserConfig{
+				UseTrash:               config.Bool(true),
+				InlineThumbnails:       config.Bool(true),
+				AutoPropertiesSlideout: config.Bool(false),
+				Theme:                  "nord",
+				Keybindings:            map[string]string{},
+			}
 
 			if err := config.Save(initPath, cfg); err != nil {
 				return err

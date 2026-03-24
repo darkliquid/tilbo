@@ -17,6 +17,8 @@ import (
 // configured and embed_disabled is false.
 const DefaultModelName = "sentence-transformers/all-MiniLM-L6-v2"
 
+const defaultModelONNXFilePath = "onnx/model.onnx"
+
 // DefaultModelDir returns the directory where auto-downloaded models are stored.
 // Uses $XDG_DATA_HOME/tilbo/models or ~/.local/share/tilbo/models.
 func DefaultModelDir() string {
@@ -44,8 +46,7 @@ func EnsureModel(ctx context.Context, modelName, modelsDir string) (string, erro
 		return "", fmt.Errorf("vectorize: create models dir: %w", err)
 	}
 
-	opts := hugot.NewDownloadOptions()
-	opts.Verbose = false
+	opts := downloadOptionsForModel(modelName)
 
 	select {
 	case <-ctx.Done():
@@ -58,6 +59,15 @@ func EnsureModel(ctx context.Context, modelName, modelsDir string) (string, erro
 		return "", fmt.Errorf("vectorize: download model %q: %w", modelName, err)
 	}
 	return path, nil
+}
+
+func downloadOptionsForModel(modelName string) hugot.DownloadOptions {
+	opts := hugot.NewDownloadOptions()
+	opts.Verbose = false
+	if modelName == DefaultModelName {
+		opts.OnnxFilePath = defaultModelONNXFilePath
+	}
+	return opts
 }
 
 // Embedder provides vector embeddings for strings.

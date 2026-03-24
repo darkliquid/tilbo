@@ -155,21 +155,25 @@ func (DaemonState) EnumDescriptor() ([]byte, []int) {
 type ThumbnailSize int32
 
 const (
+	// Unspecified size.
+	ThumbnailSize_THUMBNAIL_SIZE_UNSPECIFIED ThumbnailSize = 0
 	// Normal size: 128x128 pixels maximum.
-	ThumbnailSize_THUMBNAIL_SIZE_NORMAL ThumbnailSize = 0
+	ThumbnailSize_THUMBNAIL_SIZE_NORMAL ThumbnailSize = 1
 	// Large size: 256x256 pixels maximum.
-	ThumbnailSize_THUMBNAIL_SIZE_LARGE ThumbnailSize = 1
+	ThumbnailSize_THUMBNAIL_SIZE_LARGE ThumbnailSize = 2
 )
 
 // Enum value maps for ThumbnailSize.
 var (
 	ThumbnailSize_name = map[int32]string{
-		0: "THUMBNAIL_SIZE_NORMAL",
-		1: "THUMBNAIL_SIZE_LARGE",
+		0: "THUMBNAIL_SIZE_UNSPECIFIED",
+		1: "THUMBNAIL_SIZE_NORMAL",
+		2: "THUMBNAIL_SIZE_LARGE",
 	}
 	ThumbnailSize_value = map[string]int32{
-		"THUMBNAIL_SIZE_NORMAL": 0,
-		"THUMBNAIL_SIZE_LARGE":  1,
+		"THUMBNAIL_SIZE_UNSPECIFIED": 0,
+		"THUMBNAIL_SIZE_NORMAL":      1,
+		"THUMBNAIL_SIZE_LARGE":       2,
 	}
 )
 
@@ -5071,8 +5075,12 @@ type GetBrowserConfigResponse struct {
 	UseTrash bool `protobuf:"varint,2,opt,name=use_trash,json=useTrash,proto3" json:"use_trash,omitempty"`
 	// When true, show inline thumbnail previews in file listings.
 	InlineThumbnails bool `protobuf:"varint,3,opt,name=inline_thumbnails,json=inlineThumbnails,proto3" json:"inline_thumbnails,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	// When true, selecting a file automatically opens the properties sidebar.
+	AutoPropertiesSlideout bool `protobuf:"varint,4,opt,name=auto_properties_slideout,json=autoPropertiesSlideout,proto3" json:"auto_properties_slideout,omitempty"`
+	// Named browser theme preset to apply in the GUI.
+	Theme         string `protobuf:"bytes,5,opt,name=theme,proto3" json:"theme,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *GetBrowserConfigResponse) Reset() {
@@ -5124,6 +5132,20 @@ func (x *GetBrowserConfigResponse) GetInlineThumbnails() bool {
 		return x.InlineThumbnails
 	}
 	return false
+}
+
+func (x *GetBrowserConfigResponse) GetAutoPropertiesSlideout() bool {
+	if x != nil {
+		return x.AutoPropertiesSlideout
+	}
+	return false
+}
+
+func (x *GetBrowserConfigResponse) GetTheme() string {
+	if x != nil {
+		return x.Theme
+	}
+	return ""
 }
 
 // GetFileBadgesRequest retrieves visual badge indicators for a file. Badges
@@ -5653,7 +5675,7 @@ func (x *GetThumbnailRequest) GetSize() ThumbnailSize {
 	if x != nil {
 		return x.Size
 	}
-	return ThumbnailSize_THUMBNAIL_SIZE_NORMAL
+	return ThumbnailSize_THUMBNAIL_SIZE_UNSPECIFIED
 }
 
 // GetThumbnailResponse returns the path to the generated PNG thumbnail and
@@ -6945,11 +6967,13 @@ const file_tilbo_ipc_v1_ipc_proto_rawDesc = "" +
 	"\x04path\x18\x01 \x01(\tR\x04path\x12\x15\n" +
 	"\x06app_id\x18\x02 \x01(\tR\x05appId\"\x15\n" +
 	"\x13OpenWithAppResponse\"\x19\n" +
-	"\x17GetBrowserConfigRequest\"\xff\x01\n" +
+	"\x17GetBrowserConfigRequest\"\xcf\x02\n" +
 	"\x18GetBrowserConfigResponse\x12Y\n" +
 	"\vkeybindings\x18\x01 \x03(\v27.tilbo.ipc.v1.GetBrowserConfigResponse.KeybindingsEntryR\vkeybindings\x12\x1b\n" +
 	"\tuse_trash\x18\x02 \x01(\bR\buseTrash\x12+\n" +
-	"\x11inline_thumbnails\x18\x03 \x01(\bR\x10inlineThumbnails\x1a>\n" +
+	"\x11inline_thumbnails\x18\x03 \x01(\bR\x10inlineThumbnails\x128\n" +
+	"\x18auto_properties_slideout\x18\x04 \x01(\bR\x16autoPropertiesSlideout\x12\x14\n" +
+	"\x05theme\x18\x05 \x01(\tR\x05theme\x1a>\n" +
 	"\x10KeybindingsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"*\n" +
@@ -7035,10 +7059,11 @@ const file_tilbo_ipc_v1_ipc_proto_rawDesc = "" +
 	"\x11DAEMON_STATE_IDLE\x10\x01\x12\x19\n" +
 	"\x15DAEMON_STATE_SCANNING\x10\x02\x12\x16\n" +
 	"\x12DAEMON_STATE_READY\x10\x03\x12\x19\n" +
-	"\x15DAEMON_STATE_DEGRADED\x10\x04*D\n" +
-	"\rThumbnailSize\x12\x19\n" +
-	"\x15THUMBNAIL_SIZE_NORMAL\x10\x00\x12\x18\n" +
-	"\x14THUMBNAIL_SIZE_LARGE\x10\x01B\xaf\x01\n" +
+	"\x15DAEMON_STATE_DEGRADED\x10\x04*d\n" +
+	"\rThumbnailSize\x12\x1e\n" +
+	"\x1aTHUMBNAIL_SIZE_UNSPECIFIED\x10\x00\x12\x19\n" +
+	"\x15THUMBNAIL_SIZE_NORMAL\x10\x01\x12\x18\n" +
+	"\x14THUMBNAIL_SIZE_LARGE\x10\x02B\xaf\x01\n" +
 	"\x10com.tilbo.ipc.v1B\bIpcProtoP\x01Z?github.com/darkliquid/tilbo/internal/ipc/gen/tilbo/ipc/v1;ipcv1\xa2\x02\x03TIX\xaa\x02\fTilbo.Ipc.V1\xca\x02\fTilbo\\Ipc\\V1\xe2\x02\x18Tilbo\\Ipc\\V1\\GPBMetadata\xea\x02\x0eTilbo::Ipc::V1b\x06proto3"
 
 var (

@@ -316,7 +316,13 @@ Singleton {
         _call({ getBrowserConfig: {} }, function(resp, err) {
             if (err) { callback(null, err); return }
             var cfg = resp.getBrowserConfig || {}
-            callback({ keybindings: cfg.keybindings || {}, useTrash: !!cfg.useTrash }, null)
+            callback({
+                keybindings: cfg.keybindings || {},
+                useTrash: !!cfg.useTrash,
+                inlineThumbnails: cfg.inlineThumbnails !== undefined ? !!cfg.inlineThumbnails : true,
+                autoPropertiesSlideout: !!cfg.autoPropertiesSlideout,
+                theme: cfg.theme || ""
+            }, null)
         })
     }
 

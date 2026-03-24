@@ -95,9 +95,11 @@ type SavedSearch struct {
 //
 //nolint:revive // keep name for clarity
 type BrowserConfig struct {
-	Keybindings      map[string]string
-	UseTrash         bool
-	InlineThumbnails bool
+	Keybindings            map[string]string
+	UseTrash               bool
+	InlineThumbnails       bool
+	AutoPropertiesSlideout bool
+	Theme                  string
 }
 
 // ThumbnailResult holds the outcome of a GetThumbnail call.

@@ -9,8 +9,10 @@ import (
 	"syscall"
 	"testing"
 
+	"github.com/darkliquid/tilbo/internal/config"
 	"github.com/darkliquid/tilbo/internal/graph"
 	"github.com/darkliquid/tilbo/internal/index"
+	"github.com/darkliquid/tilbo/internal/thumbnail"
 	"github.com/darkliquid/tilbo/internal/xattr"
 )
 
@@ -103,6 +105,90 @@ func TestValidatePath_AbsolutePassthrough(t *testing.T) {
 	}
 	if got != "/tmp/tilbo-test" {
 		t.Errorf("got %q, want /tmp/tilbo-test", got)
+	}
+}
+
+func TestThumbnailSizeFromRequest(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		size int
+		want thumbnail.Size
+	}{
+		{name: "unspecified defaults to normal", size: 0, want: thumbnail.Normal},
+		{name: "normal stays normal", size: 1, want: thumbnail.Normal},
+		{name: "large maps to large", size: 2, want: thumbnail.Large},
+		{name: "unknown defaults to normal", size: 99, want: thumbnail.Normal},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			if got := thumbnailSizeFromRequest(tt.size); got != tt.want {
+				t.Fatalf("thumbnailSizeFromRequest(%d) = %v, want %v", tt.size, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestGetBrowserConfig_Defaults(t *testing.T) {
+	t.Parallel()
+
+	h, _ := newTestHandler(t)
+
+	cfg, err := h.GetBrowserConfig()
+	if err != nil {
+		t.Fatalf("GetBrowserConfig: %v", err)
+	}
+	if !cfg.UseTrash {
+		t.Fatal("UseTrash should default to true")
+	}
+	if !cfg.InlineThumbnails {
+		t.Fatal("InlineThumbnails should default to true")
+	}
+	if cfg.AutoPropertiesSlideout {
+		t.Fatal("AutoPropertiesSlideout should default to false")
+	}
+	if cfg.Theme != defaultBrowserTheme {
+		t.Fatalf("Theme = %q, want %q", cfg.Theme, defaultBrowserTheme)
+	}
+}
+
+func TestGetBrowserConfig_UsesConfiguredValues(t *testing.T) {
+	t.Parallel()
+
+	h, _ := newTestHandler(t)
+	h.cfg = &config.Config{
+		Browser: config.BrowserConfig{
+			UseTrash:               config.Bool(false),
+			InlineThumbnails:       config.Bool(false),
+			AutoPropertiesSlideout: config.Bool(true),
+			Theme:                  "light",
+			Keybindings: map[string]string{
+				"copy": "Meta+C",
+			},
+		},
+	}
+
+	cfg, err := h.GetBrowserConfig()
+	if err != nil {
+		t.Fatalf("GetBrowserConfig: %v", err)
+	}
+	if cfg.UseTrash {
+		t.Fatal("UseTrash should honor false")
+	}
+	if cfg.InlineThumbnails {
+		t.Fatal("InlineThumbnails should honor false")
+	}
+	if !cfg.AutoPropertiesSlideout {
+		t.Fatal("AutoPropertiesSlideout should honor true")
+	}
+	if cfg.Theme != "light" {
+		t.Fatalf("Theme = %q, want light", cfg.Theme)
+	}
+	if got := cfg.Keybindings["copy"]; got != "Meta+C" {
+		t.Fatalf("copy keybinding = %q, want Meta+C", got)
 	}
 }
 

@@ -62,7 +62,10 @@ sources = ["**/*.go"]
 
 [tasks.lint]
 description = "Lint the Go codebase"
-run = "golangci-lint run ./..."
+run = """
+golangci-lint run ./...
+buf lint
+"""
 sources = ["**/*.go"]
 
 [tasks.format]

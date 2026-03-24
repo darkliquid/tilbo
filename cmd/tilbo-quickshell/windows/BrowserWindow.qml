@@ -100,6 +100,15 @@ ApplicationWindow {
         function onTrashRefreshNeeded() {
             nav._loadTrash()
         }
+        function onSelectedFileChanged() {
+            if (!fileOps.selectedFile && layout._autoPropertiesSlideout) {
+                layout.sidebar.showRightSidebar = false
+                return
+            }
+            if (fileOps.selectedFile && layout._autoPropertiesSlideout) {
+                layout.sidebar.showRightSidebar = true
+            }
+        }
     }
 
     Connections {
@@ -126,7 +135,10 @@ ApplicationWindow {
             if (cfg) {
                 layout._keybindings = cfg.keybindings || {}
                 layout._useTrash = cfg.useTrash !== undefined ? cfg.useTrash : true
-                fileOps._useInlineThumbnails = cfg.inlineThumbnails !== undefined ? cfg.inlineThumbnails : false
+                layout._autoPropertiesSlideout = !!cfg.autoPropertiesSlideout
+                fileOps._useInlineThumbnails = cfg.inlineThumbnails !== undefined ? cfg.inlineThumbnails : true
+                if (cfg.theme && cfg.theme !== "")
+                    Theme.applyPreset(cfg.theme)
             }
         })
     }

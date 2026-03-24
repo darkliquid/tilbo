@@ -25,6 +25,15 @@ func TestSaveAndLoad(t *testing.T) {
 		Daemon: config.DaemonConfig{
 			Watch: "/home/user",
 		},
+		Browser: config.BrowserConfig{
+			UseTrash:               config.Bool(true),
+			InlineThumbnails:       config.Bool(true),
+			AutoPropertiesSlideout: config.Bool(false),
+			Theme:                  "light",
+			Keybindings: map[string]string{
+				"copy": "Ctrl+Shift+C",
+			},
+		},
 	}
 
 	if err := config.Save(path, cfg); err != nil {
@@ -38,5 +47,20 @@ func TestSaveAndLoad(t *testing.T) {
 
 	if got.Daemon.Watch != cfg.Daemon.Watch {
 		t.Errorf("expected %v, got %v", cfg.Daemon.Watch, got.Daemon.Watch)
+	}
+	if got.Browser.UseTrash == nil || !*got.Browser.UseTrash {
+		t.Fatalf("expected Browser.UseTrash=true, got %#v", got.Browser.UseTrash)
+	}
+	if got.Browser.InlineThumbnails == nil || !*got.Browser.InlineThumbnails {
+		t.Fatalf("expected Browser.InlineThumbnails=true, got %#v", got.Browser.InlineThumbnails)
+	}
+	if got.Browser.AutoPropertiesSlideout == nil || *got.Browser.AutoPropertiesSlideout {
+		t.Fatalf("expected Browser.AutoPropertiesSlideout=false, got %#v", got.Browser.AutoPropertiesSlideout)
+	}
+	if got.Browser.Theme != "light" {
+		t.Fatalf("expected Browser.Theme=light, got %q", got.Browser.Theme)
+	}
+	if got.Browser.Keybindings["copy"] != "Ctrl+Shift+C" {
+		t.Fatalf("expected Browser keybinding copy to round-trip, got %q", got.Browser.Keybindings["copy"])
 	}
 }

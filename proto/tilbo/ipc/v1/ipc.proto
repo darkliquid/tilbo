@@ -740,6 +740,10 @@ message GetBrowserConfigResponse {
   bool use_trash = 2;
   // When true, show inline thumbnail previews in file listings.
   bool inline_thumbnails = 3;
+  // When true, selecting a file automatically opens the properties sidebar.
+  bool auto_properties_slideout = 4;
+  // Named browser theme preset to apply in the GUI.
+  string theme = 5;
 }
 
 // ---------------------------------------------------------------------------
@@ -824,10 +828,12 @@ message ShowWindowEvent {
 // ThumbnailSize controls the maximum dimensions of generated thumbnails,
 // following the XDG thumbnail specification sizes.
 enum ThumbnailSize {
+  // Unspecified size.
+  THUMBNAIL_SIZE_UNSPECIFIED = 0;
   // Normal size: 128x128 pixels maximum.
-  THUMBNAIL_SIZE_NORMAL = 0;
+  THUMBNAIL_SIZE_NORMAL = 1;
   // Large size: 256x256 pixels maximum.
-  THUMBNAIL_SIZE_LARGE = 1;
+  THUMBNAIL_SIZE_LARGE = 2;
 }
 
 // GetThumbnailRequest generates (or retrieves a cached) thumbnail for a file.

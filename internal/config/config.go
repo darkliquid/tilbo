@@ -48,11 +48,13 @@ type SavedSearch struct {
 
 // BrowserConfig holds tilbo file-browser settings.
 type BrowserConfig struct {
-	PinnedPlaces     []PinnedPlace     `toml:"pinned_place"`
-	SavedSearches    []SavedSearch     `toml:"saved_search"`
-	UseTrash         bool              `toml:"use_trash"`
-	InlineThumbnails bool              `toml:"inline_thumbnails"`
-	Keybindings      map[string]string `toml:"keybindings"`
+	PinnedPlaces           []PinnedPlace     `toml:"pinned_place"`
+	SavedSearches          []SavedSearch     `toml:"saved_search"`
+	UseTrash               *bool             `toml:"use_trash"`
+	InlineThumbnails       *bool             `toml:"inline_thumbnails"`
+	AutoPropertiesSlideout *bool             `toml:"auto_properties_slideout"`
+	Theme                  string            `toml:"theme"`
+	Keybindings            map[string]string `toml:"keybindings"`
 }
 
 // Config is the top-level structure of the shared config file.
@@ -65,6 +67,11 @@ type Config struct {
 	// directory. TOML rule files in the rules directory continue to work; these
 	// are loaded in addition to any .lua or .wasm rules found there.
 	Rules []rules.RuleDef `toml:"rule"`
+}
+
+// Bool returns a pointer to v for optional config fields.
+func Bool(v bool) *bool {
+	return &v
 }
 
 // Path returns the default config file path ($XDG_CONFIG_HOME/tilbo/config.toml).
