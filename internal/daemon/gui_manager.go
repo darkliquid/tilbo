@@ -51,9 +51,11 @@ func newGUIManager(shellPath string, broadcast func(*ipcv1.Event)) *guiManager {
 	return gm
 }
 
+const guiStopTimeout = 2 * time.Second
+
 // stopForUpdate stops the tracked GUI process to allow safe file replacement.
-// It sends SIGTERM and waits up to 2 s for a clean exit before force-killing.
-// Must NOT be called with gm.mu held.
+// It sends SIGTERM and waits up to guiStopTimeout for a clean exit before
+// force-killing. Must NOT be called with gm.mu held.
 func (gm *guiManager) stopForUpdate() {
 	gm.mu.Lock()
 	cmd := gm.cmd
@@ -75,7 +77,7 @@ func (gm *guiManager) stopForUpdate() {
 
 	select {
 	case <-done:
-	case <-time.After(2 * time.Second):
+	case <-time.After(guiStopTimeout):
 		_ = cmd.Process.Kill()
 	}
 }
@@ -219,7 +221,8 @@ func (gm *guiManager) syncEmbeddedQuickshell() (string, error) {
 	}
 
 	// Compare against the stored hash to decide whether extraction is needed.
-	storedHash, _ := os.ReadFile(filepath.Join(targetDir, embedHashFile)) //nolint:errcheck // missing == needs extraction
+	hashFile := filepath.Join(targetDir, embedHashFile)
+	storedHash, _ := os.ReadFile(hashFile) //nolint:gosec // targetDir is under XDG_DATA_HOME / user home
 	if string(storedHash) == currentHash {
 		// On-disk copy is up to date.
 		return filepath.Join(targetDir, "shell.qml"), nil
@@ -231,7 +234,7 @@ func (gm *guiManager) syncEmbeddedQuickshell() (string, error) {
 	// Remove the old tree entirely so no running Quickshell (including
 	// orphans from a previous daemon session) can read a half-updated tree
 	// or trigger a hot-reload mid-replacement.
-	if err := os.RemoveAll(targetDir); err != nil {
+	if err := os.RemoveAll(targetDir); err != nil { //nolint:gosec // targetDir is under XDG_DATA_HOME / user home
 		return "", fmt.Errorf("remove old quickshell dir: %w", err)
 	}
 
@@ -242,7 +245,7 @@ func (gm *guiManager) syncEmbeddedQuickshell() (string, error) {
 		}
 		dest := filepath.Join(targetDir, path)
 		if d.IsDir() {
-			return os.MkdirAll(dest, 0o750)
+			return os.MkdirAll(dest, 0o750) //nolint:gosec // dest is under user data dir
 		}
 		data, readErr := fs.ReadFile(quickshell.Files, path)
 		if readErr != nil {
@@ -254,14 +257,16 @@ func (gm *guiManager) syncEmbeddedQuickshell() (string, error) {
 	}
 
 	// Persist the new hash so the next start skips extraction.
-	if writeErr := os.WriteFile(filepath.Join(targetDir, embedHashFile), []byte(currentHash), 0o640); writeErr != nil { //nolint:gosec // user data dir
+	if writeErr := os.WriteFile( //nolint:gosec // hashFile is under XDG_DATA_HOME / user home
+		hashFile, []byte(currentHash), 0o600,
+	); writeErr != nil {
 		slog.Warn("could not write embed hash", "err", writeErr)
 	}
 
 	if string(storedHash) == "" {
-		slog.Info("extracted embedded quickshell", "dir", targetDir)
+		slog.Info("extracted embedded quickshell", "dir", targetDir) //nolint:gosec // user-controlled data home
 	} else {
-		slog.Info("updated embedded quickshell", "dir", targetDir)
+		slog.Info("updated embedded quickshell", "dir", targetDir) //nolint:gosec // user-controlled data home
 	}
 	return filepath.Join(targetDir, "shell.qml"), nil
 }

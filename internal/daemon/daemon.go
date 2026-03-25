@@ -34,8 +34,9 @@ import (
 )
 
 const (
-	fuseMountWaitTimeout = 5 * time.Second
-	shutdownWaitTimeout  = 2 * time.Second
+	fuseMountWaitTimeout  = 5 * time.Second
+	shutdownWaitTimeout   = 2 * time.Second
+	shutdownResponseDelay = 50 * time.Millisecond // delay before cancelling ctx so response is delivered first
 )
 
 // Run is the main daemon loop. It returns nil on clean shutdown and a non-nil
@@ -532,7 +533,7 @@ func buildIPCRequestHandler(
 		case *ipcv1.Request_Shutdown:
 			// Schedule cancellation after the response is delivered.
 			go func() {
-				time.Sleep(50 * time.Millisecond)
+				time.Sleep(shutdownResponseDelay)
 				shutdown()
 			}()
 			return &ipcv1.Response{Kind: &ipcv1.Response_Shutdown{
