@@ -1,4 +1,4 @@
-package daemoncmd
+package daemon
 
 import (
 	"context"

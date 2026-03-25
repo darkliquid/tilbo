@@ -1,5 +1,5 @@
 // Package daemoncmd provides the tilbo daemon command and runtime.
-package daemoncmd
+package daemon
 
 import (
 	"context"
@@ -33,15 +33,6 @@ import (
 	"github.com/darkliquid/tilbo/internal/xattr"
 )
 
-// version, commit, and buildDate are injected at build time by goreleaser via
-// -ldflags "-X main.version=... -X main.commit=... -X main.buildDate=...".
-// They default to "dev" so untagged local builds still produce useful output.
-var (
-	version   = "dev"
-	commit    = "none"
-	buildDate = "unknown"
-)
-
 const (
 	fuseMountWaitTimeout = 5 * time.Second
 	shutdownWaitTimeout  = 2 * time.Second
@@ -51,7 +42,7 @@ const (
 // error if any component fails unexpectedly.
 //
 //nolint:funlen // daemon initialization is inherently long
-func run(
+func Run(
 	ctx context.Context,
 	hupCh <-chan os.Signal,
 	watchPath, dbPath, fuseMount, sockPath, cfgPath string,
@@ -883,59 +874,4 @@ func waitForSyncerShutdown(syncErrCh <-chan error) error {
 	case <-time.After(shutdownWaitTimeout):
 		return errors.New("syncer shutdown timed out")
 	}
-}
-
-// setupLogging configures the default slog handler.
-func setupLogging(format, level string) error {
-	var lvl slog.Level
-	if err := lvl.UnmarshalText([]byte(level)); err != nil {
-		return fmt.Errorf("invalid log level %q: %w", level, err)
-	}
-
-	opts := &slog.HandlerOptions{Level: lvl}
-	var h slog.Handler
-	switch format {
-	case "json":
-		h = slog.NewJSONHandler(os.Stderr, opts)
-	case "text":
-		h = slog.NewTextHandler(os.Stderr, opts)
-	default:
-		return fmt.Errorf("invalid log format %q: want text or json", format)
-	}
-	slog.SetDefault(slog.New(h))
-	return nil
-}
-
-// socketPath returns the Unix socket path for the current user.
-func socketPath() string {
-	uid := os.Getuid()
-	return fmt.Sprintf("/run/user/%d/tilbo.sock", uid)
-}
-
-// defaultFuseMountPath returns the default FUSE mount point for the current user.
-func defaultFuseMountPath() string {
-	if dir := os.Getenv("XDG_RUNTIME_DIR"); dir != "" {
-		return filepath.Join(dir, "tilbo", "tags")
-	}
-	return fmt.Sprintf("/run/user/%d/tilbo/tags", os.Getuid())
-}
-
-// defaultWatchPath returns the path to watch when none is specified.
-// Defaults to the user's home directory.
-func defaultWatchPath() string {
-	if h, err := os.UserHomeDir(); err == nil {
-		return h
-	}
-	return "/"
-}
-
-// defaultDBPath returns the default SQLite database path for the current user.
-func defaultDBPath() string {
-	if dir := os.Getenv("XDG_STATE_HOME"); dir != "" {
-		return filepath.Join(dir, "tilbo", "index.db")
-	}
-	if h, err := os.UserHomeDir(); err == nil {
-		return filepath.Join(h, ".local", "state", "tilbo", "index.db")
-	}
-	return "tilbo-index.db"
 }

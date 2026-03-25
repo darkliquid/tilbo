@@ -1,7 +1,7 @@
 [tools]
 go = "latest"
 buf = "latest"
-golangci-lint = "2.11.3"
+golangci-lint = "2.11.4"
 "go:google.golang.org/protobuf/cmd/protoc-gen-go" = "latest"
 "go:github.com/planetscale/vtprotobuf/cmd/protoc-gen-go-vtproto" = "latest"
 sqlc = "latest"
