@@ -136,6 +136,7 @@ ApplicationWindow {
                 layout._keybindings = cfg.keybindings || {}
                 layout._useTrash = cfg.useTrash !== undefined ? cfg.useTrash : true
                 layout._autoPropertiesSlideout = !!cfg.autoPropertiesSlideout
+                layout._singleClick = !!cfg.singleClick
                 fileOps._useInlineThumbnails = cfg.inlineThumbnails !== undefined ? cfg.inlineThumbnails : true
                 if (cfg.theme && cfg.theme !== "")
                     Theme.applyPreset(cfg.theme)

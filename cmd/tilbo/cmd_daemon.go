@@ -362,7 +362,7 @@ func newDaemonCmd() *cobra.Command {
 		fuseMount:      orDefault(cfg.Daemon.FuseMount, defaultFuseMountPath()),
 		socketOverride: cfg.Daemon.Socket,
 		logFormat:      orDefault(cfg.Daemon.LogFormat, outputFormatText),
-		logLevel:       orDefault(cfg.Daemon.LogLevel, "info"),
+		logLevel:       orDefault(cfg.Daemon.LogLevel, slog.LevelInfo.String()),
 		watcherBackend: orDefault(cfg.Daemon.Watcher, "auto"),
 		watchHidden:    cfg.Daemon.WatchHidden,
 		embedModel:     cfg.Daemon.EmbedModel,
@@ -425,6 +425,7 @@ func newDaemonCmd() *cobra.Command {
 	cmd.AddCommand(newSystemdCmd())
 	cmd.AddCommand(daemonStatusCmd)
 	cmd.AddCommand(daemonReloadRulesCmd)
+	cmd.AddCommand(daemonShutdownCmd)
 	return cmd
 }
 
@@ -434,7 +435,7 @@ var daemonStatusCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		ctx := cmd.Context()
 
-		resp, err := call(ctx, &ipcv1.Request{Kind: &ipcv1.Request_Status{
+		resp, err := callDirect(ctx, &ipcv1.Request{Kind: &ipcv1.Request_Status{
 			Status: &ipcv1.StatusRequest{},
 		}})
 		if err != nil {
@@ -470,7 +471,7 @@ var daemonReloadRulesCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		ctx := cmd.Context()
 
-		resp, err := call(ctx, &ipcv1.Request{Kind: &ipcv1.Request_ReloadRules{
+		resp, err := callDirect(ctx, &ipcv1.Request{Kind: &ipcv1.Request_ReloadRules{
 			ReloadRules: &ipcv1.ReloadRulesRequest{},
 		}})
 		if err != nil {
@@ -489,6 +490,28 @@ var daemonReloadRulesCmd = &cobra.Command{
 			return nil
 		}
 		fmt.Println("rules reloaded successfully")
+		return nil
+	},
+}
+
+var daemonShutdownCmd = &cobra.Command{
+	Use:     "shutdown",
+	Short:   "Ask the running daemon to stop and exit",
+	Aliases: []string{"stop"},
+	RunE: func(cmd *cobra.Command, _ []string) error {
+		ctx := cmd.Context()
+
+		resp, err := callDirect(ctx, &ipcv1.Request{Kind: &ipcv1.Request_Shutdown{
+			Shutdown: &ipcv1.ShutdownRequest{},
+		}})
+		if err != nil {
+			return err
+		}
+		if err := daemonError(resp); err != nil {
+			return err
+		}
+
+		fmt.Println("daemon shutting down")
 		return nil
 	},
 }

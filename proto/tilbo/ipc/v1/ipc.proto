@@ -98,6 +98,12 @@ message Request {
     PinSearchRequest pin_search = 36;
     UnpinSearchRequest unpin_search = 37;
     ListSavedSearchesRequest list_saved_searches = 38;
+
+    // -- Daemon lifecycle --
+    ShutdownRequest shutdown = 39;
+
+    // -- File indexing --
+    ReindexFileRequest reindex_file = 40;
   }
 }
 
@@ -164,6 +170,12 @@ message Response {
     PinSearchResponse pin_search = 36;
     UnpinSearchResponse unpin_search = 37;
     ListSavedSearchesResponse list_saved_searches = 38;
+
+    // -- Daemon lifecycle --
+    ShutdownResponse shutdown = 39;
+
+    // -- File indexing --
+    ReindexFileResponse reindex_file = 40;
   }
 }
 
@@ -396,6 +408,24 @@ message StatusResponse {
   // Seconds since the daemon process started.
   int64 uptime_seconds = 6;
 }
+
+// ShutdownRequest asks the daemon to stop gracefully.
+// No fields are needed.
+message ShutdownRequest {}
+
+// ShutdownResponse is empty on success; the daemon will exit after sending it.
+message ShutdownResponse {}
+
+// ReindexFileRequest forces a full re-harvest and thumbnail cache invalidation
+// for a single file so that updated metadata and a fresh thumbnail appear
+// without waiting for the background sync cycle.
+message ReindexFileRequest {
+  // Absolute path to the file to reindex.
+  string path = 1;
+}
+
+// ReindexFileResponse is empty on success.
+message ReindexFileResponse {}
 
 // ReloadRulesRequest asks the daemon to re-read tagging rules from disk.
 // No fields are needed.
@@ -744,6 +774,9 @@ message GetBrowserConfigResponse {
   bool auto_properties_slideout = 4;
   // Named browser theme preset to apply in the GUI.
   string theme = 5;
+  // When true, a single click opens directories and files (double-click is
+  // still supported). Default false (double-click to open).
+  bool single_click = 6;
 }
 
 // ---------------------------------------------------------------------------

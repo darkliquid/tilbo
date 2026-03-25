@@ -15,10 +15,10 @@ run = """
 mkdir -p internal/ipc/gen
 pbjs -t static-module -w es6 -o internal/ipc/gen/ipc_generated.js proto/tilbo/ipc/v1/ipc.proto
 pbts -o internal/ipc/gen/ipc_generated.d.ts internal/ipc/gen/ipc_generated.js
-esbuild internal/ipc/gen/ipc_generated.js --bundle --format=esm --outfile=cmd/tilbo-quickshell/services/qml_ipc.mjs
+esbuild internal/ipc/gen/ipc_generated.js --bundle --format=esm --outfile=internal/quickshell/services/qml_ipc.mjs
 """
 sources = ["proto/**/*.proto"]
-outputs = ["cmd/tilbo-quickshell/services/qml_ipc.mjs"]
+outputs = ["internal/quickshell/services/qml_ipc.mjs"]
 
 # Code generation
 
@@ -43,7 +43,7 @@ depends = ["generate-proto", "generate-sqlc", "generate-js"]
 description = "Build the tilbo binary"
 run = "go build -v -o tilbo ./cmd/tilbo"
 depends = ["generate"]
-sources = ["**/*.go"]
+sources = ["**/*.go", "**/*.qml"]
 outputs = ["tilbo"]
 wait_for = ["format", "fixup"]
 
@@ -112,7 +112,7 @@ depends = ["generate", "format", "fixup", "lint", "test", "build"]
 [tasks.clean]
 description = "Clean build artifacts and generated code"
 run = """
-rm -rf tilbo tilbo-cli tilbo-daemon
+rm -rf tilbo
 rm -rf internal/ipc/gen/
 """
 
@@ -120,9 +120,9 @@ rm -rf internal/ipc/gen/
 description = "Run the tilbo Quickshell frontend (daemon must be running first)"
 run = """
 export QS_ICON_THEME="${QS_ICON_THEME:-$(contrib/scripts/detect-icon-theme.sh)}"
-exec quickshell -p cmd/tilbo-quickshell/shell.qml
+exec quickshell -p internal/quickshell/shell.qml
 """
-sources = ["cmd/tilbo-quickshell/**/*.qml"]
+sources = ["internal/quickshell/**/*.qml"]
 
 [tasks.build-sqlite-vec]
 description = "Rebuild sqlite-vec.wasm for the index package using pinned sqlite-vec-go versions"

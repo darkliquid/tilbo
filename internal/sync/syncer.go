@@ -249,9 +249,16 @@ func (s *Syncer) SyncFile(ctx context.Context, path string, stat *syscall.Stat_t
 		return false, fmt.Errorf("read source: %w", err)
 	}
 
-	// File needs harvesting if it has no mime metadata yet.
+	// File needs harvesting if it has no mime metadata, or if its mtime/size
+	// has changed since it was last indexed (content may have changed).
 	_, hasMIME := meta["mime"]
-	needsHarvest := !hasMIME
+	var needsHarvest bool
+	if !hasMIME {
+		needsHarvest = true
+	} else {
+		storedMtime, storedSize, statErr := s.idx.GetFileStat(ctx, path)
+		needsHarvest = statErr != nil || storedMtime != stat.Mtim.Sec || storedSize != stat.Size
+	}
 
 	// 2. Upsert the file record
 	inode := saturatingInt64FromUint64(stat.Ino)

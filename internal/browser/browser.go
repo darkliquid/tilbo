@@ -99,6 +99,7 @@ type BrowserConfig struct {
 	UseTrash               bool
 	InlineThumbnails       bool
 	AutoPropertiesSlideout bool
+	SingleClick            bool
 	Theme                  string
 }
 

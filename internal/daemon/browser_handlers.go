@@ -8,6 +8,7 @@ import (
 	"io"
 	"log/slog"
 	"maps"
+	"mime"
 	"os"
 	"path/filepath"
 	"sort"
@@ -83,6 +84,9 @@ type daemonBrowserMethods struct {
 	cfgPath      string                                     // filesystem path to the config file, used for persisting changes
 	extRegistry  *extension.Registry                        // plugin registry providing badges and context-menu actions
 	thumbGen     *thumbnail.Generator                       // on-demand thumbnail generator for file previews
+	proc         interface {                                // subset of *Processor needed for on-demand reindexing
+		ProcessFile(ctx context.Context, path string)
+	}
 
 	// clipboardPaths and clipboardIsMove implement an in-process clipboard for
 	// copy/cut/paste operations. The clipboard lives in daemon memory rather than
@@ -201,6 +205,9 @@ func (h *daemonBrowserMethods) toDirEntry(cleanDir string, de os.DirEntry, hidde
 		iconName = "folder" //nolint:goconst // simple string is fine
 	} else {
 		mimeType, _ = h.idx.GetFileMime(context.Background(), entryPath)
+		if mimeType == "" {
+			mimeType = mime.TypeByExtension(filepath.Ext(name))
+		}
 		if mimeType != "" {
 			iconName = mimeToIconName(mimeType)
 		} else {
@@ -820,6 +827,7 @@ func (h *daemonBrowserMethods) GetBrowserConfig() (browser.BrowserConfig, error)
 		UseTrash:               browserConfigBool(h.cfg.Browser.UseTrash, true),
 		InlineThumbnails:       browserConfigBool(h.cfg.Browser.InlineThumbnails, true),
 		AutoPropertiesSlideout: browserConfigBool(h.cfg.Browser.AutoPropertiesSlideout, false),
+		SingleClick:            browserConfigBool(h.cfg.Browser.SingleClick, false),
 		Theme:                  browserConfigTheme(h.cfg.Browser.Theme),
 	}, nil
 }
@@ -1215,4 +1223,21 @@ func (h *daemonBrowserMethods) ListSavedSearches() ([]browser.SavedSearch, error
 		})
 	}
 	return res, nil
+}
+
+// ReindexFile forces a full re-harvest of the file at path and invalidates its
+// cached thumbnails so the GUI sees fresh metadata without waiting for the
+// background sync cycle.
+func (h *daemonBrowserMethods) ReindexFile(ctx context.Context, path string) error {
+	clean, err := validatePath(path)
+	if err != nil {
+		return err
+	}
+	if h.thumbGen != nil {
+		h.thumbGen.Invalidate(clean)
+	}
+	if h.proc != nil {
+		h.proc.ProcessFile(ctx, clean)
+	}
+	return nil
 }

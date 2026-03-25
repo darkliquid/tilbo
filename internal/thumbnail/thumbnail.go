@@ -146,6 +146,15 @@ func (g *Generator) GetOrGenerate(ctx context.Context, path string, mime string,
 	return c.res, c.err
 }
 
+// Invalidate removes all cached thumbnails for absPath (all sizes).
+// It is safe to call when no thumbnail exists.
+func (g *Generator) Invalidate(absPath string) {
+	for _, sz := range []Size{Normal, Large} {
+		key := cacheKey(absPath, sz)
+		_ = os.Remove(filepath.Join(g.cacheDir, key+".png"))
+	}
+}
+
 // cacheKey returns the XDG cache filename (without extension) for the path and size.
 func cacheKey(absPath string, sz Size) string {
 	uri := "file://" + absPath

@@ -694,6 +694,18 @@ func saturatingInt64FromUint64(v uint64) int64 {
 	return int64(v)
 }
 
+// GetFileStat returns the stored mtime (Unix seconds) and size (bytes) for path.
+// Returns a wrapped sql.ErrNoRows if the file is not in the index.
+func (d *DB) GetFileStat(ctx context.Context, path string) (mtime, size int64, err error) {
+	err = d.db.QueryRowContext(ctx,
+		`SELECT mtime, size_bytes FROM files WHERE path = ? LIMIT 1`, path,
+	).Scan(&mtime, &size)
+	if err != nil {
+		return 0, 0, fmt.Errorf("index: get file stat for %q: %w", path, err)
+	}
+	return mtime, size, nil
+}
+
 // GetFileMime returns the MIME type stored in file_meta for the given path.
 // Returns an empty string (not an error) if the file is not indexed or has no
 // MIME type recorded.

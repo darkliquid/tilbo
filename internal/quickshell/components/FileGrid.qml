@@ -23,6 +23,7 @@ Item {
 
     property var entries: []
     property bool inlineThumbnails: false
+    property bool singleClick: false
     property var selection: []
     property int _lastSelectedIndex: -1
     property int iconSize: 48
@@ -385,6 +386,11 @@ Item {
 
                         root.selection = currentSelection
                         root.fileSelected(cell.modelData)
+
+                        if (root.singleClick && !(mouse.modifiers & (Qt.ControlModifier | Qt.ShiftModifier))) {
+                            if (cell.modelData.isDir) root.directoryActivated(cell.modelData.path)
+                            else                      root.fileOpenRequested(cell.modelData.path)
+                        }
                     }
                 }
 

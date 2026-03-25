@@ -1,7 +1,8 @@
 // BrowserSidebar.qml — left places/mounts/searches sidebar + right properties panel.
 //
-// Visual Item. Wraps a content slot (default property) between left and right panels
-// inside a RowLayout. Owns sidebar data and load functions.
+// Visual Item. Wraps a content slot (default property) between left and right panels.
+// Both panels are user-resizable via drag handles; widths are stored in _leftWidth /
+// _rightWidth. The properties action bar collapses to icon-only when _rightWidth < 220.
 
 import QtQuick
 import QtQuick.Controls
@@ -60,16 +61,25 @@ Item {
         })
     }
 
+    // ── Sidebar widths (user-resizable) ─────────────────────────────────
+
+    property int _leftWidth:  200
+    property int _rightWidth: 260
+
+    // When the properties panel is narrower than this threshold the action bar
+    // switches to icon-only mode to avoid overflow.
+    readonly property bool _actionsCompact: _rightWidth < 220
+
     // ── Layout ──────────────────────────────────────────────────────────
 
-    RowLayout {
+    Item {
         anchors.fill: parent
-        spacing: 0
 
-        // Left strip toggle
+        // ── Left toggle strip (36 px, fixed) ────────────────────────────
         Rectangle {
-            Layout.preferredWidth: 36
-            Layout.fillHeight: true
+            id: leftToggleStrip
+            anchors.left: parent.left; anchors.top: parent.top; anchors.bottom: parent.bottom
+            width: 36
             color: Theme.bgMedium
 
             Rectangle {
@@ -80,31 +90,24 @@ Item {
             Text {
                 text: I18n.tr("sidebar.places")
                 color: Theme.accent
-                font.pixelSize: 14
-                font.bold: true
-                font.letterSpacing: 2
-                rotation: -90
-                anchors.centerIn: parent
+                font.pixelSize: 14; font.bold: true; font.letterSpacing: 2
+                rotation: -90; anchors.centerIn: parent
             }
 
             MouseArea {
                 id: maLeftToggle
-                anchors.fill: parent
-                hoverEnabled: true
-                cursorShape: Qt.PointingHandCursor
+                anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
                 onClicked: root.showLeftSidebar = !root.showLeftSidebar
             }
         }
 
-        // Places sidebar
+        // ── Left sidebar panel (places / mounts / searches) ─────────────
         Rectangle {
-            Layout.preferredWidth: root.showLeftSidebar ? 200 : 0
-            Layout.fillHeight: true
-            color: Theme.bgMedium
-            clip: true
-            Behavior on Layout.preferredWidth {
-                NumberAnimation { duration: 250; easing.type: Easing.InOutQuad }
-            }
+            id: leftPanel
+            anchors.left: leftToggleStrip.right; anchors.top: parent.top; anchors.bottom: parent.bottom
+            width: root.showLeftSidebar ? root._leftWidth : 0
+            color: Theme.bgMedium; clip: true
+            Behavior on width { NumberAnimation { duration: 250; easing.type: Easing.InOutQuad } }
 
             ColumnLayout {
                 anchors.fill: parent
@@ -418,28 +421,68 @@ Item {
             }
         }
 
-        // ── Content slot (file area goes here) ──────────────────────────
+        // ── Left resize handle ───────────────────────────────────────────
         Item {
-            id: contentSlot
-            Layout.fillWidth: true
-            Layout.fillHeight: true
+            id: leftHandle
+            anchors.left: leftPanel.right; anchors.top: parent.top; anchors.bottom: parent.bottom
+            width: leftPanel.width > 0 ? 4 : 0
+
+            Rectangle {
+                anchors.fill: parent
+                color: leftHandleMA.containsMouse || leftHandleMA.pressed ? Theme.accent : Theme.border
+                opacity: leftHandleMA.containsMouse || leftHandleMA.pressed ? 1.0 : 0.4
+            }
+            MouseArea {
+                id: leftHandleMA
+                anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.SizeHorCursor
+                property real _globalPressX: 0; property int _pressWidth: 0
+                onPressed:         (m) => { _globalPressX = mapToGlobal(m.x, m.y).x; _pressWidth = root._leftWidth }
+                onPositionChanged: (m) => {
+                    if (!pressed) return
+                    root._leftWidth = Math.max(120, Math.min(600,
+                        _pressWidth + (mapToGlobal(m.x, m.y).x - _globalPressX)))
+                }
+            }
         }
 
-        // ── Properties sidebar ──────────────────────────────────────────
+        // ── Right toggle strip (36 px, fixed) ────────────────────────────
         Rectangle {
-            Layout.preferredWidth: root.showRightSidebar ? 260 : 0
-            Layout.fillHeight: true
+            id: rightToggleStrip
+            anchors.right: parent.right; anchors.top: parent.top; anchors.bottom: parent.bottom
+            width: 36
             color: Theme.bgMedium
-            clip: true
-            Behavior on Layout.preferredWidth {
-                NumberAnimation { duration: 250; easing.type: Easing.InOutQuad }
+
+            Rectangle {
+                anchors.fill: parent
+                color: maRightToggle.containsMouse ? Theme.bgHover : "transparent"
             }
+
+            Text {
+                text: "PROPERTIES"
+                color: Theme.accent; font.pixelSize: 14; font.bold: true
+                font.letterSpacing: 2; rotation: -90; anchors.centerIn: parent
+            }
+
+            MouseArea {
+                id: maRightToggle
+                anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
+                onClicked: root.showRightSidebar = !root.showRightSidebar
+            }
+        }
+
+        // ── Right sidebar panel (properties) ─────────────────────────────
+        Rectangle {
+            id: rightPanel
+            anchors.right: rightToggleStrip.left; anchors.top: parent.top; anchors.bottom: parent.bottom
+            width: root.showRightSidebar ? root._rightWidth : 0
+            color: Theme.bgMedium; clip: true
+            Behavior on width { NumberAnimation { duration: 250; easing.type: Easing.InOutQuad } }
 
             ColumnLayout {
                 anchors.fill: parent
                 anchors.margins: 16
                 spacing: 12
-                visible: root.showRightSidebar
+                visible: rightPanel.width > 4
 
                 // No file selected
                 Item {
@@ -473,6 +516,7 @@ Item {
 
                         // Preview / Icon
                         Item {
+                            id: previewItem
                             Layout.alignment: Qt.AlignHCenter
                             Layout.preferredWidth: 228
                             Layout.preferredHeight: _previewImg.visible ? Math.min(_previewImg.implicitHeight * (228 / Math.max(1, _previewImg.implicitWidth)), 228) : 64
@@ -481,6 +525,16 @@ Item {
                             property bool _isMedia: {
                                 var f = root.selectedFile
                                 return f && f.mimeType && (f.mimeType.indexOf("image/") === 0 || f.mimeType.indexOf("video/") === 0)
+                            }
+
+                            function requestThumbnail() {
+                                var f = root.selectedFile
+                                if (!f || f.isDir || !_isMedia) return
+                                _previewSource = ""
+                                TilboDaemon.getThumbnail(f.path, 1, function(result, _err) {
+                                    if (result && result.thumbnailPath && root.selectedFile && root.selectedFile.path === f.path)
+                                        _previewSource = "file://" + result.thumbnailPath
+                                })
                             }
 
                             ThemeIcon {
@@ -518,14 +572,7 @@ Item {
                             Connections {
                                 target: root
                                 function onSelectedFileChanged() {
-                                    parent._previewSource = ""
-                                    var f = root.selectedFile
-                                    if (f && !f.isDir && parent._isMedia) {
-                                        TilboDaemon.getThumbnail(f.path, 1, function(result, _err) {
-                                            if (result && result.thumbnailPath && root.selectedFile && root.selectedFile.path === f.path)
-                                                parent._previewSource = "file://" + result.thumbnailPath
-                                        })
-                                    }
+                                    previewItem.requestThumbnail()
                                 }
                             }
                         }
@@ -539,6 +586,69 @@ Item {
                             font.bold: true
                             wrapMode: Text.WrapAnywhere
                             horizontalAlignment: Text.AlignHCenter
+                        }
+
+                        // ── Action bar ──────────────────────────────
+                        Row {
+                            Layout.alignment: Qt.AlignHCenter
+                            spacing: 6
+
+                            // Open / Navigate
+                            ThemeButton {
+                                property bool _isDir: root.selectedFile && root.selectedFile.isDir
+                                text: root._actionsCompact ? ""
+                                      : (_isDir ? I18n.tr("prop.action.navigate")
+                                                : I18n.tr("prop.action.open"))
+                                iconName: _isDir ? "folder-open-symbolic" : "document-open-symbolic"
+                                visible: !!root.selectedFile
+                                ToolTip.text: _isDir ? I18n.tr("prop.action.navigate")
+                                                     : I18n.tr("prop.action.open")
+                                ToolTip.visible: root._actionsCompact && hovered
+                                onClicked: {
+                                    if (root.selectedFile)
+                                        root.openRequested(root.selectedFile.path, root.selectedFile.isDir)
+                                }
+                            }
+
+                            // Preview (media only)
+                            ThemeButton {
+                                text: root._actionsCompact ? "" : I18n.tr("prop.action.preview")
+                                iconName: "media-playback-start-symbolic"
+                                visible: root.selectedFile && !root.selectedFile.isDir
+                                         && root.selectedFile.mimeType
+                                         && (root.selectedFile.mimeType.indexOf("image/") === 0
+                                             || root.selectedFile.mimeType.indexOf("video/") === 0)
+                                ToolTip.text: I18n.tr("prop.action.preview")
+                                ToolTip.visible: root._actionsCompact && hovered
+                                onClicked: {
+                                    if (root.selectedFile)
+                                        root.previewRequested(root.selectedFile.path,
+                                                              root.selectedFile.mimeType || "")
+                                }
+                            }
+
+                            // Refresh / Reindex
+                            ThemeButton {
+                                id: reindexBtn
+                                text: root._actionsCompact ? "" : I18n.tr("prop.action.refresh")
+                                iconName: "view-refresh-symbolic"
+                                visible: root.selectedFile && !root.selectedFile.isDir
+                                property bool _busy: false
+                                enabled: !_busy
+                                ToolTip.text: I18n.tr("prop.action.refresh")
+                                ToolTip.visible: (root._actionsCompact || _busy) && hovered
+                                onClicked: {
+                                    if (!root.selectedFile) return
+                                    _busy = true
+                                    var targetPath = root.selectedFile.path
+                                    TilboDaemon.reindexFile(targetPath, function(err) {
+                                        reindexBtn._busy = false
+                                        if (err) { console.warn("reindex:", err); return }
+                                        previewItem.requestThumbnail()
+                                        root.reindexRequested(targetPath)
+                                    })
+                                }
+                            }
                         }
 
                         // Key-value details
@@ -665,32 +775,40 @@ Item {
             }
         }
 
-        // Right strip toggle
-        Rectangle {
-            Layout.preferredWidth: 36
-            Layout.fillHeight: true
-            color: Theme.bgMedium
+        // ── Right resize handle ───────────────────────────────────────────
+        Item {
+            id: rightHandle
+            anchors.right: rightPanel.left; anchors.top: parent.top; anchors.bottom: parent.bottom
+            width: rightPanel.width > 0 ? 4 : 0
 
             Rectangle {
                 anchors.fill: parent
-                color: maRightToggle.containsMouse ? Theme.bgHover : "transparent"
+                color: rightHandleMA.containsMouse || rightHandleMA.pressed ? Theme.accent : Theme.border
+                opacity: rightHandleMA.containsMouse || rightHandleMA.pressed ? 1.0 : 0.4
             }
-
-            Text {
-                text: "PROPERTIES"
-                color: Theme.accent; font.pixelSize: 14; font.bold: true
-                font.letterSpacing: 2; rotation: -90; anchors.centerIn: parent
-            }
-
             MouseArea {
-                id: maRightToggle
-                anchors.fill: parent; hoverEnabled: true
-                cursorShape: Qt.PointingHandCursor
-                onClicked: root.showRightSidebar = !root.showRightSidebar
+                id: rightHandleMA
+                anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.SizeHorCursor
+                property real _globalPressX: 0; property int _pressWidth: 0
+                onPressed:         (m) => { _globalPressX = mapToGlobal(m.x, m.y).x; _pressWidth = root._rightWidth }
+                onPositionChanged: (m) => {
+                    if (!pressed) return
+                    root._rightWidth = Math.max(140, Math.min(600,
+                        _pressWidth - (mapToGlobal(m.x, m.y).x - _globalPressX)))
+                }
             }
+        }
+
+        // ── Content slot (file area goes here) ───────────────────────────
+        Item {
+            id: contentSlot
+            anchors.left: leftHandle.right; anchors.right: rightHandle.left
+            anchors.top: parent.top; anchors.bottom: parent.bottom
         }
     }
 
-    // ── Signal for image preview (handled by layout) ────────────────────
+    // ── Signals for file actions (handled by layout) ────────────────────
     signal previewRequested(string filePath, string mimeType)
+    signal openRequested(string filePath, bool isDir)
+    signal reindexRequested(string filePath)
 }

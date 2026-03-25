@@ -533,6 +533,7 @@ func handleGetBrowserConfig(_ *ipcv1.GetBrowserConfigRequest, browser *daemonBro
 			UseTrash:               cfg.UseTrash,
 			InlineThumbnails:       cfg.InlineThumbnails,
 			AutoPropertiesSlideout: cfg.AutoPropertiesSlideout,
+			SingleClick:            cfg.SingleClick,
 			Theme:                  cfg.Theme,
 		},
 	}}, nil

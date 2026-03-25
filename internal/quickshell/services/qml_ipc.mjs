@@ -1663,9 +1663,11 @@ var tilbo = $root.tilbo = (() => {
         Request.prototype.pinSearch = null;
         Request.prototype.unpinSearch = null;
         Request.prototype.listSavedSearches = null;
+        Request.prototype.shutdown = null;
+        Request.prototype.reindexFile = null;
         let $oneOfFields;
         Object.defineProperty(Request.prototype, "kind", {
-          get: $util.oneOfGetter($oneOfFields = ["search", "listTags", "hydrateTags", "related", "globSearch", "tag", "metadata", "metadataSet", "status", "reloadRules", "listDirectory", "statFile", "renameFile", "deleteFile", "chmodFile", "copy", "paste", "createFile", "createDirectory", "listPlaces", "pinPlace", "unpinPlace", "trashFile", "listTrash", "restoreTrash", "emptyTrash", "listAppsForFile", "openWithApp", "getBrowserConfig", "launchGui", "getThumbnail", "listMounts", "getFileBadges", "getFileActions", "runFileAction", "pinSearch", "unpinSearch", "listSavedSearches"]),
+          get: $util.oneOfGetter($oneOfFields = ["search", "listTags", "hydrateTags", "related", "globSearch", "tag", "metadata", "metadataSet", "status", "reloadRules", "listDirectory", "statFile", "renameFile", "deleteFile", "chmodFile", "copy", "paste", "createFile", "createDirectory", "listPlaces", "pinPlace", "unpinPlace", "trashFile", "listTrash", "restoreTrash", "emptyTrash", "listAppsForFile", "openWithApp", "getBrowserConfig", "launchGui", "getThumbnail", "listMounts", "getFileBadges", "getFileActions", "runFileAction", "pinSearch", "unpinSearch", "listSavedSearches", "shutdown", "reindexFile"]),
           set: $util.oneOfSetter($oneOfFields)
         });
         Request.create = function create(properties) {
@@ -1864,6 +1866,16 @@ var tilbo = $root.tilbo = (() => {
               /* id 38, wireType 2 =*/
               306
             ).fork()).ldelim();
+          if (message.shutdown != null && Object.hasOwnProperty.call(message, "shutdown"))
+            $root.tilbo.ipc.v1.ShutdownRequest.encode(message.shutdown, writer.uint32(
+              /* id 39, wireType 2 =*/
+              314
+            ).fork()).ldelim();
+          if (message.reindexFile != null && Object.hasOwnProperty.call(message, "reindexFile"))
+            $root.tilbo.ipc.v1.ReindexFileRequest.encode(message.reindexFile, writer.uint32(
+              /* id 40, wireType 2 =*/
+              322
+            ).fork()).ldelim();
           return writer;
         };
         Request.encodeDelimited = function encodeDelimited(message, writer) {
@@ -2028,6 +2040,14 @@ var tilbo = $root.tilbo = (() => {
               }
               case 38: {
                 message.listSavedSearches = $root.tilbo.ipc.v1.ListSavedSearchesRequest.decode(reader, reader.uint32());
+                break;
+              }
+              case 39: {
+                message.shutdown = $root.tilbo.ipc.v1.ShutdownRequest.decode(reader, reader.uint32());
+                break;
+              }
+              case 40: {
+                message.reindexFile = $root.tilbo.ipc.v1.ReindexFileRequest.decode(reader, reader.uint32());
                 break;
               }
               default:
@@ -2424,6 +2444,26 @@ var tilbo = $root.tilbo = (() => {
                 return "listSavedSearches." + error;
             }
           }
+          if (message.shutdown != null && message.hasOwnProperty("shutdown")) {
+            if (properties.kind === 1)
+              return "kind: multiple values";
+            properties.kind = 1;
+            {
+              let error = $root.tilbo.ipc.v1.ShutdownRequest.verify(message.shutdown);
+              if (error)
+                return "shutdown." + error;
+            }
+          }
+          if (message.reindexFile != null && message.hasOwnProperty("reindexFile")) {
+            if (properties.kind === 1)
+              return "kind: multiple values";
+            properties.kind = 1;
+            {
+              let error = $root.tilbo.ipc.v1.ReindexFileRequest.verify(message.reindexFile);
+              if (error)
+                return "reindexFile." + error;
+            }
+          }
           return null;
         };
         Request.fromObject = function fromObject(object) {
@@ -2619,6 +2659,16 @@ var tilbo = $root.tilbo = (() => {
             if (typeof object.listSavedSearches !== "object")
               throw TypeError(".tilbo.ipc.v1.Request.listSavedSearches: object expected");
             message.listSavedSearches = $root.tilbo.ipc.v1.ListSavedSearchesRequest.fromObject(object.listSavedSearches);
+          }
+          if (object.shutdown != null) {
+            if (typeof object.shutdown !== "object")
+              throw TypeError(".tilbo.ipc.v1.Request.shutdown: object expected");
+            message.shutdown = $root.tilbo.ipc.v1.ShutdownRequest.fromObject(object.shutdown);
+          }
+          if (object.reindexFile != null) {
+            if (typeof object.reindexFile !== "object")
+              throw TypeError(".tilbo.ipc.v1.Request.reindexFile: object expected");
+            message.reindexFile = $root.tilbo.ipc.v1.ReindexFileRequest.fromObject(object.reindexFile);
           }
           return message;
         };
@@ -2816,6 +2866,16 @@ var tilbo = $root.tilbo = (() => {
             if (options.oneofs)
               object.kind = "listSavedSearches";
           }
+          if (message.shutdown != null && message.hasOwnProperty("shutdown")) {
+            object.shutdown = $root.tilbo.ipc.v1.ShutdownRequest.toObject(message.shutdown, options);
+            if (options.oneofs)
+              object.kind = "shutdown";
+          }
+          if (message.reindexFile != null && message.hasOwnProperty("reindexFile")) {
+            object.reindexFile = $root.tilbo.ipc.v1.ReindexFileRequest.toObject(message.reindexFile, options);
+            if (options.oneofs)
+              object.kind = "reindexFile";
+          }
           return object;
         };
         Request.prototype.toJSON = function toJSON() {
@@ -2875,9 +2935,11 @@ var tilbo = $root.tilbo = (() => {
         Response.prototype.pinSearch = null;
         Response.prototype.unpinSearch = null;
         Response.prototype.listSavedSearches = null;
+        Response.prototype.shutdown = null;
+        Response.prototype.reindexFile = null;
         let $oneOfFields;
         Object.defineProperty(Response.prototype, "kind", {
-          get: $util.oneOfGetter($oneOfFields = ["error", "search", "listTags", "hydrateTags", "related", "globSearch", "tag", "metadata", "status", "reloadRules", "listDirectory", "statFile", "renameFile", "deleteFile", "chmodFile", "copy", "paste", "createFile", "createDirectory", "listPlaces", "pinPlace", "unpinPlace", "trashFile", "listTrash", "restoreTrash", "emptyTrash", "listAppsForFile", "openWithApp", "getBrowserConfig", "launchGui", "getThumbnail", "listMounts", "getFileBadges", "getFileActions", "runFileAction", "pinSearch", "unpinSearch", "listSavedSearches"]),
+          get: $util.oneOfGetter($oneOfFields = ["error", "search", "listTags", "hydrateTags", "related", "globSearch", "tag", "metadata", "status", "reloadRules", "listDirectory", "statFile", "renameFile", "deleteFile", "chmodFile", "copy", "paste", "createFile", "createDirectory", "listPlaces", "pinPlace", "unpinPlace", "trashFile", "listTrash", "restoreTrash", "emptyTrash", "listAppsForFile", "openWithApp", "getBrowserConfig", "launchGui", "getThumbnail", "listMounts", "getFileBadges", "getFileActions", "runFileAction", "pinSearch", "unpinSearch", "listSavedSearches", "shutdown", "reindexFile"]),
           set: $util.oneOfSetter($oneOfFields)
         });
         Response.create = function create(properties) {
@@ -3076,6 +3138,16 @@ var tilbo = $root.tilbo = (() => {
               /* id 38, wireType 2 =*/
               306
             ).fork()).ldelim();
+          if (message.shutdown != null && Object.hasOwnProperty.call(message, "shutdown"))
+            $root.tilbo.ipc.v1.ShutdownResponse.encode(message.shutdown, writer.uint32(
+              /* id 39, wireType 2 =*/
+              314
+            ).fork()).ldelim();
+          if (message.reindexFile != null && Object.hasOwnProperty.call(message, "reindexFile"))
+            $root.tilbo.ipc.v1.ReindexFileResponse.encode(message.reindexFile, writer.uint32(
+              /* id 40, wireType 2 =*/
+              322
+            ).fork()).ldelim();
           return writer;
         };
         Response.encodeDelimited = function encodeDelimited(message, writer) {
@@ -3240,6 +3312,14 @@ var tilbo = $root.tilbo = (() => {
               }
               case 38: {
                 message.listSavedSearches = $root.tilbo.ipc.v1.ListSavedSearchesResponse.decode(reader, reader.uint32());
+                break;
+              }
+              case 39: {
+                message.shutdown = $root.tilbo.ipc.v1.ShutdownResponse.decode(reader, reader.uint32());
+                break;
+              }
+              case 40: {
+                message.reindexFile = $root.tilbo.ipc.v1.ReindexFileResponse.decode(reader, reader.uint32());
                 break;
               }
               default:
@@ -3636,6 +3716,26 @@ var tilbo = $root.tilbo = (() => {
                 return "listSavedSearches." + error;
             }
           }
+          if (message.shutdown != null && message.hasOwnProperty("shutdown")) {
+            if (properties.kind === 1)
+              return "kind: multiple values";
+            properties.kind = 1;
+            {
+              let error = $root.tilbo.ipc.v1.ShutdownResponse.verify(message.shutdown);
+              if (error)
+                return "shutdown." + error;
+            }
+          }
+          if (message.reindexFile != null && message.hasOwnProperty("reindexFile")) {
+            if (properties.kind === 1)
+              return "kind: multiple values";
+            properties.kind = 1;
+            {
+              let error = $root.tilbo.ipc.v1.ReindexFileResponse.verify(message.reindexFile);
+              if (error)
+                return "reindexFile." + error;
+            }
+          }
           return null;
         };
         Response.fromObject = function fromObject(object) {
@@ -3832,6 +3932,16 @@ var tilbo = $root.tilbo = (() => {
               throw TypeError(".tilbo.ipc.v1.Response.listSavedSearches: object expected");
             message.listSavedSearches = $root.tilbo.ipc.v1.ListSavedSearchesResponse.fromObject(object.listSavedSearches);
           }
+          if (object.shutdown != null) {
+            if (typeof object.shutdown !== "object")
+              throw TypeError(".tilbo.ipc.v1.Response.shutdown: object expected");
+            message.shutdown = $root.tilbo.ipc.v1.ShutdownResponse.fromObject(object.shutdown);
+          }
+          if (object.reindexFile != null) {
+            if (typeof object.reindexFile !== "object")
+              throw TypeError(".tilbo.ipc.v1.Response.reindexFile: object expected");
+            message.reindexFile = $root.tilbo.ipc.v1.ReindexFileResponse.fromObject(object.reindexFile);
+          }
           return message;
         };
         Response.toObject = function toObject(message, options) {
@@ -4027,6 +4137,16 @@ var tilbo = $root.tilbo = (() => {
             object.listSavedSearches = $root.tilbo.ipc.v1.ListSavedSearchesResponse.toObject(message.listSavedSearches, options);
             if (options.oneofs)
               object.kind = "listSavedSearches";
+          }
+          if (message.shutdown != null && message.hasOwnProperty("shutdown")) {
+            object.shutdown = $root.tilbo.ipc.v1.ShutdownResponse.toObject(message.shutdown, options);
+            if (options.oneofs)
+              object.kind = "shutdown";
+          }
+          if (message.reindexFile != null && message.hasOwnProperty("reindexFile")) {
+            object.reindexFile = $root.tilbo.ipc.v1.ReindexFileResponse.toObject(message.reindexFile, options);
+            if (options.oneofs)
+              object.kind = "reindexFile";
           }
           return object;
         };
@@ -6694,6 +6814,286 @@ var tilbo = $root.tilbo = (() => {
           return typeUrlPrefix + "/tilbo.ipc.v1.StatusResponse";
         };
         return StatusResponse;
+      })();
+      v1.ShutdownRequest = (function() {
+        function ShutdownRequest(properties) {
+          if (properties) {
+            for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+              if (properties[keys[i]] != null)
+                this[keys[i]] = properties[keys[i]];
+          }
+        }
+        ShutdownRequest.create = function create(properties) {
+          return new ShutdownRequest(properties);
+        };
+        ShutdownRequest.encode = function encode(message, writer) {
+          if (!writer)
+            writer = $Writer.create();
+          return writer;
+        };
+        ShutdownRequest.encodeDelimited = function encodeDelimited(message, writer) {
+          return this.encode(message, writer).ldelim();
+        };
+        ShutdownRequest.decode = function decode(reader, length, error) {
+          if (!(reader instanceof $Reader))
+            reader = $Reader.create(reader);
+          let end = length === void 0 ? reader.len : reader.pos + length, message = new $root.tilbo.ipc.v1.ShutdownRequest();
+          while (reader.pos < end) {
+            let tag = reader.uint32();
+            if (tag === error)
+              break;
+            switch (tag >>> 3) {
+              default:
+                reader.skipType(tag & 7);
+                break;
+            }
+          }
+          return message;
+        };
+        ShutdownRequest.decodeDelimited = function decodeDelimited(reader) {
+          if (!(reader instanceof $Reader))
+            reader = new $Reader(reader);
+          return this.decode(reader, reader.uint32());
+        };
+        ShutdownRequest.verify = function verify(message) {
+          if (typeof message !== "object" || message === null)
+            return "object expected";
+          return null;
+        };
+        ShutdownRequest.fromObject = function fromObject(object) {
+          if (object instanceof $root.tilbo.ipc.v1.ShutdownRequest)
+            return object;
+          return new $root.tilbo.ipc.v1.ShutdownRequest();
+        };
+        ShutdownRequest.toObject = function toObject() {
+          return {};
+        };
+        ShutdownRequest.prototype.toJSON = function toJSON() {
+          return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+        };
+        ShutdownRequest.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
+          if (typeUrlPrefix === void 0) {
+            typeUrlPrefix = "type.googleapis.com";
+          }
+          return typeUrlPrefix + "/tilbo.ipc.v1.ShutdownRequest";
+        };
+        return ShutdownRequest;
+      })();
+      v1.ShutdownResponse = (function() {
+        function ShutdownResponse(properties) {
+          if (properties) {
+            for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+              if (properties[keys[i]] != null)
+                this[keys[i]] = properties[keys[i]];
+          }
+        }
+        ShutdownResponse.create = function create(properties) {
+          return new ShutdownResponse(properties);
+        };
+        ShutdownResponse.encode = function encode(message, writer) {
+          if (!writer)
+            writer = $Writer.create();
+          return writer;
+        };
+        ShutdownResponse.encodeDelimited = function encodeDelimited(message, writer) {
+          return this.encode(message, writer).ldelim();
+        };
+        ShutdownResponse.decode = function decode(reader, length, error) {
+          if (!(reader instanceof $Reader))
+            reader = $Reader.create(reader);
+          let end = length === void 0 ? reader.len : reader.pos + length, message = new $root.tilbo.ipc.v1.ShutdownResponse();
+          while (reader.pos < end) {
+            let tag = reader.uint32();
+            if (tag === error)
+              break;
+            switch (tag >>> 3) {
+              default:
+                reader.skipType(tag & 7);
+                break;
+            }
+          }
+          return message;
+        };
+        ShutdownResponse.decodeDelimited = function decodeDelimited(reader) {
+          if (!(reader instanceof $Reader))
+            reader = new $Reader(reader);
+          return this.decode(reader, reader.uint32());
+        };
+        ShutdownResponse.verify = function verify(message) {
+          if (typeof message !== "object" || message === null)
+            return "object expected";
+          return null;
+        };
+        ShutdownResponse.fromObject = function fromObject(object) {
+          if (object instanceof $root.tilbo.ipc.v1.ShutdownResponse)
+            return object;
+          return new $root.tilbo.ipc.v1.ShutdownResponse();
+        };
+        ShutdownResponse.toObject = function toObject() {
+          return {};
+        };
+        ShutdownResponse.prototype.toJSON = function toJSON() {
+          return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+        };
+        ShutdownResponse.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
+          if (typeUrlPrefix === void 0) {
+            typeUrlPrefix = "type.googleapis.com";
+          }
+          return typeUrlPrefix + "/tilbo.ipc.v1.ShutdownResponse";
+        };
+        return ShutdownResponse;
+      })();
+      v1.ReindexFileRequest = (function() {
+        function ReindexFileRequest(properties) {
+          if (properties) {
+            for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+              if (properties[keys[i]] != null)
+                this[keys[i]] = properties[keys[i]];
+          }
+        }
+        ReindexFileRequest.prototype.path = "";
+        ReindexFileRequest.create = function create(properties) {
+          return new ReindexFileRequest(properties);
+        };
+        ReindexFileRequest.encode = function encode(message, writer) {
+          if (!writer)
+            writer = $Writer.create();
+          if (message.path != null && Object.hasOwnProperty.call(message, "path"))
+            writer.uint32(
+              /* id 1, wireType 2 =*/
+              10
+            ).string(message.path);
+          return writer;
+        };
+        ReindexFileRequest.encodeDelimited = function encodeDelimited(message, writer) {
+          return this.encode(message, writer).ldelim();
+        };
+        ReindexFileRequest.decode = function decode(reader, length, error) {
+          if (!(reader instanceof $Reader))
+            reader = $Reader.create(reader);
+          let end = length === void 0 ? reader.len : reader.pos + length, message = new $root.tilbo.ipc.v1.ReindexFileRequest();
+          while (reader.pos < end) {
+            let tag = reader.uint32();
+            if (tag === error)
+              break;
+            switch (tag >>> 3) {
+              case 1: {
+                message.path = reader.string();
+                break;
+              }
+              default:
+                reader.skipType(tag & 7);
+                break;
+            }
+          }
+          return message;
+        };
+        ReindexFileRequest.decodeDelimited = function decodeDelimited(reader) {
+          if (!(reader instanceof $Reader))
+            reader = new $Reader(reader);
+          return this.decode(reader, reader.uint32());
+        };
+        ReindexFileRequest.verify = function verify(message) {
+          if (typeof message !== "object" || message === null)
+            return "object expected";
+          if (message.path != null && message.hasOwnProperty("path")) {
+            if (!$util.isString(message.path))
+              return "path: string expected";
+          }
+          return null;
+        };
+        ReindexFileRequest.fromObject = function fromObject(object) {
+          if (object instanceof $root.tilbo.ipc.v1.ReindexFileRequest)
+            return object;
+          let message = new $root.tilbo.ipc.v1.ReindexFileRequest();
+          if (object.path != null)
+            message.path = String(object.path);
+          return message;
+        };
+        ReindexFileRequest.toObject = function toObject(message, options) {
+          if (!options)
+            options = {};
+          let object = {};
+          if (options.defaults)
+            object.path = "";
+          if (message.path != null && message.hasOwnProperty("path"))
+            object.path = message.path;
+          return object;
+        };
+        ReindexFileRequest.prototype.toJSON = function toJSON() {
+          return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+        };
+        ReindexFileRequest.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
+          if (typeUrlPrefix === void 0) {
+            typeUrlPrefix = "type.googleapis.com";
+          }
+          return typeUrlPrefix + "/tilbo.ipc.v1.ReindexFileRequest";
+        };
+        return ReindexFileRequest;
+      })();
+      v1.ReindexFileResponse = (function() {
+        function ReindexFileResponse(properties) {
+          if (properties) {
+            for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+              if (properties[keys[i]] != null)
+                this[keys[i]] = properties[keys[i]];
+          }
+        }
+        ReindexFileResponse.create = function create(properties) {
+          return new ReindexFileResponse(properties);
+        };
+        ReindexFileResponse.encode = function encode(message, writer) {
+          if (!writer)
+            writer = $Writer.create();
+          return writer;
+        };
+        ReindexFileResponse.encodeDelimited = function encodeDelimited(message, writer) {
+          return this.encode(message, writer).ldelim();
+        };
+        ReindexFileResponse.decode = function decode(reader, length, error) {
+          if (!(reader instanceof $Reader))
+            reader = $Reader.create(reader);
+          let end = length === void 0 ? reader.len : reader.pos + length, message = new $root.tilbo.ipc.v1.ReindexFileResponse();
+          while (reader.pos < end) {
+            let tag = reader.uint32();
+            if (tag === error)
+              break;
+            switch (tag >>> 3) {
+              default:
+                reader.skipType(tag & 7);
+                break;
+            }
+          }
+          return message;
+        };
+        ReindexFileResponse.decodeDelimited = function decodeDelimited(reader) {
+          if (!(reader instanceof $Reader))
+            reader = new $Reader(reader);
+          return this.decode(reader, reader.uint32());
+        };
+        ReindexFileResponse.verify = function verify(message) {
+          if (typeof message !== "object" || message === null)
+            return "object expected";
+          return null;
+        };
+        ReindexFileResponse.fromObject = function fromObject(object) {
+          if (object instanceof $root.tilbo.ipc.v1.ReindexFileResponse)
+            return object;
+          return new $root.tilbo.ipc.v1.ReindexFileResponse();
+        };
+        ReindexFileResponse.toObject = function toObject() {
+          return {};
+        };
+        ReindexFileResponse.prototype.toJSON = function toJSON() {
+          return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+        };
+        ReindexFileResponse.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
+          if (typeUrlPrefix === void 0) {
+            typeUrlPrefix = "type.googleapis.com";
+          }
+          return typeUrlPrefix + "/tilbo.ipc.v1.ReindexFileResponse";
+        };
+        return ReindexFileResponse;
       })();
       v1.ReloadRulesRequest = (function() {
         function ReloadRulesRequest(properties) {
@@ -11438,6 +11838,7 @@ var tilbo = $root.tilbo = (() => {
         GetBrowserConfigResponse.prototype.inlineThumbnails = false;
         GetBrowserConfigResponse.prototype.autoPropertiesSlideout = false;
         GetBrowserConfigResponse.prototype.theme = "";
+        GetBrowserConfigResponse.prototype.singleClick = false;
         GetBrowserConfigResponse.create = function create(properties) {
           return new GetBrowserConfigResponse(properties);
         };
@@ -11476,6 +11877,11 @@ var tilbo = $root.tilbo = (() => {
               /* id 5, wireType 2 =*/
               42
             ).string(message.theme);
+          if (message.singleClick != null && Object.hasOwnProperty.call(message, "singleClick"))
+            writer.uint32(
+              /* id 6, wireType 0 =*/
+              48
+            ).bool(message.singleClick);
           return writer;
         };
         GetBrowserConfigResponse.encodeDelimited = function encodeDelimited(message, writer) {
@@ -11529,6 +11935,10 @@ var tilbo = $root.tilbo = (() => {
                 message.theme = reader.string();
                 break;
               }
+              case 6: {
+                message.singleClick = reader.bool();
+                break;
+              }
               default:
                 reader.skipType(tag & 7);
                 break;
@@ -11568,6 +11978,10 @@ var tilbo = $root.tilbo = (() => {
             if (!$util.isString(message.theme))
               return "theme: string expected";
           }
+          if (message.singleClick != null && message.hasOwnProperty("singleClick")) {
+            if (typeof message.singleClick !== "boolean")
+              return "singleClick: boolean expected";
+          }
           return null;
         };
         GetBrowserConfigResponse.fromObject = function fromObject(object) {
@@ -11589,6 +12003,8 @@ var tilbo = $root.tilbo = (() => {
             message.autoPropertiesSlideout = Boolean(object.autoPropertiesSlideout);
           if (object.theme != null)
             message.theme = String(object.theme);
+          if (object.singleClick != null)
+            message.singleClick = Boolean(object.singleClick);
           return message;
         };
         GetBrowserConfigResponse.toObject = function toObject(message, options) {
@@ -11602,6 +12018,7 @@ var tilbo = $root.tilbo = (() => {
             object.inlineThumbnails = false;
             object.autoPropertiesSlideout = false;
             object.theme = "";
+            object.singleClick = false;
           }
           let keys2;
           if (message.keybindings && (keys2 = Object.keys(message.keybindings)).length) {
@@ -11617,6 +12034,8 @@ var tilbo = $root.tilbo = (() => {
             object.autoPropertiesSlideout = message.autoPropertiesSlideout;
           if (message.theme != null && message.hasOwnProperty("theme"))
             object.theme = message.theme;
+          if (message.singleClick != null && message.hasOwnProperty("singleClick"))
+            object.singleClick = message.singleClick;
           return object;
         };
         GetBrowserConfigResponse.prototype.toJSON = function toJSON() {

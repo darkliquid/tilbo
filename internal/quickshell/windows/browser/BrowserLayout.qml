@@ -26,6 +26,7 @@ Item {
     property var    _keybindings: ({})
     property bool   _useTrash: true
     property bool   _autoPropertiesSlideout: false
+    property bool   _singleClick: false
     property bool   daemonConnected: false
 
     // ── Expose sidebar for orchestrator access ──────────────────────────
@@ -383,6 +384,21 @@ Item {
             imagePreview.visible = true
         }
 
+        onOpenRequested: (filePath, isDir) => {
+            if (isDir) nav.navigateTo(filePath)
+            else        Qt.openUrlExternally("file://" + filePath)
+        }
+
+        onReindexRequested: (filePath) => {
+            // After reindexing completes the sidebar re-requests the thumbnail
+            // via its own Connections. Reload directory metadata so mimeType
+            // and inline thumbnails in the file list also refresh.
+            if (!nav.isTrashView && !nav.isSearchMode)
+                nav._loadDirectory(nav.currentPath)
+            else if (nav.isSearchMode)
+                nav._executeSearch(nav.searchChips)
+        }
+
         // ── File area (default content slot) ────────────────────────
         Rectangle {
             anchors.fill: parent
@@ -509,6 +525,7 @@ Item {
                     id: fileGrid
                     entries: nav.activeEntries
                     inlineThumbnails: fileOps._useInlineThumbnails
+                    singleClick: root._singleClick
                     iconSize: fileOps._gridIconSize
                     selection: fileOps.selectedPaths
                     selectionMode: fileOps.selectionMode
@@ -558,6 +575,7 @@ Item {
                     id: fileList
                     entries: nav.activeEntries
                     inlineThumbnails: fileOps._useInlineThumbnails
+                    singleClick: root._singleClick
                     selection: fileOps.selectedPaths
                     selectionMode: fileOps.selectionMode
                     sortColumn: nav._sortColumn

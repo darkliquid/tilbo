@@ -73,6 +73,17 @@ func main() {
 	}
 }
 
+// connect opens a single connection to the daemon socket. It does not attempt
+// to auto-start the daemon; callers receive an error immediately if the socket
+// is unreachable.
+func connect(ctx context.Context) (*ipc.Client, error) {
+	c, err := ipc.NewClient(ctx, sockFlag)
+	if err != nil {
+		return nil, fmt.Errorf("cannot connect to tilbo daemon at %s: %w", sockFlag, err)
+	}
+	return c, nil
+}
+
 // dial connects to the daemon, auto-starting it if not reachable.
 func dial(ctx context.Context) (*ipc.Client, error) {
 	c, err := ipc.NewClient(ctx, sockFlag)
@@ -122,9 +133,20 @@ func spawnDaemon() error {
 	return cmd.Start()
 }
 
-// call dials, sends one request, closes, and returns the response.
+// call dials (with auto-start), sends one request, closes, and returns the response.
 func call(ctx context.Context, req *ipcv1.Request) (*ipcv1.Response, error) {
 	c, err := dial(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer c.Close()
+	return c.Call(ctx, req)
+}
+
+// callDirect connects without auto-start, sends one request, and closes.
+// Use this for daemon management subcommands where the daemon must already be running.
+func callDirect(ctx context.Context, req *ipcv1.Request) (*ipcv1.Response, error) {
+	c, err := connect(ctx)
 	if err != nil {
 		return nil, err
 	}

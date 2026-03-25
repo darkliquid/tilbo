@@ -1,17 +1,23 @@
 package daemon
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
+	"io/fs"
 	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"sync"
 	"syscall"
+	"time"
 
 	"github.com/darkliquid/tilbo/internal/icontheme"
 	ipcv1 "github.com/darkliquid/tilbo/internal/ipc/gen/tilbo/ipc/v1"
+	"github.com/darkliquid/tilbo/internal/quickshell"
 )
 
 // guiManager tracks and manages the Quickshell GUI process.
@@ -23,15 +29,54 @@ type guiManager struct {
 }
 
 // newGUIManager creates a GUI manager. shellPath is the path to the Quickshell
-// shell.qml entry point. If empty, it is resolved relative to the daemon
-// binary or from well-known install paths.
+// shell.qml entry point. If empty, the XDG data-home copy is updated from the
+// embedded bundle when the content has changed, then resolved from well-known
+// locations.
 func newGUIManager(shellPath string, broadcast func(*ipcv1.Event)) *guiManager {
+	gm := &guiManager{broadcast: broadcast}
+	if shellPath == "" {
+		// Always attempt to sync the embedded bundle to the XDG data dir so
+		// that the on-disk copy stays up to date with the compiled-in version.
+		// The manager is created first so stopForUpdate can stop a tracked GUI.
+		if extracted, err := gm.syncEmbeddedQuickshell(); err != nil {
+			slog.Warn("failed to sync embedded quickshell", "err", err)
+		} else if extracted != "" {
+			shellPath = extracted
+		}
+	}
 	if shellPath == "" {
 		shellPath = resolveShellQML()
 	}
-	return &guiManager{
-		shellPath: shellPath,
-		broadcast: broadcast,
+	gm.shellPath = shellPath
+	return gm
+}
+
+// stopForUpdate stops the tracked GUI process to allow safe file replacement.
+// It sends SIGTERM and waits up to 2 s for a clean exit before force-killing.
+// Must NOT be called with gm.mu held.
+func (gm *guiManager) stopForUpdate() {
+	gm.mu.Lock()
+	cmd := gm.cmd
+	gm.cmd = nil
+	gm.mu.Unlock()
+
+	if cmd == nil || cmd.Process == nil {
+		return
+	}
+
+	slog.Info("stopping GUI for quickshell update")
+	_ = cmd.Process.Signal(syscall.SIGTERM)
+
+	done := make(chan struct{})
+	go func() {
+		_ = cmd.Wait()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+	case <-time.After(2 * time.Second):
+		_ = cmd.Process.Kill()
 	}
 }
 
@@ -117,15 +162,123 @@ func (gm *guiManager) isRunning() bool {
 	return gm.cmd.Process.Signal(syscall.Signal(0)) == nil
 }
 
+const embedHashFile = ".embed-hash"
+
+// embeddedQuickshellHash returns a hex SHA-256 digest over all files in the
+// embedded FS, walked in deterministic (sorted) order.  The digest covers each
+// file's relative path and its full content so any addition, removal, rename,
+// or content change is detected.
+func embeddedQuickshellHash() (string, error) {
+	var paths []string
+	if err := fs.WalkDir(quickshell.Files, ".", func(p string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() {
+			return err
+		}
+		paths = append(paths, p)
+		return nil
+	}); err != nil {
+		return "", err
+	}
+	sort.Strings(paths)
+
+	h := sha256.New()
+	for _, p := range paths {
+		data, err := fs.ReadFile(quickshell.Files, p)
+		if err != nil {
+			return "", err
+		}
+		fmt.Fprintf(h, "%s\x00", p)
+		h.Write(data)
+	}
+	return hex.EncodeToString(h.Sum(nil)), nil
+}
+
+// syncEmbeddedQuickshell writes the bundled QML files to the user's XDG data
+// directory only when the content has changed since the last extraction (or the
+// directory doesn't exist yet).  It returns the path to shell.qml on success.
+//
+// When an update is needed it first stops any tracked GUI process (SIGTERM +
+// 2 s timeout) and then removes the entire target directory before writing the
+// new files.  Deleting before writing ensures no running Quickshell instance —
+// including orphaned processes from a previous daemon session — can observe a
+// partially-updated file tree or hot-reload stale QML.
+func (gm *guiManager) syncEmbeddedQuickshell() (string, error) {
+	dataHome := os.Getenv("XDG_DATA_HOME")
+	if dataHome == "" {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return "", fmt.Errorf("resolve home dir: %w", err)
+		}
+		dataHome = filepath.Join(home, ".local", "share")
+	}
+	targetDir := filepath.Join(dataHome, "tilbo", "quickshell")
+
+	currentHash, err := embeddedQuickshellHash()
+	if err != nil {
+		return "", fmt.Errorf("hash embedded quickshell: %w", err)
+	}
+
+	// Compare against the stored hash to decide whether extraction is needed.
+	storedHash, _ := os.ReadFile(filepath.Join(targetDir, embedHashFile)) //nolint:errcheck // missing == needs extraction
+	if string(storedHash) == currentHash {
+		// On-disk copy is up to date.
+		return filepath.Join(targetDir, "shell.qml"), nil
+	}
+
+	// Stop any GUI process this manager is tracking before touching files.
+	gm.stopForUpdate()
+
+	// Remove the old tree entirely so no running Quickshell (including
+	// orphans from a previous daemon session) can read a half-updated tree
+	// or trigger a hot-reload mid-replacement.
+	if err := os.RemoveAll(targetDir); err != nil {
+		return "", fmt.Errorf("remove old quickshell dir: %w", err)
+	}
+
+	// Extract fresh files.
+	if err := fs.WalkDir(quickshell.Files, ".", func(path string, d fs.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+		dest := filepath.Join(targetDir, path)
+		if d.IsDir() {
+			return os.MkdirAll(dest, 0o750)
+		}
+		data, readErr := fs.ReadFile(quickshell.Files, path)
+		if readErr != nil {
+			return readErr
+		}
+		return os.WriteFile(dest, data, 0o640) //nolint:gosec // dest is under user data dir
+	}); err != nil {
+		return "", fmt.Errorf("extract quickshell: %w", err)
+	}
+
+	// Persist the new hash so the next start skips extraction.
+	if writeErr := os.WriteFile(filepath.Join(targetDir, embedHashFile), []byte(currentHash), 0o640); writeErr != nil { //nolint:gosec // user data dir
+		slog.Warn("could not write embed hash", "err", writeErr)
+	}
+
+	if string(storedHash) == "" {
+		slog.Info("extracted embedded quickshell", "dir", targetDir)
+	} else {
+		slog.Info("updated embedded quickshell", "dir", targetDir)
+	}
+	return filepath.Join(targetDir, "shell.qml"), nil
+}
+
 // resolveShellQML tries to find shell.qml from well-known locations.
 func resolveShellQML() string {
-	// 1. Relative to the daemon binary (development layout).
-	if exe, err := os.Executable(); err == nil {
-		exe, _ = filepath.EvalSymlinks(exe)
-		devPath := filepath.Join(filepath.Dir(exe), "..", "tilbo-quickshell", "shell.qml")
-		if _, err := os.Stat(devPath); err == nil {
-			abs, _ := filepath.Abs(devPath)
-			return abs
+	// 1. XDG data home.
+	dataHome := os.Getenv("XDG_DATA_HOME")
+	if dataHome == "" {
+		if home, err := os.UserHomeDir(); err == nil {
+			dataHome = filepath.Join(home, ".local", "share")
+		}
+	}
+	if dataHome != "" {
+		p := filepath.Join(dataHome, "tilbo", "quickshell", "shell.qml")
+		if _, err := os.Stat(p); err == nil { //nolint:gosec // constructed from environment
+			return p
 		}
 	}
 
@@ -140,17 +293,13 @@ func resolveShellQML() string {
 		}
 	}
 
-	// 3. XDG data home.
-	dataHome := os.Getenv("XDG_DATA_HOME")
-	if dataHome == "" {
-		if home, err := os.UserHomeDir(); err == nil {
-			dataHome = filepath.Join(home, ".local", "share")
-		}
-	}
-	if dataHome != "" {
-		p := filepath.Join(dataHome, "tilbo", "quickshell", "shell.qml")
-		if _, err := os.Stat(p); err == nil { //nolint:gosec // constructed from environment
-			return p
+	// 3. Relative to the daemon binary (development layout).
+	if exe, err := os.Executable(); err == nil {
+		exe, _ = filepath.EvalSymlinks(exe)
+		devPath := filepath.Join(filepath.Dir(exe), "..", "tilbo-quickshell", "shell.qml")
+		if _, err := os.Stat(devPath); err == nil {
+			abs, _ := filepath.Abs(devPath)
+			return abs
 		}
 	}
 

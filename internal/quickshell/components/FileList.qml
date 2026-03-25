@@ -11,6 +11,7 @@ Item {
 
     property var entries: []
     property bool inlineThumbnails: false
+    property bool singleClick: false
     property var selection: []
     property int _lastSelectedIndex: -1
 
@@ -440,6 +441,11 @@ Item {
 
                         root.selection = currentSelection
                         root.fileSelected(row.modelData)
+
+                        if (root.singleClick && !(mouse.modifiers & (Qt.ControlModifier | Qt.ShiftModifier))) {
+                            if (row.modelData.isDir) root.directoryActivated(row.modelData.path)
+                            else                     root.fileOpenRequested(row.modelData.path)
+                        }
                     }
                 }
 

@@ -52,6 +52,12 @@ func Run(
 	embedModelName string,
 	embedDisabled bool,
 ) error {
+	// Wrap context so the shutdown IPC handler can cancel the daemon
+	// independently of the outer signal context.
+	runCtx, cancelRun := context.WithCancel(ctx)
+	defer cancelRun()
+	ctx = runCtx
+
 	if err := ensureParentDir(dbPath, "create db dir"); err != nil {
 		return err
 	}
@@ -104,6 +110,7 @@ func Run(
 		cfgPath:     cfgPath,
 		extRegistry: extRegistry,
 		thumbGen:    thumbnail.New(""),
+		proc:        proc,
 	}
 
 	sweeper := rules.NewSweeper(idx, tags, pipeline, engine)
@@ -133,6 +140,7 @@ func Run(
 		embedder,
 		uiBrowserMethods,
 		guiMgr,
+		cancelRun,
 	)
 
 	ipcServer, err := startIPCServer(ctx, sockPath, handleIPCRequest)
@@ -417,6 +425,7 @@ func buildIPCRequestHandler(
 	embedder *vectorize.ONNXEmbedder,
 	browser *daemonBrowserMethods,
 	guiMgr *guiManager,
+	shutdown context.CancelFunc,
 ) func(context.Context, *ipcv1.Request) (*ipcv1.Response, error) {
 	return func(ctx context.Context, req *ipcv1.Request) (*ipcv1.Response, error) {
 		switch r := req.GetKind().(type) {
@@ -520,6 +529,16 @@ func buildIPCRequestHandler(
 				LaunchGui: &ipcv1.LaunchGUIResponse{AlreadyRunning: alreadyRunning},
 			}}, nil
 
+		case *ipcv1.Request_Shutdown:
+			// Schedule cancellation after the response is delivered.
+			go func() {
+				time.Sleep(50 * time.Millisecond)
+				shutdown()
+			}()
+			return &ipcv1.Response{Kind: &ipcv1.Response_Shutdown{
+				Shutdown: &ipcv1.ShutdownResponse{},
+			}}, nil
+
 		case *ipcv1.Request_ReloadRules:
 			var reloadErrs []string
 			engine.Reset()
@@ -539,6 +558,14 @@ func buildIPCRequestHandler(
 			}()
 			return &ipcv1.Response{Kind: &ipcv1.Response_ReloadRules{
 				ReloadRules: &ipcv1.ReloadRulesResponse{Errors: reloadErrs},
+			}}, nil
+
+		case *ipcv1.Request_ReindexFile:
+			if err := browser.ReindexFile(ctx, r.ReindexFile.GetPath()); err != nil {
+				return errResponse(daemonInternalErrCode, err.Error()), nil
+			}
+			return &ipcv1.Response{Kind: &ipcv1.Response_ReindexFile{
+				ReindexFile: &ipcv1.ReindexFileResponse{},
 			}}, nil
 
 		default:

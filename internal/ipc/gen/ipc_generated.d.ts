@@ -243,6 +243,12 @@ export namespace tilbo {
 
                 /** Request listSavedSearches */
                 listSavedSearches?: (tilbo.ipc.v1.IListSavedSearchesRequest|null);
+
+                /** Request shutdown */
+                shutdown?: (tilbo.ipc.v1.IShutdownRequest|null);
+
+                /** Request reindexFile */
+                reindexFile?: (tilbo.ipc.v1.IReindexFileRequest|null);
             }
 
             /** Represents a Request. */
@@ -368,8 +374,14 @@ export namespace tilbo {
                 /** Request listSavedSearches. */
                 public listSavedSearches?: (tilbo.ipc.v1.IListSavedSearchesRequest|null);
 
+                /** Request shutdown. */
+                public shutdown?: (tilbo.ipc.v1.IShutdownRequest|null);
+
+                /** Request reindexFile. */
+                public reindexFile?: (tilbo.ipc.v1.IReindexFileRequest|null);
+
                 /** Request kind. */
-                public kind?: ("search"|"listTags"|"hydrateTags"|"related"|"globSearch"|"tag"|"metadata"|"metadataSet"|"status"|"reloadRules"|"listDirectory"|"statFile"|"renameFile"|"deleteFile"|"chmodFile"|"copy"|"paste"|"createFile"|"createDirectory"|"listPlaces"|"pinPlace"|"unpinPlace"|"trashFile"|"listTrash"|"restoreTrash"|"emptyTrash"|"listAppsForFile"|"openWithApp"|"getBrowserConfig"|"launchGui"|"getThumbnail"|"listMounts"|"getFileBadges"|"getFileActions"|"runFileAction"|"pinSearch"|"unpinSearch"|"listSavedSearches");
+                public kind?: ("search"|"listTags"|"hydrateTags"|"related"|"globSearch"|"tag"|"metadata"|"metadataSet"|"status"|"reloadRules"|"listDirectory"|"statFile"|"renameFile"|"deleteFile"|"chmodFile"|"copy"|"paste"|"createFile"|"createDirectory"|"listPlaces"|"pinPlace"|"unpinPlace"|"trashFile"|"listTrash"|"restoreTrash"|"emptyTrash"|"listAppsForFile"|"openWithApp"|"getBrowserConfig"|"launchGui"|"getThumbnail"|"listMounts"|"getFileBadges"|"getFileActions"|"runFileAction"|"pinSearch"|"unpinSearch"|"listSavedSearches"|"shutdown"|"reindexFile");
 
                 /**
                  * Creates a new Request instance using the specified properties.
@@ -565,6 +577,12 @@ export namespace tilbo {
 
                 /** Response listSavedSearches */
                 listSavedSearches?: (tilbo.ipc.v1.IListSavedSearchesResponse|null);
+
+                /** Response shutdown */
+                shutdown?: (tilbo.ipc.v1.IShutdownResponse|null);
+
+                /** Response reindexFile */
+                reindexFile?: (tilbo.ipc.v1.IReindexFileResponse|null);
             }
 
             /** Represents a Response. */
@@ -690,8 +708,14 @@ export namespace tilbo {
                 /** Response listSavedSearches. */
                 public listSavedSearches?: (tilbo.ipc.v1.IListSavedSearchesResponse|null);
 
+                /** Response shutdown. */
+                public shutdown?: (tilbo.ipc.v1.IShutdownResponse|null);
+
+                /** Response reindexFile. */
+                public reindexFile?: (tilbo.ipc.v1.IReindexFileResponse|null);
+
                 /** Response kind. */
-                public kind?: ("error"|"search"|"listTags"|"hydrateTags"|"related"|"globSearch"|"tag"|"metadata"|"status"|"reloadRules"|"listDirectory"|"statFile"|"renameFile"|"deleteFile"|"chmodFile"|"copy"|"paste"|"createFile"|"createDirectory"|"listPlaces"|"pinPlace"|"unpinPlace"|"trashFile"|"listTrash"|"restoreTrash"|"emptyTrash"|"listAppsForFile"|"openWithApp"|"getBrowserConfig"|"launchGui"|"getThumbnail"|"listMounts"|"getFileBadges"|"getFileActions"|"runFileAction"|"pinSearch"|"unpinSearch"|"listSavedSearches");
+                public kind?: ("error"|"search"|"listTags"|"hydrateTags"|"related"|"globSearch"|"tag"|"metadata"|"status"|"reloadRules"|"listDirectory"|"statFile"|"renameFile"|"deleteFile"|"chmodFile"|"copy"|"paste"|"createFile"|"createDirectory"|"listPlaces"|"pinPlace"|"unpinPlace"|"trashFile"|"listTrash"|"restoreTrash"|"emptyTrash"|"listAppsForFile"|"openWithApp"|"getBrowserConfig"|"launchGui"|"getThumbnail"|"listMounts"|"getFileBadges"|"getFileActions"|"runFileAction"|"pinSearch"|"unpinSearch"|"listSavedSearches"|"shutdown"|"reindexFile");
 
                 /**
                  * Creates a new Response instance using the specified properties.
@@ -2474,6 +2498,376 @@ export namespace tilbo {
 
                 /**
                  * Gets the default type url for StatusResponse
+                 * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+                 * @returns The default type url
+                 */
+                public static getTypeUrl(typeUrlPrefix?: string): string;
+            }
+
+            /** Properties of a ShutdownRequest. */
+            interface IShutdownRequest {
+            }
+
+            /** Represents a ShutdownRequest. */
+            class ShutdownRequest implements IShutdownRequest {
+
+                /**
+                 * Constructs a new ShutdownRequest.
+                 * @param [properties] Properties to set
+                 */
+                constructor(properties?: tilbo.ipc.v1.IShutdownRequest);
+
+                /**
+                 * Creates a new ShutdownRequest instance using the specified properties.
+                 * @param [properties] Properties to set
+                 * @returns ShutdownRequest instance
+                 */
+                public static create(properties?: tilbo.ipc.v1.IShutdownRequest): tilbo.ipc.v1.ShutdownRequest;
+
+                /**
+                 * Encodes the specified ShutdownRequest message. Does not implicitly {@link tilbo.ipc.v1.ShutdownRequest.verify|verify} messages.
+                 * @param message ShutdownRequest message or plain object to encode
+                 * @param [writer] Writer to encode to
+                 * @returns Writer
+                 */
+                public static encode(message: tilbo.ipc.v1.IShutdownRequest, writer?: $protobuf.Writer): $protobuf.Writer;
+
+                /**
+                 * Encodes the specified ShutdownRequest message, length delimited. Does not implicitly {@link tilbo.ipc.v1.ShutdownRequest.verify|verify} messages.
+                 * @param message ShutdownRequest message or plain object to encode
+                 * @param [writer] Writer to encode to
+                 * @returns Writer
+                 */
+                public static encodeDelimited(message: tilbo.ipc.v1.IShutdownRequest, writer?: $protobuf.Writer): $protobuf.Writer;
+
+                /**
+                 * Decodes a ShutdownRequest message from the specified reader or buffer.
+                 * @param reader Reader or buffer to decode from
+                 * @param [length] Message length if known beforehand
+                 * @returns ShutdownRequest
+                 * @throws {Error} If the payload is not a reader or valid buffer
+                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                 */
+                public static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): tilbo.ipc.v1.ShutdownRequest;
+
+                /**
+                 * Decodes a ShutdownRequest message from the specified reader or buffer, length delimited.
+                 * @param reader Reader or buffer to decode from
+                 * @returns ShutdownRequest
+                 * @throws {Error} If the payload is not a reader or valid buffer
+                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                 */
+                public static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): tilbo.ipc.v1.ShutdownRequest;
+
+                /**
+                 * Verifies a ShutdownRequest message.
+                 * @param message Plain object to verify
+                 * @returns `null` if valid, otherwise the reason why it is not
+                 */
+                public static verify(message: { [k: string]: any }): (string|null);
+
+                /**
+                 * Creates a ShutdownRequest message from a plain object. Also converts values to their respective internal types.
+                 * @param object Plain object
+                 * @returns ShutdownRequest
+                 */
+                public static fromObject(object: { [k: string]: any }): tilbo.ipc.v1.ShutdownRequest;
+
+                /**
+                 * Creates a plain object from a ShutdownRequest message. Also converts values to other types if specified.
+                 * @param message ShutdownRequest
+                 * @param [options] Conversion options
+                 * @returns Plain object
+                 */
+                public static toObject(message: tilbo.ipc.v1.ShutdownRequest, options?: $protobuf.IConversionOptions): { [k: string]: any };
+
+                /**
+                 * Converts this ShutdownRequest to JSON.
+                 * @returns JSON object
+                 */
+                public toJSON(): { [k: string]: any };
+
+                /**
+                 * Gets the default type url for ShutdownRequest
+                 * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+                 * @returns The default type url
+                 */
+                public static getTypeUrl(typeUrlPrefix?: string): string;
+            }
+
+            /** Properties of a ShutdownResponse. */
+            interface IShutdownResponse {
+            }
+
+            /** Represents a ShutdownResponse. */
+            class ShutdownResponse implements IShutdownResponse {
+
+                /**
+                 * Constructs a new ShutdownResponse.
+                 * @param [properties] Properties to set
+                 */
+                constructor(properties?: tilbo.ipc.v1.IShutdownResponse);
+
+                /**
+                 * Creates a new ShutdownResponse instance using the specified properties.
+                 * @param [properties] Properties to set
+                 * @returns ShutdownResponse instance
+                 */
+                public static create(properties?: tilbo.ipc.v1.IShutdownResponse): tilbo.ipc.v1.ShutdownResponse;
+
+                /**
+                 * Encodes the specified ShutdownResponse message. Does not implicitly {@link tilbo.ipc.v1.ShutdownResponse.verify|verify} messages.
+                 * @param message ShutdownResponse message or plain object to encode
+                 * @param [writer] Writer to encode to
+                 * @returns Writer
+                 */
+                public static encode(message: tilbo.ipc.v1.IShutdownResponse, writer?: $protobuf.Writer): $protobuf.Writer;
+
+                /**
+                 * Encodes the specified ShutdownResponse message, length delimited. Does not implicitly {@link tilbo.ipc.v1.ShutdownResponse.verify|verify} messages.
+                 * @param message ShutdownResponse message or plain object to encode
+                 * @param [writer] Writer to encode to
+                 * @returns Writer
+                 */
+                public static encodeDelimited(message: tilbo.ipc.v1.IShutdownResponse, writer?: $protobuf.Writer): $protobuf.Writer;
+
+                /**
+                 * Decodes a ShutdownResponse message from the specified reader or buffer.
+                 * @param reader Reader or buffer to decode from
+                 * @param [length] Message length if known beforehand
+                 * @returns ShutdownResponse
+                 * @throws {Error} If the payload is not a reader or valid buffer
+                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                 */
+                public static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): tilbo.ipc.v1.ShutdownResponse;
+
+                /**
+                 * Decodes a ShutdownResponse message from the specified reader or buffer, length delimited.
+                 * @param reader Reader or buffer to decode from
+                 * @returns ShutdownResponse
+                 * @throws {Error} If the payload is not a reader or valid buffer
+                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                 */
+                public static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): tilbo.ipc.v1.ShutdownResponse;
+
+                /**
+                 * Verifies a ShutdownResponse message.
+                 * @param message Plain object to verify
+                 * @returns `null` if valid, otherwise the reason why it is not
+                 */
+                public static verify(message: { [k: string]: any }): (string|null);
+
+                /**
+                 * Creates a ShutdownResponse message from a plain object. Also converts values to their respective internal types.
+                 * @param object Plain object
+                 * @returns ShutdownResponse
+                 */
+                public static fromObject(object: { [k: string]: any }): tilbo.ipc.v1.ShutdownResponse;
+
+                /**
+                 * Creates a plain object from a ShutdownResponse message. Also converts values to other types if specified.
+                 * @param message ShutdownResponse
+                 * @param [options] Conversion options
+                 * @returns Plain object
+                 */
+                public static toObject(message: tilbo.ipc.v1.ShutdownResponse, options?: $protobuf.IConversionOptions): { [k: string]: any };
+
+                /**
+                 * Converts this ShutdownResponse to JSON.
+                 * @returns JSON object
+                 */
+                public toJSON(): { [k: string]: any };
+
+                /**
+                 * Gets the default type url for ShutdownResponse
+                 * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+                 * @returns The default type url
+                 */
+                public static getTypeUrl(typeUrlPrefix?: string): string;
+            }
+
+            /** Properties of a ReindexFileRequest. */
+            interface IReindexFileRequest {
+
+                /** ReindexFileRequest path */
+                path?: (string|null);
+            }
+
+            /** Represents a ReindexFileRequest. */
+            class ReindexFileRequest implements IReindexFileRequest {
+
+                /**
+                 * Constructs a new ReindexFileRequest.
+                 * @param [properties] Properties to set
+                 */
+                constructor(properties?: tilbo.ipc.v1.IReindexFileRequest);
+
+                /** ReindexFileRequest path. */
+                public path: string;
+
+                /**
+                 * Creates a new ReindexFileRequest instance using the specified properties.
+                 * @param [properties] Properties to set
+                 * @returns ReindexFileRequest instance
+                 */
+                public static create(properties?: tilbo.ipc.v1.IReindexFileRequest): tilbo.ipc.v1.ReindexFileRequest;
+
+                /**
+                 * Encodes the specified ReindexFileRequest message. Does not implicitly {@link tilbo.ipc.v1.ReindexFileRequest.verify|verify} messages.
+                 * @param message ReindexFileRequest message or plain object to encode
+                 * @param [writer] Writer to encode to
+                 * @returns Writer
+                 */
+                public static encode(message: tilbo.ipc.v1.IReindexFileRequest, writer?: $protobuf.Writer): $protobuf.Writer;
+
+                /**
+                 * Encodes the specified ReindexFileRequest message, length delimited. Does not implicitly {@link tilbo.ipc.v1.ReindexFileRequest.verify|verify} messages.
+                 * @param message ReindexFileRequest message or plain object to encode
+                 * @param [writer] Writer to encode to
+                 * @returns Writer
+                 */
+                public static encodeDelimited(message: tilbo.ipc.v1.IReindexFileRequest, writer?: $protobuf.Writer): $protobuf.Writer;
+
+                /**
+                 * Decodes a ReindexFileRequest message from the specified reader or buffer.
+                 * @param reader Reader or buffer to decode from
+                 * @param [length] Message length if known beforehand
+                 * @returns ReindexFileRequest
+                 * @throws {Error} If the payload is not a reader or valid buffer
+                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                 */
+                public static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): tilbo.ipc.v1.ReindexFileRequest;
+
+                /**
+                 * Decodes a ReindexFileRequest message from the specified reader or buffer, length delimited.
+                 * @param reader Reader or buffer to decode from
+                 * @returns ReindexFileRequest
+                 * @throws {Error} If the payload is not a reader or valid buffer
+                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                 */
+                public static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): tilbo.ipc.v1.ReindexFileRequest;
+
+                /**
+                 * Verifies a ReindexFileRequest message.
+                 * @param message Plain object to verify
+                 * @returns `null` if valid, otherwise the reason why it is not
+                 */
+                public static verify(message: { [k: string]: any }): (string|null);
+
+                /**
+                 * Creates a ReindexFileRequest message from a plain object. Also converts values to their respective internal types.
+                 * @param object Plain object
+                 * @returns ReindexFileRequest
+                 */
+                public static fromObject(object: { [k: string]: any }): tilbo.ipc.v1.ReindexFileRequest;
+
+                /**
+                 * Creates a plain object from a ReindexFileRequest message. Also converts values to other types if specified.
+                 * @param message ReindexFileRequest
+                 * @param [options] Conversion options
+                 * @returns Plain object
+                 */
+                public static toObject(message: tilbo.ipc.v1.ReindexFileRequest, options?: $protobuf.IConversionOptions): { [k: string]: any };
+
+                /**
+                 * Converts this ReindexFileRequest to JSON.
+                 * @returns JSON object
+                 */
+                public toJSON(): { [k: string]: any };
+
+                /**
+                 * Gets the default type url for ReindexFileRequest
+                 * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+                 * @returns The default type url
+                 */
+                public static getTypeUrl(typeUrlPrefix?: string): string;
+            }
+
+            /** Properties of a ReindexFileResponse. */
+            interface IReindexFileResponse {
+            }
+
+            /** Represents a ReindexFileResponse. */
+            class ReindexFileResponse implements IReindexFileResponse {
+
+                /**
+                 * Constructs a new ReindexFileResponse.
+                 * @param [properties] Properties to set
+                 */
+                constructor(properties?: tilbo.ipc.v1.IReindexFileResponse);
+
+                /**
+                 * Creates a new ReindexFileResponse instance using the specified properties.
+                 * @param [properties] Properties to set
+                 * @returns ReindexFileResponse instance
+                 */
+                public static create(properties?: tilbo.ipc.v1.IReindexFileResponse): tilbo.ipc.v1.ReindexFileResponse;
+
+                /**
+                 * Encodes the specified ReindexFileResponse message. Does not implicitly {@link tilbo.ipc.v1.ReindexFileResponse.verify|verify} messages.
+                 * @param message ReindexFileResponse message or plain object to encode
+                 * @param [writer] Writer to encode to
+                 * @returns Writer
+                 */
+                public static encode(message: tilbo.ipc.v1.IReindexFileResponse, writer?: $protobuf.Writer): $protobuf.Writer;
+
+                /**
+                 * Encodes the specified ReindexFileResponse message, length delimited. Does not implicitly {@link tilbo.ipc.v1.ReindexFileResponse.verify|verify} messages.
+                 * @param message ReindexFileResponse message or plain object to encode
+                 * @param [writer] Writer to encode to
+                 * @returns Writer
+                 */
+                public static encodeDelimited(message: tilbo.ipc.v1.IReindexFileResponse, writer?: $protobuf.Writer): $protobuf.Writer;
+
+                /**
+                 * Decodes a ReindexFileResponse message from the specified reader or buffer.
+                 * @param reader Reader or buffer to decode from
+                 * @param [length] Message length if known beforehand
+                 * @returns ReindexFileResponse
+                 * @throws {Error} If the payload is not a reader or valid buffer
+                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                 */
+                public static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): tilbo.ipc.v1.ReindexFileResponse;
+
+                /**
+                 * Decodes a ReindexFileResponse message from the specified reader or buffer, length delimited.
+                 * @param reader Reader or buffer to decode from
+                 * @returns ReindexFileResponse
+                 * @throws {Error} If the payload is not a reader or valid buffer
+                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                 */
+                public static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): tilbo.ipc.v1.ReindexFileResponse;
+
+                /**
+                 * Verifies a ReindexFileResponse message.
+                 * @param message Plain object to verify
+                 * @returns `null` if valid, otherwise the reason why it is not
+                 */
+                public static verify(message: { [k: string]: any }): (string|null);
+
+                /**
+                 * Creates a ReindexFileResponse message from a plain object. Also converts values to their respective internal types.
+                 * @param object Plain object
+                 * @returns ReindexFileResponse
+                 */
+                public static fromObject(object: { [k: string]: any }): tilbo.ipc.v1.ReindexFileResponse;
+
+                /**
+                 * Creates a plain object from a ReindexFileResponse message. Also converts values to other types if specified.
+                 * @param message ReindexFileResponse
+                 * @param [options] Conversion options
+                 * @returns Plain object
+                 */
+                public static toObject(message: tilbo.ipc.v1.ReindexFileResponse, options?: $protobuf.IConversionOptions): { [k: string]: any };
+
+                /**
+                 * Converts this ReindexFileResponse to JSON.
+                 * @returns JSON object
+                 */
+                public toJSON(): { [k: string]: any };
+
+                /**
+                 * Gets the default type url for ReindexFileResponse
                  * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
                  * @returns The default type url
                  */
@@ -7079,6 +7473,9 @@ export namespace tilbo {
 
                 /** GetBrowserConfigResponse theme */
                 theme?: (string|null);
+
+                /** GetBrowserConfigResponse singleClick */
+                singleClick?: (boolean|null);
             }
 
             /** Represents a GetBrowserConfigResponse. */
@@ -7104,6 +7501,9 @@ export namespace tilbo {
 
                 /** GetBrowserConfigResponse theme. */
                 public theme: string;
+
+                /** GetBrowserConfigResponse singleClick. */
+                public singleClick: boolean;
 
                 /**
                  * Creates a new GetBrowserConfigResponse instance using the specified properties.

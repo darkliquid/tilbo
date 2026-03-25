@@ -53,6 +53,7 @@ type BrowserConfig struct {
 	UseTrash               *bool             `toml:"use_trash"`
 	InlineThumbnails       *bool             `toml:"inline_thumbnails"`
 	AutoPropertiesSlideout *bool             `toml:"auto_properties_slideout"`
+	SingleClick            *bool             `toml:"single_click"`
 	Theme                  string            `toml:"theme"`
 	Keybindings            map[string]string `toml:"keybindings"`
 }

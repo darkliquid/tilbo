@@ -99,6 +99,10 @@ Item {
         "prop.change_icon": "Change Icon...",
         "prop.change_icon_title": "Change Icon",
         "prop.icon_prompt": "Enter an XDG icon name for %1:",
+        "prop.action.open": "Open",
+        "prop.action.navigate": "Navigate",
+        "prop.action.preview": "Preview",
+        "prop.action.refresh": "Refresh",
 
         // File List Headers
         "list.header.name": "Name",

@@ -362,6 +362,15 @@ Singleton {
         })
     }
 
+    // reindexFile forces a full re-harvest of a single file and invalidates its
+    // cached thumbnails. callback(err) — err is null on success.
+    function reindexFile(path, callback) {
+        _call({ reindexFile: { path: path } }, function(resp, err) {
+            if (err) { callback(err); return }
+            callback(null)
+        })
+    }
+
     function listMounts(callback) {
         _call({ listMounts: {} }, function(resp, err) {
             if (err) { callback([], err); return }

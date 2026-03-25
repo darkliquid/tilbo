@@ -415,6 +415,8 @@ export const tilbo = $root.tilbo = (() => {
                  * @property {tilbo.ipc.v1.IPinSearchRequest|null} [pinSearch] Request pinSearch
                  * @property {tilbo.ipc.v1.IUnpinSearchRequest|null} [unpinSearch] Request unpinSearch
                  * @property {tilbo.ipc.v1.IListSavedSearchesRequest|null} [listSavedSearches] Request listSavedSearches
+                 * @property {tilbo.ipc.v1.IShutdownRequest|null} [shutdown] Request shutdown
+                 * @property {tilbo.ipc.v1.IReindexFileRequest|null} [reindexFile] Request reindexFile
                  */
 
                 /**
@@ -736,17 +738,33 @@ export const tilbo = $root.tilbo = (() => {
                  */
                 Request.prototype.listSavedSearches = null;
 
+                /**
+                 * Request shutdown.
+                 * @member {tilbo.ipc.v1.IShutdownRequest|null|undefined} shutdown
+                 * @memberof tilbo.ipc.v1.Request
+                 * @instance
+                 */
+                Request.prototype.shutdown = null;
+
+                /**
+                 * Request reindexFile.
+                 * @member {tilbo.ipc.v1.IReindexFileRequest|null|undefined} reindexFile
+                 * @memberof tilbo.ipc.v1.Request
+                 * @instance
+                 */
+                Request.prototype.reindexFile = null;
+
                 // OneOf field names bound to virtual getters and setters
                 let $oneOfFields;
 
                 /**
                  * Request kind.
-                 * @member {"search"|"listTags"|"hydrateTags"|"related"|"globSearch"|"tag"|"metadata"|"metadataSet"|"status"|"reloadRules"|"listDirectory"|"statFile"|"renameFile"|"deleteFile"|"chmodFile"|"copy"|"paste"|"createFile"|"createDirectory"|"listPlaces"|"pinPlace"|"unpinPlace"|"trashFile"|"listTrash"|"restoreTrash"|"emptyTrash"|"listAppsForFile"|"openWithApp"|"getBrowserConfig"|"launchGui"|"getThumbnail"|"listMounts"|"getFileBadges"|"getFileActions"|"runFileAction"|"pinSearch"|"unpinSearch"|"listSavedSearches"|undefined} kind
+                 * @member {"search"|"listTags"|"hydrateTags"|"related"|"globSearch"|"tag"|"metadata"|"metadataSet"|"status"|"reloadRules"|"listDirectory"|"statFile"|"renameFile"|"deleteFile"|"chmodFile"|"copy"|"paste"|"createFile"|"createDirectory"|"listPlaces"|"pinPlace"|"unpinPlace"|"trashFile"|"listTrash"|"restoreTrash"|"emptyTrash"|"listAppsForFile"|"openWithApp"|"getBrowserConfig"|"launchGui"|"getThumbnail"|"listMounts"|"getFileBadges"|"getFileActions"|"runFileAction"|"pinSearch"|"unpinSearch"|"listSavedSearches"|"shutdown"|"reindexFile"|undefined} kind
                  * @memberof tilbo.ipc.v1.Request
                  * @instance
                  */
                 Object.defineProperty(Request.prototype, "kind", {
-                    get: $util.oneOfGetter($oneOfFields = ["search", "listTags", "hydrateTags", "related", "globSearch", "tag", "metadata", "metadataSet", "status", "reloadRules", "listDirectory", "statFile", "renameFile", "deleteFile", "chmodFile", "copy", "paste", "createFile", "createDirectory", "listPlaces", "pinPlace", "unpinPlace", "trashFile", "listTrash", "restoreTrash", "emptyTrash", "listAppsForFile", "openWithApp", "getBrowserConfig", "launchGui", "getThumbnail", "listMounts", "getFileBadges", "getFileActions", "runFileAction", "pinSearch", "unpinSearch", "listSavedSearches"]),
+                    get: $util.oneOfGetter($oneOfFields = ["search", "listTags", "hydrateTags", "related", "globSearch", "tag", "metadata", "metadataSet", "status", "reloadRules", "listDirectory", "statFile", "renameFile", "deleteFile", "chmodFile", "copy", "paste", "createFile", "createDirectory", "listPlaces", "pinPlace", "unpinPlace", "trashFile", "listTrash", "restoreTrash", "emptyTrash", "listAppsForFile", "openWithApp", "getBrowserConfig", "launchGui", "getThumbnail", "listMounts", "getFileBadges", "getFileActions", "runFileAction", "pinSearch", "unpinSearch", "listSavedSearches", "shutdown", "reindexFile"]),
                     set: $util.oneOfSetter($oneOfFields)
                 });
 
@@ -850,6 +868,10 @@ export const tilbo = $root.tilbo = (() => {
                         $root.tilbo.ipc.v1.UnpinSearchRequest.encode(message.unpinSearch, writer.uint32(/* id 37, wireType 2 =*/298).fork()).ldelim();
                     if (message.listSavedSearches != null && Object.hasOwnProperty.call(message, "listSavedSearches"))
                         $root.tilbo.ipc.v1.ListSavedSearchesRequest.encode(message.listSavedSearches, writer.uint32(/* id 38, wireType 2 =*/306).fork()).ldelim();
+                    if (message.shutdown != null && Object.hasOwnProperty.call(message, "shutdown"))
+                        $root.tilbo.ipc.v1.ShutdownRequest.encode(message.shutdown, writer.uint32(/* id 39, wireType 2 =*/314).fork()).ldelim();
+                    if (message.reindexFile != null && Object.hasOwnProperty.call(message, "reindexFile"))
+                        $root.tilbo.ipc.v1.ReindexFileRequest.encode(message.reindexFile, writer.uint32(/* id 40, wireType 2 =*/322).fork()).ldelim();
                     return writer;
                 };
 
@@ -1036,6 +1058,14 @@ export const tilbo = $root.tilbo = (() => {
                             }
                         case 38: {
                                 message.listSavedSearches = $root.tilbo.ipc.v1.ListSavedSearchesRequest.decode(reader, reader.uint32());
+                                break;
+                            }
+                        case 39: {
+                                message.shutdown = $root.tilbo.ipc.v1.ShutdownRequest.decode(reader, reader.uint32());
+                                break;
+                            }
+                        case 40: {
+                                message.reindexFile = $root.tilbo.ipc.v1.ReindexFileRequest.decode(reader, reader.uint32());
                                 break;
                             }
                         default:
@@ -1452,6 +1482,26 @@ export const tilbo = $root.tilbo = (() => {
                                 return "listSavedSearches." + error;
                         }
                     }
+                    if (message.shutdown != null && message.hasOwnProperty("shutdown")) {
+                        if (properties.kind === 1)
+                            return "kind: multiple values";
+                        properties.kind = 1;
+                        {
+                            let error = $root.tilbo.ipc.v1.ShutdownRequest.verify(message.shutdown);
+                            if (error)
+                                return "shutdown." + error;
+                        }
+                    }
+                    if (message.reindexFile != null && message.hasOwnProperty("reindexFile")) {
+                        if (properties.kind === 1)
+                            return "kind: multiple values";
+                        properties.kind = 1;
+                        {
+                            let error = $root.tilbo.ipc.v1.ReindexFileRequest.verify(message.reindexFile);
+                            if (error)
+                                return "reindexFile." + error;
+                        }
+                    }
                     return null;
                 };
 
@@ -1656,6 +1706,16 @@ export const tilbo = $root.tilbo = (() => {
                         if (typeof object.listSavedSearches !== "object")
                             throw TypeError(".tilbo.ipc.v1.Request.listSavedSearches: object expected");
                         message.listSavedSearches = $root.tilbo.ipc.v1.ListSavedSearchesRequest.fromObject(object.listSavedSearches);
+                    }
+                    if (object.shutdown != null) {
+                        if (typeof object.shutdown !== "object")
+                            throw TypeError(".tilbo.ipc.v1.Request.shutdown: object expected");
+                        message.shutdown = $root.tilbo.ipc.v1.ShutdownRequest.fromObject(object.shutdown);
+                    }
+                    if (object.reindexFile != null) {
+                        if (typeof object.reindexFile !== "object")
+                            throw TypeError(".tilbo.ipc.v1.Request.reindexFile: object expected");
+                        message.reindexFile = $root.tilbo.ipc.v1.ReindexFileRequest.fromObject(object.reindexFile);
                     }
                     return message;
                 };
@@ -1863,6 +1923,16 @@ export const tilbo = $root.tilbo = (() => {
                         if (options.oneofs)
                             object.kind = "listSavedSearches";
                     }
+                    if (message.shutdown != null && message.hasOwnProperty("shutdown")) {
+                        object.shutdown = $root.tilbo.ipc.v1.ShutdownRequest.toObject(message.shutdown, options);
+                        if (options.oneofs)
+                            object.kind = "shutdown";
+                    }
+                    if (message.reindexFile != null && message.hasOwnProperty("reindexFile")) {
+                        object.reindexFile = $root.tilbo.ipc.v1.ReindexFileRequest.toObject(message.reindexFile, options);
+                        if (options.oneofs)
+                            object.kind = "reindexFile";
+                    }
                     return object;
                 };
 
@@ -1939,6 +2009,8 @@ export const tilbo = $root.tilbo = (() => {
                  * @property {tilbo.ipc.v1.IPinSearchResponse|null} [pinSearch] Response pinSearch
                  * @property {tilbo.ipc.v1.IUnpinSearchResponse|null} [unpinSearch] Response unpinSearch
                  * @property {tilbo.ipc.v1.IListSavedSearchesResponse|null} [listSavedSearches] Response listSavedSearches
+                 * @property {tilbo.ipc.v1.IShutdownResponse|null} [shutdown] Response shutdown
+                 * @property {tilbo.ipc.v1.IReindexFileResponse|null} [reindexFile] Response reindexFile
                  */
 
                 /**
@@ -2260,17 +2332,33 @@ export const tilbo = $root.tilbo = (() => {
                  */
                 Response.prototype.listSavedSearches = null;
 
+                /**
+                 * Response shutdown.
+                 * @member {tilbo.ipc.v1.IShutdownResponse|null|undefined} shutdown
+                 * @memberof tilbo.ipc.v1.Response
+                 * @instance
+                 */
+                Response.prototype.shutdown = null;
+
+                /**
+                 * Response reindexFile.
+                 * @member {tilbo.ipc.v1.IReindexFileResponse|null|undefined} reindexFile
+                 * @memberof tilbo.ipc.v1.Response
+                 * @instance
+                 */
+                Response.prototype.reindexFile = null;
+
                 // OneOf field names bound to virtual getters and setters
                 let $oneOfFields;
 
                 /**
                  * Response kind.
-                 * @member {"error"|"search"|"listTags"|"hydrateTags"|"related"|"globSearch"|"tag"|"metadata"|"status"|"reloadRules"|"listDirectory"|"statFile"|"renameFile"|"deleteFile"|"chmodFile"|"copy"|"paste"|"createFile"|"createDirectory"|"listPlaces"|"pinPlace"|"unpinPlace"|"trashFile"|"listTrash"|"restoreTrash"|"emptyTrash"|"listAppsForFile"|"openWithApp"|"getBrowserConfig"|"launchGui"|"getThumbnail"|"listMounts"|"getFileBadges"|"getFileActions"|"runFileAction"|"pinSearch"|"unpinSearch"|"listSavedSearches"|undefined} kind
+                 * @member {"error"|"search"|"listTags"|"hydrateTags"|"related"|"globSearch"|"tag"|"metadata"|"status"|"reloadRules"|"listDirectory"|"statFile"|"renameFile"|"deleteFile"|"chmodFile"|"copy"|"paste"|"createFile"|"createDirectory"|"listPlaces"|"pinPlace"|"unpinPlace"|"trashFile"|"listTrash"|"restoreTrash"|"emptyTrash"|"listAppsForFile"|"openWithApp"|"getBrowserConfig"|"launchGui"|"getThumbnail"|"listMounts"|"getFileBadges"|"getFileActions"|"runFileAction"|"pinSearch"|"unpinSearch"|"listSavedSearches"|"shutdown"|"reindexFile"|undefined} kind
                  * @memberof tilbo.ipc.v1.Response
                  * @instance
                  */
                 Object.defineProperty(Response.prototype, "kind", {
-                    get: $util.oneOfGetter($oneOfFields = ["error", "search", "listTags", "hydrateTags", "related", "globSearch", "tag", "metadata", "status", "reloadRules", "listDirectory", "statFile", "renameFile", "deleteFile", "chmodFile", "copy", "paste", "createFile", "createDirectory", "listPlaces", "pinPlace", "unpinPlace", "trashFile", "listTrash", "restoreTrash", "emptyTrash", "listAppsForFile", "openWithApp", "getBrowserConfig", "launchGui", "getThumbnail", "listMounts", "getFileBadges", "getFileActions", "runFileAction", "pinSearch", "unpinSearch", "listSavedSearches"]),
+                    get: $util.oneOfGetter($oneOfFields = ["error", "search", "listTags", "hydrateTags", "related", "globSearch", "tag", "metadata", "status", "reloadRules", "listDirectory", "statFile", "renameFile", "deleteFile", "chmodFile", "copy", "paste", "createFile", "createDirectory", "listPlaces", "pinPlace", "unpinPlace", "trashFile", "listTrash", "restoreTrash", "emptyTrash", "listAppsForFile", "openWithApp", "getBrowserConfig", "launchGui", "getThumbnail", "listMounts", "getFileBadges", "getFileActions", "runFileAction", "pinSearch", "unpinSearch", "listSavedSearches", "shutdown", "reindexFile"]),
                     set: $util.oneOfSetter($oneOfFields)
                 });
 
@@ -2374,6 +2462,10 @@ export const tilbo = $root.tilbo = (() => {
                         $root.tilbo.ipc.v1.UnpinSearchResponse.encode(message.unpinSearch, writer.uint32(/* id 37, wireType 2 =*/298).fork()).ldelim();
                     if (message.listSavedSearches != null && Object.hasOwnProperty.call(message, "listSavedSearches"))
                         $root.tilbo.ipc.v1.ListSavedSearchesResponse.encode(message.listSavedSearches, writer.uint32(/* id 38, wireType 2 =*/306).fork()).ldelim();
+                    if (message.shutdown != null && Object.hasOwnProperty.call(message, "shutdown"))
+                        $root.tilbo.ipc.v1.ShutdownResponse.encode(message.shutdown, writer.uint32(/* id 39, wireType 2 =*/314).fork()).ldelim();
+                    if (message.reindexFile != null && Object.hasOwnProperty.call(message, "reindexFile"))
+                        $root.tilbo.ipc.v1.ReindexFileResponse.encode(message.reindexFile, writer.uint32(/* id 40, wireType 2 =*/322).fork()).ldelim();
                     return writer;
                 };
 
@@ -2560,6 +2652,14 @@ export const tilbo = $root.tilbo = (() => {
                             }
                         case 38: {
                                 message.listSavedSearches = $root.tilbo.ipc.v1.ListSavedSearchesResponse.decode(reader, reader.uint32());
+                                break;
+                            }
+                        case 39: {
+                                message.shutdown = $root.tilbo.ipc.v1.ShutdownResponse.decode(reader, reader.uint32());
+                                break;
+                            }
+                        case 40: {
+                                message.reindexFile = $root.tilbo.ipc.v1.ReindexFileResponse.decode(reader, reader.uint32());
                                 break;
                             }
                         default:
@@ -2976,6 +3076,26 @@ export const tilbo = $root.tilbo = (() => {
                                 return "listSavedSearches." + error;
                         }
                     }
+                    if (message.shutdown != null && message.hasOwnProperty("shutdown")) {
+                        if (properties.kind === 1)
+                            return "kind: multiple values";
+                        properties.kind = 1;
+                        {
+                            let error = $root.tilbo.ipc.v1.ShutdownResponse.verify(message.shutdown);
+                            if (error)
+                                return "shutdown." + error;
+                        }
+                    }
+                    if (message.reindexFile != null && message.hasOwnProperty("reindexFile")) {
+                        if (properties.kind === 1)
+                            return "kind: multiple values";
+                        properties.kind = 1;
+                        {
+                            let error = $root.tilbo.ipc.v1.ReindexFileResponse.verify(message.reindexFile);
+                            if (error)
+                                return "reindexFile." + error;
+                        }
+                    }
                     return null;
                 };
 
@@ -3180,6 +3300,16 @@ export const tilbo = $root.tilbo = (() => {
                         if (typeof object.listSavedSearches !== "object")
                             throw TypeError(".tilbo.ipc.v1.Response.listSavedSearches: object expected");
                         message.listSavedSearches = $root.tilbo.ipc.v1.ListSavedSearchesResponse.fromObject(object.listSavedSearches);
+                    }
+                    if (object.shutdown != null) {
+                        if (typeof object.shutdown !== "object")
+                            throw TypeError(".tilbo.ipc.v1.Response.shutdown: object expected");
+                        message.shutdown = $root.tilbo.ipc.v1.ShutdownResponse.fromObject(object.shutdown);
+                    }
+                    if (object.reindexFile != null) {
+                        if (typeof object.reindexFile !== "object")
+                            throw TypeError(".tilbo.ipc.v1.Response.reindexFile: object expected");
+                        message.reindexFile = $root.tilbo.ipc.v1.ReindexFileResponse.fromObject(object.reindexFile);
                     }
                     return message;
                 };
@@ -3386,6 +3516,16 @@ export const tilbo = $root.tilbo = (() => {
                         object.listSavedSearches = $root.tilbo.ipc.v1.ListSavedSearchesResponse.toObject(message.listSavedSearches, options);
                         if (options.oneofs)
                             object.kind = "listSavedSearches";
+                    }
+                    if (message.shutdown != null && message.hasOwnProperty("shutdown")) {
+                        object.shutdown = $root.tilbo.ipc.v1.ShutdownResponse.toObject(message.shutdown, options);
+                        if (options.oneofs)
+                            object.kind = "shutdown";
+                    }
+                    if (message.reindexFile != null && message.hasOwnProperty("reindexFile")) {
+                        object.reindexFile = $root.tilbo.ipc.v1.ReindexFileResponse.toObject(message.reindexFile, options);
+                        if (options.oneofs)
+                            object.kind = "reindexFile";
                     }
                     return object;
                 };
@@ -8000,6 +8140,742 @@ export const tilbo = $root.tilbo = (() => {
                 };
 
                 return StatusResponse;
+            })();
+
+            v1.ShutdownRequest = (function() {
+
+                /**
+                 * Properties of a ShutdownRequest.
+                 * @memberof tilbo.ipc.v1
+                 * @interface IShutdownRequest
+                 */
+
+                /**
+                 * Constructs a new ShutdownRequest.
+                 * @memberof tilbo.ipc.v1
+                 * @classdesc Represents a ShutdownRequest.
+                 * @implements IShutdownRequest
+                 * @constructor
+                 * @param {tilbo.ipc.v1.IShutdownRequest=} [properties] Properties to set
+                 */
+                function ShutdownRequest(properties) {
+                    if (properties)
+                        for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+                            if (properties[keys[i]] != null)
+                                this[keys[i]] = properties[keys[i]];
+                }
+
+                /**
+                 * Creates a new ShutdownRequest instance using the specified properties.
+                 * @function create
+                 * @memberof tilbo.ipc.v1.ShutdownRequest
+                 * @static
+                 * @param {tilbo.ipc.v1.IShutdownRequest=} [properties] Properties to set
+                 * @returns {tilbo.ipc.v1.ShutdownRequest} ShutdownRequest instance
+                 */
+                ShutdownRequest.create = function create(properties) {
+                    return new ShutdownRequest(properties);
+                };
+
+                /**
+                 * Encodes the specified ShutdownRequest message. Does not implicitly {@link tilbo.ipc.v1.ShutdownRequest.verify|verify} messages.
+                 * @function encode
+                 * @memberof tilbo.ipc.v1.ShutdownRequest
+                 * @static
+                 * @param {tilbo.ipc.v1.IShutdownRequest} message ShutdownRequest message or plain object to encode
+                 * @param {$protobuf.Writer} [writer] Writer to encode to
+                 * @returns {$protobuf.Writer} Writer
+                 */
+                ShutdownRequest.encode = function encode(message, writer) {
+                    if (!writer)
+                        writer = $Writer.create();
+                    return writer;
+                };
+
+                /**
+                 * Encodes the specified ShutdownRequest message, length delimited. Does not implicitly {@link tilbo.ipc.v1.ShutdownRequest.verify|verify} messages.
+                 * @function encodeDelimited
+                 * @memberof tilbo.ipc.v1.ShutdownRequest
+                 * @static
+                 * @param {tilbo.ipc.v1.IShutdownRequest} message ShutdownRequest message or plain object to encode
+                 * @param {$protobuf.Writer} [writer] Writer to encode to
+                 * @returns {$protobuf.Writer} Writer
+                 */
+                ShutdownRequest.encodeDelimited = function encodeDelimited(message, writer) {
+                    return this.encode(message, writer).ldelim();
+                };
+
+                /**
+                 * Decodes a ShutdownRequest message from the specified reader or buffer.
+                 * @function decode
+                 * @memberof tilbo.ipc.v1.ShutdownRequest
+                 * @static
+                 * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+                 * @param {number} [length] Message length if known beforehand
+                 * @returns {tilbo.ipc.v1.ShutdownRequest} ShutdownRequest
+                 * @throws {Error} If the payload is not a reader or valid buffer
+                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                 */
+                ShutdownRequest.decode = function decode(reader, length, error) {
+                    if (!(reader instanceof $Reader))
+                        reader = $Reader.create(reader);
+                    let end = length === undefined ? reader.len : reader.pos + length, message = new $root.tilbo.ipc.v1.ShutdownRequest();
+                    while (reader.pos < end) {
+                        let tag = reader.uint32();
+                        if (tag === error)
+                            break;
+                        switch (tag >>> 3) {
+                        default:
+                            reader.skipType(tag & 7);
+                            break;
+                        }
+                    }
+                    return message;
+                };
+
+                /**
+                 * Decodes a ShutdownRequest message from the specified reader or buffer, length delimited.
+                 * @function decodeDelimited
+                 * @memberof tilbo.ipc.v1.ShutdownRequest
+                 * @static
+                 * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+                 * @returns {tilbo.ipc.v1.ShutdownRequest} ShutdownRequest
+                 * @throws {Error} If the payload is not a reader or valid buffer
+                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                 */
+                ShutdownRequest.decodeDelimited = function decodeDelimited(reader) {
+                    if (!(reader instanceof $Reader))
+                        reader = new $Reader(reader);
+                    return this.decode(reader, reader.uint32());
+                };
+
+                /**
+                 * Verifies a ShutdownRequest message.
+                 * @function verify
+                 * @memberof tilbo.ipc.v1.ShutdownRequest
+                 * @static
+                 * @param {Object.<string,*>} message Plain object to verify
+                 * @returns {string|null} `null` if valid, otherwise the reason why it is not
+                 */
+                ShutdownRequest.verify = function verify(message) {
+                    if (typeof message !== "object" || message === null)
+                        return "object expected";
+                    return null;
+                };
+
+                /**
+                 * Creates a ShutdownRequest message from a plain object. Also converts values to their respective internal types.
+                 * @function fromObject
+                 * @memberof tilbo.ipc.v1.ShutdownRequest
+                 * @static
+                 * @param {Object.<string,*>} object Plain object
+                 * @returns {tilbo.ipc.v1.ShutdownRequest} ShutdownRequest
+                 */
+                ShutdownRequest.fromObject = function fromObject(object) {
+                    if (object instanceof $root.tilbo.ipc.v1.ShutdownRequest)
+                        return object;
+                    return new $root.tilbo.ipc.v1.ShutdownRequest();
+                };
+
+                /**
+                 * Creates a plain object from a ShutdownRequest message. Also converts values to other types if specified.
+                 * @function toObject
+                 * @memberof tilbo.ipc.v1.ShutdownRequest
+                 * @static
+                 * @param {tilbo.ipc.v1.ShutdownRequest} message ShutdownRequest
+                 * @param {$protobuf.IConversionOptions} [options] Conversion options
+                 * @returns {Object.<string,*>} Plain object
+                 */
+                ShutdownRequest.toObject = function toObject() {
+                    return {};
+                };
+
+                /**
+                 * Converts this ShutdownRequest to JSON.
+                 * @function toJSON
+                 * @memberof tilbo.ipc.v1.ShutdownRequest
+                 * @instance
+                 * @returns {Object.<string,*>} JSON object
+                 */
+                ShutdownRequest.prototype.toJSON = function toJSON() {
+                    return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+                };
+
+                /**
+                 * Gets the default type url for ShutdownRequest
+                 * @function getTypeUrl
+                 * @memberof tilbo.ipc.v1.ShutdownRequest
+                 * @static
+                 * @param {string} [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+                 * @returns {string} The default type url
+                 */
+                ShutdownRequest.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
+                    if (typeUrlPrefix === undefined) {
+                        typeUrlPrefix = "type.googleapis.com";
+                    }
+                    return typeUrlPrefix + "/tilbo.ipc.v1.ShutdownRequest";
+                };
+
+                return ShutdownRequest;
+            })();
+
+            v1.ShutdownResponse = (function() {
+
+                /**
+                 * Properties of a ShutdownResponse.
+                 * @memberof tilbo.ipc.v1
+                 * @interface IShutdownResponse
+                 */
+
+                /**
+                 * Constructs a new ShutdownResponse.
+                 * @memberof tilbo.ipc.v1
+                 * @classdesc Represents a ShutdownResponse.
+                 * @implements IShutdownResponse
+                 * @constructor
+                 * @param {tilbo.ipc.v1.IShutdownResponse=} [properties] Properties to set
+                 */
+                function ShutdownResponse(properties) {
+                    if (properties)
+                        for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+                            if (properties[keys[i]] != null)
+                                this[keys[i]] = properties[keys[i]];
+                }
+
+                /**
+                 * Creates a new ShutdownResponse instance using the specified properties.
+                 * @function create
+                 * @memberof tilbo.ipc.v1.ShutdownResponse
+                 * @static
+                 * @param {tilbo.ipc.v1.IShutdownResponse=} [properties] Properties to set
+                 * @returns {tilbo.ipc.v1.ShutdownResponse} ShutdownResponse instance
+                 */
+                ShutdownResponse.create = function create(properties) {
+                    return new ShutdownResponse(properties);
+                };
+
+                /**
+                 * Encodes the specified ShutdownResponse message. Does not implicitly {@link tilbo.ipc.v1.ShutdownResponse.verify|verify} messages.
+                 * @function encode
+                 * @memberof tilbo.ipc.v1.ShutdownResponse
+                 * @static
+                 * @param {tilbo.ipc.v1.IShutdownResponse} message ShutdownResponse message or plain object to encode
+                 * @param {$protobuf.Writer} [writer] Writer to encode to
+                 * @returns {$protobuf.Writer} Writer
+                 */
+                ShutdownResponse.encode = function encode(message, writer) {
+                    if (!writer)
+                        writer = $Writer.create();
+                    return writer;
+                };
+
+                /**
+                 * Encodes the specified ShutdownResponse message, length delimited. Does not implicitly {@link tilbo.ipc.v1.ShutdownResponse.verify|verify} messages.
+                 * @function encodeDelimited
+                 * @memberof tilbo.ipc.v1.ShutdownResponse
+                 * @static
+                 * @param {tilbo.ipc.v1.IShutdownResponse} message ShutdownResponse message or plain object to encode
+                 * @param {$protobuf.Writer} [writer] Writer to encode to
+                 * @returns {$protobuf.Writer} Writer
+                 */
+                ShutdownResponse.encodeDelimited = function encodeDelimited(message, writer) {
+                    return this.encode(message, writer).ldelim();
+                };
+
+                /**
+                 * Decodes a ShutdownResponse message from the specified reader or buffer.
+                 * @function decode
+                 * @memberof tilbo.ipc.v1.ShutdownResponse
+                 * @static
+                 * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+                 * @param {number} [length] Message length if known beforehand
+                 * @returns {tilbo.ipc.v1.ShutdownResponse} ShutdownResponse
+                 * @throws {Error} If the payload is not a reader or valid buffer
+                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                 */
+                ShutdownResponse.decode = function decode(reader, length, error) {
+                    if (!(reader instanceof $Reader))
+                        reader = $Reader.create(reader);
+                    let end = length === undefined ? reader.len : reader.pos + length, message = new $root.tilbo.ipc.v1.ShutdownResponse();
+                    while (reader.pos < end) {
+                        let tag = reader.uint32();
+                        if (tag === error)
+                            break;
+                        switch (tag >>> 3) {
+                        default:
+                            reader.skipType(tag & 7);
+                            break;
+                        }
+                    }
+                    return message;
+                };
+
+                /**
+                 * Decodes a ShutdownResponse message from the specified reader or buffer, length delimited.
+                 * @function decodeDelimited
+                 * @memberof tilbo.ipc.v1.ShutdownResponse
+                 * @static
+                 * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+                 * @returns {tilbo.ipc.v1.ShutdownResponse} ShutdownResponse
+                 * @throws {Error} If the payload is not a reader or valid buffer
+                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                 */
+                ShutdownResponse.decodeDelimited = function decodeDelimited(reader) {
+                    if (!(reader instanceof $Reader))
+                        reader = new $Reader(reader);
+                    return this.decode(reader, reader.uint32());
+                };
+
+                /**
+                 * Verifies a ShutdownResponse message.
+                 * @function verify
+                 * @memberof tilbo.ipc.v1.ShutdownResponse
+                 * @static
+                 * @param {Object.<string,*>} message Plain object to verify
+                 * @returns {string|null} `null` if valid, otherwise the reason why it is not
+                 */
+                ShutdownResponse.verify = function verify(message) {
+                    if (typeof message !== "object" || message === null)
+                        return "object expected";
+                    return null;
+                };
+
+                /**
+                 * Creates a ShutdownResponse message from a plain object. Also converts values to their respective internal types.
+                 * @function fromObject
+                 * @memberof tilbo.ipc.v1.ShutdownResponse
+                 * @static
+                 * @param {Object.<string,*>} object Plain object
+                 * @returns {tilbo.ipc.v1.ShutdownResponse} ShutdownResponse
+                 */
+                ShutdownResponse.fromObject = function fromObject(object) {
+                    if (object instanceof $root.tilbo.ipc.v1.ShutdownResponse)
+                        return object;
+                    return new $root.tilbo.ipc.v1.ShutdownResponse();
+                };
+
+                /**
+                 * Creates a plain object from a ShutdownResponse message. Also converts values to other types if specified.
+                 * @function toObject
+                 * @memberof tilbo.ipc.v1.ShutdownResponse
+                 * @static
+                 * @param {tilbo.ipc.v1.ShutdownResponse} message ShutdownResponse
+                 * @param {$protobuf.IConversionOptions} [options] Conversion options
+                 * @returns {Object.<string,*>} Plain object
+                 */
+                ShutdownResponse.toObject = function toObject() {
+                    return {};
+                };
+
+                /**
+                 * Converts this ShutdownResponse to JSON.
+                 * @function toJSON
+                 * @memberof tilbo.ipc.v1.ShutdownResponse
+                 * @instance
+                 * @returns {Object.<string,*>} JSON object
+                 */
+                ShutdownResponse.prototype.toJSON = function toJSON() {
+                    return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+                };
+
+                /**
+                 * Gets the default type url for ShutdownResponse
+                 * @function getTypeUrl
+                 * @memberof tilbo.ipc.v1.ShutdownResponse
+                 * @static
+                 * @param {string} [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+                 * @returns {string} The default type url
+                 */
+                ShutdownResponse.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
+                    if (typeUrlPrefix === undefined) {
+                        typeUrlPrefix = "type.googleapis.com";
+                    }
+                    return typeUrlPrefix + "/tilbo.ipc.v1.ShutdownResponse";
+                };
+
+                return ShutdownResponse;
+            })();
+
+            v1.ReindexFileRequest = (function() {
+
+                /**
+                 * Properties of a ReindexFileRequest.
+                 * @memberof tilbo.ipc.v1
+                 * @interface IReindexFileRequest
+                 * @property {string|null} [path] ReindexFileRequest path
+                 */
+
+                /**
+                 * Constructs a new ReindexFileRequest.
+                 * @memberof tilbo.ipc.v1
+                 * @classdesc Represents a ReindexFileRequest.
+                 * @implements IReindexFileRequest
+                 * @constructor
+                 * @param {tilbo.ipc.v1.IReindexFileRequest=} [properties] Properties to set
+                 */
+                function ReindexFileRequest(properties) {
+                    if (properties)
+                        for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+                            if (properties[keys[i]] != null)
+                                this[keys[i]] = properties[keys[i]];
+                }
+
+                /**
+                 * ReindexFileRequest path.
+                 * @member {string} path
+                 * @memberof tilbo.ipc.v1.ReindexFileRequest
+                 * @instance
+                 */
+                ReindexFileRequest.prototype.path = "";
+
+                /**
+                 * Creates a new ReindexFileRequest instance using the specified properties.
+                 * @function create
+                 * @memberof tilbo.ipc.v1.ReindexFileRequest
+                 * @static
+                 * @param {tilbo.ipc.v1.IReindexFileRequest=} [properties] Properties to set
+                 * @returns {tilbo.ipc.v1.ReindexFileRequest} ReindexFileRequest instance
+                 */
+                ReindexFileRequest.create = function create(properties) {
+                    return new ReindexFileRequest(properties);
+                };
+
+                /**
+                 * Encodes the specified ReindexFileRequest message. Does not implicitly {@link tilbo.ipc.v1.ReindexFileRequest.verify|verify} messages.
+                 * @function encode
+                 * @memberof tilbo.ipc.v1.ReindexFileRequest
+                 * @static
+                 * @param {tilbo.ipc.v1.IReindexFileRequest} message ReindexFileRequest message or plain object to encode
+                 * @param {$protobuf.Writer} [writer] Writer to encode to
+                 * @returns {$protobuf.Writer} Writer
+                 */
+                ReindexFileRequest.encode = function encode(message, writer) {
+                    if (!writer)
+                        writer = $Writer.create();
+                    if (message.path != null && Object.hasOwnProperty.call(message, "path"))
+                        writer.uint32(/* id 1, wireType 2 =*/10).string(message.path);
+                    return writer;
+                };
+
+                /**
+                 * Encodes the specified ReindexFileRequest message, length delimited. Does not implicitly {@link tilbo.ipc.v1.ReindexFileRequest.verify|verify} messages.
+                 * @function encodeDelimited
+                 * @memberof tilbo.ipc.v1.ReindexFileRequest
+                 * @static
+                 * @param {tilbo.ipc.v1.IReindexFileRequest} message ReindexFileRequest message or plain object to encode
+                 * @param {$protobuf.Writer} [writer] Writer to encode to
+                 * @returns {$protobuf.Writer} Writer
+                 */
+                ReindexFileRequest.encodeDelimited = function encodeDelimited(message, writer) {
+                    return this.encode(message, writer).ldelim();
+                };
+
+                /**
+                 * Decodes a ReindexFileRequest message from the specified reader or buffer.
+                 * @function decode
+                 * @memberof tilbo.ipc.v1.ReindexFileRequest
+                 * @static
+                 * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+                 * @param {number} [length] Message length if known beforehand
+                 * @returns {tilbo.ipc.v1.ReindexFileRequest} ReindexFileRequest
+                 * @throws {Error} If the payload is not a reader or valid buffer
+                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                 */
+                ReindexFileRequest.decode = function decode(reader, length, error) {
+                    if (!(reader instanceof $Reader))
+                        reader = $Reader.create(reader);
+                    let end = length === undefined ? reader.len : reader.pos + length, message = new $root.tilbo.ipc.v1.ReindexFileRequest();
+                    while (reader.pos < end) {
+                        let tag = reader.uint32();
+                        if (tag === error)
+                            break;
+                        switch (tag >>> 3) {
+                        case 1: {
+                                message.path = reader.string();
+                                break;
+                            }
+                        default:
+                            reader.skipType(tag & 7);
+                            break;
+                        }
+                    }
+                    return message;
+                };
+
+                /**
+                 * Decodes a ReindexFileRequest message from the specified reader or buffer, length delimited.
+                 * @function decodeDelimited
+                 * @memberof tilbo.ipc.v1.ReindexFileRequest
+                 * @static
+                 * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+                 * @returns {tilbo.ipc.v1.ReindexFileRequest} ReindexFileRequest
+                 * @throws {Error} If the payload is not a reader or valid buffer
+                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                 */
+                ReindexFileRequest.decodeDelimited = function decodeDelimited(reader) {
+                    if (!(reader instanceof $Reader))
+                        reader = new $Reader(reader);
+                    return this.decode(reader, reader.uint32());
+                };
+
+                /**
+                 * Verifies a ReindexFileRequest message.
+                 * @function verify
+                 * @memberof tilbo.ipc.v1.ReindexFileRequest
+                 * @static
+                 * @param {Object.<string,*>} message Plain object to verify
+                 * @returns {string|null} `null` if valid, otherwise the reason why it is not
+                 */
+                ReindexFileRequest.verify = function verify(message) {
+                    if (typeof message !== "object" || message === null)
+                        return "object expected";
+                    if (message.path != null && message.hasOwnProperty("path"))
+                        if (!$util.isString(message.path))
+                            return "path: string expected";
+                    return null;
+                };
+
+                /**
+                 * Creates a ReindexFileRequest message from a plain object. Also converts values to their respective internal types.
+                 * @function fromObject
+                 * @memberof tilbo.ipc.v1.ReindexFileRequest
+                 * @static
+                 * @param {Object.<string,*>} object Plain object
+                 * @returns {tilbo.ipc.v1.ReindexFileRequest} ReindexFileRequest
+                 */
+                ReindexFileRequest.fromObject = function fromObject(object) {
+                    if (object instanceof $root.tilbo.ipc.v1.ReindexFileRequest)
+                        return object;
+                    let message = new $root.tilbo.ipc.v1.ReindexFileRequest();
+                    if (object.path != null)
+                        message.path = String(object.path);
+                    return message;
+                };
+
+                /**
+                 * Creates a plain object from a ReindexFileRequest message. Also converts values to other types if specified.
+                 * @function toObject
+                 * @memberof tilbo.ipc.v1.ReindexFileRequest
+                 * @static
+                 * @param {tilbo.ipc.v1.ReindexFileRequest} message ReindexFileRequest
+                 * @param {$protobuf.IConversionOptions} [options] Conversion options
+                 * @returns {Object.<string,*>} Plain object
+                 */
+                ReindexFileRequest.toObject = function toObject(message, options) {
+                    if (!options)
+                        options = {};
+                    let object = {};
+                    if (options.defaults)
+                        object.path = "";
+                    if (message.path != null && message.hasOwnProperty("path"))
+                        object.path = message.path;
+                    return object;
+                };
+
+                /**
+                 * Converts this ReindexFileRequest to JSON.
+                 * @function toJSON
+                 * @memberof tilbo.ipc.v1.ReindexFileRequest
+                 * @instance
+                 * @returns {Object.<string,*>} JSON object
+                 */
+                ReindexFileRequest.prototype.toJSON = function toJSON() {
+                    return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+                };
+
+                /**
+                 * Gets the default type url for ReindexFileRequest
+                 * @function getTypeUrl
+                 * @memberof tilbo.ipc.v1.ReindexFileRequest
+                 * @static
+                 * @param {string} [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+                 * @returns {string} The default type url
+                 */
+                ReindexFileRequest.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
+                    if (typeUrlPrefix === undefined) {
+                        typeUrlPrefix = "type.googleapis.com";
+                    }
+                    return typeUrlPrefix + "/tilbo.ipc.v1.ReindexFileRequest";
+                };
+
+                return ReindexFileRequest;
+            })();
+
+            v1.ReindexFileResponse = (function() {
+
+                /**
+                 * Properties of a ReindexFileResponse.
+                 * @memberof tilbo.ipc.v1
+                 * @interface IReindexFileResponse
+                 */
+
+                /**
+                 * Constructs a new ReindexFileResponse.
+                 * @memberof tilbo.ipc.v1
+                 * @classdesc Represents a ReindexFileResponse.
+                 * @implements IReindexFileResponse
+                 * @constructor
+                 * @param {tilbo.ipc.v1.IReindexFileResponse=} [properties] Properties to set
+                 */
+                function ReindexFileResponse(properties) {
+                    if (properties)
+                        for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+                            if (properties[keys[i]] != null)
+                                this[keys[i]] = properties[keys[i]];
+                }
+
+                /**
+                 * Creates a new ReindexFileResponse instance using the specified properties.
+                 * @function create
+                 * @memberof tilbo.ipc.v1.ReindexFileResponse
+                 * @static
+                 * @param {tilbo.ipc.v1.IReindexFileResponse=} [properties] Properties to set
+                 * @returns {tilbo.ipc.v1.ReindexFileResponse} ReindexFileResponse instance
+                 */
+                ReindexFileResponse.create = function create(properties) {
+                    return new ReindexFileResponse(properties);
+                };
+
+                /**
+                 * Encodes the specified ReindexFileResponse message. Does not implicitly {@link tilbo.ipc.v1.ReindexFileResponse.verify|verify} messages.
+                 * @function encode
+                 * @memberof tilbo.ipc.v1.ReindexFileResponse
+                 * @static
+                 * @param {tilbo.ipc.v1.IReindexFileResponse} message ReindexFileResponse message or plain object to encode
+                 * @param {$protobuf.Writer} [writer] Writer to encode to
+                 * @returns {$protobuf.Writer} Writer
+                 */
+                ReindexFileResponse.encode = function encode(message, writer) {
+                    if (!writer)
+                        writer = $Writer.create();
+                    return writer;
+                };
+
+                /**
+                 * Encodes the specified ReindexFileResponse message, length delimited. Does not implicitly {@link tilbo.ipc.v1.ReindexFileResponse.verify|verify} messages.
+                 * @function encodeDelimited
+                 * @memberof tilbo.ipc.v1.ReindexFileResponse
+                 * @static
+                 * @param {tilbo.ipc.v1.IReindexFileResponse} message ReindexFileResponse message or plain object to encode
+                 * @param {$protobuf.Writer} [writer] Writer to encode to
+                 * @returns {$protobuf.Writer} Writer
+                 */
+                ReindexFileResponse.encodeDelimited = function encodeDelimited(message, writer) {
+                    return this.encode(message, writer).ldelim();
+                };
+
+                /**
+                 * Decodes a ReindexFileResponse message from the specified reader or buffer.
+                 * @function decode
+                 * @memberof tilbo.ipc.v1.ReindexFileResponse
+                 * @static
+                 * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+                 * @param {number} [length] Message length if known beforehand
+                 * @returns {tilbo.ipc.v1.ReindexFileResponse} ReindexFileResponse
+                 * @throws {Error} If the payload is not a reader or valid buffer
+                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                 */
+                ReindexFileResponse.decode = function decode(reader, length, error) {
+                    if (!(reader instanceof $Reader))
+                        reader = $Reader.create(reader);
+                    let end = length === undefined ? reader.len : reader.pos + length, message = new $root.tilbo.ipc.v1.ReindexFileResponse();
+                    while (reader.pos < end) {
+                        let tag = reader.uint32();
+                        if (tag === error)
+                            break;
+                        switch (tag >>> 3) {
+                        default:
+                            reader.skipType(tag & 7);
+                            break;
+                        }
+                    }
+                    return message;
+                };
+
+                /**
+                 * Decodes a ReindexFileResponse message from the specified reader or buffer, length delimited.
+                 * @function decodeDelimited
+                 * @memberof tilbo.ipc.v1.ReindexFileResponse
+                 * @static
+                 * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+                 * @returns {tilbo.ipc.v1.ReindexFileResponse} ReindexFileResponse
+                 * @throws {Error} If the payload is not a reader or valid buffer
+                 * @throws {$protobuf.util.ProtocolError} If required fields are missing
+                 */
+                ReindexFileResponse.decodeDelimited = function decodeDelimited(reader) {
+                    if (!(reader instanceof $Reader))
+                        reader = new $Reader(reader);
+                    return this.decode(reader, reader.uint32());
+                };
+
+                /**
+                 * Verifies a ReindexFileResponse message.
+                 * @function verify
+                 * @memberof tilbo.ipc.v1.ReindexFileResponse
+                 * @static
+                 * @param {Object.<string,*>} message Plain object to verify
+                 * @returns {string|null} `null` if valid, otherwise the reason why it is not
+                 */
+                ReindexFileResponse.verify = function verify(message) {
+                    if (typeof message !== "object" || message === null)
+                        return "object expected";
+                    return null;
+                };
+
+                /**
+                 * Creates a ReindexFileResponse message from a plain object. Also converts values to their respective internal types.
+                 * @function fromObject
+                 * @memberof tilbo.ipc.v1.ReindexFileResponse
+                 * @static
+                 * @param {Object.<string,*>} object Plain object
+                 * @returns {tilbo.ipc.v1.ReindexFileResponse} ReindexFileResponse
+                 */
+                ReindexFileResponse.fromObject = function fromObject(object) {
+                    if (object instanceof $root.tilbo.ipc.v1.ReindexFileResponse)
+                        return object;
+                    return new $root.tilbo.ipc.v1.ReindexFileResponse();
+                };
+
+                /**
+                 * Creates a plain object from a ReindexFileResponse message. Also converts values to other types if specified.
+                 * @function toObject
+                 * @memberof tilbo.ipc.v1.ReindexFileResponse
+                 * @static
+                 * @param {tilbo.ipc.v1.ReindexFileResponse} message ReindexFileResponse
+                 * @param {$protobuf.IConversionOptions} [options] Conversion options
+                 * @returns {Object.<string,*>} Plain object
+                 */
+                ReindexFileResponse.toObject = function toObject() {
+                    return {};
+                };
+
+                /**
+                 * Converts this ReindexFileResponse to JSON.
+                 * @function toJSON
+                 * @memberof tilbo.ipc.v1.ReindexFileResponse
+                 * @instance
+                 * @returns {Object.<string,*>} JSON object
+                 */
+                ReindexFileResponse.prototype.toJSON = function toJSON() {
+                    return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+                };
+
+                /**
+                 * Gets the default type url for ReindexFileResponse
+                 * @function getTypeUrl
+                 * @memberof tilbo.ipc.v1.ReindexFileResponse
+                 * @static
+                 * @param {string} [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+                 * @returns {string} The default type url
+                 */
+                ReindexFileResponse.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
+                    if (typeUrlPrefix === undefined) {
+                        typeUrlPrefix = "type.googleapis.com";
+                    }
+                    return typeUrlPrefix + "/tilbo.ipc.v1.ReindexFileResponse";
+                };
+
+                return ReindexFileResponse;
             })();
 
             v1.ReloadRulesRequest = (function() {
@@ -18210,6 +19086,7 @@ export const tilbo = $root.tilbo = (() => {
                  * @property {boolean|null} [inlineThumbnails] GetBrowserConfigResponse inlineThumbnails
                  * @property {boolean|null} [autoPropertiesSlideout] GetBrowserConfigResponse autoPropertiesSlideout
                  * @property {string|null} [theme] GetBrowserConfigResponse theme
+                 * @property {boolean|null} [singleClick] GetBrowserConfigResponse singleClick
                  */
 
                 /**
@@ -18269,6 +19146,14 @@ export const tilbo = $root.tilbo = (() => {
                 GetBrowserConfigResponse.prototype.theme = "";
 
                 /**
+                 * GetBrowserConfigResponse singleClick.
+                 * @member {boolean} singleClick
+                 * @memberof tilbo.ipc.v1.GetBrowserConfigResponse
+                 * @instance
+                 */
+                GetBrowserConfigResponse.prototype.singleClick = false;
+
+                /**
                  * Creates a new GetBrowserConfigResponse instance using the specified properties.
                  * @function create
                  * @memberof tilbo.ipc.v1.GetBrowserConfigResponse
@@ -18303,6 +19188,8 @@ export const tilbo = $root.tilbo = (() => {
                         writer.uint32(/* id 4, wireType 0 =*/32).bool(message.autoPropertiesSlideout);
                     if (message.theme != null && Object.hasOwnProperty.call(message, "theme"))
                         writer.uint32(/* id 5, wireType 2 =*/42).string(message.theme);
+                    if (message.singleClick != null && Object.hasOwnProperty.call(message, "singleClick"))
+                        writer.uint32(/* id 6, wireType 0 =*/48).bool(message.singleClick);
                     return writer;
                 };
 
@@ -18378,6 +19265,10 @@ export const tilbo = $root.tilbo = (() => {
                                 message.theme = reader.string();
                                 break;
                             }
+                        case 6: {
+                                message.singleClick = reader.bool();
+                                break;
+                            }
                         default:
                             reader.skipType(tag & 7);
                             break;
@@ -18433,6 +19324,9 @@ export const tilbo = $root.tilbo = (() => {
                     if (message.theme != null && message.hasOwnProperty("theme"))
                         if (!$util.isString(message.theme))
                             return "theme: string expected";
+                    if (message.singleClick != null && message.hasOwnProperty("singleClick"))
+                        if (typeof message.singleClick !== "boolean")
+                            return "singleClick: boolean expected";
                     return null;
                 };
 
@@ -18463,6 +19357,8 @@ export const tilbo = $root.tilbo = (() => {
                         message.autoPropertiesSlideout = Boolean(object.autoPropertiesSlideout);
                     if (object.theme != null)
                         message.theme = String(object.theme);
+                    if (object.singleClick != null)
+                        message.singleClick = Boolean(object.singleClick);
                     return message;
                 };
 
@@ -18486,6 +19382,7 @@ export const tilbo = $root.tilbo = (() => {
                         object.inlineThumbnails = false;
                         object.autoPropertiesSlideout = false;
                         object.theme = "";
+                        object.singleClick = false;
                     }
                     let keys2;
                     if (message.keybindings && (keys2 = Object.keys(message.keybindings)).length) {
@@ -18501,6 +19398,8 @@ export const tilbo = $root.tilbo = (() => {
                         object.autoPropertiesSlideout = message.autoPropertiesSlideout;
                     if (message.theme != null && message.hasOwnProperty("theme"))
                         object.theme = message.theme;
+                    if (message.singleClick != null && message.hasOwnProperty("singleClick"))
+                        object.singleClick = message.singleClick;
                     return object;
                 };
 
