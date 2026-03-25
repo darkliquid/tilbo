@@ -2,7 +2,7 @@
 
 The CLI module is responsible for:
 
-- **Cobra command tree**: root command (`tilbo-daemon`), `config init`, `completion`, `systemd` subcommands
+- **Cobra command tree**: `daemon` subcommand of `tilbo`, `config init`, `completion`, `systemd` subcommands
 - **Flag parsing**: all daemon runtime options (`--watch`, `--db`, `--fuse-mount`, `--socket`, `--log-format`, `--log-level`, `--embed-*`, etc.)
 - **Layered configuration**: config file values serve as flag defaults, CLI flags override everything (`orDefault` pattern)
 - **Logging setup**: configures `slog` handler (text or JSON) with the requested log level

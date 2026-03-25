@@ -35,4 +35,4 @@ relations:
 
 mapping:
   paths:
-    - cmd/tilbo-quickshell/windows/browser/BrowserLayout.qml
+    - internal/quickshell/windows/browser/BrowserLayout.qml

@@ -4,4 +4,4 @@ description: "QML singleton providing centralized localization with English defa
 
 mapping:
   paths:
-    - cmd/tilbo-quickshell/services/I18n.qml
+    - internal/quickshell/services/I18n.qml

@@ -1,4 +1,4 @@
-// Package builtin contains the built-in harvesters that ship with tilbo-daemon.
+// Package builtin contains the built-in harvesters that ship with the tilbo daemon.
 // All harvesters in this package are CGo-free and safe to use in any non-browser binary.
 //
 // Priority layout:

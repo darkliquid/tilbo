@@ -11,4 +11,4 @@ relations:
 
 mapping:
   paths:
-    - cmd/tilbo-quickshell/components/ImagePreview.qml
+    - internal/quickshell/components/ImagePreview.qml

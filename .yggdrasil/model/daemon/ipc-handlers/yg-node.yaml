@@ -18,4 +18,4 @@ relations:
 
 mapping:
   paths:
-    - cmd/tilbo-daemon/handlers.go
+    - internal/daemon/handlers.go

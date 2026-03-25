@@ -16,4 +16,4 @@ relations:
 
 mapping:
   paths:
-    - cmd/tilbo-quickshell/windows/browser/BrowserNavigation.qml
+    - internal/quickshell/windows/browser/BrowserNavigation.qml

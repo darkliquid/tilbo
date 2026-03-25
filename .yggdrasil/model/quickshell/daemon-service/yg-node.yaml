@@ -19,6 +19,6 @@ relations:
 
 mapping:
   paths:
-    - cmd/tilbo-quickshell/services/TilboDaemon.qml
-    - cmd/tilbo-quickshell/services/qmldir
-    - cmd/tilbo-quickshell/services/qml_ipc.mjs
+    - internal/quickshell/services/TilboDaemon.qml
+    - internal/quickshell/services/qmldir
+    - internal/quickshell/services/qml_ipc.mjs

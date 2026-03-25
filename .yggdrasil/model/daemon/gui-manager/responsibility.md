@@ -10,6 +10,6 @@ The GUI Manager module is responsible for:
 
 ## Not responsible for
 
-- GUI content or behavior (→ `cmd/tilbo-quickshell/`)
+- GUI content or behavior (→ `internal/quickshell/`)
 - IPC method registration for LaunchGUI/StopGUI (→ `daemon` via `buildIPCRequestHandler`)
 - Browser file operations (→ `daemon/browser-handlers`)

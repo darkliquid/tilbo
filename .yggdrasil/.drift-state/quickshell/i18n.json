@@ -1,21 +1,21 @@
 {
-  "hash": "1944277cadff50ee59b28303bcab8fdd95d64357722f9a913d064b7ef5f8f3fd",
+  "hash": "3f20f1879301c8f796c7b012b885e0772ce7635fef8c110dec858c0d91028359",
   "files": {
-    ".yggdrasil/model/quickshell/i18n/yg-node.yaml": "3204f91c7052d2e058e3c33cbf06649a19949c47dd423bfc296a54e1f2132334",
     ".yggdrasil/model/quickshell/i18n/interface.md": "4aee34c36c58a024b9e5df56e5b9e5387675d31a9f1dbf436279b84f678b504d",
     ".yggdrasil/model/quickshell/i18n/responsibility.md": "a95e45795edef60313d6ec9d29a8e213c1280aea864fcbe59cab270b6edea9d7",
-    ".yggdrasil/model/quickshell/yg-node.yaml": "dc9d1e46e3018d0c412e27d84fb914d1ccb83c72d99eaf927591a9d65eee3f88",
     ".yggdrasil/model/quickshell/internals.md": "b6a2f74059cc51eb643de37da359b2701afb9c56cadea816fded91427788502e",
     ".yggdrasil/model/quickshell/responsibility.md": "f918b91041fe592eb6b07392652353b71b0cac5d8c903bcc77058181fbd2ad68",
-    "cmd/tilbo-quickshell/services/I18n.qml": "d464a4bdba6a887a32249df4eabd247bdc1f3af39faf17a0e4f4fd03b8890917"
+    ".yggdrasil/model/quickshell/i18n/yg-node.yaml": "57d8c27a08ace9d9b13761166885aed885fc6b35aa9c9ed268f4f4e1b4a5ebc6",
+    ".yggdrasil/model/quickshell/yg-node.yaml": "d58af921c8b262f16ce320d91bc5531c5e818f50df5bc2f7d15af9d081e64e1e",
+    "internal/quickshell/services/I18n.qml": "24f9f469a2313eccdeb08fdce92be7dfdcd326b861a5ee13e302a05832dbd5db"
   },
   "mtimes": {
-    ".yggdrasil/model/quickshell/i18n/yg-node.yaml": 1774334210827.7327,
+    ".yggdrasil/model/quickshell/i18n/yg-node.yaml": 1774431390866.8909,
     ".yggdrasil/model/quickshell/i18n/interface.md": 1774334221917.843,
     ".yggdrasil/model/quickshell/i18n/responsibility.md": 1774334219342.8174,
-    ".yggdrasil/model/quickshell/yg-node.yaml": 1774334414496.7632,
+    ".yggdrasil/model/quickshell/yg-node.yaml": 1774431390867.6633,
     ".yggdrasil/model/quickshell/internals.md": 1774334168451.3125,
     ".yggdrasil/model/quickshell/responsibility.md": 1774334157765.2065,
-    "cmd/tilbo-quickshell/services/I18n.qml": 1773816396696.6807
+    "internal/quickshell/services/I18n.qml": 1774422675141.663
   }
 }

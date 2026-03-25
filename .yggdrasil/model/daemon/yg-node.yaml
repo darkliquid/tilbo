@@ -20,5 +20,5 @@ aspects:
 
 mapping:
   paths:
-    - cmd/tilbo-daemon/main.go
-    - cmd/tilbo-daemon/builtins.go
+    - cmd/tilbo/cmd_daemon.go
+    - internal/daemon/builtins.go

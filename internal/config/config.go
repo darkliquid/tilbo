@@ -10,7 +10,7 @@ import (
 	"github.com/darkliquid/tilbo/internal/rules"
 )
 
-// DaemonConfig holds tilbo-daemon settings.
+// DaemonConfig holds tilbo daemon settings.
 type DaemonConfig struct {
 	Watch          string `toml:"watch"`
 	DB             string `toml:"db"`

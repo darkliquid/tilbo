@@ -13,4 +13,4 @@ relations:
 
 mapping:
   paths:
-    - cmd/tilbo-quickshell/components/TagSearchBar.qml
+    - internal/quickshell/components/TagSearchBar.qml

@@ -1,5 +1,5 @@
 {
-  "hash": "993fc16dc982f1aa69ff1a10a8b4b17120cf24bfddc9e3846f3353bf30755c6c",
+  "hash": "3f97734fd212fe206ed114992adc19d1b7746d5148388f7230e4b3e8ce4f6ec8",
   "files": {
     ".yggdrasil/model/cli/admin-commands/yg-node.yaml": "2f48629b98b4c0455231e615f49d665de07784c058e9ff75e5e36007c6bff3e7",
     ".yggdrasil/model/cli/admin-commands/interface.md": "e91e8796873f427865ab093737e25a6a74536dd0e64e9acba68ecb51a8ff45bb",
@@ -11,9 +11,7 @@
     ".yggdrasil/aspects/ipc-envelope/yg-aspect.yaml": "e9646609c1a0d858d18496465819a0c81de02a0e9cd5c30f8fba0caaab2e4645",
     ".yggdrasil/aspects/ipc-envelope/guidance.md": "5cb10aa1755fbe6a975c4643575192fa83a88249a319efee1a08a32626240ad1",
     ".yggdrasil/aspects/structured-logging/yg-aspect.yaml": "a54c104b3ea2b820e3888b643fe08fb5b606216d31929fffda4d74fcc5f9c194",
-    ".yggdrasil/aspects/structured-logging/guidance.md": "ac68b260dbe3a96f48f19dfd2ca4d8560c8dd2cbd6777c79fcbd27f6c22572f3",
-    "cmd/tilbo-cli/cmd_daemon.go": "3679ab6d2b4f1335c63f562472deab5ddf34b1ec6531a1f62fb8e7fa7ad94ed8",
-    "cmd/tilbo-cli/cmd_gui.go": "a90e8f90a2fd21d4ba09bfedc4095a3e374f1e151fc9d26c0e242e5bafbf1553"
+    ".yggdrasil/aspects/structured-logging/guidance.md": "ac68b260dbe3a96f48f19dfd2ca4d8560c8dd2cbd6777c79fcbd27f6c22572f3"
   },
   "mtimes": {
     ".yggdrasil/model/cli/admin-commands/yg-node.yaml": 1774332962682.3184,
@@ -26,8 +24,6 @@
     ".yggdrasil/aspects/ipc-envelope/yg-aspect.yaml": 1774330828056.589,
     ".yggdrasil/aspects/ipc-envelope/guidance.md": 1774330840373.7412,
     ".yggdrasil/aspects/structured-logging/yg-aspect.yaml": 1774330751639.6455,
-    ".yggdrasil/aspects/structured-logging/guidance.md": 1774330769410.865,
-    "cmd/tilbo-cli/cmd_daemon.go": 1773313034103.7048,
-    "cmd/tilbo-cli/cmd_gui.go": 1773730639552.4314
+    ".yggdrasil/aspects/structured-logging/guidance.md": 1774330769410.865
   }
 }

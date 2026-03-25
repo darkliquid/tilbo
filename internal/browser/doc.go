@@ -6,7 +6,7 @@
 // [Methods] interface that the daemon implements to service these operations.
 //
 // The package is intentionally free of daemon-internal dependencies so that
-// both cmd/tilbo-daemon (which implements the interface) and cmd/tilbo-quickshell
+// both internal/daemon (which implements the interface) and internal/quickshell
 // (which consumes it via IPC) can share the same type definitions without
 // import cycles.
 package browser

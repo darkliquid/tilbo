@@ -16,5 +16,5 @@ relations:
 
 mapping:
   paths:
-    - cmd/tilbo-quickshell/components/FileGrid.qml
-    - cmd/tilbo-quickshell/components/FileList.qml
+    - internal/quickshell/components/FileGrid.qml
+    - internal/quickshell/components/FileList.qml

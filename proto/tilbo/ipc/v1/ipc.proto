@@ -1,7 +1,7 @@
 // Tilbo IPC Protocol v1
 //
 // This file defines the inter-process communication protocol between the tilbo
-// daemon (tilbo-daemon) and its GUI/CLI clients (e.g. tilbo-quickshell, tilbo CLI).
+// daemon (tilbo daemon) and its GUI/CLI clients (e.g. quickshell GUI, tilbo CLI).
 //
 // Communication uses a request/response pattern multiplexed over a single Unix
 // domain socket connection, with support for unsolicited server-pushed events.

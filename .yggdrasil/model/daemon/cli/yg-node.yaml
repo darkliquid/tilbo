@@ -20,4 +20,4 @@ relations:
 
 mapping:
   paths:
-    - cmd/tilbo-daemon/cmd_root.go
+    - cmd/tilbo/cmd_daemon.go
