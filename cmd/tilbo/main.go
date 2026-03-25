@@ -5,7 +5,10 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"syscall"
+	"time"
 
 	"github.com/charmbracelet/fang"
 	"github.com/spf13/cobra"
@@ -69,13 +72,54 @@ func main() {
 	}
 }
 
-// dial connects to the daemon and returns an IPC client.
+// dial connects to the daemon, auto-starting it if not reachable.
 func dial(ctx context.Context) (*ipc.Client, error) {
 	c, err := ipc.NewClient(ctx, sockFlag)
-	if err != nil {
-		return nil, fmt.Errorf("cannot connect to tilbo daemon at %s: %w\nIs the tilbo daemon running?", sockFlag, err)
+	if err == nil {
+		return c, nil
 	}
-	return c, nil
+
+	// Daemon unreachable — attempt to spawn it in the background.
+	if spawnErr := spawnDaemon(); spawnErr != nil {
+		return nil, fmt.Errorf(
+			"cannot connect to tilbo daemon at %s: %w\n(auto-start failed: %v)",
+			sockFlag, err, spawnErr,
+		)
+	}
+
+	// Retry for up to 3 seconds while the daemon initialises.
+	const (
+		retries  = 15
+		interval = 200 * time.Millisecond
+	)
+	for range retries {
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case <-time.After(interval):
+		}
+		c, err = ipc.NewClient(ctx, sockFlag)
+		if err == nil {
+			return c, nil
+		}
+	}
+	return nil, fmt.Errorf("cannot connect to tilbo daemon at %s after auto-start: %w", sockFlag, err)
+}
+
+// spawnDaemon launches "tilbo --socket <sock> daemon" as a detached background process.
+func spawnDaemon() error {
+	exe, err := os.Executable()
+	if err != nil {
+		return fmt.Errorf("resolve executable: %w", err)
+	}
+	if resolved, resolveErr := filepath.EvalSymlinks(exe); resolveErr == nil {
+		exe = resolved
+	}
+
+	//nolint:gosec // exe is our own resolved executable path
+	cmd := exec.Command(exe, "--socket", sockFlag, "daemon")
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
+	return cmd.Start()
 }
 
 // call dials, sends one request, closes, and returns the response.
