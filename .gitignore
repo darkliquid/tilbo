@@ -35,8 +35,7 @@
 !packaging/*
 
 # Explicitly exclude build output and caches
-/tilbo-cli
-/tilbo-daemon
+/tilbo
 memory/
 .claude/
 .vscode/
