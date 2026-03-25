@@ -1,3 +1,4 @@
+//nolint:testpackage // allow testing unexported functions
 package vectorize
 
 import "testing"
@@ -28,7 +29,12 @@ func TestDownloadOptionsForModel(t *testing.T) {
 
 			opts := downloadOptionsForModel(tt.modelName)
 			if opts.OnnxFilePath != tt.wantONNX {
-				t.Fatalf("downloadOptionsForModel(%q).OnnxFilePath = %q, want %q", tt.modelName, opts.OnnxFilePath, tt.wantONNX)
+				t.Fatalf(
+					"downloadOptionsForModel(%q).OnnxFilePath = %q, want %q",
+					tt.modelName,
+					opts.OnnxFilePath,
+					tt.wantONNX,
+				)
 			}
 		})
 	}

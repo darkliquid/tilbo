@@ -1,3 +1,4 @@
+//nolint:testpackage // allow testing unexported functions
 package daemon
 
 import (
@@ -161,9 +162,9 @@ func TestGetBrowserConfig_UsesConfiguredValues(t *testing.T) {
 	h, _ := newTestHandler(t)
 	h.cfg = &config.Config{
 		Browser: config.BrowserConfig{
-			UseTrash:               config.Bool(false),
-			InlineThumbnails:       config.Bool(false),
-			AutoPropertiesSlideout: config.Bool(true),
+			UseTrash:               new(false),
+			InlineThumbnails:       new(false),
+			AutoPropertiesSlideout: new(true),
 			Theme:                  "light",
 			Keybindings: map[string]string{
 				"copy": "Meta+C",
@@ -503,7 +504,7 @@ func TestRenameFile_SourceDoesNotExist(t *testing.T) {
 
 func TestDeleteFile_RemovesFile(t *testing.T) {
 	h, root := newTestHandler(t)
-	h.cfg = &config.Config{Browser: config.BrowserConfig{UseTrash: config.Bool(false)}}
+	h.cfg = &config.Config{Browser: config.BrowserConfig{UseTrash: new(false)}}
 	path := filepath.Join(root, "delete-me.txt")
 	os.WriteFile(path, []byte("bye"), 0o644)
 
@@ -517,7 +518,7 @@ func TestDeleteFile_RemovesFile(t *testing.T) {
 
 func TestDeleteFile_RemovesDirectoryTree(t *testing.T) {
 	h, root := newTestHandler(t)
-	h.cfg = &config.Config{Browser: config.BrowserConfig{UseTrash: config.Bool(false)}}
+	h.cfg = &config.Config{Browser: config.BrowserConfig{UseTrash: new(false)}}
 	dir := filepath.Join(root, "rmdir")
 	os.MkdirAll(filepath.Join(dir, "sub"), 0o755)
 	os.WriteFile(filepath.Join(dir, "sub", "f.txt"), []byte(""), 0o644)

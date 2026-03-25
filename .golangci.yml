@@ -457,6 +457,8 @@ linters:
       - common-false-positives
     # Excluding configuration per-path, per-linter, per-text and per-source.
     rules:
+      - source: '//go:fix'
+        linters: [ gocheckcompilerdirectives]
       - source: 'TODO'
         linters: [ godot ]
       - text: 'should have a package comment'

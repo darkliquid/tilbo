@@ -70,8 +70,10 @@ type Config struct {
 }
 
 // Bool returns a pointer to v for optional config fields.
+//
+//go:fix inline
 func Bool(v bool) *bool {
-	return &v
+	return new(v)
 }
 
 // Path returns the default config file path ($XDG_CONFIG_HOME/tilbo/config.toml).

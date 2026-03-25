@@ -800,7 +800,7 @@ func (h *daemonBrowserMethods) OpenWithApp(path, appID string) error {
 
 // GetBrowserConfig returns the browser configuration from daemon config.
 //
-//nolint:unparam // required by interface
+
 func (h *daemonBrowserMethods) GetBrowserConfig() (browser.BrowserConfig, error) {
 	if h.cfg == nil {
 		return browser.BrowserConfig{
@@ -946,7 +946,7 @@ func (h *daemonBrowserMethods) GetThumbnail(path string, size int) (browser.Thum
 }
 
 func thumbnailSizeFromRequest(size int) thumbnail.Size {
-	if size == 2 {
+	if size == int(thumbnail.Large) {
 		return thumbnail.Large
 	}
 	return thumbnail.Normal
@@ -1199,7 +1199,7 @@ func (h *daemonBrowserMethods) UnpinSearch(id string) error {
 
 // ListSavedSearches returns the pinned search queries from config.
 //
-//nolint:unparam // required by interface
+
 func (h *daemonBrowserMethods) ListSavedSearches() ([]browser.SavedSearch, error) {
 	if h.cfg == nil {
 		return nil, nil

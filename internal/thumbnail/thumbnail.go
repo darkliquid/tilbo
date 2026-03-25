@@ -21,8 +21,9 @@ import (
 type Size int
 
 const (
+	Unspecified Size = iota
 	// Normal is 128×128 max (XDG "normal").
-	Normal Size = iota
+	Normal
 	// Large is 256×256 max (XDG "large").
 	Large
 )

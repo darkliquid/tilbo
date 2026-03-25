@@ -26,9 +26,9 @@ func TestSaveAndLoad(t *testing.T) {
 			Watch: "/home/user",
 		},
 		Browser: config.BrowserConfig{
-			UseTrash:               config.Bool(true),
-			InlineThumbnails:       config.Bool(true),
-			AutoPropertiesSlideout: config.Bool(false),
+			UseTrash:               new(true),
+			InlineThumbnails:       new(true),
+			AutoPropertiesSlideout: new(false),
 			Theme:                  "light",
 			Keybindings: map[string]string{
 				"copy": "Ctrl+Shift+C",

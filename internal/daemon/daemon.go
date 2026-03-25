@@ -1,4 +1,4 @@
-// Package daemoncmd provides the tilbo daemon command and runtime.
+// Package daemon provides the tilbo daemon command and runtime.
 package daemon
 
 import (
@@ -38,7 +38,7 @@ const (
 	shutdownWaitTimeout  = 2 * time.Second
 )
 
-// run is the main daemon loop. It returns nil on clean shutdown and a non-nil
+// Run is the main daemon loop. It returns nil on clean shutdown and a non-nil
 // error if any component fails unexpectedly.
 //
 //nolint:funlen // daemon initialization is inherently long

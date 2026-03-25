@@ -1,3 +1,4 @@
+//nolint:testpackage // allow testing unexported functions
 package daemon
 
 import (

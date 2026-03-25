@@ -9,11 +9,6 @@ node = "25"
 "npm:esbuild" = "latest"
 "npm:protobufjs-cli" = "latest"
 
-[tasks.build-daemon]
-description = "Build tilbo binary"
-run = "go build -v -o tilbo ./cmd/tilbo"
-depends = ["generate"]
-
 [tasks.generate-js]
 description = "Generate JS bindings from protobuf for QML"
 run = """
@@ -25,21 +20,41 @@ esbuild internal/ipc/gen/ipc_generated.js --bundle --format=esm --outfile=cmd/ti
 sources = ["proto/**/*.proto"]
 outputs = ["cmd/tilbo-quickshell/services/qml_ipc.mjs"]
 
-[tasks.build-cli]
-description = "Build tilbo binary"
+# Code generation
+
+[tasks.generate-proto]
+description = "Generate protobuf code using buf and vtprotobuf"
+run = "buf generate"
+sources = ["proto/**/*.proto", "buf.*"]
+
+[tasks.generate-sqlc]
+description = "Generate sqlc code using sqlc"
+run = "sqlc generate"
+sources = ["query.sql"]
+dir = "{{config_root}}/internal/index"
+
+[tasks.generate]
+description = "Generate protobuf, sqlc, and JS code"
+depends = ["generate-proto", "generate-sqlc", "generate-js"]
+
+# Build
+
+[tasks.build]
+description = "Build the tilbo binary"
 run = "go build -v -o tilbo ./cmd/tilbo"
 depends = ["generate"]
 sources = ["**/*.go"]
 outputs = ["tilbo"]
+wait_for = ["format", "fixup"]
 
-[tasks.build]
-description = "Build the tilbo binary"
-depends = ["build-daemon", "build-cli"]
+# Test and lint
 
 [tasks.test]
 description = "Run tests"
 run = "go test -v ./..."
 sources = ["**/*.go"]
+wait_for = ["format", "fixup"]
+
 
 [tasks.integration-test]
 description = "Run integration tests"
@@ -67,11 +82,15 @@ golangci-lint run ./...
 buf lint
 """
 sources = ["**/*.go"]
+wait_for = ["format", "fixup"]
+
+# Formatting and fixup
 
 [tasks.format]
 description = "Format the Go codebase"
 run = "golangci-lint fmt ./..."
-sources = ["**/*.go"]
+sources = ["**/*.go", ".golangci.yml"]
+wait_for = ["generate", "fixup"]
 
 [tasks.fixup]
 description = "Format the Go codebase"
@@ -79,27 +98,16 @@ run = """
 go fix ./...
 golangci-lint run --fix ./... 2>/dev/null
 """
-sources = ["**/*.go"]
+sources = ["**/*.go", ".golangci.yml"]
+wait_for = ["generate"]
 
-
-[tasks.generate-proto]
-description = "Generate protobuf code using buf and vtprotobuf"
-run = "buf generate"
-sources = ["proto/**/*.proto", "buf.*"]
-
-[tasks.generate-sqlc]
-description = "Generate sqlc code using sqlc"
-run = "sqlc generate"
-sources = ["query.sql"]
-dir = "{{config_root}}/internal/index"
-
-[tasks.generate]
-description = "Generate protobuf and sqlc code"
-depends = ["generate-proto", "generate-sqlc"]
+# CI
 
 [tasks.ci]
 description = "Run the full CI pipeline (generate, lint, test, build)"
-depends = ["generate", "lint", "test", "build"]
+depends = ["generate", "format", "fixup", "lint", "test", "build"]
+
+# Misc Utilities
 
 [tasks.clean]
 description = "Clean build artifacts and generated code"

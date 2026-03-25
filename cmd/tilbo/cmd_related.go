@@ -14,7 +14,11 @@ import (
 	ipcv1 "github.com/darkliquid/tilbo/internal/ipc/gen/tilbo/ipc/v1"
 )
 
-const outputFormatJSON = "json"
+const (
+	outputFormatJSON  = "json"
+	outputFormatHuman = "human"
+	outputFormatText  = "text" // alias for human-friendly text output
+)
 
 const (
 	defaultRelatedLimit = 20

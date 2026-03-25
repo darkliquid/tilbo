@@ -3,6 +3,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -82,8 +83,8 @@ func dial(ctx context.Context) (*ipc.Client, error) {
 	// Daemon unreachable — attempt to spawn it in the background.
 	if spawnErr := spawnDaemon(); spawnErr != nil {
 		return nil, fmt.Errorf(
-			"cannot connect to tilbo daemon at %s: %w\n(auto-start failed: %v)",
-			sockFlag, err, spawnErr,
+			"cannot connect to tilbo daemon at %s: %w (auto-start failed)",
+			sockFlag, errors.Join(err, spawnErr),
 		)
 	}
 
@@ -116,8 +117,7 @@ func spawnDaemon() error {
 		exe = resolved
 	}
 
-	//nolint:gosec // exe is our own resolved executable path
-	cmd := exec.Command(exe, "--socket", sockFlag, "daemon")
+	cmd := exec.CommandContext(context.Background(), exe, "--socket", sockFlag, "daemon")
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
 	return cmd.Start()
 }

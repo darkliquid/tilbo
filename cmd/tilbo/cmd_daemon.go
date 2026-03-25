@@ -162,9 +162,9 @@ func newConfigCmd(opts *daemonOptions, defaultConfigPath string) *cobra.Command 
 				EmbedDisabled:  opts.embedDisabled,
 			}
 			cfg.Browser = config.BrowserConfig{
-				UseTrash:               config.Bool(true),
-				InlineThumbnails:       config.Bool(true),
-				AutoPropertiesSlideout: config.Bool(false),
+				UseTrash:               new(true),
+				InlineThumbnails:       new(true),
+				AutoPropertiesSlideout: new(false),
 				Theme:                  "nord",
 				Keybindings:            map[string]string{},
 			}
@@ -183,33 +183,6 @@ func newConfigCmd(opts *daemonOptions, defaultConfigPath string) *cobra.Command 
 
 	cmd.AddCommand(initCmd)
 	return cmd
-}
-
-// newCompletionCmd creates the "completion" subcommand that outputs shell
-// completion scripts for bash, zsh, fish, and powershell. Users typically
-// pipe the output into their shell's completion directory (e.g.,
-// "tilbo completion fish > ~/.config/fish/completions/tilbo.fish").
-func newCompletionCmd() *cobra.Command {
-	return &cobra.Command{
-		Use:       "completion [bash|zsh|fish|powershell]",
-		Short:     "Generate shell completion scripts",
-		Args:      cobra.ExactArgs(1),
-		ValidArgs: []string{"bash", "zsh", "fish", "powershell"},
-		RunE: func(cmd *cobra.Command, args []string) error {
-			switch args[0] {
-			case "bash":
-				return cmd.Root().GenBashCompletionV2(os.Stdout, true)
-			case "zsh":
-				return cmd.Root().GenZshCompletion(os.Stdout)
-			case "fish":
-				return cmd.Root().GenFishCompletion(os.Stdout, true)
-			case "powershell":
-				return cmd.Root().GenPowerShellCompletionWithDesc(os.Stdout)
-			default:
-				return fmt.Errorf("unsupported shell %q", args[0])
-			}
-		},
-	}
 }
 
 // newSystemdCmd creates the "systemd" subcommand group for installing user-mode
@@ -388,7 +361,7 @@ func newDaemonCmd() *cobra.Command {
 		dbPath:         orDefault(cfg.Daemon.DB, defaultDBPath()),
 		fuseMount:      orDefault(cfg.Daemon.FuseMount, defaultFuseMountPath()),
 		socketOverride: cfg.Daemon.Socket,
-		logFormat:      orDefault(cfg.Daemon.LogFormat, "text"),
+		logFormat:      orDefault(cfg.Daemon.LogFormat, outputFormatText),
 		logLevel:       orDefault(cfg.Daemon.LogLevel, "info"),
 		watcherBackend: orDefault(cfg.Daemon.Watcher, "auto"),
 		watchHidden:    cfg.Daemon.WatchHidden,
@@ -449,7 +422,6 @@ func newDaemonCmd() *cobra.Command {
 	cmd.Flags().BoolVar(&opts.printVersion, "version", false, "print version information and exit")
 
 	cmd.AddCommand(newConfigCmd(opts, cfgPath))
-	cmd.AddCommand(newCompletionCmd())
 	cmd.AddCommand(newSystemdCmd())
 	cmd.AddCommand(daemonStatusCmd)
 	cmd.AddCommand(daemonReloadRulesCmd)
@@ -549,9 +521,9 @@ func setupLogging(format, level string) error {
 	opts := &slog.HandlerOptions{Level: lvl}
 	var h slog.Handler
 	switch format {
-	case "json":
+	case outputFormatJSON:
 		h = slog.NewJSONHandler(os.Stderr, opts)
-	case "text":
+	case outputFormatText, outputFormatHuman:
 		h = slog.NewTextHandler(os.Stderr, opts)
 	default:
 		return fmt.Errorf("invalid log format %q: want text or json", format)
