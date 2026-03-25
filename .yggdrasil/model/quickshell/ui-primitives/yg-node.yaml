@@ -8,5 +8,5 @@ relations:
 
 mapping:
   paths:
-    - cmd/tilbo-quickshell/components/ThemeButton.qml
-    - cmd/tilbo-quickshell/components/ThemeIcon.qml
+    - internal/quickshell/components/ThemeButton.qml
+    - internal/quickshell/components/ThemeIcon.qml

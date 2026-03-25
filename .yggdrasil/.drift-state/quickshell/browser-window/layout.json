@@ -1,13 +1,10 @@
 {
-  "hash": "2cf20c66ef0909ea26dfef0fb74b0b93b9d217a379d6389ac4abf5313d026936",
+  "hash": "54f171d4f5e3b85f395553c4b7600877be8b33ca9bf7c3a48a02833eeee59882",
   "files": {
-    ".yggdrasil/model/quickshell/browser-window/layout/yg-node.yaml": "addb6699911295aa59766bfa7d3a51b4251c29a885cddd2c1d9e68896d2f64c5",
     ".yggdrasil/model/quickshell/browser-window/layout/interface.md": "af08817d93885862127e8ad9526d80d494014f30bc9fb5ea7aca828b2e980c27",
     ".yggdrasil/model/quickshell/browser-window/layout/responsibility.md": "5b7a2d0bdc65e9b7d6a795d4fb23ae1e980db218e6d2299322497ab6e16e4fa6",
-    ".yggdrasil/model/quickshell/yg-node.yaml": "dc9d1e46e3018d0c412e27d84fb914d1ccb83c72d99eaf927591a9d65eee3f88",
     ".yggdrasil/model/quickshell/internals.md": "b6a2f74059cc51eb643de37da359b2701afb9c56cadea816fded91427788502e",
     ".yggdrasil/model/quickshell/responsibility.md": "f918b91041fe592eb6b07392652353b71b0cac5d8c903bcc77058181fbd2ad68",
-    ".yggdrasil/model/quickshell/browser-window/yg-node.yaml": "30ff613fc5919c71855514c94d9bd887f5dc46a370270f96870b9b98a4fb516a",
     ".yggdrasil/model/quickshell/browser-window/interface.md": "ec3413a77ead195a4b25b95113d5f127943b710c0a0be37a175f43cb1e964296",
     ".yggdrasil/model/quickshell/browser-window/responsibility.md": "c3e15d47481e9cd9cf8b2e80c6822c3b0ea4b07432fd5e8f834aebb391c5eb18",
     ".yggdrasil/aspects/ipc-envelope/yg-aspect.yaml": "e9646609c1a0d858d18496465819a0c81de02a0e9cd5c30f8fba0caaab2e4645",
@@ -28,16 +25,19 @@
     ".yggdrasil/model/quickshell/ui-primitives/interface.md": "bdd4e67b8ed3eb03312bd36abb0b9ff7e99b4a64f2dc1dd178a22408d0da3c4f",
     ".yggdrasil/model/quickshell/browser-window/sidebar/responsibility.md": "1dfa4761ba766cdfd21aae599321468592a84d977dbb0e0d11a46a3432fb58ce",
     ".yggdrasil/model/quickshell/browser-window/sidebar/interface.md": "d5d53015f6a67f679ee4cf985a19c1e277e4bbfb73b3e80d4f2eeee6506bd1ff",
-    "cmd/tilbo-quickshell/windows/browser/BrowserLayout.qml": "5b99b17f317f88871b8936d6b2d15ff3c4bb6ebbc5e763abdff63dcd50f2047a"
+    ".yggdrasil/model/quickshell/browser-window/layout/yg-node.yaml": "02a230e358672abe44d00f52257e19b4ef9762393a98b889f5508a8cc4a6eaa2",
+    ".yggdrasil/model/quickshell/yg-node.yaml": "d58af921c8b262f16ce320d91bc5531c5e818f50df5bc2f7d15af9d081e64e1e",
+    ".yggdrasil/model/quickshell/browser-window/yg-node.yaml": "aaa128f3c8eeee75573aeefea6ccf1951e36f5b9027f7b061cd6bcfaa1a92ba0",
+    "internal/quickshell/windows/browser/BrowserLayout.qml": "53ec804c8c68c202518df599714a6f67a9606cad4447f86e340bf13db87d45e6"
   },
   "mtimes": {
-    ".yggdrasil/model/quickshell/browser-window/layout/yg-node.yaml": 1774335604155.7832,
+    ".yggdrasil/model/quickshell/browser-window/layout/yg-node.yaml": 1774431390867.2305,
     ".yggdrasil/model/quickshell/browser-window/layout/interface.md": 1774335750991.274,
     ".yggdrasil/model/quickshell/browser-window/layout/responsibility.md": 1774335729036.051,
-    ".yggdrasil/model/quickshell/yg-node.yaml": 1774334414496.7632,
+    ".yggdrasil/model/quickshell/yg-node.yaml": 1774431390867.6633,
     ".yggdrasil/model/quickshell/internals.md": 1774334168451.3125,
     ".yggdrasil/model/quickshell/responsibility.md": 1774334157765.2065,
-    ".yggdrasil/model/quickshell/browser-window/yg-node.yaml": 1774335614375.887,
+    ".yggdrasil/model/quickshell/browser-window/yg-node.yaml": 1774431390867.3,
     ".yggdrasil/model/quickshell/browser-window/interface.md": 1774335641740.1648,
     ".yggdrasil/model/quickshell/browser-window/responsibility.md": 1774335635427.1006,
     ".yggdrasil/aspects/ipc-envelope/yg-aspect.yaml": 1774330828056.589,
@@ -58,6 +58,6 @@
     ".yggdrasil/model/quickshell/ui-primitives/interface.md": 1774334374455.3628,
     ".yggdrasil/model/quickshell/browser-window/sidebar/responsibility.md": 1774335719331.9524,
     ".yggdrasil/model/quickshell/browser-window/sidebar/interface.md": 1774335757804.343,
-    "cmd/tilbo-quickshell/windows/browser/BrowserLayout.qml": 1774335545847.1914
+    "internal/quickshell/windows/browser/BrowserLayout.qml": 1774422580573.299
   }
 }

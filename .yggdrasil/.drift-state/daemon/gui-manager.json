@@ -1,10 +1,7 @@
 {
-  "hash": "f231aadc7589e1cbb35ecc37189940afe25ddb1225589a5a6c888a03ff5bc2fc",
+  "hash": "bfa8b72384c3c9a47fa0c3d00ca085ca68a0d90a68aaa344ecec028f84777161",
   "files": {
-    ".yggdrasil/model/daemon/gui-manager/yg-node.yaml": "e7b99309128b408d774ea634056e1dad1914443ecd07b5214a5d57584d1d171a",
     ".yggdrasil/model/daemon/gui-manager/interface.md": "2f95c2163e58a7801f08dd8536bed3ad1e95faff1741615944ab6aada3dd33f4",
-    ".yggdrasil/model/daemon/gui-manager/responsibility.md": "5b5e49b07aa4928a77aff25dcddb2d2386cddd889aba003b495cec5758bfe5b4",
-    ".yggdrasil/model/daemon/yg-node.yaml": "15418ee76b7eb630fd8f71ed31bbdbd8ae2b85baf86334e46c2c8c406782a5df",
     ".yggdrasil/model/daemon/interface.md": "e1b7b1630508fc50bd160b3a8b5bce8c540b8ca23c823e7dab9aa7070d7ddb27",
     ".yggdrasil/model/daemon/internals.md": "ac4868d1c4ee1fcab1f95d40ed7e6be5f64d392a072a20f720a5c61a6f1a8051",
     ".yggdrasil/model/daemon/responsibility.md": "5f39c0177cdf865b567f07f3e70d6ead720265a1a34332a897db1df8cadb84d4",
@@ -20,13 +17,16 @@
     ".yggdrasil/flows/gui-lifecycle/description.md": "8838d76d05e4b15d7a7d3ef53986aebb72a944bc72e9458a69451329294ca67d",
     ".yggdrasil/flows/ipc-communication/yg-flow.yaml": "5d93bfd06aa94e03fd000c02c2f1100d9cf6a7ac29d45773fe6bf022ef1098cc",
     ".yggdrasil/flows/ipc-communication/description.md": "cda4ab3b9f303be45ddd5148d635ee8b4180c7c2c893b6366e709c77e4408e49",
-    "cmd/tilbo-daemon/gui_manager.go": "bd3b3045972d8c241a0240a29e972540db1922d68be76a2b323a60fd2203513d"
+    ".yggdrasil/model/daemon/gui-manager/yg-node.yaml": "e3de9906f5e93858aeb9bb6a5f04d52f1a0f6375365318194e157d062c3c1d38",
+    ".yggdrasil/model/daemon/gui-manager/responsibility.md": "af096103653723b4c6883f8f4251d556cf43789ed8c1c4a50b03ff369dad9e79",
+    ".yggdrasil/model/daemon/yg-node.yaml": "0bd5434a5400371d4564d0ee5c24c66c33246caf9a70973a125a4b1ac43cef22",
+    "internal/daemon/gui_manager.go": "ee8c9692bbecb9b0d9e7ee5e165c879812b07f4dc17a3c60509c914650081baf"
   },
   "mtimes": {
-    ".yggdrasil/model/daemon/gui-manager/yg-node.yaml": 1774331206964.2683,
+    ".yggdrasil/model/daemon/gui-manager/yg-node.yaml": 1774431419799.084,
     ".yggdrasil/model/daemon/gui-manager/interface.md": 1774331154638.622,
-    ".yggdrasil/model/daemon/gui-manager/responsibility.md": 1774331146863.5261,
-    ".yggdrasil/model/daemon/yg-node.yaml": 1774331202852.2175,
+    ".yggdrasil/model/daemon/gui-manager/responsibility.md": 1774431390866.4985,
+    ".yggdrasil/model/daemon/yg-node.yaml": 1774431419800.0735,
     ".yggdrasil/model/daemon/interface.md": 1774331230123.5542,
     ".yggdrasil/model/daemon/internals.md": 1774331031453.1008,
     ".yggdrasil/model/daemon/responsibility.md": 1774330964674.2761,
@@ -42,6 +42,6 @@
     ".yggdrasil/flows/gui-lifecycle/description.md": 1774330940164.9736,
     ".yggdrasil/flows/ipc-communication/yg-flow.yaml": 1774330899324.4692,
     ".yggdrasil/flows/ipc-communication/description.md": 1774330925644.7942,
-    "cmd/tilbo-daemon/gui_manager.go": 1773810824257.9204
+    "internal/daemon/gui_manager.go": 1774425738455.6628
   }
 }

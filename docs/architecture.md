@@ -8,14 +8,14 @@ The `tilbo` system is composed of three main user-facing components:
 
 1.  **`tilbo daemon`**: The core service, launched from the unified `tilbo` binary.
 2.  **`tilbo`**: The command-line interface for interacting with the daemon.
-3.  **`tilbo-quickshell`**: The QML-based GUI for interacting with the daemon.
+3.  **`tilbo gui`**: The QML-based GUI for interacting with the daemon (via `internal/quickshell`).
 
 And several key internal components that live within the daemon runtime:
 
 *   **Watcher**: An `fanotify`-based filesystem watcher that detects file changes in real-time.
 *   **Index**: A SQLite database that stores all metadata, tags, and file information.
 *   **IPC Server**: A Protobuf-based IPC server for the `tilbo` CLI.
-*   **UI Socket Server**: A JSON-RPC-based IPC server for the `tilbo-quickshell` GUI.
+*   **UI Socket Server**: A JSON-RPC-based IPC server for the Quickshell GUI.
 *   **FUSE Server**: A FUSE filesystem that exposes a virtual, tag-based view of your files.
 *   **Harvester**: An extensible pipeline for extracting metadata from files. Supports custom WASM-based harvesters.
 *   **Rule Engine**: An engine for applying automated tagging and management rules. Supports custom WASM-based rules.
@@ -28,7 +28,7 @@ And several key internal components that live within the daemon runtime:
 
 *   **`tilbo` -> `tilbo daemon`**: The CLI communicates with the daemon over a Unix socket using a **Protobuf**-based RPC protocol. This provides a fast and strongly-typed interface suitable for command-line operations.
 
-*   **`tilbo-quickshell` -> `tilbo daemon`**: The Quickshell GUI communicates with the daemon over a separate Unix socket using a **JSON-RPC** protocol. This protocol was chosen for its ease of use within the QML/Javascript environment provided by Quickshell.
+*   **`tilbo gui` -> `tilbo daemon`**: The Quickshell GUI communicates with the daemon over a separate Unix socket using a **JSON-RPC** protocol. This protocol was chosen for its ease of use within the QML/Javascript environment provided by Quickshell.
 
 ## Data Flow
 

@@ -1,35 +1,35 @@
 {
-  "hash": "391d7f4cb5f0bd4bbe12ae2e780e306242ea91b96213f43794899c3536744e5e",
+  "hash": "a405ee84a80aff12a6af5c7dc1d7c430228dfda299ad58d211c1e340ba5b475d",
   "files": {
-    ".yggdrasil/model/quickshell/browser-window/navigation/yg-node.yaml": "1b9ea905d2828cd804bf8fa3ff6dcaca416b2b077777a47642f3295c15dd576d",
     ".yggdrasil/model/quickshell/browser-window/navigation/interface.md": "5e5274e7e78910ceee6a94c97d901de8c0f0a73225e340b2ee5c1e814b5c7905",
     ".yggdrasil/model/quickshell/browser-window/navigation/responsibility.md": "cb6be5d77b72c634918751748457994203cdf7725b5c55dbe50573c3e312a80c",
-    ".yggdrasil/model/quickshell/yg-node.yaml": "dc9d1e46e3018d0c412e27d84fb914d1ccb83c72d99eaf927591a9d65eee3f88",
     ".yggdrasil/model/quickshell/internals.md": "b6a2f74059cc51eb643de37da359b2701afb9c56cadea816fded91427788502e",
     ".yggdrasil/model/quickshell/responsibility.md": "f918b91041fe592eb6b07392652353b71b0cac5d8c903bcc77058181fbd2ad68",
-    ".yggdrasil/model/quickshell/browser-window/yg-node.yaml": "30ff613fc5919c71855514c94d9bd887f5dc46a370270f96870b9b98a4fb516a",
     ".yggdrasil/model/quickshell/browser-window/interface.md": "ec3413a77ead195a4b25b95113d5f127943b710c0a0be37a175f43cb1e964296",
     ".yggdrasil/model/quickshell/browser-window/responsibility.md": "c3e15d47481e9cd9cf8b2e80c6822c3b0ea4b07432fd5e8f834aebb391c5eb18",
     ".yggdrasil/aspects/ipc-envelope/yg-aspect.yaml": "e9646609c1a0d858d18496465819a0c81de02a0e9cd5c30f8fba0caaab2e4645",
     ".yggdrasil/aspects/ipc-envelope/guidance.md": "5cb10aa1755fbe6a975c4643575192fa83a88249a319efee1a08a32626240ad1",
     ".yggdrasil/model/quickshell/daemon-service/responsibility.md": "022481f8c786c64bf96107d722c9bc3963b4d749fea3a9e53c5d3393424646ef",
     ".yggdrasil/model/quickshell/daemon-service/interface.md": "9350d332ee3816ad2b284803aec90a45f84dfbe6e0fbd65cc6301b9cb7a2978f",
-    "cmd/tilbo-quickshell/windows/browser/BrowserNavigation.qml": "29a1fa15ba309f892ce1dee74c6d9787f8050302e3369ee397e6cc21e7607367"
+    ".yggdrasil/model/quickshell/browser-window/navigation/yg-node.yaml": "2e1a94bea5183c014bd02ec922d40a5e68035985b65eb715aab427d16f9579f1",
+    ".yggdrasil/model/quickshell/yg-node.yaml": "d58af921c8b262f16ce320d91bc5531c5e818f50df5bc2f7d15af9d081e64e1e",
+    ".yggdrasil/model/quickshell/browser-window/yg-node.yaml": "aaa128f3c8eeee75573aeefea6ccf1951e36f5b9027f7b061cd6bcfaa1a92ba0",
+    "internal/quickshell/windows/browser/BrowserNavigation.qml": "29a1fa15ba309f892ce1dee74c6d9787f8050302e3369ee397e6cc21e7607367"
   },
   "mtimes": {
-    ".yggdrasil/model/quickshell/browser-window/navigation/yg-node.yaml": 1774335593457.6746,
+    ".yggdrasil/model/quickshell/browser-window/navigation/yg-node.yaml": 1774431390866.981,
     ".yggdrasil/model/quickshell/browser-window/navigation/interface.md": 1774334271878.3396,
     ".yggdrasil/model/quickshell/browser-window/navigation/responsibility.md": 1774335703896.7957,
-    ".yggdrasil/model/quickshell/yg-node.yaml": 1774334414496.7632,
+    ".yggdrasil/model/quickshell/yg-node.yaml": 1774431390867.6633,
     ".yggdrasil/model/quickshell/internals.md": 1774334168451.3125,
     ".yggdrasil/model/quickshell/responsibility.md": 1774334157765.2065,
-    ".yggdrasil/model/quickshell/browser-window/yg-node.yaml": 1774335614375.887,
+    ".yggdrasil/model/quickshell/browser-window/yg-node.yaml": 1774431390867.3,
     ".yggdrasil/model/quickshell/browser-window/interface.md": 1774335641740.1648,
     ".yggdrasil/model/quickshell/browser-window/responsibility.md": 1774335635427.1006,
     ".yggdrasil/aspects/ipc-envelope/yg-aspect.yaml": 1774330828056.589,
     ".yggdrasil/aspects/ipc-envelope/guidance.md": 1774330840373.7412,
     ".yggdrasil/model/quickshell/daemon-service/responsibility.md": 1774334184576.4724,
     ".yggdrasil/model/quickshell/daemon-service/interface.md": 1774334198626.6116,
-    "cmd/tilbo-quickshell/windows/browser/BrowserNavigation.qml": 1774335332094.0232
+    "internal/quickshell/windows/browser/BrowserNavigation.qml": 1774335332094.0232
   }
 }

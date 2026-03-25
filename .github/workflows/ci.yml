@@ -21,6 +21,8 @@ jobs:
   generate:
     name: Check generated code
     runs-on: ubuntu-24.04
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
       - uses: actions/checkout@v6
 
@@ -63,6 +65,8 @@ jobs:
     name: Lint
     runs-on: ubuntu-24.04
     timeout-minutes: 45
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
       - uses: actions/checkout@v6
 
@@ -90,6 +94,8 @@ jobs:
   vuln:
     name: Vulnerability scan
     runs-on: ubuntu-24.04
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
       - uses: actions/checkout@v6
 
@@ -119,6 +125,8 @@ jobs:
     name: Unit tests
     runs-on: ubuntu-24.04
     timeout-minutes: 60
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
       - uses: actions/checkout@v6
 
@@ -149,7 +157,7 @@ jobs:
             -timeout=45m \
             -race \
             -coverprofile=coverage.out \
-            ./internal/... ./cmd/tilbo/... ./cmd/tilbo-daemon/...
+            ./internal/... ./cmd/tilbo/...
 
       - name: Write coverage summary
         if: always()
@@ -191,6 +199,8 @@ jobs:
   bench:
     name: Benchmarks
     runs-on: ubuntu-24.04
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
       - uses: actions/checkout@v6
 
@@ -237,6 +247,7 @@ jobs:
       CGO_ENABLED: "0"
       GOOS: linux
       GOARCH: ${{ matrix.goarch }}
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
       - uses: actions/checkout@v6
 

@@ -1,21 +1,21 @@
 {
-  "hash": "37a58518e92533b7d72b441d45f7afdca4788e518213cf78a7fd0316a349511f",
+  "hash": "321c5d20f9145fe4854fec1e8be3439925795256fb07fefcae516d35fe4c2384",
   "files": {
-    ".yggdrasil/model/quickshell/theme/yg-node.yaml": "0637a0e171eca44c35bb97ca00382cdf7e9f8d7f96e379bb444694fd99457932",
     ".yggdrasil/model/quickshell/theme/interface.md": "81e051950a26fe2eecfcbf14c0cc5144cf83914957174a309dddf01fc41938ed",
     ".yggdrasil/model/quickshell/theme/responsibility.md": "fa5108ab06999c90e6792d13c1594d35a924d20e611a40570a648dd98da37574",
-    ".yggdrasil/model/quickshell/yg-node.yaml": "dc9d1e46e3018d0c412e27d84fb914d1ccb83c72d99eaf927591a9d65eee3f88",
     ".yggdrasil/model/quickshell/internals.md": "b6a2f74059cc51eb643de37da359b2701afb9c56cadea816fded91427788502e",
     ".yggdrasil/model/quickshell/responsibility.md": "f918b91041fe592eb6b07392652353b71b0cac5d8c903bcc77058181fbd2ad68",
-    "cmd/tilbo-quickshell/services/Theme.qml": "e6cfcb0e229b844266449fe9a82f0ebbeb62714d978686be2f131ffbf546e8ee"
+    ".yggdrasil/model/quickshell/theme/yg-node.yaml": "af733b97b800d76ba15de3107f49a031c3fba666d05d07cdeb92af0da082a9a2",
+    ".yggdrasil/model/quickshell/yg-node.yaml": "d58af921c8b262f16ce320d91bc5531c5e818f50df5bc2f7d15af9d081e64e1e",
+    "internal/quickshell/services/Theme.qml": "aa72c0e85945f0cca18f877c69640a1e9af9a0db26167ab996b5b3083da9f570"
   },
   "mtimes": {
-    ".yggdrasil/model/quickshell/theme/yg-node.yaml": 1774334199825.6235,
+    ".yggdrasil/model/quickshell/theme/yg-node.yaml": 1774431390866.7876,
     ".yggdrasil/model/quickshell/theme/interface.md": 1774334209348.718,
     ".yggdrasil/model/quickshell/theme/responsibility.md": 1774334203992.665,
-    ".yggdrasil/model/quickshell/yg-node.yaml": 1774334414496.7632,
+    ".yggdrasil/model/quickshell/yg-node.yaml": 1774431390867.6633,
     ".yggdrasil/model/quickshell/internals.md": 1774334168451.3125,
     ".yggdrasil/model/quickshell/responsibility.md": 1774334157765.2065,
-    "cmd/tilbo-quickshell/services/Theme.qml": 1773812627980.4985
+    "internal/quickshell/services/Theme.qml": 1774392713113.1526
   }
 }

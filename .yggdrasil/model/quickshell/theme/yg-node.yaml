@@ -4,4 +4,4 @@ description: "QML singleton providing centralized color palette with Nord-inspir
 
 mapping:
   paths:
-    - cmd/tilbo-quickshell/services/Theme.qml
+    - internal/quickshell/services/Theme.qml

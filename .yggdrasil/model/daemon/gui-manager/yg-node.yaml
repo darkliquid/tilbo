@@ -17,4 +17,4 @@ relations:
 
 mapping:
   paths:
-    - cmd/tilbo-daemon/gui_manager.go
+    - internal/daemon/gui_manager.go

@@ -15,7 +15,7 @@ These commands must pass for every user story:
 - `golangci-lint run` - Code quality and security linting
 
 For UI stories:
-- Successful compilation/startup of `tilbo-quickshell`
+- Successful compilation/startup of the Quickshell GUI (`tilbo gui`)
 
 ## User Stories
 
@@ -76,7 +76,7 @@ For UI stories:
 **Description:** As a user, I want to see removable drives and system mount points in the sidebar for easy access.
 
 **Acceptance Criteria:**
-- [ ] Implement mount point discovery in `tilbo-daemon` (reading `/proc/mounts` or using `gio`).
+- [ ] Implement mount point discovery in `tilbo daemon` (reading `/proc/mounts` or using `gio`).
 - [ ] Show detected mounts in a separate section of the left sidebar in `BrowserWindow.qml`.
 - [ ] Add "Eject/Unmount" context menu actions for removable media.
 
@@ -108,7 +108,7 @@ For UI stories:
 
 ## Technical Considerations
 - Multi-selection requires updating `activeEntries` or maintaining a separate `selectionModel`.
-- `tilbo-daemon` already handles some file operations; ensure new IPC calls use `context.Context` and handle errors gracefully.
+- `tilbo daemon` already handles some file operations; ensure new IPC calls use `context.Context` and handle errors gracefully.
 - Re-use `ThemeIcon` for any new buttons to maintain visual consistency.
 
 ## Success Metrics

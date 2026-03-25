@@ -14,7 +14,7 @@ Tilbo is a three-component system: a daemon, a CLI, and a GUI. All three are in 
                          Unix socket (JSON-RPC)
  tilbo ────────────────────────────────────────────► tilbo daemon
                                                         │
- tilbo-quickshell (QML) ──── tilbo-ui.sock ────────────►│
+ tilbo gui (QML) ────────── tilbo-ui.sock ─────────────►│
                                                         │
                                ┌────────────────────────┤
                                │                        │
@@ -127,7 +127,7 @@ Rule overrides: if a user manually removes a rule-applied tag, the override is r
 
 ### GUI Architecture
 
-The Quickshell GUI (`cmd/tilbo-quickshell/`) is a pure QML application with no Go build step:
+The Quickshell GUI (`internal/quickshell/`) is a pure QML application with no Go build step:
 
 - **Services layer** (`services/`): `TilboDaemon.qml` handles socket connection and JSON-RPC; `Theme.qml` provides centralised colour palette; `I18n.qml` provides localisation
 - **Components** (`components/`): Reusable UI elements (file grid, file list, tag search bar, theme button/icon, image preview)
@@ -231,7 +231,7 @@ The IPC protocol is defined in `proto/tilbo/ipc/v1/ipc.proto`. Changes to this f
 
 ```sh
 mise run generate-proto   # Go + vtprotobuf → internal/ipc/gen/
-mise run generate-js      # protobufjs → cmd/tilbo-quickshell/services/qml_ipc.mjs
+mise run generate-js      # protobufjs → internal/quickshell/services/qml_ipc.mjs
 ```
 
 Both generated outputs must be committed alongside proto changes.
@@ -369,9 +369,9 @@ Same TOML config but with a `.wasm` path in the command field. WASI modules have
 1. Define request/response messages in `proto/tilbo/ipc/v1/ipc.proto`
 2. Add the new types to the `Request` and `Response` `oneof` blocks
 3. Run `mise run generate-proto` and `mise run generate-js`
-4. Implement the handler in `cmd/tilbo-daemon/handlers.go` (or `browser_handlers.go` for browser-specific methods)
+4. Implement the handler in `internal/daemon/handlers.go` (or `browser_handlers.go` for browser-specific methods)
 5. Add the CLI command in `cmd/tilbo/cmd_<domain>.go`
-6. If the GUI needs it, add the RPC call in `cmd/tilbo-quickshell/services/TilboDaemon.qml`
+6. If the GUI needs it, add the RPC call in `internal/quickshell/services/TilboDaemon.qml`
 7. Commit the proto file and all generated outputs together
 
 ---
@@ -390,13 +390,12 @@ TOML rule condition operators are defined in `internal/rules/toml.go`. To add a 
 
 ```
 cmd/
-  tilbo-daemon/         Importable daemon command/runtime package
   tilbo/                Unified CLI binary (Cobra commands + `tilbo daemon`)
-  tilbo-quickshell/     QML GUI (components, services, windows)
 internal/
   bookmarks/            GTK bookmarks integration for virtual tag roots
   browser/              Browser operations interface for FUSE/UI
   config/               Configuration file parsing
+  daemon/               Importable daemon command/runtime package
   desktopfile/          .desktop file parsing for "Open With" support
   extension/            Extension/plugin mechanism for custom file actions
   fsutil/               Filesystem utilities
@@ -406,6 +405,7 @@ internal/
   icontheme/            XDG icon theme detection
   index/                SQLite index (FTS5 + sqlite-vec), migrations, sqlc queries
   ipc/                  JSON-RPC client/server over Unix sockets
+  quickshell/           QML GUI (components, services, windows)
   rules/                Tag rule engine (TOML declarative + Lua scripted)
   sidecar/              Fallback metadata storage for non-xattr filesystems
   sync/                 Background filesystem-to-index synchronisation

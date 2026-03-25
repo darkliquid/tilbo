@@ -10,4 +10,4 @@ relations:
 
 mapping:
   paths:
-    - cmd/tilbo-quickshell/shell.qml
+    - internal/quickshell/shell.qml

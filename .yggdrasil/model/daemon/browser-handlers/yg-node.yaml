@@ -22,4 +22,4 @@ relations:
 
 mapping:
   paths:
-    - cmd/tilbo-daemon/browser_handlers.go
+    - internal/daemon/browser_handlers.go

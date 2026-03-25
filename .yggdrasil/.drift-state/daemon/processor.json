@@ -1,11 +1,9 @@
 {
-  "hash": "c7f9d15bf8167a5e2e2a19388baa9a335965cb92d5b8ceff39731a3b702c45c2",
+  "hash": "6a2cca45f4e6387caba30122a447933a78ce17480dd386d9e05abe5cee9b7478",
   "files": {
-    ".yggdrasil/model/daemon/processor/yg-node.yaml": "08147fddd8d5e42ad949066a4aca990e9942f18221451e70ba13c351a8280396",
     ".yggdrasil/model/daemon/processor/interface.md": "beabd1b164524dd3beabffa079c83f0bc8b2669e33eeb7cb4eeff8d703a58ada",
     ".yggdrasil/model/daemon/processor/internals.md": "cb82cbd77758c4f64cef65656d414c07ca1ed549444696f7ad4ba84d9cea30f1",
     ".yggdrasil/model/daemon/processor/responsibility.md": "af66d545c3ce7c77fcce905c7367f9a2b3bfebc1ea5ed3c6ab2d86f2d15a431e",
-    ".yggdrasil/model/daemon/yg-node.yaml": "15418ee76b7eb630fd8f71ed31bbdbd8ae2b85baf86334e46c2c8c406782a5df",
     ".yggdrasil/model/daemon/interface.md": "e1b7b1630508fc50bd160b3a8b5bce8c540b8ca23c823e7dab9aa7070d7ddb27",
     ".yggdrasil/model/daemon/internals.md": "ac4868d1c4ee1fcab1f95d40ed7e6be5f64d392a072a20f720a5c61a6f1a8051",
     ".yggdrasil/model/daemon/responsibility.md": "5f39c0177cdf865b567f07f3e70d6ead720265a1a34332a897db1df8cadb84d4",
@@ -19,14 +17,16 @@
     ".yggdrasil/flows/file-indexing/description.md": "d44285cee7589c7d33b138331e8b9f4c5b442d3b324bfb32041dc68f7f6e5eca",
     ".yggdrasil/flows/ipc-communication/yg-flow.yaml": "5d93bfd06aa94e03fd000c02c2f1100d9cf6a7ac29d45773fe6bf022ef1098cc",
     ".yggdrasil/flows/ipc-communication/description.md": "cda4ab3b9f303be45ddd5148d635ee8b4180c7c2c893b6366e709c77e4408e49",
-    "cmd/tilbo-daemon/processor.go": "63eebfe88a60c0757fe04e926311c45f86096d96c5a1d5ab31b6d53c7756950f"
+    ".yggdrasil/model/daemon/processor/yg-node.yaml": "18544cb739ebd1b7636e1b0f43f9b07904571e6d18f067c86cd1b003f6b2901f",
+    ".yggdrasil/model/daemon/yg-node.yaml": "0bd5434a5400371d4564d0ee5c24c66c33246caf9a70973a125a4b1ac43cef22",
+    "internal/daemon/processor.go": "8166f71685eddb0e2316e19d1f54d40640eb97b0cee5bbffdde82b03eac8e727"
   },
   "mtimes": {
-    ".yggdrasil/model/daemon/processor/yg-node.yaml": 1774331210043.3064,
+    ".yggdrasil/model/daemon/processor/yg-node.yaml": 1774431419795.3953,
     ".yggdrasil/model/daemon/processor/interface.md": 1774331081436.718,
     ".yggdrasil/model/daemon/processor/internals.md": 1774331088778.8088,
     ".yggdrasil/model/daemon/processor/responsibility.md": 1774331074567.6333,
-    ".yggdrasil/model/daemon/yg-node.yaml": 1774331202852.2175,
+    ".yggdrasil/model/daemon/yg-node.yaml": 1774431419800.0735,
     ".yggdrasil/model/daemon/interface.md": 1774331230123.5542,
     ".yggdrasil/model/daemon/internals.md": 1774331031453.1008,
     ".yggdrasil/model/daemon/responsibility.md": 1774330964674.2761,
@@ -40,6 +40,6 @@
     ".yggdrasil/flows/file-indexing/description.md": 1774330889651.3499,
     ".yggdrasil/flows/ipc-communication/yg-flow.yaml": 1774330899324.4692,
     ".yggdrasil/flows/ipc-communication/description.md": 1774330925644.7942,
-    "cmd/tilbo-daemon/processor.go": 1773991641635.8164
+    "internal/daemon/processor.go": 1774415653124.5007
   }
 }

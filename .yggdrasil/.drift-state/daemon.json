@@ -1,7 +1,6 @@
 {
-  "hash": "53d2a9ac2978fa9df1294d153c9d55e16ec7a194d2266fbeb8d59115d7dff4b1",
+  "hash": "ed0356717b9e9bce68d3dad1906e62ae597b5f09f347053f14397b2260d3924b",
   "files": {
-    ".yggdrasil/model/daemon/yg-node.yaml": "15418ee76b7eb630fd8f71ed31bbdbd8ae2b85baf86334e46c2c8c406782a5df",
     ".yggdrasil/model/daemon/interface.md": "e1b7b1630508fc50bd160b3a8b5bce8c540b8ca23c823e7dab9aa7070d7ddb27",
     ".yggdrasil/model/daemon/internals.md": "ac4868d1c4ee1fcab1f95d40ed7e6be5f64d392a072a20f720a5c61a6f1a8051",
     ".yggdrasil/model/daemon/responsibility.md": "5f39c0177cdf865b567f07f3e70d6ead720265a1a34332a897db1df8cadb84d4",
@@ -15,11 +14,11 @@
     ".yggdrasil/flows/file-indexing/description.md": "d44285cee7589c7d33b138331e8b9f4c5b442d3b324bfb32041dc68f7f6e5eca",
     ".yggdrasil/flows/ipc-communication/yg-flow.yaml": "5d93bfd06aa94e03fd000c02c2f1100d9cf6a7ac29d45773fe6bf022ef1098cc",
     ".yggdrasil/flows/ipc-communication/description.md": "cda4ab3b9f303be45ddd5148d635ee8b4180c7c2c893b6366e709c77e4408e49",
-    "cmd/tilbo-daemon/main.go": "3cbd2f9ae4104106b749b3b08c0e6a729bedceaacbce32f8b9e136fe4baa14ac",
-    "cmd/tilbo-daemon/builtins.go": "6d4d0e44f093e9e5be0d0f5fd8cc8bb7486e9f814709fce9b1d4deb83e64438e"
+    ".yggdrasil/model/daemon/yg-node.yaml": "0bd5434a5400371d4564d0ee5c24c66c33246caf9a70973a125a4b1ac43cef22",
+    "internal/daemon/builtins.go": "28e372a51d147f91e087c70c1deeb122ed38529211f8b6fa3e0058a91da6f7a4"
   },
   "mtimes": {
-    ".yggdrasil/model/daemon/yg-node.yaml": 1774331202852.2175,
+    ".yggdrasil/model/daemon/yg-node.yaml": 1774431419800.0735,
     ".yggdrasil/model/daemon/interface.md": 1774331230123.5542,
     ".yggdrasil/model/daemon/internals.md": 1774331031453.1008,
     ".yggdrasil/model/daemon/responsibility.md": 1774330964674.2761,
@@ -33,7 +32,6 @@
     ".yggdrasil/flows/file-indexing/description.md": 1774330889651.3499,
     ".yggdrasil/flows/ipc-communication/yg-flow.yaml": 1774330899324.4692,
     ".yggdrasil/flows/ipc-communication/description.md": 1774330925644.7942,
-    "cmd/tilbo-daemon/main.go": 1773815199083.6538,
-    "cmd/tilbo-daemon/builtins.go": 1773561541564.4353
+    "internal/daemon/builtins.go": 1774415653056.0881
   }
 }

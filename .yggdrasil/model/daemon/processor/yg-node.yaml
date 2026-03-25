@@ -14,4 +14,4 @@ relations:
 
 mapping:
   paths:
-    - cmd/tilbo-daemon/processor.go
+    - internal/daemon/processor.go

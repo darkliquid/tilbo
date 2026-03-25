@@ -53,7 +53,7 @@ cp tilbo ~/bin/
 
 # The GUI browser is a pure-QML app — no Go build step needed.
 # Install Quickshell (https://quickshell.outfoxxed.me/), then run directly:
-#   quickshell -p cmd/tilbo-quickshell/shell.qml
+#   quickshell -p internal/quickshell/shell.qml
 
 # Generate shell completions
 tilbo completion bash > ~/.local/share/bash-completion/completions/tilbo
@@ -100,7 +100,7 @@ systemctl --user enable --now tilbo-daemon
 2. **Open the GUI browser** (optional, requires Quickshell):
 
    ```sh
-   quickshell run cmd/tilbo-quickshell/shell.qml
+   tilbo gui
    ```
 
 3. **Tag a file**:
@@ -391,7 +391,7 @@ tilbo completion fish > ~/.config/fish/completions/tilbo.fish
 
 ## The GUI Browser
 
-The Quickshell frontend (`cmd/tilbo-quickshell`) is a pure-QML file browser
+The Quickshell frontend (`internal/quickshell`) is a pure-QML file browser
 that communicates with a running daemon over a newline-delimited JSON Unix
 socket (`$XDG_RUNTIME_DIR/tilbo-ui.sock`). It requires
 [Quickshell](https://quickshell.outfoxxed.me/) to be installed.
@@ -403,7 +403,7 @@ socket (`$XDG_RUNTIME_DIR/tilbo-ui.sock`). It requires
 tilbo daemon --watch ~ --fuse-mount ~/tags
 
 # Then launch the browser in another terminal (or via autostart)
-quickshell -p cmd/tilbo-quickshell/shell.qml
+tilbo gui
 
 # Or with the mise task shorthand
 mise run run-quickshell

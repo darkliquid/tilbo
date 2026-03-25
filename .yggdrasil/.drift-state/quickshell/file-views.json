@@ -1,10 +1,8 @@
 {
-  "hash": "6eba5e0e96e0e315bb55b28e2639547394c624067fbdac1196120e42cbffe761",
+  "hash": "befcbdef1380eb6199911e00f20486775ff59ad6e420c7fb5535d95924dedf71",
   "files": {
-    ".yggdrasil/model/quickshell/file-views/yg-node.yaml": "d93610d17ddbc4c0295b3937adfeb47ee548196eaddfb7755c0642e998feac3b",
     ".yggdrasil/model/quickshell/file-views/interface.md": "69e0ab35226961150b39bc4e00172129ec0e6eff669de6a09fcfd5aff7ddd197",
     ".yggdrasil/model/quickshell/file-views/responsibility.md": "4240856ad5ad968096c0620096ed4d780066bbdac294c4d4b7f71fd5c0d7f9ee",
-    ".yggdrasil/model/quickshell/yg-node.yaml": "dc9d1e46e3018d0c412e27d84fb914d1ccb83c72d99eaf927591a9d65eee3f88",
     ".yggdrasil/model/quickshell/internals.md": "b6a2f74059cc51eb643de37da359b2701afb9c56cadea816fded91427788502e",
     ".yggdrasil/model/quickshell/responsibility.md": "f918b91041fe592eb6b07392652353b71b0cac5d8c903bcc77058181fbd2ad68",
     ".yggdrasil/model/quickshell/daemon-service/responsibility.md": "022481f8c786c64bf96107d722c9bc3963b4d749fea3a9e53c5d3393424646ef",
@@ -15,14 +13,16 @@
     ".yggdrasil/model/quickshell/i18n/interface.md": "4aee34c36c58a024b9e5df56e5b9e5387675d31a9f1dbf436279b84f678b504d",
     ".yggdrasil/model/quickshell/ui-primitives/responsibility.md": "7db846499f701aec3b53dc16a208462e3448e96ff71bda690397df5480572c4d",
     ".yggdrasil/model/quickshell/ui-primitives/interface.md": "bdd4e67b8ed3eb03312bd36abb0b9ff7e99b4a64f2dc1dd178a22408d0da3c4f",
-    "cmd/tilbo-quickshell/components/FileGrid.qml": "6648d912623cd59eda964bf48a0d023ad0f76df5f54d27f89167d6b426fc2d61",
-    "cmd/tilbo-quickshell/components/FileList.qml": "4e13c0356667ae35dabc9fc4c3faa7b5df9bf5ea1d5616ae97c1f294482f23c1"
+    ".yggdrasil/model/quickshell/file-views/yg-node.yaml": "ec1cea75655976b9b334d660dfa0179f3119f358e3e05adaf53419f93957bee0",
+    ".yggdrasil/model/quickshell/yg-node.yaml": "d58af921c8b262f16ce320d91bc5531c5e818f50df5bc2f7d15af9d081e64e1e",
+    "internal/quickshell/components/FileGrid.qml": "320c5df4564029493fb863bc74338578977e46bd793920f59589a86f4168d0ce",
+    "internal/quickshell/components/FileList.qml": "4c797994ef373a3ddd1c479fcf1e781d18b49d41a2c00f0b317618547f7c60db"
   },
   "mtimes": {
-    ".yggdrasil/model/quickshell/file-views/yg-node.yaml": 1774334319182.811,
+    ".yggdrasil/model/quickshell/file-views/yg-node.yaml": 1774431390867.3696,
     ".yggdrasil/model/quickshell/file-views/interface.md": 1774334335270.9714,
     ".yggdrasil/model/quickshell/file-views/responsibility.md": 1774334326556.8845,
-    ".yggdrasil/model/quickshell/yg-node.yaml": 1774334414496.7632,
+    ".yggdrasil/model/quickshell/yg-node.yaml": 1774431390867.6633,
     ".yggdrasil/model/quickshell/internals.md": 1774334168451.3125,
     ".yggdrasil/model/quickshell/responsibility.md": 1774334157765.2065,
     ".yggdrasil/model/quickshell/daemon-service/responsibility.md": 1774334184576.4724,
@@ -33,7 +33,7 @@
     ".yggdrasil/model/quickshell/i18n/interface.md": 1774334221917.843,
     ".yggdrasil/model/quickshell/ui-primitives/responsibility.md": 1774334366399.2825,
     ".yggdrasil/model/quickshell/ui-primitives/interface.md": 1774334374455.3628,
-    "cmd/tilbo-quickshell/components/FileGrid.qml": 1773815012024.2065,
-    "cmd/tilbo-quickshell/components/FileList.qml": 1773815014741.3823
+    "internal/quickshell/components/FileGrid.qml": 1774421215009.7288,
+    "internal/quickshell/components/FileList.qml": 1774421227347.5667
   }
 }
